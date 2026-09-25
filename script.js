@@ -53,8 +53,13 @@
       video.style.display = 'none';
       document.documentElement.classList.add('video-unavailable');
     };
+    // Só escondemos o vídeo se o elemento inteiro falhar.
+    // Um source opcional (como WebM) pode dar 404 e o navegador ainda
+    // deve continuar normalmente para o MP4.
     video.addEventListener('error', fail);
-    video.querySelectorAll('source').forEach(source => source.addEventListener('error', fail));
+    video.addEventListener('loadeddata', () => {
+      document.documentElement.classList.add('video-ready');
+    }, { once: true });
     video.play().catch(() => {
       // Autoplay pode ser bloqueado em alguns navegadores; o poster assume o fundo.
     });
