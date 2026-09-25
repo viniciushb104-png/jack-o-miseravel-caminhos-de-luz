@@ -3,8 +3,6 @@
   const hero = document.querySelector('#inicio');
   const toast = document.querySelector('#toast');
   const video = document.querySelector('#menuVideo');
-  const chapterOne = document.querySelector('#chapterOne');
-  const chapterMessage = document.querySelector('#chapterMessage');
 
   function showToast(message) {
     if (!toast) return;
@@ -36,10 +34,11 @@
     button.addEventListener('click', () => openScreen(button.dataset.target));
   });
 
-  chapterOne?.addEventListener('click', () => {
-    if (chapterMessage) chapterMessage.hidden = false;
-    localStorage.setItem('jack-chapter', '1');
-    showToast('Halloween I — As Casas dos Perdidos selecionado.');
+  document.querySelectorAll('[data-play-phase="1"]').forEach(button => {
+    button.addEventListener('click', () => {
+      localStorage.setItem('jack-chapter', '1');
+      window.location.href = 'game/phase1.html';
+    });
   });
 
   const savedMemories = Math.min(8, Math.max(0, Number(localStorage.getItem('jack-memories') || 0)));
