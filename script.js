@@ -1,5 +1,6 @@
 (() => {
   const titleScreen = document.querySelector('#title-screen');
+  const titleArt = document.querySelector('#titleArt');
   const gameShell = document.querySelector('#game-shell');
   const startButton = document.querySelector('#startButton');
   const soundButton = document.querySelector('#soundButton');
@@ -7,6 +8,19 @@
   const screens = [...document.querySelectorAll('.screen')];
   let soundOn = localStorage.getItem('jack-sound') !== 'off';
   let audioCtx;
+
+  async function loadHeroArt() {
+    try {
+      const response = await fetch('assets/hero-data.txt', { cache: 'force-cache' });
+      if (!response.ok) throw new Error('hero art unavailable');
+      const base64 = (await response.text()).trim();
+      const dataUrl = 'data:image/webp;base64,' + base64;
+      titleArt.src = dataUrl;
+      document.documentElement.style.setProperty('--hero-art', 'url("' + dataUrl + '")');
+    } catch (_) {
+      titleArt.hidden = true;
+    }
+  }
 
   function beep(freq = 420, duration = 0.055, type = 'square') {
     if (!soundOn) return;
@@ -93,6 +107,8 @@
       showToast('Esta memória ainda está escondida na noite.');
     });
   });
+
+  loadHeroArt();
 
   const savedMemories = Number(localStorage.getItem('jack-memories') || 0);
   document.querySelector('#memoryCount').textContent = Math.min(8, Math.max(0, savedMemories));
