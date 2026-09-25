@@ -3,76 +3,78 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#080d1a">
-  <meta name="description" content="Jack o Miserável — Caminhos de Luz. Uma aventura narrativa de Halloween sobre ajudar almas perdidas a encontrar o caminho de volta para casa.">
+  <meta name="theme-color" content="#07101f">
+  <meta name="description" content="Jack o Miserável — Caminhos de Luz. Uma aventura narrativa de Halloween em estética 16-bit.">
   <title>Jack o Miserável — Caminhos de Luz</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <div class="scanlines" aria-hidden="true"></div>
 
-  <section id="title-screen" class="title-screen" aria-label="Tela de abertura">
-    <img id="titleArt" class="title-art" alt="Jack o Miserável em uma vila de Halloween iluminada por lanternas, com almas perdidas ao redor.">
-    <div class="title-vignette" aria-hidden="true"></div>
-    <div class="start-overlay">
-      <button id="startButton" class="pixel-button pixel-button--primary" type="button">
-        <span class="pumpkin">🎃</span>
-        PRESS START
-      </button>
-      <p class="start-help">toque, clique ou pressione Enter</p>
-    </div>
-  </section>
-
-  <main id="game-shell" class="game-shell" hidden>
-    <header class="topbar">
-      <button class="brand" data-target="inicio" aria-label="Voltar ao início">
-        <span class="brand-pumpkin">🎃</span>
-        <span><strong>JACK O MISERÁVEL</strong><small>CAMINHOS DE LUZ</small></span>
-      </button>
-
-      <nav class="desktop-nav" aria-label="Navegação principal">
-        <button data-target="historia">A História</button>
-        <button data-target="personagens">Personagens</button>
-        <button data-target="musical">Músicas & Musical</button>
-        <button data-target="fases">Fases</button>
-        <button data-target="memorias">Memórias</button>
-        <button data-target="creditos">Créditos</button>
-      </nav>
-
-      <button id="soundButton" class="sound-button" type="button" aria-pressed="true" title="Som dos menus">
-        ♪
-      </button>
-    </header>
-
-    <section id="inicio" class="screen screen--hero active-screen">
-      <div class="hero-bg" aria-hidden="true"></div>
-      <div class="hero-content">
-        <div class="eyebrow">CONTINUAÇÃO DO MUSICAL · UM NOVO HALLOWEEN</div>
-        <h1>JACK<br><span>O MISERÁVEL</span></h1>
-        <p class="subtitle">CAMINHOS DE LUZ</p>
-        <p class="tagline">Ajude almas perdidas a reencontrar seu caminho.</p>
-
-        <div class="hero-actions">
-          <button class="pixel-button pixel-button--primary" data-target="fases">🎃 Iniciar Jornada</button>
-          <button class="pixel-button" data-target="historia">📖 Conhecer a História</button>
-        </div>
-
-        <div class="save-panel" aria-label="Progresso da jornada">
-          <div><span class="save-label">ARQUIVO</span><strong id="saveName">JACK</strong></div>
-          <div><span class="save-label">MEMÓRIAS</span><strong><span id="memoryCount">0</span>/8</strong></div>
-          <div><span class="save-label">LUZ</span><strong id="lightLevel">01</strong></div>
-        </div>
+  <main class="site-shell">
+    <section id="inicio" class="hero-screen active-screen" aria-label="Menu principal">
+      <div class="hero-media" aria-hidden="true">
+        <img class="hero-poster" src="assets/images/menu/menu-poster.webp" alt="">
+        <video id="menuVideo" class="hero-video" autoplay muted loop playsinline preload="metadata"
+          poster="assets/images/menu/menu-poster.webp">
+          <source src="assets/videos/menu/jack-menu-bg-loop.webm" type="video/webm">
+          <source src="assets/videos/menu/jack-menu-bg-loop.mp4" type="video/mp4">
+        </video>
+        <div class="hero-shade"></div>
       </div>
 
-      <aside class="quest-card">
-        <span class="quest-kicker">MISSÃO ATUAL</span>
-        <h2>As Casas dos Perdidos</h2>
-        <p>Uma vila inteira apaga suas lanternas quando a meia-noite chega. Jack precisa descobrir por quê.</p>
-        <button class="text-link" data-target="fases">Ver capítulo →</button>
-      </aside>
+      <div class="rotate-hint" role="note">
+        <span>↻</span>
+        <strong>Para a melhor experiência, gire o celular.</strong>
+      </div>
+
+      <div class="hero-layout">
+        <div class="hero-copy">
+          <div class="tiny-kicker">UM NOVO HALLOWEEN</div>
+          <h1>JACK<br><span>O MISERÁVEL</span></h1>
+          <div class="subtitle">CAMINHOS DE LUZ</div>
+          <p class="tagline">Ajude almas perdidas a reencontrar seu caminho.</p>
+        </div>
+
+        <nav class="game-menu" aria-label="Menu principal">
+          <button class="game-btn game-btn--active" data-target="fases">
+            <span class="menu-icon">✦</span><span>Iniciar Jornada</span><b>›</b>
+          </button>
+          <button class="game-btn" data-target="historia">
+            <span class="menu-icon">▤</span><span>A História</span><b>›</b>
+          </button>
+          <button class="game-btn" data-target="personagens">
+            <span class="menu-icon">♟</span><span>Personagens</span><b>›</b>
+          </button>
+          <button class="game-btn" data-target="musical">
+            <span class="menu-icon">♫</span><span>Músicas & Musical</span><b>›</b>
+          </button>
+          <button class="game-btn" data-target="fases">
+            <span class="menu-icon">◇</span><span>Fases</span><b>›</b>
+          </button>
+          <button class="game-btn" data-target="memorias">
+            <span class="menu-icon">▣</span><span>Memórias</span><b>›</b>
+          </button>
+          <button class="game-btn" data-target="creditos">
+            <span class="menu-icon">⚙</span><span>Créditos</span><b>›</b>
+          </button>
+        </nav>
+
+        <aside class="save-box" aria-label="Progresso">
+          <div class="save-title">Arquivo JACK</div>
+          <div class="save-content">
+            <div class="save-portrait">J</div>
+            <div class="save-stats">
+              <span><b>▤</b> Memórias <strong id="memoryCount">0/8</strong></span>
+              <span><b>▣</b> Luz <strong id="lightLevel">01</strong></span>
+            </div>
+          </div>
+        </aside>
+      </div>
     </section>
 
     <section id="historia" class="screen content-screen">
+      <button class="back-btn" data-target="inicio">‹ Voltar</button>
       <div class="section-heading">
         <span class="chapter-number">I</span>
         <div><p class="eyebrow">LORE</p><h2>A chama mudou.</h2></div>
@@ -80,9 +82,9 @@
       <div class="story-grid">
         <article class="ornate-panel story-copy">
           <p>Depois dos acontecimentos de <strong>Redentor dos Perdidos</strong>, Jack descobre que carregar sua lanterna não é apenas uma condenação. A chama que um dia iluminou somente o próprio caminho agora revela trilhas para aqueles que se perderam.</p>
-          <p>A cada Halloween, quando a fronteira entre os vivos e os mortos enfraquece, novas almas aparecem pelas estradas: algumas guardam assuntos inacabados, outras perderam as próprias memórias e algumas nem sabem que estão perdidas.</p>
+          <p>A cada Halloween, novas almas aparecem pelas estradas: algumas guardam assuntos inacabados, outras perderam as próprias memórias e algumas nem sabem que estão perdidas.</p>
           <blockquote>Jack não coleta almas. Jack ajuda pessoas.</blockquote>
-          <p>Ao ajudar cada viajante, a luz de sua lanterna cresce. E, Halloween após Halloween, ele começa a perceber que talvez esteja salvando mais do que os outros — talvez esteja aprendendo a encontrar o próprio caminho.</p>
+          <p>Ao ajudar cada viajante, a luz de sua lanterna cresce. Halloween após Halloween, Jack começa a perceber que talvez esteja salvando mais do que os outros — talvez esteja aprendendo a encontrar o próprio caminho.</p>
         </article>
         <aside class="ornate-panel lore-rules">
           <h3>As regras da lanterna</h3>
@@ -97,87 +99,66 @@
     </section>
 
     <section id="personagens" class="screen content-screen">
+      <button class="back-btn" data-target="inicio">‹ Voltar</button>
       <div class="section-heading">
         <span class="chapter-number">II</span>
         <div><p class="eyebrow">PERSONAGENS</p><h2>Quem caminha na noite</h2></div>
       </div>
       <div class="character-grid">
-        <article class="character-card">
-          <div class="sprite-window jack-silhouette">🎃</div>
-          <h3>Jack</h3>
-          <p>O viajante da lanterna. Teimoso, melancólico e incapaz de abandonar alguém no escuro.</p>
-          <span class="status-tag">JOGÁVEL</span>
-        </article>
-        <article class="character-card">
-          <div class="sprite-window ghost">✦</div>
-          <h3>Almas Perdidas</h3>
-          <p>Pessoas presas a lembranças, promessas e caminhos interrompidos. Cada uma possui uma pequena história.</p>
-          <span class="status-tag">8 MEMÓRIAS</span>
-        </article>
-        <article class="character-card character-card--locked">
-          <div class="sprite-window">?</div>
-          <h3>???</h3>
-          <p>Uma presença observa Jack de longe. Seu nome será revelado em um Halloween futuro.</p>
-          <span class="status-tag">BLOQUEADO</span>
-        </article>
+        <article class="character-card"><div class="sprite-window">J</div><h3>Jack</h3><p>O viajante da lanterna. Teimoso, melancólico e incapaz de abandonar alguém no escuro.</p><span class="status-tag">JOGÁVEL</span></article>
+        <article class="character-card"><div class="sprite-window ghost">✦</div><h3>Almas Perdidas</h3><p>Pessoas presas a lembranças, promessas e caminhos interrompidos. Cada uma carrega uma pequena história.</p><span class="status-tag">8 MEMÓRIAS</span></article>
+        <article class="character-card character-card--locked"><div class="sprite-window">?</div><h3>???</h3><p>Uma presença observa Jack de longe. Seu nome será revelado em um Halloween futuro.</p><span class="status-tag">BLOQUEADO</span></article>
       </div>
     </section>
 
     <section id="musical" class="screen content-screen">
+      <button class="back-btn" data-target="inicio">‹ Voltar</button>
       <div class="section-heading">
         <span class="chapter-number">♫</span>
         <div><p class="eyebrow">TRILHA & UNIVERSO</p><h2>Do musical para o jogo</h2></div>
       </div>
       <div class="ornate-panel jukebox">
-        <div>
-          <p class="eyebrow">ORIGEM</p>
-          <h3>Jack o Miserável — Redentor dos Perdidos</h3>
-          <p>O jogo continua a história do musical e transforma seus temas em exploração, pequenas escolhas, memórias e encontros. A música continua sendo parte do mundo: cada capítulo poderá ganhar seu próprio tema.</p>
-        </div>
+        <div><p class="eyebrow">ORIGEM</p><h3>Jack o Miserável — Redentor dos Perdidos</h3><p>O jogo continua a história do musical e transforma seus temas em exploração, pequenas escolhas, memórias e encontros.</p></div>
         <div class="record" aria-hidden="true"><span>J</span></div>
       </div>
     </section>
 
     <section id="fases" class="screen content-screen">
+      <button class="back-btn" data-target="inicio">‹ Voltar</button>
       <div class="section-heading">
         <span class="chapter-number">III</span>
         <div><p class="eyebrow">MAPA DA JORNADA</p><h2>Halloweens</h2></div>
       </div>
       <div class="chapter-list">
-        <button class="chapter-card chapter-card--open" data-chapter="1">
-          <span class="chapter-icon">🏚️</span>
-          <span><small>HALLOWEEN I</small><strong>As Casas dos Perdidos</strong><em>Disponível para construção</em></span>
-          <b>→</b>
+        <button class="chapter-card chapter-card--open" id="chapterOne">
+          <span class="chapter-icon">✦</span>
+          <span><small>HALLOWEEN I</small><strong>As Casas dos Perdidos</strong><em>Primeira fase em construção</em></span>
+          <b>›</b>
         </button>
-        <button class="chapter-card" disabled><span class="chapter-icon">🌙</span><span><small>HALLOWEEN II</small><strong>A Vila sem Amanhecer</strong><em>Em breve</em></span><b>🔒</b></button>
-        <button class="chapter-card" disabled><span class="chapter-icon">🌲</span><span><small>HALLOWEEN III</small><strong>O Bosque das Memórias</strong><em>Em breve</em></span><b>🔒</b></button>
-        <button class="chapter-card" disabled><span class="chapter-icon">🕯️</span><span><small>HALLOWEEN IV</small><strong>A Estrada dos Esquecidos</strong><em>Em breve</em></span><b>🔒</b></button>
-        <button class="chapter-card" disabled><span class="chapter-icon">🎃</span><span><small>HALLOWEEN V</small><strong>A Última Lanterna</strong><em>Em breve</em></span><b>🔒</b></button>
+        <button class="chapter-card" disabled><span class="chapter-icon">☾</span><span><small>HALLOWEEN II</small><strong>A Vila sem Amanhecer</strong><em>Em breve</em></span><b>🔒</b></button>
+        <button class="chapter-card" disabled><span class="chapter-icon">♣</span><span><small>HALLOWEEN III</small><strong>O Bosque das Memórias</strong><em>Em breve</em></span><b>🔒</b></button>
+        <button class="chapter-card" disabled><span class="chapter-icon">✧</span><span><small>HALLOWEEN IV</small><strong>A Estrada dos Esquecidos</strong><em>Em breve</em></span><b>🔒</b></button>
+        <button class="chapter-card" disabled><span class="chapter-icon">✦</span><span><small>HALLOWEEN V</small><strong>A Última Lanterna</strong><em>Em breve</em></span><b>🔒</b></button>
       </div>
       <div id="chapterMessage" class="chapter-message" hidden>
-        <strong>Capítulo I selecionado.</strong>
-        <span>O próximo passo é transformar “As Casas dos Perdidos” na primeira fase jogável.</span>
+        <strong>Halloween I selecionado.</strong>
+        <span>Estrutura pronta para receber o protótipo jogável da primeira fase.</span>
       </div>
     </section>
 
     <section id="memorias" class="screen content-screen">
+      <button class="back-btn" data-target="inicio">‹ Voltar</button>
       <div class="section-heading">
         <span class="chapter-number">✦</span>
         <div><p class="eyebrow">COLEÇÃO</p><h2>Memórias Encontradas</h2></div>
       </div>
-      <div class="memory-grid" aria-label="Memórias">
-        <button class="memory-slot" data-memory="1"><span>01</span><b>?</b><small>Não encontrada</small></button>
-        <button class="memory-slot" data-memory="2"><span>02</span><b>?</b><small>Não encontrada</small></button>
-        <button class="memory-slot" data-memory="3"><span>03</span><b>?</b><small>Não encontrada</small></button>
-        <button class="memory-slot" data-memory="4"><span>04</span><b>?</b><small>Não encontrada</small></button>
-        <button class="memory-slot" data-memory="5"><span>05</span><b>?</b><small>Não encontrada</small></button>
-        <button class="memory-slot" data-memory="6"><span>06</span><b>?</b><small>Não encontrada</small></button>
-        <button class="memory-slot" data-memory="7"><span>07</span><b>?</b><small>Não encontrada</small></button>
-        <button class="memory-slot" data-memory="8"><span>08</span><b>?</b><small>Não encontrada</small></button>
+      <div class="memory-grid">
+        <button class="memory-slot" disabled><span>01</span><b>?</b><small>Não encontrada</small></button><button class="memory-slot" disabled><span>02</span><b>?</b><small>Não encontrada</small></button><button class="memory-slot" disabled><span>03</span><b>?</b><small>Não encontrada</small></button><button class="memory-slot" disabled><span>04</span><b>?</b><small>Não encontrada</small></button><button class="memory-slot" disabled><span>05</span><b>?</b><small>Não encontrada</small></button><button class="memory-slot" disabled><span>06</span><b>?</b><small>Não encontrada</small></button><button class="memory-slot" disabled><span>07</span><b>?</b><small>Não encontrada</small></button><button class="memory-slot" disabled><span>08</span><b>?</b><small>Não encontrada</small></button>
       </div>
     </section>
 
     <section id="creditos" class="screen content-screen">
+      <button class="back-btn" data-target="inicio">‹ Voltar</button>
       <div class="section-heading">
         <span class="chapter-number">★</span>
         <div><p class="eyebrow">CRÉDITOS</p><h2>Feito à luz de uma lanterna</h2></div>
@@ -186,14 +167,8 @@
         <p><strong>Universo, conceito, história e direção criativa</strong><br>Vinicius Diniz</p>
         <p><strong>Projeto</strong><br>Jack o Miserável — Caminhos de Luz</p>
         <p><strong>Formato</strong><br>Aventura narrativa de plataforma · Halloween · estética 16-bit</p>
-        <p class="credits-note">“A luz não escolhe quem merece o caminho. Ela apenas mostra que ainda existe um.”</p>
       </div>
     </section>
-
-    <footer>
-      <span>© 2026 Vinicius Diniz</span>
-      <button data-target="inicio">↑ Voltar ao início</button>
-    </footer>
   </main>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
