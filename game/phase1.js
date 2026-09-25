@@ -655,7 +655,7 @@
   function playerFrame(){
     if(!player.onGround)return 3;
     if(Math.abs(player.vx)<18)return 0;
-    const s=input.run?.09:.15;return player.anim%(s*2)<s?1:2;
+    const s=input.run ? .09 : .15;return player.anim%(s*2)<s?1:2;
   }
 
   function drawPlayer(){
@@ -692,12 +692,20 @@
   function setKey(ev,down){
     const k=ev.key.toLowerCase();
     if(["arrowleft","arrowright","arrowup"," ","a","d","shift","e","enter","f","k"].includes(k))ev.preventDefault();
+
+    // O próprio sistema de diálogo cuida de E, Enter e Espaço.
+    // Aqui só bloqueamos o controle do personagem para não avançar duas falas de uma vez.
+    if(dialogue.active){
+      input.left=false; input.right=false; input.run=false;
+      return;
+    }
+
     if(k==="arrowleft"||k==="a")input.left=down;
     if(k==="arrowright"||k==="d")input.right=down;
     if(k==="shift")input.run=down;
-    if(down&&(k==="arrowup"||k===" ")){if(dialogue.active)dialogue.advance();else input.jump=true;}
+    if(down&&(k==="arrowup"||k===" "))input.jump=true;
     if(!down&&(k==="arrowup"||k===" ")&&player.vy<-180)player.vy*=.55;
-    if(down&&(k==="e"||k==="enter")){if(dialogue.active)dialogue.advance();else tryInteract();}
+    if(down&&(k==="e"||k==="enter"))tryInteract();
     if(down&&(k==="f"||k==="k"))useLight();
   }
   addEventListener("keydown",e=>setKey(e,true),{passive:false});
