@@ -44,6 +44,9 @@
   const savedMemories = Math.min(8, Math.max(0, Number(localStorage.getItem('jack-memories') || 0)));
   const memoryCounter = document.querySelector('#memoryCount');
   if (memoryCounter) memoryCounter.textContent = savedMemories + '/8';
+  const lightLevel = Math.max(1, Number(localStorage.getItem('jack-light-level') || 1));
+  const lightCounter = document.querySelector('#lightLevel');
+  if (lightCounter) lightCounter.textContent = String(lightLevel).padStart(2, '0');
 
   // O poster permanece atrás do vídeo. Se o arquivo ainda não existir,
   // o site continua bonito e funcional apenas com a imagem estática.
