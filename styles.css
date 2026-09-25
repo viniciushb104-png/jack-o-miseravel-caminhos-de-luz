@@ -43,7 +43,7 @@ button:focus-visible{outline:3px solid #fff2a8;outline-offset:4px}
 }
 .title-art{
   position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;
-  filter:saturate(.96) contrast(1.03) brightness(.9);
+  filter:saturate(.96) contrast(1.03) brightness(.9);image-rendering:pixelated;
 }
 .title-vignette{
   position:absolute;inset:0;
@@ -113,7 +113,7 @@ button:focus-visible{outline:3px solid #fff2a8;outline-offset:4px}
   position:absolute;inset:0;z-index:-3;
   background:
     linear-gradient(90deg,rgba(3,5,10,.91) 0%,rgba(3,5,10,.64) 38%,rgba(3,5,10,.18) 66%,rgba(3,5,10,.66) 100%),
-    url("assets/jack-caminhos-de-luz-home.png") center/cover no-repeat;
+    var(--hero-art, none) center/cover no-repeat;
   filter:saturate(.92) brightness(.72);
 }
 .hero-bg::after{
@@ -162,7 +162,7 @@ button:focus-visible{outline:3px solid #fff2a8;outline-offset:4px}
   background:
     radial-gradient(circle at 82% 16%,rgba(86,112,166,.11),transparent 22%),
     linear-gradient(rgba(6,9,16,.95),rgba(6,8,13,.98)),
-    url("assets/jack-caminhos-de-luz-home.png") center/cover fixed;
+    var(--hero-art, none) center/cover fixed;
 }
 .section-heading{display:flex;align-items:center;gap:1rem;margin:0 auto 2rem;max-width:1180px}
 .chapter-number{
