@@ -20,6 +20,15 @@
 
     <div id="rotateHint" class="rotate-hint">↻ Gire o celular para jogar na horizontal</div>
 
+    <div id="objective" class="objective" aria-live="polite">
+      <small>OBJETIVO</small>
+      <strong>Siga a única luz acesa da vila.</strong>
+    </div>
+
+    <button id="interactPrompt" class="interact-prompt" type="button" hidden>
+      <span>E</span> CONVERSAR
+    </button>
+
     <section id="intro" class="intro-card">
       <p>HALLOWEEN I</p>
       <h1>AS CASAS<br>DOS PERDIDOS</h1>
@@ -37,7 +46,10 @@
         <button id="leftBtn" type="button" aria-label="Mover para a esquerda">◀</button>
         <button id="rightBtn" type="button" aria-label="Mover para a direita">▶</button>
       </div>
-      <button id="jumpBtn" class="jump-btn" type="button" aria-label="Pular">▲<small>PULAR</small></button>
+      <div class="action-cluster">
+        <button id="interactBtn" class="action-btn" type="button" aria-label="Interagir">✦<small>AÇÃO</small></button>
+        <button id="jumpBtn" class="jump-btn" type="button" aria-label="Pular">▲<small>PULAR</small></button>
+      </div>
     </div>
 
     <section id="finish" class="finish-card" hidden>
@@ -50,8 +62,21 @@
       </div>
     </section>
 
+    <section id="dialogue" class="dialogue" hidden aria-live="polite">
+      <img class="dialogue-frame-art" data-dialogue-frame alt="" aria-hidden="true">
+      <div class="dialogue-portrait" data-dialogue-portrait aria-hidden="true"></div>
+      <div class="dialogue-copy">
+        <div class="dialogue-name" data-dialogue-name></div>
+        <p class="dialogue-text" data-dialogue-text></p>
+      </div>
+      <button class="dialogue-next" data-dialogue-next type="button" aria-label="Próxima fala">▶</button>
+    </section>
+
     <div id="message" class="message" aria-live="polite"></div>
   </main>
+  <script src="data/phase1/story.js"></script>
+  <script src="data/phase1/dialogues.js"></script>
+  <script src="engine/dialogue.js"></script>
   <script src="phase1.js"></script>
 </body>
 </html>
