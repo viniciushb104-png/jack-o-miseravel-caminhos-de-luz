@@ -34,13 +34,6 @@
     button.addEventListener('click', () => openScreen(button.dataset.target));
   });
 
-  document.querySelectorAll('[data-play-phase="1"]').forEach(button => {
-    button.addEventListener('click', () => {
-      localStorage.setItem('jack-chapter', '1');
-      window.location.href = 'game/phase1.html';
-    });
-  });
-
   const savedMemories = Math.min(8, Math.max(0, Number(localStorage.getItem('jack-memories') || 0)));
   const memoryCounter = document.querySelector('#memoryCount');
   if (memoryCounter) memoryCounter.textContent = savedMemories + '/8';
