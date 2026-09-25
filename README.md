@@ -32,7 +32,7 @@ assets/
 └── videos/
     └── menu/
         ├── README.md
-        ├── jack-menu-bg-loop.mp4   ← adicionar aqui
+        ├── jack-menu-bg-loop.mp4   ← instalado
         └── jack-menu-bg-loop.webm  ← opcional
 ```
 
@@ -55,6 +55,7 @@ O HTML já está configurado. Não é necessário alterar código quando o víde
 ## Estado atual
 
 - Menu horizontal funcional.
+- Vídeo animado do menu já instalado em MP4 e conectado ao site.
 - Poster otimizado já salvo no repositório.
 - Navegação entre História, Personagens, Músicas & Musical, Fases, Memórias e Créditos.
 - Primeiro capítulo preparado: **Halloween I — As Casas dos Perdidos**.
