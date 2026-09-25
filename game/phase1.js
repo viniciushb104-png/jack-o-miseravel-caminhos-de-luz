@@ -691,6 +691,7 @@
 
   function setKey(ev,down){
     const k=ev.key.toLowerCase();
+    if(ev.defaultPrevented) return;
     if(["arrowleft","arrowright","arrowup"," ","a","d","shift","e","enter","f","k"].includes(k))ev.preventDefault();
 
     // O próprio sistema de diálogo cuida de E, Enter e Espaço.
