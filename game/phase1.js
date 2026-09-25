@@ -548,6 +548,9 @@
     checkpoint = true;
     player.checkpointX = 2890;
     player.checkpointY = 420;
+    player.x = 2890;
+    player.y = 420;
+    cameraX = Math.max(0, player.x - W * 0.38);
     document.getElementById('lightValue').textContent = '02';
   }
 
