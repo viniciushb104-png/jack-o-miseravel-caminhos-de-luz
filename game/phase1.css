@@ -19,3 +19,90 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#02050b;col
 @media (orientation:portrait) and (max-width:760px){.rotate-hint{display:block}.hud-title{display:none}.hud{grid-template-columns:auto 1fr auto}.intro-card{top:46%}}
 @media (max-height:480px){.intro-card{padding:16px 18px}.intro-card h1{font-size:2rem}.intro-card span{margin:8px auto 12px}.mobile-controls button{width:54px;height:54px}.jump-btn{width:64px!important;height:64px!important}.tutorial{bottom:76px}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+/* Narrative HUD */
+.objective{
+  position:fixed;z-index:18;top:max(62px,calc(env(safe-area-inset-top) + 58px));left:50%;
+  transform:translateX(-50%);width:min(620px,72vw);padding:7px 18px;text-align:center;
+  background:linear-gradient(90deg,transparent,#061329e8 12%,#061329e8 88%,transparent);
+  color:#ead7a8;text-shadow:0 2px 3px #000;pointer-events:none;
+}
+.objective small{display:block;color:var(--orange);font-size:.52rem;letter-spacing:.2em}
+.objective strong{display:block;margin-top:2px;font-size:.8rem;font-weight:400;letter-spacing:.03em}
+.interact-prompt{
+  position:fixed;z-index:24;left:50%;bottom:118px;transform:translateX(-50%);
+  border:1px solid #e3a12b;background:#061329ed;color:#f7e1aa;padding:8px 13px;
+  font:700 .68rem Georgia,serif;letter-spacing:.09em;box-shadow:0 7px 24px #0009;cursor:pointer;
+  animation:promptPulse 1.2s steps(2,end) infinite;
+}
+.interact-prompt span{
+  display:inline-grid;place-items:center;width:23px;height:23px;margin-right:6px;
+  background:#6e3109;border:1px solid #ffbd3c;color:#fff0bc;
+}
+@keyframes promptPulse{50%{filter:brightness(1.22)}}
+.action-cluster{display:flex;gap:10px;align-items:flex-end;pointer-events:none}
+.action-cluster button{pointer-events:auto}
+.action-btn{width:60px!important;height:60px!important;border-radius:50%!important}
+.action-btn small,.jump-btn small{display:block;font-size:.43rem;letter-spacing:.07em;margin-top:2px}
+
+/* Dialogue system */
+.dialogue{
+  position:fixed;z-index:60;left:50%;bottom:max(10px,env(safe-area-inset-bottom));
+  transform:translate(-50%,24px);opacity:0;width:min(1160px,96vw);height:min(250px,35vh);
+  filter:drop-shadow(0 18px 30px #000c);transition:opacity .16s ease,transform .16s ease;
+  pointer-events:auto;
+}
+.dialogue.is-open{opacity:1;transform:translate(-50%,0)}
+.dialogue-frame-art{
+  position:absolute;inset:0;width:100%;height:100%;object-fit:fill;
+  image-rendering:pixelated;pointer-events:none;
+}
+.dialogue-portrait{
+  position:absolute;left:5.7%;bottom:8%;width:22.5%;height:58%;
+  background-repeat:no-repeat;background-color:#07102088;
+  image-rendering:pixelated;overflow:hidden;
+  filter:drop-shadow(0 0 9px #000a);
+}
+.dialogue-portrait.is-hidden{opacity:0}
+.dialogue-copy{
+  position:absolute;left:31%;right:8.2%;top:31%;bottom:13%;
+  display:flex;flex-direction:column;justify-content:flex-start;
+}
+.dialogue-name{
+  align-self:flex-start;min-width:180px;margin-top:-20%;margin-bottom:8px;padding:5px 18px;
+  color:#ffe09a;font-weight:700;font-size:.82rem;letter-spacing:.08em;text-shadow:0 2px #000;
+}
+.dialogue-text{
+  margin:0;color:#f4e7c5;font:1.05rem/1.5 Georgia,"Times New Roman",serif;
+  text-shadow:0 2px 2px #000;max-width:95%;
+}
+.dialogue-next{
+  position:absolute;right:7%;bottom:12%;width:38px;height:34px;border:0;background:transparent;
+  color:#ffd366;font-size:1.35rem;cursor:pointer;text-shadow:0 0 10px #ff9b1c;
+  animation:nextBlink .8s steps(2,end) infinite;
+}
+@keyframes nextBlink{50%{opacity:.35}}
+
+/* Eleanor world marker */
+.soul-label{
+  position:fixed;z-index:14;color:#bcecff;background:#07162dcb;border:1px solid #71cfff88;
+  padding:4px 8px;font-size:.6rem;pointer-events:none;text-shadow:0 1px #000;
+}
+
+@media (max-width:900px){
+  .objective{top:53px;width:min(560px,70vw)}
+  .objective strong{font-size:.7rem}
+  .interact-prompt{bottom:88px}
+  .dialogue{height:min(200px,43vh);bottom:4px}
+  .dialogue-copy{left:30%;right:7%;top:31%;bottom:10%}
+  .dialogue-name{font-size:.68rem;min-width:120px;margin-bottom:5px}
+  .dialogue-text{font-size:.82rem;line-height:1.35}
+  .dialogue-next{right:5.5%;bottom:9%;font-size:1rem}
+}
+@media (orientation:portrait) and (max-width:760px){
+  .objective{top:62px;width:88vw}
+  .dialogue{width:98vw;height:225px}
+  .dialogue-portrait{left:5%;width:25%;height:55%}
+  .dialogue-copy{left:32%;right:6%;top:34%}
+  .dialogue-text{font-size:.78rem}
+}
