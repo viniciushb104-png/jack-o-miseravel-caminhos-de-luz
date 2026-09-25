@@ -1,6 +1,6 @@
 # Jack o Miserável — Caminhos de Luz
 
-Site/jogo narrativo em estética **16-bit / Super Nintendo**, continuação do universo do musical **Jack o Miserável — Redentor dos Perdidos**.
+Portal/jogo narrativo em estética **16-bit / Super Nintendo**, continuação do universo do musical **Jack o Miserável — Redentor dos Perdidos**.
 
 ## Premissa
 
@@ -8,33 +8,62 @@ Depois dos acontecimentos do musical, Jack descobre que sua lanterna não serve 
 
 > Jack não coleta almas. Jack ajuda pessoas.
 
+## Menu atual
+
+A página inicial foi refeita como um menu horizontal de jogo, inspirado diretamente na arte-base do projeto:
+
+- cenário 16-bit em tela cheia;
+- título e subtítulo sobre o cenário;
+- botões navy/dourado em estilo RPG;
+- menu vertical à direita;
+- painel de progresso;
+- versão responsiva;
+- modo horizontal otimizado para celular;
+- aviso discreto para girar o celular quando aberto em retrato;
+- suporte a vídeo animado em loop com fallback automático para imagem estática.
+
+## Arquivos do menu
+
+```
+assets/
+├── images/
+│   └── menu/
+│       └── menu-poster.webp
+└── videos/
+    └── menu/
+        ├── README.md
+        ├── jack-menu-bg-loop.mp4   ← adicionar aqui
+        └── jack-menu-bg-loop.webm  ← opcional
+```
+
+### Vídeo do Gemini
+
+Exporte o fundo animado com este nome:
+
+```
+jack-menu-bg-loop.mp4
+```
+
+e coloque em:
+
+```
+assets/videos/menu/jack-menu-bg-loop.mp4
+```
+
+O HTML já está configurado. Não é necessário alterar código quando o vídeo for adicionado.
+
 ## Estado atual
 
-- Tela de abertura inspirada em cartuchos de 16-bit.
-- Arte principal integrada ao projeto em versão pixelada otimizada.
-- Portal responsivo para desktop e celular.
-- Navegação em estilo menu de RPG.
-- Seções de lore, personagens, musical, capítulos, memórias e créditos.
+- Menu horizontal funcional.
+- Poster otimizado já salvo no repositório.
+- Navegação entre História, Personagens, Músicas & Musical, Fases, Memórias e Créditos.
 - Primeiro capítulo preparado: **Halloween I — As Casas dos Perdidos**.
-- Progresso básico salvo no navegador com `localStorage`.
-- Efeitos sonoros de menu gerados no navegador, sem arquivos externos.
-
-## Estrutura
-
-```
-/
-├── index.html
-├── styles.css
-├── script.js
-└── assets/
-    └── hero-data.txt
-```
-
-A arte de abertura é carregada pelo navegador a partir de `hero-data.txt`, evitando dependência de hospedagem externa e preservando o visual retro no GitHub Pages.
+- Progresso básico salvo com `localStorage`.
+- Estrutura pronta para receber o protótipo jogável da primeira fase.
 
 ## Próximo passo
 
-Construir a primeira fase jogável de plataforma dentro de **As Casas dos Perdidos**, mantendo a linguagem visual 16-bit, a lanterna como mecânica central e a ajuda às almas como eixo narrativo.
+Adicionar o vídeo animado do menu e depois construir a primeira fase jogável de plataforma em **As Casas dos Perdidos**.
 
 ## Créditos
 
