@@ -39,7 +39,23 @@
   };
 
   const input = { left: false, right: false, jump: false, run: false };
+
+  const story = window.PHASE1_STORY;
+  const dialogues = window.PHASE1_DIALOGUES;
+  const dialogueRoot = document.getElementById('dialogue');
+  const dialogue = new window.DialogueSystem(dialogueRoot);
+  const objectiveText = document.querySelector('#objective strong');
+  const interactPrompt = document.getElementById('interactPrompt');
+  const interactBtn = document.getElementById('interactBtn');
+
+  const soul = { x: 620, y: 590, bob: 0 };
+  let metEleanor = localStorage.getItem(story.states.metEleanor) === '1';
+  let nearEleanor = false;
+
   let jack = null;
+  let jackPortraits = null;
+  let eleanorPortraits = null;
+  let dialogueFrame = null;
   let cameraX = 0;
   let last = performance.now();
   let running = false;
@@ -76,11 +92,63 @@
   }
 
   async function loadAssets() {
-    jack = await imageFromChunks([
-      '../assets/sprites/jack/data/jack-mini.1.b64',
-      '../assets/sprites/jack/data/jack-mini.2.b64',
-      '../assets/sprites/jack/data/jack-mini.3.b64'
+    [jack, jackPortraits, eleanorPortraits, dialogueFrame] = await Promise.all([
+      imageFromChunks([
+        '../assets/sprites/jack/data/jack-mini.1.b64',
+        '../assets/sprites/jack/data/jack-mini.2.b64',
+        '../assets/sprites/jack/data/jack-mini.3.b64'
+      ]),
+      imageFromChunks([
+        '../assets/portraits/jack/data/portraits.1.b64',
+        '../assets/portraits/jack/data/portraits.2.b64'
+      ]),
+      imageFromChunks([
+        '../assets/portraits/eleanor/data/portraits.1.b64',
+        '../assets/portraits/eleanor/data/portraits.2.b64'
+      ]),
+      imageFromChunks([
+        '../assets/ui/dialogue/data/dialogue-frame.1.b64',
+        '../assets/ui/dialogue/data/dialogue-frame.2.b64'
+      ])
     ]);
+
+    dialogue.setAssets({
+      jack: jackPortraits,
+      eleanor: eleanorPortraits,
+      frame: dialogueFrame
+    });
+  }
+
+  function setObjective(text) {
+    if (objectiveText) objectiveText.textContent = text;
+  }
+
+  function syncObjective() {
+    setObjective(metEleanor ? story.objectives.findMemories : story.objectives.beforeMeeting);
+  }
+
+  function tryInteract() {
+    if (!running || finished || dialogue.active) return;
+    if (!nearEleanor) return;
+
+    player.vx = 0;
+    interactPrompt.hidden = true;
+
+    const scene = metEleanor
+      ? [
+          { speaker: 'Eleanor', portrait: 'eleanor', expression: 1, text: 'A sua lanterna ainda está mostrando aquelas luzes pela vila?' },
+          { speaker: 'Jack', portrait: 'jack', expression: 0, text: 'Está. Continue mantendo essa janela acesa por mais um pouco.' }
+        ]
+      : dialogues.firstMeeting;
+
+    dialogue.open(scene, () => {
+      if (!metEleanor) {
+        metEleanor = true;
+        localStorage.setItem(story.states.metEleanor, '1');
+        setObjective(story.objectives.findMemories);
+        showMessage('✦ Nova missão — recupere as memórias de Eleanor');
+      }
+    });
   }
 
   function showMessage(text) {
@@ -100,6 +168,12 @@
 
   function update(dt) {
     if (!running || finished) return;
+    if (dialogue.active) {
+      player.vx = 0;
+      if (interactPrompt) interactPrompt.hidden = true;
+      return;
+    }
+
     dt = Math.min(dt, 0.034);
     player.anim += dt;
 
@@ -160,6 +234,10 @@
       resetPlayer();
       showMessage('A estrada trouxe Jack de volta à última luz.');
     }
+
+    nearEleanor = Math.abs(player.x - soul.x) < 115 &&
+                  Math.abs((player.y + player.h / 2) - soul.y) < 135;
+    if (interactPrompt) interactPrompt.hidden = !nearEleanor;
 
     if (!checkpoint && player.x > 2860) {
       checkpoint = true;
@@ -440,6 +518,88 @@
     }
   }
 
+  function drawEleanor() {
+    const x = soul.x - cameraX;
+    if (x < -120 || x > W + 120) return;
+
+    const y = soul.y - 64 + Math.sin(performance.now() / 420) * 4;
+    ctx.save();
+
+    ctx.globalCompositeOperation = 'screen';
+    const glow = ctx.createRadialGradient(x, y - 32, 10, x, y - 32, 82);
+    glow.addColorStop(0, 'rgba(180,239,255,.55)');
+    glow.addColorStop(.45, 'rgba(91,196,255,.22)');
+    glow.addColorStop(1, 'rgba(72,141,255,0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(x, y - 28, 82, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = .92;
+
+    // Ghostly hair silhouette
+    ctx.fillStyle = '#54475f';
+    ctx.beginPath();
+    ctx.arc(x, y - 63, 24, Math.PI, Math.PI * 2);
+    ctx.lineTo(x + 27, y - 24);
+    ctx.quadraticCurveTo(x + 20, y - 5, x + 8, y + 4);
+    ctx.lineTo(x - 10, y + 4);
+    ctx.quadraticCurveTo(x - 24, y - 7, x - 27, y - 27);
+    ctx.closePath();
+    ctx.fill();
+
+    // Face
+    ctx.fillStyle = '#e9d9c5';
+    ctx.beginPath();
+    ctx.arc(x, y - 52, 17, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Eyes
+    ctx.fillStyle = '#2b2733';
+    ctx.fillRect(x - 8, y - 55, 3, 5);
+    ctx.fillRect(x + 5, y - 55, 3, 5);
+
+    // Dress / cloak
+    ctx.fillStyle = '#7180a1';
+    ctx.beginPath();
+    ctx.moveTo(x - 15, y - 31);
+    ctx.lineTo(x - 28, y + 34);
+    ctx.quadraticCurveTo(x, y + 48, x + 28, y + 34);
+    ctx.lineTo(x + 15, y - 31);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = '#c9d0d7';
+    ctx.fillRect(x - 9, y - 30, 18, 7);
+
+    // Key
+    ctx.strokeStyle = '#f2b23c';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(x + 18, y - 16, 7, 0, Math.PI * 2);
+    ctx.moveTo(x + 18, y - 9);
+    ctx.lineTo(x + 18, y + 8);
+    ctx.lineTo(x + 25, y + 8);
+    ctx.stroke();
+
+    // Wisps
+    ctx.globalAlpha = .72;
+    ctx.fillStyle = '#86dcff';
+    for (const [dx, dy, r] of [[-37,-50,7],[34,-34,6],[-30,9,5]]) {
+      ctx.beginPath();
+      ctx.arc(x + dx, y + dy, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+
+    ctx.fillStyle = '#bfeeff';
+    ctx.font = '12px Georgia';
+    ctx.textAlign = 'center';
+    ctx.fillText('Eleanor', x, y - 98);
+    ctx.textAlign = 'left';
+  }
+
   function currentPlayerFrame() {
     if (!player.onGround) return 3;
     if (Math.abs(player.vx) < 20) return 0;
@@ -478,6 +638,7 @@
     for (const lamp of lamps) drawLantern(lamp.x, lamp.y);
     for (const pumpkin of pumpkins) drawPumpkin(pumpkin.x, pumpkin.y);
     drawTutorialSign();
+    drawEleanor();
     drawPlayer();
     const vignette = ctx.createRadialGradient(W / 2, H / 2, 250, W / 2, H / 2, 760);
     vignette.addColorStop(0, 'rgba(0,0,0,0)');
@@ -495,7 +656,8 @@
 
   function setKey(event, pressed) {
     const key = event.key.toLowerCase();
-    if (['arrowleft', 'arrowright', 'arrowup', ' ', 'a', 'd', 'shift'].includes(key)) event.preventDefault();
+    if (['arrowleft', 'arrowright', 'arrowup', ' ', 'a', 'd', 'shift', 'e', 'enter'].includes(key)) event.preventDefault();
+    if (pressed && (key === 'e' || key === 'enter') && !dialogue.active) tryInteract();
     if (key === 'arrowleft' || key === 'a') input.left = pressed;
     if (key === 'arrowright' || key === 'd') input.right = pressed;
     if (key === 'shift') input.run = pressed;
@@ -523,10 +685,17 @@
     input.jump = true;
   });
 
+  interactPrompt?.addEventListener('click', tryInteract);
+  interactBtn?.addEventListener('pointerdown', event => {
+    event.preventDefault();
+    tryInteract();
+  });
+
   document.getElementById('startGame').onclick = () => {
     document.getElementById('intro').hidden = true;
     running = true;
     last = performance.now();
+    syncObjective();
     const tutorial = document.getElementById('tutorial');
     tutorial.classList.add('show');
     setTimeout(() => tutorial.classList.remove('show'), 5000);
@@ -544,7 +713,9 @@
     running = true;
   };
 
-  if (localStorage.getItem('jack-phase1-checkpoint') === '1') {
+  syncObjective();
+
+  if (localStorage.getItem('jack-phase1-checkpoint') === '1' && metEleanor) {
     checkpoint = true;
     player.checkpointX = 2890;
     player.checkpointY = 420;
