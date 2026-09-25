@@ -4,26 +4,31 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
   <meta name="theme-color" content="#050914">
-  <meta name="description" content="Halloween I — As Casas dos Perdidos. Primeiro protótipo jogável de Jack o Miserável — Caminhos de Luz.">
+  <meta name="description" content="Halloween I — As Casas dos Perdidos. Jack ajuda Eleanor a recuperar suas memórias e encontrar o Caminho de Luz.">
   <title>Halloween I — As Casas dos Perdidos</title>
   <link rel="stylesheet" href="phase1.css">
 </head>
 <body>
   <main class="game-page">
-    <canvas id="game" width="1280" height="720" aria-label="Primeira fase jogável de Jack o Miserável"></canvas>
+    <canvas id="game" width="1280" height="720" aria-label="Halloween I — As Casas dos Perdidos"></canvas>
 
     <header class="hud">
       <a class="hud-btn" href="../index.html#fases" aria-label="Voltar ao mapa">‹ MAPA</a>
       <div class="hud-title"><small>HALLOWEEN I</small><strong>AS CASAS DOS PERDIDOS</strong></div>
-      <div class="hud-status"><span>LUZ</span><b id="lightValue">01</b></div>
+      <div class="hud-cluster">
+        <div class="hud-box"><span>VIDA</span><b id="healthValue">♥ ♥ ♥</b></div>
+        <div class="hud-box"><span>MEMÓRIAS</span><b id="memoryValue">0/5</b></div>
+        <div class="hud-box"><span>LUZ</span><b id="lightValue">01</b></div>
+      </div>
     </header>
-
-    <div id="rotateHint" class="rotate-hint">↻ Gire o celular para jogar na horizontal</div>
 
     <div id="objective" class="objective" aria-live="polite">
       <small>OBJETIVO</small>
-      <strong>Siga a única luz acesa da vila.</strong>
+      <strong>Siga a única casa iluminada e encontre quem ainda espera.</strong>
     </div>
+
+    <div id="sectionBanner" class="section-banner" aria-live="polite"></div>
+    <div id="rotateHint" class="rotate-hint">↻ Gire o celular para jogar na horizontal</div>
 
     <button id="interactPrompt" class="interact-prompt" type="button" hidden>
       <span>E</span> CONVERSAR
@@ -32,13 +37,18 @@
     <section id="intro" class="intro-card">
       <p>HALLOWEEN I</p>
       <h1>AS CASAS<br>DOS PERDIDOS</h1>
-      <span>Protótipo de movimento e exploração — sem inimigos por enquanto.</span>
-      <button id="startGame" type="button">✦ INICIAR</button>
+      <span>A luz de Jack desperta lembranças que alguém tentou apagar.</span>
+      <button id="startGame" type="button">✦ INICIAR JORNADA</button>
     </section>
 
     <section id="tutorial" class="tutorial" aria-live="polite">
-      <strong>MOVIMENTO</strong>
-      <span>← → ou A D · Espaço para pular · Shift para correr</span>
+      <strong>CONTROLES</strong>
+      <span>← → / A D · Espaço para pular · Shift correr · F usar Luz · E conversar</span>
+    </section>
+
+    <section id="bossHud" class="boss-hud" hidden>
+      <span>GUARDIÃ DA ÚLTIMA LANTERNA</span>
+      <div><i id="bossHealth"></i></div>
     </section>
 
     <div class="mobile-controls" aria-label="Controles de toque">
@@ -47,29 +57,31 @@
         <button id="rightBtn" type="button" aria-label="Mover para a direita">▶</button>
       </div>
       <div class="action-cluster">
-        <button id="interactBtn" class="action-btn" type="button" aria-label="Interagir">✦<small>AÇÃO</small></button>
+        <button id="lightBtn" class="light-btn" type="button" aria-label="Usar a luz">✦<small>LUZ</small></button>
+        <button id="interactBtn" class="action-btn" type="button" aria-label="Interagir">●<small>AÇÃO</small></button>
         <button id="jumpBtn" class="jump-btn" type="button" aria-label="Pular">▲<small>PULAR</small></button>
       </div>
     </div>
 
-    <section id="finish" class="finish-card" hidden>
-      <p>✦ A LUZ SEGUE ADIANTE ✦</p>
-      <h2>Protótipo concluído</h2>
-      <span>Jack atravessou a primeira rota das Casas dos Perdidos.</span>
-      <div class="finish-actions">
-        <button id="restartBtn" type="button">Jogar novamente</button>
-        <a href="../index.html#fases">Voltar ao mapa</a>
+    <section id="dialogue" class="dialogue" hidden aria-live="polite">
+      <div class="dialogue-shell">
+        <div class="dialogue-portrait" data-dialogue-portrait aria-hidden="true"></div>
+        <div class="dialogue-main">
+          <div class="dialogue-name" data-dialogue-name></div>
+          <p class="dialogue-text" data-dialogue-text></p>
+        </div>
+        <button class="dialogue-next" data-dialogue-next type="button" aria-label="Próxima fala">▶</button>
       </div>
     </section>
 
-    <section id="dialogue" class="dialogue" hidden aria-live="polite">
-      <img class="dialogue-frame-art" data-dialogue-frame alt="" aria-hidden="true">
-      <div class="dialogue-portrait" data-dialogue-portrait aria-hidden="true"></div>
-      <div class="dialogue-copy">
-        <div class="dialogue-name" data-dialogue-name></div>
-        <p class="dialogue-text" data-dialogue-text></p>
+    <section id="finish" class="finish-card" hidden>
+      <p>✦ O CAMINHO SE ABRIU ✦</p>
+      <h2>Eleanor encontrou a luz</h2>
+      <span>A primeira alma foi libertada. Mas o sino da Torre agora conhece o nome de Jack.</span>
+      <div class="finish-actions">
+        <button id="restartBtn" type="button">Recomeçar a fase</button>
+        <a href="../index.html#fases">Voltar ao mapa</a>
       </div>
-      <button class="dialogue-next" data-dialogue-next type="button" aria-label="Próxima fala">▶</button>
     </section>
 
     <div id="message" class="message" aria-live="polite"></div>
