@@ -8,63 +8,68 @@ Depois dos acontecimentos do musical, Jack descobre que sua lanterna não serve 
 
 > Jack não coleta almas. Jack ajuda pessoas.
 
-## Menu atual
+## Menu
 
-A página inicial foi refeita como um menu horizontal de jogo, inspirado diretamente na arte-base do projeto:
+A página inicial funciona como menu do jogo:
 
 - cenário 16-bit em tela cheia;
-- título e subtítulo sobre o cenário;
+- fundo animado em vídeo com poster estático de segurança;
 - botões navy/dourado em estilo RPG;
-- menu vertical à direita;
 - painel de progresso;
-- versão responsiva;
-- modo horizontal otimizado para celular;
-- aviso discreto para girar o celular quando aberto em retrato;
-- suporte a vídeo animado em loop com fallback automático para imagem estática.
+- versão responsiva e otimizada para celular;
+- acesso direto à primeira fase por **Iniciar Jornada** ou pelo mapa de fases.
 
-## Arquivos do menu
+## Halloween I — As Casas dos Perdidos
 
-```
-assets/
-├── images/
-│   └── menu/
-│       └── menu-poster.webp
-└── videos/
-    └── menu/
-        ├── README.md
-        ├── jack-menu-bg-loop.mp4   ← instalado
-        └── jack-menu-bg-loop.webm  ← opcional
-```
+A primeira rota já possui um **protótipo jogável sem inimigos**, focado em movimento e exploração.
 
-### Vídeo do Gemini
+### Mecânicas atuais
 
-Exporte o fundo animado com este nome:
+- andar para esquerda e direita;
+- correr com **Shift**;
+- pular com altura variável;
+- gravidade e colisão com plataformas;
+- coyote time e jump buffer para deixar o pulo mais confortável;
+- câmera acompanhando Jack;
+- plataformas de pedra, madeira e ponte;
+- cenário noturno com parallax procedural;
+- lanternas, abóboras, vila, montanhas e castelo;
+- checkpoint que aumenta a Luz para 02;
+- queda com retorno à última luz;
+- conclusão da rota e reinício;
+- controles de toque no celular;
+- progresso básico salvo com localStorage.
 
-```
-jack-menu-bg-loop.mp4
-```
+### Controles
 
-e coloque em:
+**PC:** A/D ou ←/→ para andar, Espaço/↑ para pular e Shift para correr.
 
-```
-assets/videos/menu/jack-menu-bg-loop.mp4
-```
+**Celular:** botões de movimento e pulo aparecem automaticamente. A experiência foi desenhada para funcionar melhor na horizontal.
 
-O HTML já está configurado. Não é necessário alterar código quando o vídeo for adicionado.
+## Estrutura principal
 
-## Estado atual
+    /
+    ├── index.html
+    ├── styles.css
+    ├── script.js
+    ├── game/
+    │   ├── phase1.html
+    │   ├── phase1.css
+    │   └── phase1.js
+    └── assets/
+        ├── images/menu/menu-poster.webp
+        ├── sprites/jack/data/
+        │   ├── jack-mini.1.b64
+        │   ├── jack-mini.2.b64
+        │   └── jack-mini.3.b64
+        └── videos/menu/
+            └── jack-menu-bg-loop.mp4
 
-- Menu horizontal funcional.
-- Vídeo animado do menu já instalado em MP4 e conectado ao site.
-- Poster otimizado já salvo no repositório.
-- Navegação entre História, Personagens, Músicas & Musical, Fases, Memórias e Créditos.
-- Primeiro capítulo preparado: **Halloween I — As Casas dos Perdidos**.
-- Progresso básico salvo com `localStorage`.
-- Estrutura pronta para receber o protótipo jogável da primeira fase.
+O atlas compacto do Jack é reconstruído no navegador a partir dos três arquivos .b64, permitindo manter os sprites dentro do próprio repositório.
 
-## Próximo passo
+## Próximas etapas
 
-Adicionar o vídeo animado do menu e depois construir a primeira fase jogável de plataforma em **As Casas dos Perdidos**.
+Expandir **As Casas dos Perdidos** com os sprites transparentes de cenário, animações adicionais do Jack, almas/NPCs, memórias e objetivos narrativos — ainda priorizando exploração antes de introduzir inimigos.
 
 ## Créditos
 
