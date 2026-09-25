@@ -92,12 +92,15 @@
   }
 
   async function loadAssets() {
-    [jack, jackPortraits, eleanorPortraits, dialogueFrame] = await Promise.all([
-      imageFromChunks([
-        '../assets/sprites/jack/data/jack-mini.1.b64',
-        '../assets/sprites/jack/data/jack-mini.2.b64',
-        '../assets/sprites/jack/data/jack-mini.3.b64'
-      ]),
+    // O sprite jogável é obrigatório. Os portraits e a moldura são enriquecimentos
+    // visuais: se algum deles falhar, a fase continua funcionando com o fallback CSS.
+    jack = await imageFromChunks([
+      '../assets/sprites/jack/data/jack-mini.1.b64',
+      '../assets/sprites/jack/data/jack-mini.2.b64',
+      '../assets/sprites/jack/data/jack-mini.3.b64'
+    ]);
+
+    const optional = await Promise.allSettled([
       imageFromChunks([
         '../assets/portraits/jack/data/portraits.1.b64',
         '../assets/portraits/jack/data/portraits.2.b64'
@@ -111,6 +114,10 @@
         '../assets/ui/dialogue/data/dialogue-frame.2.b64'
       ])
     ]);
+
+    if (optional[0].status === 'fulfilled') jackPortraits = optional[0].value;
+    if (optional[1].status === 'fulfilled') eleanorPortraits = optional[1].value;
+    if (optional[2].status === 'fulfilled') dialogueFrame = optional[2].value;
 
     dialogue.setAssets({
       jack: jackPortraits,
