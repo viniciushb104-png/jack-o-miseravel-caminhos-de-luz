@@ -145,10 +145,15 @@ if(loadedSave){
 }
 function img(src){return new Promise((r,j)=>{const i=new Image;i.onload=()=>r(i);i.onerror=j;i.src=src+"?v=p2shadowv2"})}
 img("../assets/game/phase1/sprites-hd/jack-atlas-hd.png").then(i=>jack=i).catch(()=>{});
-let phase2Background=null;
-img("../assets/game/phase2/backgrounds-hd/phase2-vila-torre-background-reference.png")
-  .then(i=>phase2Background=i)
-  .catch(()=>{});
+const phase2Backgrounds={village1:null,village2:null,village3:null,tower:null};
+[
+  ["village1","phase2-bg-01-estrada-vila.png"],
+  ["village2","phase2-bg-02-praca-vila.png"],
+  ["village3","phase2-bg-03-caminho-torre.png"],
+  ["tower","phase2-bg-04-interior-torre.png"]
+].forEach(([key,file])=>{
+  img("../assets/game/phase2/backgrounds-hd/"+file).then(i=>phase2Backgrounds[key]=i).catch(()=>{});
+});
 img("../assets/game/phase2/checkpoints/checkpoint-phase2-off.png").then(i=>checkpointArt.off=i).catch(()=>{});
 img("../assets/game/phase2/checkpoints/checkpoint-phase2-on.png").then(i=>checkpointArt.on=i).catch(()=>{});
 const ameliaMapFiles=["neutral","feliz","triste","surpresa","irritada","cansada","assustada"];
@@ -372,43 +377,60 @@ function drawTowerAmelia(){
   x.save();x.fillStyle="#e9cf86";x.font="bold 12px Georgia";x.textAlign="center";x.fillText(bossDefeated?"AMÉLIA — LIVRE":"AMÉLIA",8830,-624);x.textAlign="left";x.restore();
 }
 function clamp01(v){return Math.max(0,Math.min(1,v))}
+function smooth01(a,b,v){const t=clamp01((v-a)/(b-a));return t*t*(3-2*t)}
+function drawBackdropCover(image,focusX=.5,cropTop=0,alpha=1){
+  if(!image||alpha<=0)return;
+  const iw=image.naturalWidth||image.width||1,ih=image.naturalHeight||image.height||1;
+  const sy=Math.max(0,Math.min(ih-1,cropTop)),usableH=Math.max(1,ih-sy);
+  const targetAspect=W/H,sourceAspect=iw/usableH;
+  let sx=0,sw=iw,sh=usableH;
+  if(sourceAspect>targetAspect){
+    sw=usableH*targetAspect;
+    sx=(iw-sw)*clamp01(focusX);
+  }else{
+    sh=iw/targetAspect;
+  }
+  x.save();x.imageSmoothingEnabled=true;x.globalAlpha=alpha;
+  x.drawImage(image,sx,sy,sw,sh,0,0,W,H);
+  x.restore();
+}
 function drawPhase2Backdrop(){
   const gr=x.createLinearGradient(0,0,0,H);gr.addColorStop(0,"#061024");gr.addColorStop(.65,"#17132b");gr.addColorStop(1,"#27131d");x.fillStyle=gr;x.fillRect(0,0,W,H);
-  if(!phase2Background)return;
-  const iw=phase2Background.naturalWidth||phase2Background.width,ih=phase2Background.naturalHeight||phase2Background.height;
-  const villageY=0,villageH=Math.min(326,ih);
-  const towerY=Math.min(340,ih-1),towerH=Math.max(1,ih-towerY);
-  const villageSW=Math.min(iw,villageH*(W/H));
-  const towerSW=Math.min(iw,towerH*(W/H));
-  const villageProgress=clamp01(cam/Math.max(1,7200-W));
-  const towerProgress=clamp01(((cam-6900)/Math.max(1,WORLD-6900-W))*.72+(-camY/1050)*.28);
-  const villageSX=(iw-villageSW)*villageProgress;
-  const towerSX=(iw-towerSW)*towerProgress;
-  const towerMix=clamp01((cam-6400)/850);
 
-  x.save();
-  x.imageSmoothingEnabled=true;
-  if(towerMix<1){
-    x.globalAlpha=1-towerMix;
-    x.drawImage(phase2Background,villageSX,villageY,villageSW,villageH,0,0,W,H);
-  }
-  if(towerMix>0){
-    x.globalAlpha=towerMix;
-    x.drawImage(phase2Background,towerSX,towerY,towerSW,towerH,0,0,W,H);
-  }
+  // Três quadros estáveis: não deslizam com a câmera. Só fazem crossfade lento
+  // quando Jack muda de distrito, evitando a sensação de vertigem do panorama móvel.
+  const pos=p.x+p.w/2;
+  const mix12=smooth01(1700,2250,pos),mix23=smooth01(4550,5200,pos);
+  let a1=1-mix12,a2=mix12*(1-mix23),a3=mix23;
+  if(!phase2Backgrounds.village1&&!phase2Backgrounds.village2&&!phase2Backgrounds.village3)return;
+  drawBackdropCover(phase2Backgrounds.village1,.24,0,a1);
+  drawBackdropCover(phase2Backgrounds.village2,.48,20,a2);
+  drawBackdropCover(phase2Backgrounds.village3,.63,50,a3);
+
   const shade=x.createLinearGradient(0,0,0,H);
-  shade.addColorStop(0,"rgba(5,4,18,.08)");
-  shade.addColorStop(.62,"rgba(7,5,16,.16)");
-  shade.addColorStop(1,"rgba(3,2,8,.48)");
-  x.globalAlpha=1;x.fillStyle=shade;x.fillRect(0,0,W,H);
-  x.restore();
+  shade.addColorStop(0,"rgba(5,4,18,.06)");
+  shade.addColorStop(.64,"rgba(7,5,16,.13)");
+  shade.addColorStop(1,"rgba(3,2,8,.42)");
+  x.fillStyle=shade;x.fillRect(0,0,W,H);
+}
+const TOWER_INTERIOR=Object.freeze({cx:8050,bottom:720,h:2150});
+function drawTowerInterior(){
+  const image=phase2Backgrounds.tower;
+  if(!image)return;
+  const iw=image.naturalWidth||image.width||1,ih=image.naturalHeight||image.height||1;
+  const h=TOWER_INTERIOR.h,w=h*(iw/ih),left=TOWER_INTERIOR.cx-w/2,top=TOWER_INTERIOR.bottom-h;
+  x.save();x.imageSmoothingEnabled=true;
+  x.drawImage(image,left,top,w,h);
+  // Um véu discreto mantém Jack, selos e plataformas legíveis sobre a pintura.
+  const veil=x.createLinearGradient(left,top,left+w,top);
+  veil.addColorStop(0,"rgba(5,3,10,.18)");veil.addColorStop(.5,"rgba(5,3,10,.02)");veil.addColorStop(1,"rgba(5,3,10,.18)");
+  x.fillStyle=veil;x.fillRect(left,top,w,h);x.restore();
 }
 function draw(){drawPhase2Backdrop();x.fillStyle="#e7d4b0";x.globalAlpha=.22;for(let i=0;i<18;i++){const px=((i*431-cam*.12)%1500+1500)%1500;x.fillRect(px,80+(i*71)%220,2,2)}x.globalAlpha=1;
 x.save();x.translate(-cam,-camY);
-// O cenário HD agora carrega a vila, as estátuas congeladas, os relógios derretendo e a Torre.
-// Mantemos apenas uma sombra arquitetônica discreta para dar profundidade sem cobrir a arte.
-x.save();x.globalAlpha=.16;x.fillStyle="#08070d";x.fillRect(7350,-520,1200,1110);x.strokeStyle="#6b4329";x.lineWidth=8;x.strokeRect(7350,-520,1200,1110);x.restore();
-x.fillStyle="#d0a65b";x.font="bold 26px Georgia";x.fillText("4:13",7910,-455);
+// O interior da Torre é um plano do próprio mundo: fica à frente do fundo da fase
+// e recebe exatamente o mesmo deslocamento vertical das plataformas durante a subida.
+drawTowerInterior();
 for(const q of plats){x.fillStyle=q.y<560?"#4a3b38":"#30252a";x.fillRect(q.x,q.y,q.w,q.h);x.fillStyle="#75604b";x.fillRect(q.x,q.y,q.w,7)}
 drawPhase2Checkpoints();
 if(bossUnlocked||bossActive||bossDefeated){
