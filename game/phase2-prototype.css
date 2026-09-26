@@ -375,3 +375,16 @@
     background-size:contain!important;
   }
 }
+
+
+/* Correção pelo enquadramento real: mantém o quadro e centraliza o personagem visível */
+.dialogue-portrait,
+.dialogue-shell .dialogue-portrait.is-hd-portrait{
+  background-position:calc(50% + clamp(6px,1.4vw,16px)) center!important;
+}
+@media(max-width:700px){
+  .dialogue-portrait,
+  .dialogue-shell .dialogue-portrait.is-hd-portrait{
+    background-position:calc(50% + clamp(5px,1.4vw,10px)) center!important;
+  }
+}
