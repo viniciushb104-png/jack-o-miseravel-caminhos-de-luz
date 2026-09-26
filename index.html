@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#07101f">
   <meta name="description" content="Jack o Miserável — Caminhos de Luz. Uma aventura narrativa de Halloween em estética 16-bit.">
   <title>Jack o Miserável — Caminhos de Luz</title>
-  <link rel="stylesheet" href="styles.css?v=4">
+  <link rel="stylesheet" href="styles.css?v=5">
 </head>
 <body>
   <div class="scanlines" aria-hidden="true"></div>
@@ -103,16 +103,41 @@
       </div>
     </section>
 
-    <section id="personagens" class="screen content-screen">
+    <section id="personagens" class="screen content-screen characters-screen">
       <button class="back-btn" data-target="inicio">‹ Voltar</button>
       <div class="section-heading">
         <span class="chapter-number">II</span>
         <div><p class="eyebrow">PERSONAGENS</p><h2>Quem caminha na noite</h2></div>
       </div>
-      <div class="character-grid">
-        <article class="character-card"><div class="sprite-window">J</div><h3>Jack</h3><p>O viajante da lanterna. Teimoso, melancólico e incapaz de abandonar alguém no escuro.</p><span class="status-tag">JOGÁVEL</span></article>
-        <article class="character-card"><div class="sprite-window ghost">✦</div><h3>Almas Perdidas</h3><p>Pessoas presas a lembranças, promessas e caminhos interrompidos. Cada uma carrega uma pequena história.</p><span class="status-tag">8 MEMÓRIAS</span></article>
-        <article class="character-card character-card--locked"><div class="sprite-window">?</div><h3>???</h3><p>Uma presença observa Jack de longe. Seu nome será revelado em um Halloween futuro.</p><span class="status-tag">BLOQUEADO</span></article>
+
+      <article class="jack-character-feature">
+        <div class="jack-character-art">
+          <div class="character-art-loading" aria-hidden="true">
+            <span>✦</span><strong>ACENDENDO A LANTERNA...</strong>
+          </div>
+          <img id="jackProfileArt" alt="Jack o Miserável em uma cidade gótica de Halloween, segurando sua lanterna diante dos Caminhos de Luz.">
+        </div>
+        <div class="jack-character-caption">
+          <div>
+            <p class="eyebrow">PROTAGONISTA · VIAJANTE DA LANTERNA</p>
+            <h3>Jack — O Miserável</h3>
+            <p>Um andarilho condenado a caminhar pelas noites de Halloween. Agora sua chama revela memórias esquecidas e abre caminhos para almas que não conseguem partir.</p>
+          </div>
+          <blockquote>“Mesmo nos lugares mais sombrios, sempre existe um caminho de luz.”</blockquote>
+        </div>
+      </article>
+
+      <div class="character-lore-grid">
+        <article class="character-lore-card">
+          <span class="character-lore-icon">✦</span>
+          <div><small>ENCONTROS</small><h3>Almas Perdidas</h3><p>Pessoas presas a lembranças, promessas e caminhos interrompidos. Jack não as coleta: ajuda cada uma a compreender a própria história.</p></div>
+          <span class="status-tag">MEMÓRIAS</span>
+        </article>
+        <article class="character-lore-card character-card--locked">
+          <span class="character-lore-icon">?</span>
+          <div><small>PRESENÇA DESCONHECIDA</small><h3>???</h3><p>Algo observa os Caminhos de Luz e parece conhecer Jack. Seu nome e suas intenções ainda permanecem no escuro.</p></div>
+          <span class="status-tag">BLOQUEADO</span>
+        </article>
       </div>
     </section>
 
@@ -311,6 +336,6 @@
   </main>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script src="script.js?v=4"></script>
+  <script src="script.js?v=5"></script>
 </body>
 </html>
