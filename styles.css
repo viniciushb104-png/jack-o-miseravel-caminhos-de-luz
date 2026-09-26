@@ -925,3 +925,52 @@ button:focus-visible{outline:3px solid #fff3b0;outline-offset:4px}
   .character-file-number{writing-mode:horizontal-tb;transform:none}
   .character-file-status{justify-self:start}
 }
+
+
+/* Ajuste da ficha de Jack — arte completa + texto preservado */
+.character-feature--jack{
+  grid-template-columns:1fr;
+}
+.character-feature--jack .character-feature-art{
+  min-height:0;
+  background:#03060b;
+  border-right:0;
+  border-bottom:1px solid #d59a3047;
+  display:block;
+}
+.character-feature--jack .character-feature-art img{
+  width:100%;
+  height:auto;
+  min-height:0;
+  aspect-ratio:auto;
+  object-fit:contain;
+  object-position:center;
+}
+.character-feature--jack .character-feature-copy{
+  padding:clamp(1.4rem,3vw,2.5rem);
+}
+@media (min-width:900px){
+  .character-feature--jack .character-feature-copy{
+    display:grid;
+    grid-template-columns:minmax(0,.7fr) minmax(0,1.3fr);
+    column-gap:2rem;
+    align-items:start;
+  }
+  .character-feature--jack .character-feature-copy > .eyebrow,
+  .character-feature--jack .character-feature-copy > h3,
+  .character-feature--jack .character-feature-copy > .character-lead{
+    grid-column:1;
+  }
+  .character-feature--jack .character-lore{
+    grid-column:2;
+    grid-row:1 / span 4;
+    padding-top:0;
+    padding-left:1.5rem;
+    border-top:0;
+    border-left:1px solid #d89b2f2e;
+  }
+  .character-feature--jack .character-quote,
+  .character-feature--jack .character-tags{
+    grid-column:1 / -1;
+  }
+}
