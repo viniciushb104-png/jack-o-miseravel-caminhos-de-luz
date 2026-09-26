@@ -16,25 +16,25 @@ arrival:[
 {speaker:"???",text:"Não toque nos relógios, forasteiro. Eles já dão trabalho suficiente parados."}
 ],
 amelia:[
-{speaker:"AMÉLIA VESPER",text:"Você não é daqui."},
+{speaker:"AMÉLIA VESPER",portrait:"amelia",expression:1,text:"Você não é daqui."},
 {speaker:"JACK",portrait:"jack",expression:2,text:"Foi a lanterna que denunciou ou o fato de eu ainda estar andando para algum lugar?"},
-{speaker:"AMÉLIA VESPER",text:"Sou Amélia Vesper. Relojoeira. Quando eu consertar o relógio da praça, o sol vai nascer."},
+{speaker:"AMÉLIA VESPER",portrait:"amelia",expression:0,text:"Sou Amélia Vesper. Relojoeira. Quando eu consertar o relógio da praça, o sol vai nascer."},
 {speaker:"JACK",portrait:"jack",expression:1,text:"Há quanto tempo está tentando?"},
-{speaker:"AMÉLIA VESPER",text:"Desde ontem."},
+{speaker:"AMÉLIA VESPER",portrait:"amelia",expression:2,text:"Desde ontem."},
 {speaker:"JACK",portrait:"jack",expression:3,text:"E quando foi ontem?"},
-{speaker:"AMÉLIA VESPER",text:"... Encontre as três engrenagens. Horas. Minutos. Amanhecer. Depois conversamos."}
+{speaker:"AMÉLIA VESPER",portrait:"amelia",expression:5,text:"... Encontre as três engrenagens. Horas. Minutos. Amanhecer. Depois conversamos."}
 ],
 gears:[
-[{speaker:"AMÉLIA VESPER",text:"A Engrenagem das Horas... ainda estava aqui."},{speaker:"JACK",portrait:"jack",expression:1,text:"Você fala dela como quem esperava que tivesse desaparecido."}],
-[{speaker:"JACK",portrait:"jack",expression:1,text:"Minutos. Engraçado como poucos deles podem mudar uma vida inteira."},{speaker:"AMÉLIA VESPER",text:"Não filosofe com peças de relógio, Jack."}],
-[{speaker:"AMÉLIA VESPER",text:"A Engrenagem do Amanhecer..."},{speaker:"JACK",portrait:"jack",expression:1,text:"Você não parece feliz por eu ter encontrado."},{speaker:"AMÉLIA VESPER",text:"Leve-a até a Torre. Agora."}]
+[{speaker:"AMÉLIA VESPER",portrait:"amelia",expression:5,text:"A Engrenagem das Horas... ainda estava aqui."},{speaker:"JACK",portrait:"jack",expression:1,text:"Você fala dela como quem esperava que tivesse desaparecido."}],
+[{speaker:"JACK",portrait:"jack",expression:1,text:"Minutos. Engraçado como poucos deles podem mudar uma vida inteira."},{speaker:"AMÉLIA VESPER",portrait:"amelia",expression:4,text:"Não filosofe com peças de relógio, Jack."}],
+[{speaker:"AMÉLIA VESPER",portrait:"amelia",expression:8,text:"A Engrenagem do Amanhecer..."},{speaker:"JACK",portrait:"jack",expression:1,text:"Você não parece feliz por eu ter encontrado."},{speaker:"AMÉLIA VESPER",portrait:"amelia",expression:4,text:"Leve-a até a Torre. Agora."}]
 ],
 tower:[
-{speaker:"AMÉLIA VESPER",text:"Pare. Não coloque as três peças no mecanismo."},
+{speaker:"AMÉLIA VESPER",portrait:"amelia",expression:8,text:"Pare. Não coloque as três peças no mecanismo."},
 {speaker:"JACK",portrait:"jack",expression:1,text:"Você nunca quis consertar o relógio."},
-{speaker:"AMÉLIA VESPER",text:"Eu só precisava de mais cinco minutos naquela noite."},
+{speaker:"AMÉLIA VESPER",portrait:"amelia",expression:6,text:"Eu só precisava de mais cinco minutos naquela noite."},
 {speaker:"JACK",portrait:"jack",expression:1,text:"E desde então mantém todo mundo preso nesses cinco minutos."},
-{speaker:"AMÉLIA VESPER",text:"Se pudesse voltar à pior noite da sua vida... não voltaria?"},
+{speaker:"AMÉLIA VESPER",portrait:"amelia",expression:7,text:"Se pudesse voltar à pior noite da sua vida... não voltaria?"},
 {speaker:"JACK",portrait:"jack",expression:5,text:"Toda noite."},
 {speaker:"JACK",portrait:"jack",expression:1,text:"Mas uma lanterna não serve para apagar o que aconteceu. Serve para enxergar o caminho depois."}
 ]};
@@ -79,7 +79,15 @@ if(loadedSave){
 }
 function img(src){return new Promise((r,j)=>{const i=new Image;i.onload=()=>r(i);i.onerror=j;i.src=src+"?v=p2proto1"})}
 img("../assets/game/phase1/sprites-hd/jack-atlas-hd.png").then(i=>jack=i).catch(()=>{});
-Promise.allSettled(["jack-00-neutral.png","jack-01-serious.png","jack-02-smirk.png","jack-03-surprised.png","jack-04-determined.png","jack-05-resolved.png"].map(f=>img("../assets/game/phase1/portraits-hd/"+f))).then(rs=>dialogue.setAssets({jack:{frames:rs.map(r=>r.status==="fulfilled"?r.value:null)}}));
+const jackPortraitFiles=["jack-00-neutral.png","jack-01-serious.png","jack-02-smirk.png","jack-03-surprised.png","jack-04-determined.png","jack-05-resolved.png"];
+const ameliaPortraitFiles=["amelia-00-neutral.png","amelia-01-cansada.png","amelia-02-triste.png","amelia-03-surpresa.png","amelia-04-irritada.png","amelia-05-culpada.png","amelia-06-chorando.png","amelia-07-abatida.png","amelia-08-assustada.png","amelia-09-sorriso-suave.png"];
+Promise.all([
+  Promise.allSettled(jackPortraitFiles.map(f=>img("../assets/game/phase1/portraits-hd/"+f))),
+  Promise.allSettled(ameliaPortraitFiles.map(f=>img("../assets/game/phase2/portraits-hd/"+f)))
+]).then(([jackRs,ameliaRs])=>dialogue.setAssets({
+  jack:{frames:jackRs.map(r=>r.status==="fulfilled"?r.value:null)},
+  amelia:{frames:ameliaRs.map(r=>r.status==="fulfilled"?r.value:null)}
+}));
 function say(s){ui.msg.textContent=s;ui.msg.classList.add("show");clearTimeout(say.t);say.t=setTimeout(()=>ui.msg.classList.remove("show"),1800)}
 function banner(s){ui.banner.textContent=s;ui.banner.classList.add("show");clearTimeout(banner.t);banner.t=setTimeout(()=>ui.banner.classList.remove("show"),1500)}
 let saveClock=0;
