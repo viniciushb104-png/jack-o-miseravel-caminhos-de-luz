@@ -71,9 +71,9 @@
     localStorage.setItem("jack-light-level", "1");
   }
 
-  const input = { left:false, right:false, run:false, jump:false };
+  const input = { left:false, right:false, run:false, jump:false, down:false };
   let running = false, finished = false, cameraX = 0, last = performance.now();
-  let jack = null, jackPortraits = null, eleanorPortraits = null;
+  let jack = null, jackHD = null, jackPortraits = null, eleanorPortraits = null;
   const art = {
     background:null,
     terrain:null,
@@ -87,6 +87,7 @@
   };
 
   const spriteHD = {
+    jack:false,
     eleanor:false,
     enemies:false,
     boss:false
@@ -116,7 +117,7 @@
     x: checkpointReached ? 6120 : 130,
     y: checkpointReached ? 370 : 470,
     w: 46, h: 86, vx:0, vy:0, dir:1, onGround:false,
-    coyote:0, jumpBuffer:0, anim:0, hp:3, inv:0
+    coyote:0, jumpBuffer:0, anim:0, attackT:0, landT:0, hp:3, inv:0
   };
 
   const platforms = [
@@ -208,6 +209,16 @@
       "../assets/sprites/jack/data/jack-mini.2.b64",
       "../assets/sprites/jack/data/jack-mini.3.b64"
     ]);
+
+    const jackHDResult = await Promise.allSettled([
+      imageFromFile("../assets/game/phase1/sprites-hd/jack-atlas-hd.png")
+    ]);
+    if (jackHDResult[0].status === "fulfilled") {
+      jackHD = jackHDResult[0].value;
+      spriteHD.jack = true;
+    } else {
+      console.warn("[Fase 1] atlas HD do Jack ainda não disponível; usando sprite antigo.");
+    }
 
     const backgroundResults = await Promise.allSettled([
       imageFromFile("../assets/game/phase1/backgrounds/bg-village.png"),
@@ -517,7 +528,7 @@
   function resetPlayer(full=false){
     player.x = checkpointReached && !full ? 6120 : 130;
     player.y = checkpointReached && !full ? 360 : 470;
-    player.vx=0; player.vy=0; player.hp=3; player.inv=0;
+    player.vx=0; player.vy=0; player.hp=3; player.inv=0; player.attackT=0; player.landT=0;
     cameraX = Math.max(0, player.x - 420);
     projectiles.length=0;
     syncHud();
@@ -573,6 +584,7 @@
     if (!running || dialogue.active || finished || lightCooldown > 0) return;
     lightCooldown = .55;
     lightPulse = .32;
+    player.attackT = (window.JACK_ANIMATIONS?.timing?.attackDuration || .48);
     shake = .08;
     const radius = 190;
     enemies.forEach(e => {
@@ -648,9 +660,16 @@
   }
 
   function updatePlayer(dt){
+    const wasOnGround=player.onGround;
     const axis=(input.right?1:0)-(input.left?1:0);
-    const max=input.run?335:235, accel=axis?1550:1950;
+    const crouching=input.down && player.onGround && player.attackT<=0;
+    const max=crouching?95:(input.run?335:235);
+    const accel=axis?1550:1950;
+
     player.anim+=dt;
+    player.attackT=Math.max(0,player.attackT-dt);
+    player.landT=Math.max(0,player.landT-dt);
+
     if(axis){
       player.vx+=axis*accel*dt;
       player.vx=Math.max(-max,Math.min(max,player.vx));
@@ -660,35 +679,65 @@
       player.vx=Math.abs(player.vx)<=drag?0:player.vx-Math.sign(player.vx)*drag;
     }
 
-    if(player.onGround) player.coyote=.12; else player.coyote=Math.max(0,player.coyote-dt);
+    if(player.onGround) player.coyote=.12;
+    else player.coyote=Math.max(0,player.coyote-dt);
+
     player.jumpBuffer=Math.max(0,player.jumpBuffer-dt);
-    if(input.jump){player.jumpBuffer=.14; input.jump=false;}
-    if(player.jumpBuffer>0&&player.coyote>0){
-      player.vy=-575; player.coyote=0; player.jumpBuffer=0; player.onGround=false;
+    if(input.jump){
+      player.jumpBuffer=.14;
+      input.jump=false;
+    }
+
+    if(player.jumpBuffer>0 && player.coyote>0 && !input.down){
+      player.vy=-575;
+      player.coyote=0;
+      player.jumpBuffer=0;
+      player.onGround=false;
+      player.landT=0;
     }
 
     player.vy=Math.min(1000,player.vy+GRAVITY*dt);
     const oldY=player.y;
+    const impactVy=player.vy;
+
     player.x+=player.vx*dt;
     player.y+=player.vy*dt;
     player.x=Math.max(22,Math.min(WORLD-22,player.x));
     player.onGround=false;
 
     if(player.vy>=0){
-      const prev=oldY+player.h/2, now=player.y+player.h/2;
+      const prev=oldY+player.h/2;
+      const now=player.y+player.h/2;
       for(const p of platforms){
-        if(player.x+player.w/2>p.x+4&&player.x-player.w/2<p.x+p.w-4&&prev<=p.y+8&&now>=p.y){
-          player.y=p.y-player.h/2; player.vy=0; player.onGround=true; break;
+        if(
+          player.x+player.w/2>p.x+4 &&
+          player.x-player.w/2<p.x+p.w-4 &&
+          prev<=p.y+8 &&
+          now>=p.y
+        ){
+          player.y=p.y-player.h/2;
+          player.vy=0;
+          player.onGround=true;
+
+          if(!wasOnGround && impactVy>180){
+            player.landT=window.JACK_ANIMATIONS?.timing?.landDuration || .16;
+          }
+          break;
         }
       }
     }
 
     if(memoryCount()<5 && player.x>8750){
-      player.x=8748; player.vx=-80;
-      if(gateMessageCooldown<=0){showMessage("Cinco memórias precisam iluminar este selo.");gateMessageCooldown=2;}
+      player.x=8748;
+      player.vx=-80;
+      if(gateMessageCooldown<=0){
+        showMessage("Cinco memórias precisam iluminar este selo.");
+        gateMessageCooldown=2;
+      }
     }
 
     if(player.y>850) resetPlayer();
+
     player.inv=Math.max(0,player.inv-dt);
     lightCooldown=Math.max(0,lightCooldown-dt);
     lightPulse=Math.max(0,lightPulse-dt);
@@ -702,11 +751,13 @@
       syncHud();
     }
 
-    const nearEleanor = Math.abs(player.x-1240)<125 && player.x<1550;
-    ui.interact.hidden = !nearEleanor || dialogue.active;
+    const nearEleanor=Math.abs(player.x-1240)<125 && player.x<1550;
+    ui.interact.hidden=!nearEleanor || dialogue.active;
 
-    memories.forEach(m => {
-      if(!m.collected && metEleanor && Math.abs(player.x-m.x)<55 && Math.abs(player.y-m.y)<115) collectMemory(m);
+    memories.forEach(m=>{
+      if(!m.collected && metEleanor && Math.abs(player.x-m.x)<55 && Math.abs(player.y-m.y)<115){
+        collectMemory(m);
+      }
     });
 
     const si=sectionForX(player.x);
@@ -715,8 +766,8 @@
     if(memoryCount()>=5 && player.x>9000 && !boss.started && !boss.defeated && !dialogue.active){
       boss.started=true;
       player.vx=0;
-      phaseAudio.switchTrack("boss", { fadeOut:900, fadeIn:1050 });
-      openDialogue(dialogues.preBoss, () => {
+      phaseAudio.switchTrack("boss",{fadeOut:900,fadeIn:1050});
+      openDialogue(dialogues.preBoss,()=>{
         boss.started=true;
         syncHud();
         showMessage("♫ A Guardiã da Última Lanterna");
@@ -1385,13 +1436,105 @@
   function playerFrame(){
     if(!player.onGround)return 3;
     if(Math.abs(player.vx)<18)return 0;
-    const s=input.run ? .09 : .15;return player.anim%(s*2)<s?1:2;
+    const s=input.run?.09:.15;
+    return player.anim%(s*2)<s?1:2;
+  }
+
+  function jackSequenceFrame(sequence,fps){
+    if(!sequence?.length)return 0;
+    return sequence[Math.floor(player.anim*fps)%sequence.length];
+  }
+
+  function currentJackHDFrame(){
+    const cfg=window.JACK_ANIMATIONS;
+    const anims=cfg?.animations;
+    if(!anims)return 0;
+
+    if(player.attackT>0){
+      const duration=cfg.timing?.attackDuration||.48;
+      const progress=Math.max(0,Math.min(.999,(duration-player.attackT)/duration));
+      const seq=anims.attack;
+      return seq[Math.min(seq.length-1,Math.floor(progress*seq.length))];
+    }
+
+    if(player.inv>.72 && anims.hurt?.length){
+      return anims.hurt[0];
+    }
+
+    if(player.landT>0 && anims.land?.length){
+      const duration=cfg.timing?.landDuration||.16;
+      const progress=Math.max(0,Math.min(.999,(duration-player.landT)/duration));
+      return anims.land[Math.min(anims.land.length-1,Math.floor(progress*anims.land.length))];
+    }
+
+    if(!player.onGround){
+      if(player.vy<-360)return anims.jumpStart[0];
+      if(player.vy<-90)return anims.jumpRise[0];
+      if(player.vy<120)return anims.jumpApex[0];
+      return anims.jumpFall[0];
+    }
+
+    if(input.down){
+      if(Math.abs(player.vx)>18 && anims.crouchMove?.length){
+        return jackSequenceFrame(anims.crouchMove,5);
+      }
+      return anims.crouch[0];
+    }
+
+    const speed=Math.abs(player.vx);
+    if(speed>=18){
+      if(input.run && speed>170){
+        return jackSequenceFrame(anims.run,cfg.timing?.runFps||12);
+      }
+      return jackSequenceFrame(anims.walk,cfg.timing?.walkFps||9);
+    }
+
+    return jackSequenceFrame(anims.idle,cfg.timing?.idleFps||2.4);
   }
 
   function drawPlayer(){
-    if(!jack)return;const x=player.x-cameraX;ctx.save();ctx.globalAlpha=player.inv>0&&Math.floor(player.inv*12)%2?0.35:1;ctx.translate(x,player.y);ctx.scale(player.dir,1);ctx.drawImage(jack,playerFrame()*128,0,128,128,-66,-82,132,132);ctx.restore();
+    const x=player.x-cameraX;
+    const blinkAlpha=player.inv>0&&Math.floor(player.inv*12)%2?.35:1;
+
+    if(jackHD && spriteHD.jack && window.JACK_ANIMATIONS){
+      const cfg=window.JACK_ANIMATIONS;
+      const frame=currentJackHDFrame();
+      const col=frame%cfg.cols;
+      const row=Math.floor(frame/cfg.cols);
+      const dw=cfg.render?.width||190;
+      const dh=cfg.render?.height||190;
+      const dy=player.y+(cfg.render?.offsetY??-132);
+
+      drawAtlasCell(
+        jackHD,cfg.cols,cfg.rows,col,row,
+        x-dw/2,dy,dw,dh,
+        player.dir<0,blinkAlpha,true
+      );
+    }else if(jack){
+      ctx.save();
+      ctx.globalAlpha=blinkAlpha;
+      ctx.translate(x,player.y);
+      ctx.scale(player.dir,1);
+      ctx.drawImage(jack,playerFrame()*128,0,128,128,-66,-82,132,132);
+      ctx.restore();
+    }
+
     if(lightPulse>0){
-      const progress=1-lightPulse/.32,r=40+progress*170;ctx.save();ctx.globalAlpha=lightPulse/.32*.75;ctx.strokeStyle="#ffe989";ctx.lineWidth=7;ctx.beginPath();ctx.arc(x,player.y-18,r,0,Math.PI*2);ctx.stroke();ctx.strokeStyle="#71e8ff";ctx.lineWidth=3;ctx.beginPath();ctx.arc(x,player.y-18,r+10,0,Math.PI*2);ctx.stroke();ctx.restore();
+      const progress=1-lightPulse/.32;
+      const r=40+progress*170;
+      ctx.save();
+      ctx.globalAlpha=lightPulse/.32*.75;
+      ctx.strokeStyle="#ffe989";
+      ctx.lineWidth=7;
+      ctx.beginPath();
+      ctx.arc(x,player.y-18,r,0,Math.PI*2);
+      ctx.stroke();
+      ctx.strokeStyle="#71e8ff";
+      ctx.lineWidth=3;
+      ctx.beginPath();
+      ctx.arc(x,player.y-18,r+10,0,Math.PI*2);
+      ctx.stroke();
+      ctx.restore();
     }
   }
 
@@ -1425,18 +1568,19 @@
   function setKey(ev,down){
     const k=ev.key.toLowerCase();
     if(ev.defaultPrevented) return;
-    if(["arrowleft","arrowright","arrowup"," ","a","d","shift","e","enter","f","k"].includes(k))ev.preventDefault();
+    if(["arrowleft","arrowright","arrowup","arrowdown"," ","a","d","s","shift","e","enter","f","k"].includes(k))ev.preventDefault();
 
     // O próprio sistema de diálogo cuida de E, Enter e Espaço.
     // Aqui só bloqueamos o controle do personagem para não avançar duas falas de uma vez.
     if(dialogue.active){
-      input.left=false; input.right=false; input.run=false;
+      input.left=false; input.right=false; input.run=false; input.down=false;
       return;
     }
 
     if(k==="arrowleft"||k==="a")input.left=down;
     if(k==="arrowright"||k==="d")input.right=down;
     if(k==="shift")input.run=down;
+    if(k==="arrowdown"||k==="s")input.down=down;
     if(down&&(k==="arrowup"||k===" "))input.jump=true;
     if(!down&&(k==="arrowup"||k===" ")&&player.vy<-180)player.vy*=.55;
     if(down&&(k==="e"||k==="enter"))tryInteract();
@@ -1450,7 +1594,7 @@
     const on=e=>{e.preventDefault();input[key]=true},off=e=>{e.preventDefault();input[key]=false};
     b.addEventListener("pointerdown",on);b.addEventListener("pointerup",off);b.addEventListener("pointercancel",off);b.addEventListener("pointerleave",off);
   }
-  bindHold("leftBtn","left");bindHold("rightBtn","right");
+  bindHold("leftBtn","left");bindHold("downBtn","down");bindHold("rightBtn","right");
   document.getElementById("jumpBtn")?.addEventListener("pointerdown",e=>{e.preventDefault();input.jump=true});
   document.getElementById("lightBtn")?.addEventListener("pointerdown",e=>{e.preventDefault();useLight()});
   document.getElementById("interactBtn")?.addEventListener("pointerdown",e=>{e.preventDefault();tryInteract()});
