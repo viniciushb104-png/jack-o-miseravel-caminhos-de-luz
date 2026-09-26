@@ -25,7 +25,7 @@ button,a{font-family:inherit}
 .rotate-hint{display:none;position:fixed;z-index:90;inset:auto 8px 8px;background:#07152df5;border:1px solid var(--gold);padding:10px;text-align:center;color:var(--gold2);font-size:.7rem}
 
 /* Caixa de diálogo: toda fala fica dentro da moldura */
-.dialogue{position:fixed;z-index:80;left:50%;bottom:max(8px,env(safe-area-inset-bottom));transform:translate(-50%,18px);opacity:0;width:min(1050px,96vw);aspect-ratio:3.15/1;max-height:34vh;pointer-events:auto;transition:.16s;filter:drop-shadow(0 18px 32px #000d)}
+.dialogue{position:fixed;z-index:80;left:50%;bottom:max(8px,env(safe-area-inset-bottom));transform:translate(-50%,18px);opacity:0;width:min(900px,94vw);aspect-ratio:3/1;pointer-events:auto;transition:.16s;filter:drop-shadow(0 18px 32px #000d)}
 .dialogue.is-open{opacity:1;transform:translate(-50%,0)}
 .dialogue-shell{position:absolute;inset:0;background:linear-gradient(180deg,#0a1c3bf8,#061020fb);border:3px solid #d78a22;box-shadow:inset 0 0 0 3px #4b280b,inset 0 0 28px #16365d,0 0 0 2px #02050b;border-radius:5px;overflow:hidden}
 .dialogue-shell:before,.dialogue-shell:after{content:"";position:absolute;top:9px;width:55px;height:55px;border-top:3px solid #f1b548}.dialogue-shell:before{left:9px;border-left:3px solid #f1b548}.dialogue-shell:after{right:9px;border-right:3px solid #f1b548}
@@ -47,7 +47,8 @@ button,a{font-family:inherit}
   background-color:transparent;
   background-repeat:no-repeat;
   background-position:center;
-  background-size:100% 100%;
+  background-size:92% auto;
+  image-rendering:pixelated;
   border:0;
   box-shadow:none;
   overflow:hidden;
@@ -55,25 +56,25 @@ button,a{font-family:inherit}
 .dialogue-shell.has-art:before,
 .dialogue-shell.has-art:after{display:none}
 .dialogue-shell.has-art .dialogue-portrait{
-  left:6.8%;
-  top:20%;
-  bottom:17%;
-  width:18.2%;
+  left:8.6%;
+  top:12%;
+  bottom:15%;
+  width:20.7%;
   border:0;
   background-color:transparent;
   box-shadow:none;
 }
 .dialogue-shell.has-art .dialogue-main{
-  left:31.7%;
-  right:7.2%;
-  top:8.5%;
-  bottom:14%;
+  left:32.8%;
+  right:8%;
+  top:5%;
+  bottom:9%;
 }
 .dialogue-shell.has-art .dialogue-name{
   min-width:0;
   width:38%;
   max-width:42%;
-  margin:0 0 8.5% 0;
+  margin:0 0 10.5% 0;
   padding:5px 12px;
   background:transparent;
   border:0;
@@ -82,7 +83,7 @@ button,a{font-family:inherit}
 }
 .dialogue-shell.has-art .dialogue-text{
   padding:0 1% 0 0;
-  max-height:58%;
+  max-height:61%;
   overflow:hidden;
   color:#f6e9c9;
 }
@@ -92,8 +93,8 @@ button,a{font-family:inherit}
 }
 
 @media (pointer:coarse),(max-width:900px){
-  .dialogue-shell.has-art .dialogue-portrait{left:6.5%;top:19%;bottom:16%;width:19%}
-  .dialogue-shell.has-art .dialogue-main{left:32%;right:6%;top:8%;bottom:12%}
+  .dialogue-shell.has-art .dialogue-portrait{left:8.6%;top:12%;bottom:15%;width:20.7%}
+  .dialogue-shell.has-art .dialogue-main{left:32.8%;right:8%;top:5%;bottom:9%}
   .dialogue-shell.has-art .dialogue-name{width:42%;max-width:46%;margin-bottom:7%;font-size:.59rem}
   .dialogue-shell.has-art .dialogue-text{font-size:.70rem;line-height:1.27;max-height:59%}
 }
