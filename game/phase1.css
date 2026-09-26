@@ -29,9 +29,9 @@ button,a{font-family:inherit}
 .dialogue.is-open{opacity:1;transform:translate(-50%,0)}
 .dialogue-shell{position:absolute;inset:0;background:linear-gradient(180deg,#0a1c3bf8,#061020fb);border:3px solid #d78a22;box-shadow:inset 0 0 0 3px #4b280b,inset 0 0 28px #16365d,0 0 0 2px #02050b;border-radius:5px;overflow:hidden}
 .dialogue-shell:before,.dialogue-shell:after{content:"";position:absolute;top:9px;width:55px;height:55px;border-top:3px solid #f1b548}.dialogue-shell:before{left:9px;border-left:3px solid #f1b548}.dialogue-shell:after{right:9px;border-right:3px solid #f1b548}
-.dialogue-portrait{position:absolute;left:2.8%;top:10%;bottom:8%;width:24%;background-repeat:no-repeat;background-color:#081429;border:2px solid #a86819;box-shadow:inset 0 0 18px #0009;image-rendering:pixelated}
+.dialogue-portrait{position:absolute;left:2.8%;top:10%;bottom:8%;width:24%;background-repeat:no-repeat;background-color:#081429;border:2px solid #a86819;box-shadow:inset 0 0 18px #0009;image-rendering:auto}
 .dialogue-portrait.is-hidden{opacity:.08}
-.dialogue-portrait.is-hd-portrait{image-rendering:auto;background-repeat:no-repeat;background-size:contain;background-position:center}
+.dialogue-portrait.is-hd-portrait{image-rendering:auto!important;background-repeat:no-repeat;background-size:contain!important;background-position:center!important;filter:none;transform:translateZ(0);backface-visibility:hidden}
 .dialogue-main{position:absolute;left:30%;right:5.5%;top:14%;bottom:14%;display:flex;flex-direction:column;min-width:0}
 .dialogue-name{align-self:flex-start;min-width:180px;max-width:80%;padding:5px 15px;margin-bottom:10px;background:#2c1608;border:1px solid #c98522;color:#ffe29c;font-weight:700;font-size:clamp(.68rem,1.25vw,.88rem);letter-spacing:.08em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .dialogue-text{margin:0;color:#f4e7c5;font-size:clamp(.76rem,1.45vw,1.04rem);line-height:1.42;text-shadow:0 2px 2px #000;overflow:hidden;max-width:100%;overflow-wrap:anywhere}
@@ -49,7 +49,7 @@ button,a{font-family:inherit}
   background-repeat:no-repeat;
   background-position:center;
   background-size:92% auto;
-  image-rendering:pixelated;
+  image-rendering:auto;
   border:0;
   box-shadow:none;
   overflow:hidden;
@@ -204,4 +204,14 @@ button,a{font-family:inherit}
 }
 @media (max-height:480px){
   .music-banner{top:70px}
+}
+
+
+/* Retratos HD: nunca usar nearest-neighbor/pixelated no diálogo. */
+.dialogue-shell,
+.dialogue-shell.has-art,
+.dialogue-shell .dialogue-portrait,
+.dialogue-shell.has-art .dialogue-portrait,
+.dialogue-shell .dialogue-portrait.is-hd-portrait{
+  image-rendering:auto!important;
 }
