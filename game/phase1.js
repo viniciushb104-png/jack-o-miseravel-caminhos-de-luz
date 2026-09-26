@@ -98,6 +98,7 @@
   let crowFrames = [];
   let wispFrames = [];
   let guardianFrames = [];
+  let jackFrameOverrides = {};
 
   // Fundos HD da fase. Cada ambiente é um PNG independente para preservar
   // a arte original e permitir que a paisagem mude conforme Jack avança.
@@ -199,7 +200,7 @@
       img.onload = () => resolve(img);
       img.onerror = () => reject(new Error("Falha ao carregar " + path));
       const sep = path.includes("?") ? "&" : "?";
-      img.src = path + sep + "v=phase1-bg-scenes-1";
+      img.src = path + sep + "v=phase1-assets-20";
     });
   }
 
@@ -216,6 +217,7 @@
     if (jackHDResult[0].status === "fulfilled") {
       jackHD = jackHDResult[0].value;
       spriteHD.jack = true;
+      jackFrameOverrides = buildJackFrameOverrides(jackHD);
     } else {
       console.warn("[Fase 1] atlas HD do Jack ainda não disponível; usando sprite antigo.");
     }
@@ -424,6 +426,45 @@
       [1250,490,198,275]
     ];
     return boxes.map(box => cropSpriteFrame(img,box[0],box[1],box[2],box[3]));
+  }
+
+  function buildCleanJackFrame(img, frame, eraseRects=[]){
+    const cfg=window.JACK_ANIMATIONS;
+    const cell=cfg?.cell||320;
+    const cols=cfg?.cols||8;
+    const canvas=document.createElement("canvas");
+    canvas.width=cell;
+    canvas.height=cell;
+    const c=canvas.getContext("2d");
+    const col=frame%cols;
+    const row=Math.floor(frame/cols);
+
+    c.clearRect(0,0,cell,cell);
+    c.drawImage(
+      img,
+      col*cell,row*cell,cell,cell,
+      0,0,cell,cell
+    );
+
+    eraseRects.forEach(([x,y,w,h]) => c.clearRect(x,y,w,h));
+    return canvas;
+  }
+
+  function buildJackFrameOverrides(img){
+    // O spritesheet original tem duas poses que invadem a célula vizinha.
+    // Limpamos em memória sem alterar o PNG mestre:
+    // 25: pequeno resíduo vermelho na borda direita.
+    // 26: pé/boot de outra pose acima da cabeça durante o ataque da lanterna.
+    return {
+      25: buildCleanJackFrame(img,25,[
+        [260,0,60,320]
+      ]),
+      26: buildCleanJackFrame(img,26,[
+        [126,0,76,82],
+        [126,82,54,30],
+        [202,0,28,32]
+      ])
+    };
   }
 
   function buildGuardianFrames(img){
@@ -1505,11 +1546,27 @@
       const dh=cfg.render?.height||190;
       const dy=player.y+(cfg.render?.offsetY??-132);
 
-      drawAtlasCell(
-        jackHD,cfg.cols,cfg.rows,col,row,
-        x-dw/2,dy,dw,dh,
-        player.dir<0,blinkAlpha,true
-      );
+      const cleanFrame=jackFrameOverrides[frame];
+      if(cleanFrame){
+        ctx.save();
+        ctx.globalAlpha*=blinkAlpha;
+        ctx.imageSmoothingEnabled=true;
+        ctx.imageSmoothingQuality="high";
+        if(player.dir<0){
+          ctx.translate(x+dw/2,dy);
+          ctx.scale(-1,1);
+          ctx.drawImage(cleanFrame,0,0,cleanFrame.width,cleanFrame.height,0,0,dw,dh);
+        }else{
+          ctx.drawImage(cleanFrame,0,0,cleanFrame.width,cleanFrame.height,x-dw/2,dy,dw,dh);
+        }
+        ctx.restore();
+      }else{
+        drawAtlasCell(
+          jackHD,cfg.cols,cfg.rows,col,row,
+          x-dw/2,dy,dw,dh,
+          player.dir<0,blinkAlpha,true
+        );
+      }
     }else if(jack){
       ctx.save();
       ctx.globalAlpha=blinkAlpha;
