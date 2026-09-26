@@ -56,16 +56,29 @@
 
   const urlParams = new URLSearchParams(location.search);
   const forceNewRun = urlParams.get("new") === "1";
+  const journeyMode = urlParams.get("journey") === "1";
+  const replayMode = urlParams.get("replay") === "1";
+  const journey = window.JackJourney || null;
   const phaseCleared = localStorage.getItem("jack-phase1-complete") === "yes";
   const runWasActive = localStorage.getItem("jack-phase1-run-active") === "1";
 
-  // Ao entrar pela página Fases, a fase sempre começa do zero.
-  // A conclusão permanente e o contador de clears continuam preservados.
+  // Rejogar pelo mapa não destrói o ponto da campanha principal.
+  if (replayMode) {
+    journey?.beginReplay(1, [
+      ...Object.values(story.states),
+      "jack-phase1-run-active",
+      "jack-light-level"
+    ]);
+  }
+
+  // Uma nova Jornada ou um replay começa esta fase do zero.
+  // Conquistas permanentes, troféus e músicas não são apagados.
   if (forceNewRun) {
     Object.values(story.states).forEach(key => localStorage.removeItem(key));
     localStorage.setItem("jack-phase1-run-active","0");
     localStorage.setItem("jack-light-level","1");
-    history.replaceState(null,"",location.pathname);
+    const keptMode = journeyMode ? "?journey=1" : (replayMode ? "?replay=1" : "");
+    history.replaceState(null,"",location.pathname + keptMode);
   }
 
   // Depois de concluir a fase, entrar novamente abre uma nova jornada limpa.
@@ -1138,6 +1151,13 @@
         localStorage.setItem("jack-phase1-clear-count", String(Number(localStorage.getItem("jack-phase1-clear-count")||0)+1));
         localStorage.setItem("jack-light-level","03");
 
+        // Na campanha contínua, concluir o Halloween I abre imediatamente o II.
+        // Em replay, a Jornada principal permanece exatamente onde estava.
+        if (journeyMode && !replayMode) {
+          journey?.advanceTo(2);
+          localStorage.removeItem("jack-phase2-save");
+        }
+
         showAchievement({
           eyebrow:firstClear?"CONQUISTA DESBLOQUEADA":"MEMÓRIA REVIVIDA",
           title:firstClear?"Uma Luz na Escuridão":"As Casas dos Perdidos",
@@ -1148,7 +1168,14 @@
         });
 
         // O cartão final entra depois do aviso, como em uma conquista de videogame.
-        setTimeout(()=>{ ui.finish.hidden=false; },850);
+        setTimeout(()=>{
+          const nextJourney=document.getElementById("nextJourneyBtn");
+          const restart=document.getElementById("restartBtn");
+          const campaignContinues=journeyMode && !replayMode;
+          if(nextJourney) nextJourney.hidden=!campaignContinues;
+          if(restart) restart.hidden=campaignContinues;
+          ui.finish.hidden=false;
+        },850);
         phaseAudio.fadeOut(1800);
       }), 700);
     });
@@ -2514,6 +2541,7 @@
   }
 
   startButton.onclick=()=>{
+    if(journeyMode && !replayMode) journey?.advanceTo(1);
     localStorage.setItem("jack-phase1-run-active","1");
     phaseAudio.start();
     document.getElementById("intro").hidden=true;running=true;last=performance.now();syncHud();showSection(sectionForX(player.x));
