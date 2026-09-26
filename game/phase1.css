@@ -41,3 +41,59 @@ button,a{font-family:inherit}
 @media (orientation:portrait) and (max-width:760px){.rotate-hint{display:block}.objective{width:88vw}.hud-cluster .hud-box:nth-child(1){display:none}.dialogue{aspect-ratio:2.3/1;height:210px}.dialogue-portrait{width:25%;left:2%;top:13%;bottom:10%}.dialogue-main{left:30%;top:12%;right:4%}.dialogue-text{font-size:.72rem}}
 @media (max-height:480px){.intro-card{padding:15px 18px}.intro-card h1{font-size:2rem}.intro-card span{margin:7px auto 11px}.hud-box{padding:3px 6px;min-width:62px}.objective{top:45px;padding:4px 14px}.objective small{display:none}.section-banner{top:73px}.boss-hud{top:72px}.mobile-controls button{width:50px;height:50px}.jump-btn{width:60px!important;height:60px!important}.light-btn{width:58px!important;height:58px!important}.tutorial{bottom:69px}.dialogue{height:170px;aspect-ratio:3.5/1}.dialogue-text{font-size:.69rem;line-height:1.25}.dialogue-name{font-size:.58rem}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* Moldura ilustrada real do diálogo */
+.dialogue-shell.has-art{
+  background-color:transparent;
+  background-repeat:no-repeat;
+  background-position:center;
+  background-size:100% 100%;
+  border:0;
+  box-shadow:none;
+  overflow:hidden;
+}
+.dialogue-shell.has-art:before,
+.dialogue-shell.has-art:after{display:none}
+.dialogue-shell.has-art .dialogue-portrait{
+  left:6.8%;
+  top:20%;
+  bottom:17%;
+  width:18.2%;
+  border:0;
+  background-color:transparent;
+  box-shadow:none;
+}
+.dialogue-shell.has-art .dialogue-main{
+  left:31.7%;
+  right:7.2%;
+  top:8.5%;
+  bottom:14%;
+}
+.dialogue-shell.has-art .dialogue-name{
+  min-width:0;
+  width:38%;
+  max-width:42%;
+  margin:0 0 8.5% 0;
+  padding:5px 12px;
+  background:transparent;
+  border:0;
+  color:#ffe5a5;
+  text-shadow:0 2px 2px #000,0 0 8px #9d4d11;
+}
+.dialogue-shell.has-art .dialogue-text{
+  padding:0 1% 0 0;
+  max-height:58%;
+  overflow:hidden;
+  color:#f6e9c9;
+}
+.dialogue-shell.has-art .dialogue-next{
+  right:5%;
+  bottom:12%;
+}
+
+@media (pointer:coarse),(max-width:900px){
+  .dialogue-shell.has-art .dialogue-portrait{left:6.5%;top:19%;bottom:16%;width:19%}
+  .dialogue-shell.has-art .dialogue-main{left:32%;right:6%;top:8%;bottom:12%}
+  .dialogue-shell.has-art .dialogue-name{width:42%;max-width:46%;margin-bottom:7%;font-size:.59rem}
+  .dialogue-shell.has-art .dialogue-text{font-size:.70rem;line-height:1.27;max-height:59%}
+}
