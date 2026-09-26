@@ -4,9 +4,9 @@ const ui={obj:document.querySelector("#objective strong"),gear:document.getEleme
 const input={left:false,right:false,run:false,jump:false,down:false};let running=false,last=performance.now(),cam=0,camY=0,jack=null,ameliaMap={},light=0,cool=0,section=-1;
 const dialogue=new window.DialogueSystem(document.getElementById("dialogue"));
 const interactPrompt=document.getElementById("interactPrompt");
-const urlParams=new URLSearchParams(location.search),journey=window.JackJourney||null,journeyMode=urlParams.get("journey")==="1",replayMode=urlParams.get("replay")==="1",forceNewRun=urlParams.get("new")==="1",SAVE_KEY="jack-phase2-save";
-if(replayMode)journey?.beginReplay(2,[SAVE_KEY]);
-if(forceNewRun){localStorage.removeItem(SAVE_KEY);const keptMode=journeyMode?"?journey=1":(replayMode?"?replay=1":"");history.replaceState(null,"",location.pathname+keptMode)}
+const urlParams=new URLSearchParams(location.search),journey=window.JackJourney||null,journeyMode=urlParams.get("journey")==="1",replayMode=urlParams.get("replay")==="1",forceNewRun=urlParams.get("new")==="1",SAVE_KEY="jack-phase2-save",CHECKPOINT_KEY="jack-phase2-checkpoint";
+if(replayMode)journey?.beginReplay(2,[SAVE_KEY,CHECKPOINT_KEY]);
+if(forceNewRun){localStorage.removeItem(SAVE_KEY);localStorage.removeItem(CHECKPOINT_KEY);const keptMode=journeyMode?"?journey=1":(replayMode?"?replay=1":"");history.replaceState(null,"",location.pathname+keptMode)}
 let loadedSave=null;if(journeyMode&&!replayMode){try{loadedSave=JSON.parse(localStorage.getItem(SAVE_KEY)||"null")}catch(e){loadedSave=null}}
 let ameliaMet=false, introLorePlayed=false, gearLore=[false,false,false], finalLorePlayed=false,bossUnlocked=false,bossActive=false,bossDefeated=false;const puzzles={sinos:false,janelas:false,sombras:false};let towerMechanism=false;
 const arenaPlats=[{x:7580,y:-480,w:250,h:24},{x:7860,y:-565,w:250,h:24},{x:7200,y:-650,w:1700,h:60}];
@@ -14,6 +14,38 @@ const boss={x:8360,y:-770,hp:10,maxHp:10,dir:-1,t:0,shot:.8,invuln:0};
 const bossShots=[];let playerLife=3,playerHit=0;
 const ameliaShadowAssets={dialogue:[],transform:[],boss:[],effects:[],map:[]};
 const shadowCutscene={active:false,t:0,cue:0};
+let checkpointArt={off:null,on:null};
+let activeCheckpoint=localStorage.getItem(CHECKPOINT_KEY)||"";
+const PHASE2_CHECKPOINTS=Object.freeze([
+  {id:"village",rank:1,name:"Relógio Congelado",x:5315,groundY:590,respawnX:5135,respawnY:504,renderH:300},
+  {id:"tower",rank:2,name:"Lanterna da Torre",x:7355,groundY:590,respawnX:7205,respawnY:504,renderH:300}
+]);
+function checkpointRank(id){const cp=PHASE2_CHECKPOINTS.find(z=>z.id===id);return cp?cp.rank:0}
+function checkpointIsLit(cp){return checkpointRank(activeCheckpoint)>=cp.rank}
+function currentCheckpointRespawn(){
+  const cp=PHASE2_CHECKPOINTS.find(z=>z.id===activeCheckpoint);
+  return cp?{x:cp.respawnX,y:cp.respawnY}:{x:120,y:470};
+}
+function respawnAtCheckpoint(message){
+  const r=currentCheckpointRespawn();
+  p.x=r.x;p.y=r.y;p.vx=0;p.vy=0;p.on=false;playerHit=.45;
+  if(message)say(message);
+}
+function updateCheckpoints(){
+  const px=p.x+p.w/2,feet=p.y+p.h;
+  for(const cp of PHASE2_CHECKPOINTS){
+    if(checkpointIsLit(cp))continue;
+    if(Math.abs(px-cp.x)<175&&Math.abs(feet-cp.groundY)<135){
+      activeCheckpoint=cp.id;
+      localStorage.setItem(CHECKPOINT_KEY,activeCheckpoint);
+      playerLife=3;
+      banner("LUZ ANCORADA — CHECKPOINT ATIVADO");
+      say(cp.name+" aceso. A abóbora guardará seu retorno.");
+      saveJourney();
+      break;
+    }
+  }
+}
 const lore={
 arrival:[
 {speaker:"JACK",portrait:"jack",expression:1,text:"Outra vila. Outra noite. E nenhum sinal do amanhecer."},
@@ -76,7 +108,8 @@ function allRequired(){return gears.every(g=>g.got)&&Object.values(puzzles).ever
 function interact(){if(dialogue.active){dialogue.advance();return}if(nearAmelia()){ameliaMet=true;openDialogue(lore.amelia);return}
 if(p.x>7680&&p.x<8060&&p.y<-350){if(!allRequired()){say("SELO DO TOPO: "+solvedCount()+"/3 enigmas · "+gears.filter(g=>g.got).length+"/3 engrenagens · mecanismo "+(towerMechanism?"ativo":"pendente"));return}
 if(!finalLorePlayed){finalLorePlayed=true;openDialogue(lore.tower,()=>openDialogue(lore.shadowReveal,startShadowCutscene));}}}
-const p={x:120,y:470,w:46,h:86,vx:0,vy:0,dir:1,on:false,coyote:0,buffer:0,anim:0,attack:0};
+const checkpointStart=currentCheckpointRespawn();
+const p={x:checkpointStart.x,y:checkpointStart.y,w:46,h:86,vx:0,vy:0,dir:1,on:false,coyote:0,buffer:0,anim:0,attack:0};
 const plats=[
 {x:0,y:590,w:1100,h:130},{x:1160,y:590,w:760,h:130},{x:1350,y:505,w:260,h:32},{x:1660,y:440,w:230,h:32},
 {x:1980,y:590,w:1100,h:130},{x:2160,y:500,w:260,h:32},{x:2520,y:430,w:260,h:32},{x:2860,y:500,w:220,h:32},
@@ -95,6 +128,7 @@ const shadowSeals=[{x:5850,y:455,on:false},{x:6250,y:375,on:false},{x:6640,y:455
 const towerSeals=[{x:7850,y:55,on:false},{x:8350,y:-185,on:false}];let towerStep=0;
 const sections=[{x:0,n:"ESTRADA DAS LANTERNAS MORTAS"},{x:1100,n:"VILA BAIXA"},{x:1980,n:"PRAÇA DAS 4:13"},{x:3150,n:"DISTRITO DOS SINOS"},{x:4380,n:"JANELAS APAGADAS"},{x:5600,n:"CAMINHO DA TORRE"},{x:7200,n:"A TORRE DAS 4:13"}];
 if(loadedSave){
+  if(typeof loadedSave.activeCheckpoint==="string"&&PHASE2_CHECKPOINTS.some(z=>z.id===loadedSave.activeCheckpoint)){activeCheckpoint=loadedSave.activeCheckpoint;localStorage.setItem(CHECKPOINT_KEY,activeCheckpoint)}
   p.x=Number.isFinite(loadedSave.x)?loadedSave.x:p.x;p.y=Number.isFinite(loadedSave.y)?loadedSave.y:p.y;p.dir=loadedSave.dir===-1?-1:1;
   ameliaMet=!!loadedSave.ameliaMet;introLorePlayed=!!loadedSave.introLorePlayed;finalLorePlayed=!!loadedSave.finalLorePlayed;bossUnlocked=!!loadedSave.bossUnlocked;bossActive=!!loadedSave.bossActive;bossDefeated=!!loadedSave.bossDefeated;towerMechanism=!!loadedSave.towerMechanism;
   playerLife=Math.max(1,Math.min(3,Number(loadedSave.playerLife)||3));boss.hp=Math.max(0,Math.min(boss.maxHp,Number.isFinite(Number(loadedSave.bossHp))?Number(loadedSave.bossHp):boss.maxHp));
@@ -115,6 +149,8 @@ let phase2Background=null;
 img("../assets/game/phase2/backgrounds-hd/phase2-vila-torre-background-reference.png")
   .then(i=>phase2Background=i)
   .catch(()=>{});
+img("../assets/game/phase2/checkpoints/checkpoint-phase2-off.png").then(i=>checkpointArt.off=i).catch(()=>{});
+img("../assets/game/phase2/checkpoints/checkpoint-phase2-on.png").then(i=>checkpointArt.on=i).catch(()=>{});
 const ameliaMapFiles=["neutral","feliz","triste","surpresa","irritada","cansada","assustada"];
 Promise.allSettled(ameliaMapFiles.map(n=>img("../assets/game/phase2/amelia-sprites/amelia-map-"+n+".png")))
   .then(rs=>rs.forEach((r,i)=>{if(r.status==="fulfilled")ameliaMap[ameliaMapFiles[i]]=r.value}));
@@ -152,7 +188,7 @@ let saveClock=0;
 function saveJourney(){
   if(!journeyMode||replayMode||!journey?.isActive()||journey.currentPhase()!==2)return;
   localStorage.setItem(SAVE_KEY,JSON.stringify({
-    x:p.x,y:p.y,dir:p.dir,ameliaMet,introLorePlayed,gearLore,finalLorePlayed,bossUnlocked,bossActive,bossDefeated,towerMechanism,playerLife,bossHp:boss.hp,
+    x:p.x,y:p.y,dir:p.dir,activeCheckpoint,ameliaMet,introLorePlayed,gearLore,finalLorePlayed,bossUnlocked,bossActive,bossDefeated,towerMechanism,playerLife,bossHp:boss.hp,
     gears:gears.map(g=>!!g.got),puzzles:{...puzzles},bells:bells.map(z=>!!z.on),windows:windows.map(z=>!!z.on),
     shadows:shadowSeals.map(z=>!!z.on),towerSeals:towerSeals.map(z=>!!z.on),enemies:enemies.map(e=>!!e.dead),
     bellStep,windowStep,shadowStep,towerStep,savedAt:Date.now()
@@ -188,7 +224,8 @@ cool=Math.max(0,cool-dt);light=Math.max(0,light-dt);p.attack=Math.max(0,p.attack
 const speed=input.down?95:(input.run?335:235),dir=(input.right?1:0)-(input.left?1:0);p.vx+=((dir*speed)-p.vx)*Math.min(1,dt*12);if(dir)p.dir=dir;
 if(p.buffer>0&&p.coyote>0){p.vy=-575;p.on=false;p.coyote=0;p.buffer=0}p.vy+=G*dt;const oldY=p.y;p.x=Math.max(0,Math.min(WORLD-p.w,p.x+p.vx*dt));p.y+=p.vy*dt;p.on=false;
 const solids=plats.concat((bossUnlocked||bossActive||bossDefeated)?arenaPlats:[],reveal.filter(q=>q.t>0));for(const q of solids){if(p.x+p.w>q.x&&p.x<q.x+q.w&&oldY+p.h<=q.y+8&&p.y+p.h>=q.y&&p.vy>=0){p.y=q.y-p.h;p.vy=0;p.on=true}}
-if(p.y>760){p.x=Math.max(80,p.x-380);p.y=430;p.vy=0;say("Jack retorna à última rua segura.");}
+updateCheckpoints();
+if(p.y>760){respawnAtCheckpoint(activeCheckpoint?"A abóbora reacende o caminho de Jack.":"Jack retorna ao início da Vila sem Amanhecer.");}
 enemies.forEach(e=>{if(e.dead)return;e.x+=e.d*70*dt;if(e.x<e.a||e.x>e.b)e.d*=-1});
 boss.invuln=Math.max(0,boss.invuln-dt);playerHit=Math.max(0,playerHit-dt);
 if(bossActive&&!bossDefeated){
@@ -259,6 +296,32 @@ function drawAssetBottom(img,cx,ground,targetH,alpha=1){
   if(!img)return false;
   const iw=img.naturalWidth||img.width||1,ih=img.naturalHeight||img.height||1,w=targetH*(iw/ih);
   x.save();x.globalAlpha=alpha;x.drawImage(img,cx-w/2,ground-targetH,w,targetH);x.restore();return true;
+}
+function drawPhase2Checkpoints(){
+  for(const cp of PHASE2_CHECKPOINTS){
+    const lit=checkpointIsLit(cp),sprite=lit?checkpointArt.on:checkpointArt.off;
+    if(cp.x<cam-520||cp.x>cam+W+520)continue;
+    x.save();
+    if(lit){
+      const pulse=.84+Math.sin(p.anim*4+cp.x*.002)*.1;
+      const glow=x.createRadialGradient(cp.x-45,cp.groundY-145,20,cp.x-45,cp.groundY-145,180);
+      glow.addColorStop(0,"rgba(255,190,70,"+(.24*pulse)+")");
+      glow.addColorStop(.55,"rgba(255,112,30,"+(.11*pulse)+")");
+      glow.addColorStop(1,"rgba(255,80,20,0)");
+      x.fillStyle=glow;x.beginPath();x.arc(cp.x-45,cp.groundY-145,180,0,Math.PI*2);x.fill();
+    }
+    if(sprite){
+      const iw=sprite.naturalWidth||sprite.width||1,ih=sprite.naturalHeight||sprite.height||1;
+      const h=cp.renderH,w=h*(iw/ih);
+      x.drawImage(sprite,cp.x-w/2,cp.groundY-h,w,h);
+    }else{
+      x.fillStyle=lit?"#d8872c":"#2a2030";x.fillRect(cp.x-90,cp.groundY-190,180,190);
+      x.fillStyle=lit?"#ffd36d":"#17121a";x.beginPath();x.arc(cp.x,cp.groundY-55,38,0,Math.PI*2);x.fill();
+    }
+    x.fillStyle=lit?"#ffe7a1":"#9d8b9f";x.font="bold 12px Georgia";x.textAlign="center";
+    x.fillText(lit?"CHECKPOINT ACESO":"CHECKPOINT APAGADO",cp.x,cp.groundY+20);x.textAlign="left";
+    x.restore();
+  }
 }
 function drawShadowCutscene(){
   if(!shadowCutscene.active)return;
@@ -347,6 +410,7 @@ x.save();x.translate(-cam,-camY);
 x.save();x.globalAlpha=.16;x.fillStyle="#08070d";x.fillRect(7350,-520,1200,1110);x.strokeStyle="#6b4329";x.lineWidth=8;x.strokeRect(7350,-520,1200,1110);x.restore();
 x.fillStyle="#d0a65b";x.font="bold 26px Georgia";x.fillText("4:13",7910,-455);
 for(const q of plats){x.fillStyle=q.y<560?"#4a3b38":"#30252a";x.fillRect(q.x,q.y,q.w,q.h);x.fillStyle="#75604b";x.fillRect(q.x,q.y,q.w,7)}
+drawPhase2Checkpoints();
 if(bossUnlocked||bossActive||bossDefeated){
   // Arena protótipo no topo: um grande mostrador quebrado sustentado por engrenagens.
   x.save();x.globalAlpha=.24;x.fillStyle="#9a3b25";x.beginPath();x.arc(8050,-860,255,0,Math.PI*2);x.fill();x.globalAlpha=1;
