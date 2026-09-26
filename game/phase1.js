@@ -135,7 +135,7 @@
     {k:"lamps/lamp-post-06.png",x:5200,y:590,h:142,glow:1},
     {k:"extras/fence-small-01.png",x:5300,y:590,h:72},
     {k:"lamps/lamp-post-03.png",x:6800,y:520,h:132,glow:1},
-    {k:"trees/tree-03.png",x:6980,y:590,h:165},
+    {k:"trees/tree-03.png",x:7120,y:590,h:165}, // inteira no piso, antes da plataforma elevada
 
     // Ruínas — casario mais estreito, túmulos, cercas e árvores quebram a repetição.
     {k:"houses/house-03.png",x:7865,y:445,h:225}, // sobre a plataforma flutuante central
@@ -348,7 +348,7 @@
       img.onload = () => resolve(img);
       img.onerror = () => reject(new Error("Falha ao carregar " + path));
       const sep = path.includes("?") ? "&" : "?";
-      img.src = path + sep + "v=phase1-assets-35";
+      img.src = path + sep + "v=phase1-assets-36";
     });
   }
 
