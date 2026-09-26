@@ -98,6 +98,7 @@
   // que asas/penas de um sprite vizinho vazem para o frame atual.
   let crowFrames = [];
   let wispFrames = [];
+  let pumpkinFrames = [];
   let guardianFrames = [];
   let jackFrameOverrides = {};
 
@@ -210,7 +211,7 @@
       img.onload = () => resolve(img);
       img.onerror = () => reject(new Error("Falha ao carregar " + path));
       const sep = path.includes("?") ? "&" : "?";
-      img.src = path + sep + "v=phase1-assets-24";
+      img.src = path + sep + "v=phase1-assets-25";
     });
   }
 
@@ -323,6 +324,7 @@
       spriteHD.enemies = true;
       crowFrames = buildCrowFrames(art.enemies);
       wispFrames = buildWispFrames(art.enemies);
+      pumpkinFrames = buildPumpkinFrames(art.enemies);
     }
     if (spriteResults[2].status === "fulfilled") {
       art.boss = spriteResults[2].value;
@@ -457,10 +459,62 @@
       [5,460,245,290],
       [245,465,245,290],
       [485,465,235,290],
-      [710,460,235,300],
+      [710,460,235,290],
       [1250,490,198,275]
     ];
     return boxes.map(box => cropSpriteFrame(img,box[0],box[1],box[2],box[3]));
+  }
+
+  function spriteFootline(canvas){
+    // O sheet da abóbora tem margem transparente abaixo do desenho.
+    // Em vez de usar o fundo da célula como "pé", detectamos a última linha
+    // realmente ocupada pelo personagem. Partículas isoladas não contam.
+    const c=canvas.getContext("2d",{willReadFrequently:true});
+    const {width,height}=canvas;
+    const data=c.getImageData(0,0,width,height).data;
+    const minPixels=Math.max(3,Math.floor(width*.025));
+    for(let y=height-1;y>=Math.floor(height*.42);y--){
+      let solid=0;
+      for(let x=0;x<width;x++){
+        if(data[(y*width+x)*4+3]>=18 && ++solid>=minPixels) return y+1;
+      }
+    }
+    return height;
+  }
+
+  function buildPumpkinFrames(img){
+    const boxes=[
+      [0,724,280,362],
+      [280,724,255,362],
+      [760,724,435,362],
+      [1140,724,308,362]
+    ];
+    return boxes.map(box=>{
+      const canvas=cropSpriteFrame(img,box[0],box[1],box[2],box[3]);
+      return {canvas,footline:spriteFootline(canvas)};
+    });
+  }
+
+  function drawGroundedSprite(frame,cx,groundY,targetH,flip=false,alpha=1){
+    if(!frame?.canvas) return false;
+    const img=frame.canvas;
+    const scale=targetH/img.height;
+    const dw=img.width*scale;
+    // A linha dos pés fica exatamente sobre o topo da plataforma.
+    const top=groundY-frame.footline*scale;
+    ctx.save();
+    ctx.globalAlpha*=alpha;
+    ctx.imageSmoothingEnabled=true;
+    ctx.imageSmoothingQuality="high";
+    if(flip){
+      ctx.translate(cx+dw/2,top);
+      ctx.scale(-1,1);
+      ctx.drawImage(img,0,0,dw,targetH);
+    }else{
+      ctx.drawImage(img,cx-dw/2,top,dw,targetH);
+    }
+    ctx.restore();
+    return true;
   }
 
   function buildCleanJackFrame(img, frame, eraseRects=[]){
@@ -1403,25 +1457,23 @@
           const wisp=wispFrames[frame] || wispFrames[0];
           const h=frame===3?118:112;
           drawSpriteCropFit(wisp,0,0,wisp.width,wisp.height,x,e.y,h,flip,e.hit>0?.68:1);
-        }else{
-          // A abóbora continua usando recortes do sheet HD.
-          const crops={
-            pumpkin:[
-              [0,724,280,362],
-              [280,724,255,362],
-              [760,724,435,362],
-              [1140,724,308,362]
-            ]
-          };
-          const crop=(crops[e.type]||crops.pumpkin)[frame] || (crops[e.type]||crops.pumpkin)[0];
-          const cy=e.type==="pumpkin" ? e.y-4 : e.y;
-          drawSpriteCropFit(art.enemies,crop[0],crop[1],crop[2],crop[3],x,cy,110,flip,e.hit>0?.68:1);
+        }else if(e.type==="pumpkin" && pumpkinFrames.length){
+          const pumpkin=pumpkinFrames[frame] || pumpkinFrames[0];
+          drawGroundedSprite(
+            pumpkin,
+            x,
+            e.groundY ?? (e.y+45),
+            110,
+            flip,
+            e.hit>0?.68:1
+          );
         }
       }else{
         const row=e.type==="crow"?0:e.type==="wisp"?1:2;
         const sizes=e.type==="crow"?[108,92]:e.type==="wisp"?[118,104]:[118,92];
         const [dw,dh]=sizes;
-        drawAtlasCell(art.enemies,4,3,frame,row,x-dw/2,e.y-dh/2,dw,dh,flip,e.hit>0?.62:1);
+        const drawY=e.type==="pumpkin" && e.groundY!=null ? e.groundY-dh : e.y-dh/2;
+        drawAtlasCell(art.enemies,4,3,frame,row,x-dw/2,drawY,dw,dh,flip,e.hit>0?.62:1);
       }
       return;
     }
