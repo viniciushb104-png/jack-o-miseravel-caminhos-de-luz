@@ -69,7 +69,10 @@
       } else {
         this.music.pause();
       }
-      if (token !== this.transitionToken) return false;
+      if (token !== this.transitionToken) {
+        this.transitioning = false;
+        return false;
+      }
 
       this.currentTrack = trackName;
       this.music.src = src;
