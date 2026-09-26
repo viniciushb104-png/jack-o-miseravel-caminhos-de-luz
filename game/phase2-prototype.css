@@ -339,3 +339,16 @@
     bottom:25.3%;
   }
 }
+
+
+/* Microajuste final: retrato um toque mais à esquerda */
+.dialogue-portrait,
+.dialogue-shell .dialogue-portrait.is-hd-portrait{
+  left:4.15%;
+}
+@media(max-width:700px){
+  .dialogue-portrait,
+  .dialogue-shell .dialogue-portrait.is-hd-portrait{
+    left:4.15%;
+  }
+}
