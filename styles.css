@@ -667,3 +667,117 @@ button:focus-visible{outline:3px solid #fff3b0;outline-offset:4px}
   .menu-music-copy strong{font-size:.58rem}
 }
 @media (prefers-reduced-motion:reduce){.menu-music-toggle.is-blocked .menu-music-icon{animation:none}}
+
+
+/* Página de personagens — dossiê ilustrado do Jack */
+.characters-screen{
+  background:
+    radial-gradient(circle at 25% 20%,rgba(159,74,14,.14),transparent 32rem),
+    linear-gradient(rgba(4,8,15,.94),rgba(4,8,15,.99)),
+    url("assets/images/menu/menu-poster.webp") center/cover fixed;
+}
+.jack-character-feature{
+  width:min(1180px,100%);
+  margin:0 auto 2rem;
+  overflow:hidden;
+  background:#050a12;
+  border:1px solid #d5962c77;
+  box-shadow:0 0 0 2px #160d05,0 0 0 4px #704713,0 24px 54px #000b,0 0 28px #e781171c;
+}
+.jack-character-art{
+  position:relative;
+  aspect-ratio:3/2;
+  min-height:280px;
+  background:
+    radial-gradient(circle at 28% 48%,#7d370d33,transparent 34%),
+    linear-gradient(135deg,#07172b,#04070d 70%);
+  overflow:hidden;
+}
+.jack-character-art::after{
+  content:"";
+  position:absolute;inset:0;
+  pointer-events:none;
+  box-shadow:inset 0 0 55px #000b;
+}
+.jack-character-art img{
+  position:absolute;inset:0;
+  width:100%;height:100%;
+  display:block;
+  object-fit:cover;
+  opacity:0;
+  transform:scale(1.015);
+  transition:opacity .55s ease,transform 1.2s ease;
+  image-rendering:auto;
+}
+.jack-character-art.is-ready img{opacity:1;transform:scale(1)}
+.character-art-loading{
+  position:absolute;inset:0;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.65rem;
+  color:#c98b2c;
+  letter-spacing:.14em;
+  font-size:.68rem;
+}
+.character-art-loading span{font-size:2rem;color:#ffd66d;text-shadow:0 0 18px #ff8b1f}
+.jack-character-art.is-ready .character-art-loading{display:none}
+.jack-character-caption{
+  display:grid;
+  grid-template-columns:minmax(0,1.3fr) minmax(260px,.7fr);
+  gap:1.4rem;
+  align-items:center;
+  padding:clamp(1rem,2.4vw,1.6rem);
+  border-top:1px solid #d5962c55;
+  background:linear-gradient(90deg,#081526,#090b11 65%,#160d08);
+}
+.jack-character-caption h3{margin:.18rem 0 .45rem;color:#ffd56c;font-size:clamp(1.5rem,3vw,2.35rem)}
+.jack-character-caption p:last-child{margin:0;color:#bbaa87;line-height:1.6}
+.jack-character-caption blockquote{
+  margin:0;padding:1rem 1.1rem;
+  color:#e8c77f;
+  line-height:1.55;
+  border-left:2px solid #e49b2d;
+  background:#03070db8;
+  font-style:italic;
+}
+.character-lore-grid{
+  width:min(1180px,100%);
+  margin:0 auto;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:1rem;
+}
+.character-lore-card{
+  position:relative;
+  min-height:170px;
+  display:grid;
+  grid-template-columns:62px 1fr;
+  gap:1rem;
+  padding:1.2rem;
+  background:linear-gradient(145deg,#0a1829,#070b13);
+  border:1px solid #a9732855;
+  box-shadow:inset 0 0 24px #0006,0 12px 26px #0007;
+}
+.character-lore-icon{
+  width:58px;height:58px;
+  display:grid;place-items:center;
+  color:#ffd568;
+  background:#0b0b0d;
+  border:1px solid #bd8129;
+  box-shadow:inset 0 0 14px #e67f1627;
+  font-size:1.45rem;
+}
+.character-lore-card small{color:#9e732f;font-size:.58rem;letter-spacing:.13em}
+.character-lore-card h3{margin:.25rem 0 .45rem;color:#e9d09b;font-size:1.25rem}
+.character-lore-card p{margin:0 0 1.6rem;color:#9f9279;line-height:1.55}
+.character-lore-card .status-tag{position:absolute;right:1rem;bottom:.85rem}
+@media (max-width:820px){
+  .jack-character-caption{grid-template-columns:1fr}
+  .character-lore-grid{grid-template-columns:1fr}
+}
+@media (max-width:520px){
+  .jack-character-art{min-height:220px}
+  .character-lore-card{grid-template-columns:48px 1fr;padding:1rem}
+  .character-lore-icon{width:44px;height:44px}
+}
+@media (prefers-reduced-motion:reduce){
+  .jack-character-art img{transition:none}
+}
