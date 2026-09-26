@@ -2532,7 +2532,10 @@
 
   const startButton=document.getElementById("startGame");
   const introText=document.querySelector("#intro span");
-  if(phaseCleared){
+  if(journeyMode && !replayMode && !forceNewRun && runWasActive){
+    startButton.textContent="✦ CONTINUAR JORNADA";
+    if(introText) introText.textContent="A lanterna guardou seu último checkpoint. Continue de onde a chama ficou acesa.";
+  }else if(phaseCleared){
     const hasRunProgress=!forceNewRun && runWasActive && Object.values(story.states).some(key=>localStorage.getItem(key));
     startButton.textContent=hasRunProgress?"✦ CONTINUAR REPLAY":"↻ JOGAR NOVAMENTE";
     if(introText) introText.textContent=hasRunProgress
