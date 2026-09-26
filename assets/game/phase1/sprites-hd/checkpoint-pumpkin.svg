@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="320" viewBox="0 0 512 320">
+<defs>
+  <linearGradient id="iron" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#1b1d2d"/><stop offset=".45" stop-color="#34344b"/><stop offset="1" stop-color="#090b12"/></linearGradient>
+  <linearGradient id="wood" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#5e2f19"/><stop offset=".5" stop-color="#8a4a20"/><stop offset="1" stop-color="#2b1710"/></linearGradient>
+  <linearGradient id="pumpkinOff" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#8a3d13"/><stop offset=".55" stop-color="#c55d19"/><stop offset="1" stop-color="#54220d"/></linearGradient>
+  <radialGradient id="pumpkinOn"><stop stop-color="#fff4a6"/><stop offset=".35" stop-color="#ffc33a"/><stop offset=".72" stop-color="#ef6a16"/><stop offset="1" stop-color="#8a2808"/></radialGradient>
+  <radialGradient id="glow"><stop stop-color="#ffd86c" stop-opacity=".75"/><stop offset=".45" stop-color="#ff9a21" stop-opacity=".32"/><stop offset="1" stop-color="#ff6410" stop-opacity="0"/></radialGradient>
+  <filter id="soft"><feGaussianBlur stdDeviation="8"/></filter>
+  <style>
+    .outline{stroke:#0a0810;stroke-width:5;stroke-linejoin:round;stroke-linecap:round}
+    .detail{stroke:#b66a28;stroke-width:2;fill:none;stroke-linecap:round}
+    .leaf1{fill:#d65a18;stroke:#4b1d10;stroke-width:2}
+    .leaf2{fill:#f39a23;stroke:#633011;stroke-width:2}
+  </style>
+</defs>
+
+<!-- INATIVO -->
+<g transform="translate(0 0)">
+  <ellipse cx="126" cy="296" rx="82" ry="10" fill="#05060a" opacity=".55"/>
+  <path d="M70 289h112l-8-18-18-5-7-20H91l-7 20-18 5z" fill="#22263c" class="outline"/>
+  <path d="M96 264V79h23v185z" fill="url(#iron)" class="outline"/>
+  <path d="M107 79V53h-8l8-26 9 26h-8v26z" fill="#28283c" class="outline"/>
+  <path d="M112 86h79c21 0 31 8 34 22-13-8-28-8-42-2l-19 12h-52z" fill="url(#wood)" class="outline"/>
+  <path d="M116 94h67c12 0 22 3 31 9" class="detail"/>
+  <path d="M164 118c14-13 28-17 46-12-13 4-22 12-28 23" class="detail"/>
+  <path d="M189 111v29" stroke="#16121b" stroke-width="8"/>
+  <circle cx="189" cy="140" r="9" fill="#2f2e42" class="outline"/>
+  <path d="M189 149v13" stroke="#15121a" stroke-width="8"/>
+  <path d="M161 174c0-25 15-39 39-39s39 14 39 39c0 31-14 52-39 52s-39-21-39-52z" fill="url(#pumpkinOff)" class="outline"/>
+  <path d="M174 173q26-18 52 0M176 198q24 12 48 0" class="detail"/>
+  <path d="M183 171l9 10-17 1zM217 171l-9 10 17 1zM198 187l7 8h-14z" fill="#1b100c"/>
+  <path d="M181 201q19 16 38 0l-5 14h-28z" fill="#1b100c"/>
+  <path d="M189 133q11-17 21 0" fill="none" stroke="#313142" stroke-width="7"/>
+  <path d="M88 140q20 7 34-4M84 184q22 8 39 1M92 230q18 7 31 0" class="detail"/>
+  <path d="M73 149l-14-7 5 15-12 8 17 2 3 17 9-14 16 6-7-15 10-12-17 3z" class="leaf1"/>
+  <path d="M97 228l-14-7 5 15-12 8 17 2 3 17 9-14 16 6-7-15 10-12-17 3z" class="leaf2"/>
+  <path d="M131 102l-14-7 5 15-12 8 17 2 3 17 9-14 16 6-7-15 10-12-17 3z" class="leaf2"/>
+</g>
+
+<!-- ATIVO -->
+<g transform="translate(256 0)">
+  <circle cx="198" cy="176" r="86" fill="url(#glow)" filter="url(#soft)"/>
+  <ellipse cx="126" cy="296" rx="82" ry="10" fill="#05060a" opacity=".55"/>
+  <path d="M70 289h112l-8-18-18-5-7-20H91l-7 20-18 5z" fill="#252a45" class="outline"/>
+  <path d="M96 264V79h23v185z" fill="url(#iron)" class="outline"/>
+  <path d="M107 79V53h-8l8-26 9 26h-8v26z" fill="#32344f" class="outline"/>
+  <path d="M112 86h79c21 0 31 8 34 22-13-8-28-8-42-2l-19 12h-52z" fill="url(#wood)" class="outline"/>
+  <path d="M116 94h67c12 0 22 3 31 9" class="detail"/>
+  <path d="M164 118c14-13 28-17 46-12-13 4-22 12-28 23" class="detail"/>
+  <path d="M189 111v29" stroke="#181421" stroke-width="8"/>
+  <circle cx="189" cy="140" r="9" fill="#35374f" class="outline"/>
+  <path d="M189 149v13" stroke="#17131f" stroke-width="8"/>
+  <path d="M161 174c0-25 15-39 39-39s39 14 39 39c0 31-14 52-39 52s-39-21-39-52z" fill="url(#pumpkinOn)" class="outline"/>
+  <path d="M174 173q26-18 52 0M176 198q24 12 48 0" stroke="#ffbd3d" stroke-width="2" fill="none" opacity=".7"/>
+  <path d="M183 171l9 10-17 1zM217 171l-9 10 17 1zM198 187l7 8h-14z" fill="#fff6b0"/>
+  <path d="M181 201q19 16 38 0l-5 14h-28z" fill="#fff0a0"/>
+  <path d="M189 133q11-17 21 0" fill="none" stroke="#3b3d57" stroke-width="7"/>
+  <path d="M88 140q20 7 34-4M84 184q22 8 39 1M92 230q18 7 31 0" class="detail"/>
+  <path d="M73 149l-14-7 5 15-12 8 17 2 3 17 9-14 16 6-7-15 10-12-17 3z" class="leaf1"/>
+  <path d="M97 228l-14-7 5 15-12 8 17 2 3 17 9-14 16 6-7-15 10-12-17 3z" class="leaf2"/>
+  <path d="M131 102l-14-7 5 15-12 8 17 2 3 17 9-14 16 6-7-15 10-12-17 3z" class="leaf2"/>
+  <g fill="#ffd965">
+    <circle cx="242" cy="123" r="3"/><circle cx="233" cy="198" r="2.6"/><circle cx="154" cy="118" r="2.8"/><circle cx="244" cy="160" r="2.2"/>
+  </g>
+</g>
+</svg>
