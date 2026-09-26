@@ -9,7 +9,16 @@
   const GRAVITY = 1500;
   const story = window.PHASE1_STORY;
   const dialogues = window.PHASE1_DIALOGUES;
-  const dialogue = new window.DialogueSystem(document.getElementById("dialogue"));
+  const dialogueRoot = document.getElementById("dialogue");
+  const dialogue = new window.DialogueSystem(dialogueRoot);
+  const phaseAudio = new window.GameAudio({
+    musicSrc:"../assets/audio/phase1/phase1-theme.mp3",
+    storagePrefix:"jack-phase1-audio",
+    volume:0.58,
+    duckRatio:0.30
+  });
+  phaseAudio.bindToggle(document.getElementById("musicToggle"));
+  phaseAudio.bindDialogue(dialogueRoot);
 
   const ui = {
     objective: document.querySelector("#objective strong"),
@@ -415,6 +424,7 @@
         localStorage.setItem("jack-phase1-run-active","0");
         localStorage.setItem("jack-phase1-clear-count", String(Number(localStorage.getItem("jack-phase1-clear-count")||0)+1));
         localStorage.setItem("jack-light-level","03");
+        phaseAudio.fadeOut(1800);
       }), 700);
     });
   }
@@ -1042,6 +1052,7 @@
 
   startButton.onclick=()=>{
     localStorage.setItem("jack-phase1-run-active","1");
+    phaseAudio.start();
     document.getElementById("intro").hidden=true;running=true;last=performance.now();syncHud();showSection(sectionForX(player.x));
     const t=document.getElementById("tutorial");t.classList.add("show");setTimeout(()=>t.classList.remove("show"),5500);
   };
@@ -1054,6 +1065,11 @@
     localStorage.setItem("jack-phase1-version","3");
     location.reload();
   };
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) phaseAudio.pause();
+    else if (running && !finished) phaseAudio.resume();
+  });
 
   syncHud();
   loadAssets().then(()=>requestAnimationFrame(loop)).catch(err=>{
