@@ -16,6 +16,8 @@
       this.started = false;
       this.fadeFrame = 0;
       this.transitionToken = 0;
+      this.transitioning = false;
+      this.fadeResolve = null;
       this.nowPlayingTimer = 0;
 
       this.music = new Audio(this.tracks[this.currentTrack] || "");
@@ -60,6 +62,7 @@
       const token = ++this.transitionToken;
       const fadeOut = options.fadeOut ?? 850;
       const fadeIn = options.fadeIn ?? 900;
+      this.transitioning = true;
 
       if (this.started && !this.music.paused && fadeOut > 0) {
         await this.fadeTo(0, fadeOut, true);
@@ -76,12 +79,17 @@
 
       try {
         await this.music.play();
-        if (token !== this.transitionToken) return false;
+        if (token !== this.transitionToken) {
+          this.transitioning = false;
+          return false;
+        }
         this.started = true;
         this.announceTrack();
+        this.transitioning = false;
         this.fadeTo(this.targetVolume(), fadeIn);
         return true;
       } catch (error) {
+        this.transitioning = false;
         console.warn("[Áudio] Não foi possível iniciar a faixa:", trackName, error);
         return false;
       }
@@ -107,11 +115,17 @@
 
     setDucked(value) {
       this.ducked = !!value;
-      this.fadeTo(this.targetVolume(), this.ducked ? 220 : 520);
+      if (!this.transitioning) {
+        this.fadeTo(this.targetVolume(), this.ducked ? 220 : 520);
+      }
     }
 
     fadeTo(target, duration = 400, pauseAfter = false) {
       cancelAnimationFrame(this.fadeFrame);
+      if (this.fadeResolve) {
+        this.fadeResolve(false);
+        this.fadeResolve = null;
+      }
       const start = this.music.volume;
       const end = Math.max(0, Math.min(1, target));
       if (duration <= 0) {
@@ -121,6 +135,7 @@
       }
       const startedAt = performance.now();
       return new Promise(resolve => {
+        this.fadeResolve = resolve;
         const tick = now => {
           const p = Math.min(1, (now - startedAt) / duration);
           const eased = 1 - Math.pow(1 - p, 3);
@@ -128,7 +143,8 @@
           if (p < 1) this.fadeFrame = requestAnimationFrame(tick);
           else {
             if (pauseAfter) this.music.pause();
-            resolve();
+            this.fadeResolve = null;
+            resolve(true);
           }
         };
         this.fadeFrame = requestAnimationFrame(tick);
@@ -137,6 +153,7 @@
 
     fadeOut(duration = 1200) {
       ++this.transitionToken;
+      this.transitioning = false;
       return this.fadeTo(0, duration, true);
     }
 
