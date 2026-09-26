@@ -76,6 +76,89 @@
   let jack = null, jackHD = null, jackPortraits = null, eleanorPortraits = null, guardianPortraits = null;
   const portraitHD = { jack:[], eleanor:[], guardian:[] };
   const memoryHD = { key:null, storm:null, candle:null, letter:null, family:null };
+  const sceneryHD = Object.create(null);
+  let sceneryHDLoaded = 0;
+
+  const SCENERY_HD_FILES = Object.freeze([
+    "houses/house-01.png","houses/house-02.png","houses/house-03.png","houses/house-04.png","houses/house-05.png",
+    "lamps/lamp-hanging-01.png","lamps/lamp-post-01.png","lamps/lamp-post-02.png","lamps/lamp-post-03.png",
+    "lamps/lamp-post-04.png","lamps/lamp-post-05.png","lamps/lamp-post-06.png",
+    "graves/grave-01.png","graves/grave-02.png","graves/grave-03.png","graves/grave-04.png",
+    "graves/grave-05.png","graves/grave-06.png","graves/grave-07.png",
+    "fences/fence-01.png","fences/fence-02.png","fences/fence-03.png","fences/fence-04.png","fences/fence-05.png",
+    "trees/tree-01.png","trees/tree-02.png","trees/tree-03.png",
+    "extras/barrels-hay-01.png","extras/cart-01.png","extras/cart-pumpkin-01.png","extras/crates-01.png",
+    "extras/pumpkin-01.png","extras/pumpkin-02.png","extras/fence-small-01.png"
+  ]);
+
+  // Curadoria por região. Os sprites decoram sem alterar colisões ou rotas.
+  const SCENERY_HD_LAYOUT = Object.freeze([
+    // Entrada da Vila — acolhedora, iluminada e com silhueta de casario.
+    {k:"houses/house-01.png",x:430,y:590,h:258},
+    {k:"houses/house-02.png",x:1050,y:590,h:248},
+    {k:"houses/house-04.png",x:1430,y:590,h:205},
+    {k:"lamps/lamp-post-01.png",x:145,y:590,h:158,glow:1},
+    {k:"lamps/lamp-post-02.png",x:760,y:590,h:154,glow:1},
+    {k:"lamps/lamp-post-03.png",x:1320,y:590,h:154,glow:1},
+    {k:"extras/cart-pumpkin-01.png",x:275,y:590,h:94},
+    {k:"extras/crates-01.png",x:870,y:590,h:55},
+    {k:"extras/pumpkin-01.png",x:1260,y:590,h:54},
+
+    // Pomar — árvores retorcidas, carga e abóboras, mantendo as plataformas legíveis.
+    {k:"trees/tree-01.png",x:1600,y:590,h:188},
+    {k:"trees/tree-02.png",x:2070,y:590,h:198,flip:1},
+    {k:"trees/tree-03.png",x:2520,y:590,h:192},
+    {k:"trees/tree-01.png",x:3040,y:590,h:180,flip:1},
+    {k:"extras/cart-pumpkin-01.png",x:1850,y:590,h:92,flip:1},
+    {k:"extras/barrels-hay-01.png",x:2810,y:590,h:88},
+    {k:"extras/pumpkin-02.png",x:2260,y:590,h:52},
+    {k:"extras/pumpkin-01.png",x:3110,y:590,h:50},
+
+    // Cemitério das Velas — cercas formam o fundo e túmulos variados dão ritmo.
+    {k:"fences/fence-01.png",x:3310,y:590,h:100},
+    {k:"fences/fence-02.png",x:3570,y:590,h:100},
+    {k:"fences/fence-03.png",x:3830,y:590,h:98},
+    {k:"fences/fence-04.png",x:4540,y:590,h:98},
+    {k:"fences/fence-05.png",x:4800,y:590,h:94},
+    {k:"graves/grave-01.png",x:3380,y:590,h:112},
+    {k:"graves/grave-02.png",x:3585,y:590,h:120},
+    {k:"graves/grave-03.png",x:3790,y:590,h:112},
+    {k:"graves/grave-04.png",x:4000,y:590,h:116},
+    {k:"graves/grave-05.png",x:4435,y:590,h:116},
+    {k:"graves/grave-06.png",x:4650,y:590,h:126},
+    {k:"graves/grave-07.png",x:4870,y:590,h:120},
+    {k:"lamps/lamp-post-04.png",x:3260,y:590,h:150,glow:1},
+    {k:"lamps/lamp-post-05.png",x:4740,y:590,h:150,glow:1},
+    {k:"trees/tree-02.png",x:4970,y:590,h:175,flip:1},
+
+    // Pontes da Memória — poucos objetos para a ponte continuar sendo protagonista.
+    {k:"lamps/lamp-post-06.png",x:5200,y:590,h:142,glow:1},
+    {k:"extras/fence-small-01.png",x:5300,y:590,h:72},
+    {k:"lamps/lamp-post-03.png",x:6800,y:520,h:132,glow:1},
+    {k:"trees/tree-03.png",x:6980,y:590,h:165},
+
+    // Ruínas — casario mais estreito, túmulos, cercas e árvores quebram a repetição.
+    {k:"houses/house-03.png",x:7860,y:590,h:225},
+    {k:"houses/house-05.png",x:8500,y:590,h:214},
+    {k:"trees/tree-01.png",x:7100,y:590,h:174,flip:1},
+    {k:"trees/tree-02.png",x:8700,y:590,h:180},
+    {k:"fences/fence-03.png",x:7200,y:590,h:90},
+    {k:"fences/fence-05.png",x:8360,y:590,h:88},
+    {k:"graves/grave-02.png",x:7350,y:590,h:108},
+    {k:"graves/grave-04.png",x:7580,y:590,h:108},
+    {k:"graves/grave-06.png",x:8120,y:590,h:118},
+    {k:"graves/grave-07.png",x:8420,y:590,h:112},
+    {k:"lamps/lamp-post-02.png",x:7300,y:590,h:142,glow:1},
+    {k:"lamps/lamp-post-05.png",x:8580,y:590,h:142,glow:1},
+
+    // Arena da Guardiã — decoração mais espaçada para não competir com a luta.
+    {k:"fences/fence-01.png",x:9000,y:590,h:92},
+    {k:"lamps/lamp-post-04.png",x:9150,y:590,h:148,glow:1},
+    {k:"graves/grave-01.png",x:9400,y:590,h:104},
+    {k:"graves/grave-05.png",x:10450,y:590,h:108},
+    {k:"lamps/lamp-post-06.png",x:10700,y:590,h:150,glow:1},
+    {k:"fences/fence-02.png",x:10820,y:590,h:92}
+  ]);
   const art = {
     background:null,
     terrain:null,
@@ -265,7 +348,7 @@
       img.onload = () => resolve(img);
       img.onerror = () => reject(new Error("Falha ao carregar " + path));
       const sep = path.includes("?") ? "&" : "?";
-      img.src = path + sep + "v=phase1-assets-32";
+      img.src = path + sep + "v=phase1-assets-33";
     });
   }
 
@@ -319,6 +402,20 @@
     platformResults.forEach((result,index)=>{
       if(result.status==="fulfilled") art[platformKeys[index]]=result.value;
       else console.warn("[Fase 1] plataforma HD não carregada:",platformKeys[index],result.reason);
+    });
+
+    // Cenário HD individual: substitui o atlas antigo de props sem tocar na física.
+    const sceneryResults = await Promise.allSettled(
+      SCENERY_HD_FILES.map(async file => [file, await imageFromFile("../assets/game/phase1/scenery-hd/" + file)])
+    );
+    sceneryResults.forEach(result => {
+      if(result.status==="fulfilled"){
+        const [file,img]=result.value;
+        sceneryHD[file]=img;
+        sceneryHDLoaded++;
+      }else{
+        console.warn("[Fase 1] prop HD não carregado:",result.reason);
+      }
     });
 
     // Fragmentos de Memória HD: PNGs individuais, preservando a arte enviada.
@@ -1658,11 +1755,69 @@
     }
   }
 
+  function drawSceneryHDSprite(item){
+    const img=sceneryHD[item.k];
+    if(!img)return false;
+    const scale=item.h/img.naturalHeight;
+    const dw=img.naturalWidth*scale;
+    const x=item.x-cameraX;
+    if(x+dw/2<-160||x-dw/2>W+160)return true;
+
+    if(item.glow){
+      const gy=item.y-item.h*.57;
+      const radius=Math.max(42,item.h*.34);
+      const glow=ctx.createRadialGradient(x,gy,3,x,gy,radius);
+      glow.addColorStop(0,"rgba(255,220,126,.26)");
+      glow.addColorStop(.42,"rgba(255,142,48,.11)");
+      glow.addColorStop(1,"rgba(255,103,24,0)");
+      ctx.fillStyle=glow;
+      ctx.beginPath();ctx.arc(x,gy,radius,0,Math.PI*2);ctx.fill();
+    }
+
+    // Pequena sombra de contato integra o recorte ao piso pintado.
+    const shadowW=Math.min(dw*.58,150);
+    ctx.save();
+    ctx.globalAlpha=.20;
+    ctx.fillStyle="#07070c";
+    ctx.beginPath();
+    ctx.ellipse(x,item.y-2,shadowW/2,7,0,0,Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.save();
+    ctx.imageSmoothingEnabled=true;
+    ctx.imageSmoothingQuality="high";
+    ctx.globalAlpha=item.alpha??1;
+    if(item.flip){
+      ctx.translate(x+dw/2,item.y-item.h);
+      ctx.scale(-1,1);
+      ctx.drawImage(img,0,0,dw,item.h);
+    }else{
+      ctx.drawImage(img,x-dw/2,item.y-item.h,dw,item.h);
+    }
+    ctx.restore();
+    return true;
+  }
+
+  function drawSceneryHD(){
+    if(sceneryHDLoaded<10)return false;
+    for(const item of SCENERY_HD_LAYOUT) drawSceneryHDSprite(item);
+    return true;
+  }
+
   function scenery(){
     drawPlatformStructureAccents();
     for(const p of platforms)ground(p);
 
+    if(drawSceneryHD()){
+      // Elementos funcionais continuam por cima da decoração: checkpoint e portão.
+      gate(8820);
+      drawCheckpointPosts();
+      return;
+    }
+
     if(art.props){
+      // Fallback legado caso os novos PNGs não estejam disponíveis.
       // Vila
       artProp(520,590,"cottage",.92);artProp(1040,590,"cottage",.82);
       artProp(280,590,"tree",.9);artProp(1380,590,"tree",.78);
