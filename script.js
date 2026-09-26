@@ -12,6 +12,55 @@
   let menuMusicEnabled = localStorage.getItem('jack-menu-music-muted') !== '1';
   let mainThemeFadeToken = 0;
 
+  // Tema próprio da galeria de Memórias.
+  const memoriesThemeAudio = new Audio('assets/audio/memories/memories-theme.mp3');
+  memoriesThemeAudio.loop = true;
+  memoriesThemeAudio.preload = 'auto';
+  memoriesThemeAudio.volume = 0;
+  const MEMORIES_THEME_VOLUME = .38;
+  let memoriesThemeFadeToken = 0;
+
+  function animateMemoriesThemeVolume(target, duration = 700, pauseAtEnd = false) {
+    const token = ++memoriesThemeFadeToken;
+    const from = memoriesThemeAudio.volume;
+    const started = performance.now();
+
+    function tick(now) {
+      if (token !== memoriesThemeFadeToken) return;
+      const progress = Math.min(1, (now - started) / Math.max(1, duration));
+      const eased = progress * (2 - progress);
+      memoriesThemeAudio.volume = from + (target - from) * eased;
+      if (progress < 1) {
+        requestAnimationFrame(tick);
+      } else {
+        memoriesThemeAudio.volume = target;
+        if (pauseAtEnd && target <= .001) memoriesThemeAudio.pause();
+      }
+    }
+    requestAnimationFrame(tick);
+  }
+
+  function playMemoriesTheme() {
+    const screen = document.getElementById('memorias');
+    if (!menuMusicEnabled || !screen?.classList.contains('active-screen')) return;
+    ++memoriesThemeFadeToken;
+    memoriesThemeAudio.volume = Math.min(memoriesThemeAudio.volume, .03);
+    memoriesThemeAudio.play().then(() => {
+      animateMemoriesThemeVolume(MEMORIES_THEME_VOLUME, 1000, false);
+    }).catch(() => {
+      memoriesThemeAudio.pause();
+      memoriesThemeAudio.volume = 0;
+    });
+  }
+
+  function fadeOutMemoriesTheme(duration = 420) {
+    if (memoriesThemeAudio.paused) {
+      memoriesThemeAudio.volume = 0;
+      return;
+    }
+    animateMemoriesThemeVolume(0, duration, true);
+  }
+
   function showToast(message) {
     if (!toast) return;
     toast.textContent = message;
@@ -75,6 +124,7 @@
 
   function openScreen(id) {
     if (id === 'inicio') {
+      fadeOutMemoriesTheme(320);
       screens.forEach(screen => screen.classList.remove('active-screen'));
       hero.style.display = '';
       history.replaceState(null, '', '#inicio');
@@ -94,6 +144,13 @@
     screens.forEach(screen => screen.classList.toggle('active-screen', screen === target));
     history.replaceState(null, '', '#' + id);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    if (id === 'memorias') {
+      if (typeof pauseSoundtrack === 'function') pauseSoundtrack();
+      playMemoriesTheme();
+    } else {
+      fadeOutMemoriesTheme(300);
+    }
   }
 
   document.querySelectorAll('[data-target]').forEach(button => {
@@ -292,6 +349,12 @@
       chapter: 'HALLOWEEN I · BATALHA FINAL',
       title: 'A Guardiã da Última Lanterna',
       src: 'assets/audio/phase1/phase1-boss.mp3'
+    },
+    {
+      phase: 1,
+      chapter: 'ARQUIVO DE MEMÓRIAS · HALLOWEEN I',
+      title: 'Memórias que Ainda Brilham',
+      src: 'assets/audio/memories/memories-theme.mp3'
     }
   ];
 
@@ -394,6 +457,7 @@
     if (soundtrackIndex < 0 || !unlocked.includes(soundtrackIndex)) selectSoundtrack(unlocked[0], false);
     stopMusicalVideos();
     fadeOutMainTheme(250);
+    fadeOutMemoriesTheme(250);
     soundtrackAudio.play().then(() => {
       if (soundtrackUI.play) {
         soundtrackUI.play.textContent = '❚❚';
@@ -473,8 +537,11 @@
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
       fadeOutMainTheme(180);
+      fadeOutMemoriesTheme(180);
     } else if (hero.style.display !== 'none' && menuMusicEnabled) {
       playMainTheme();
+    } else if (document.getElementById('memorias')?.classList.contains('active-screen') && menuMusicEnabled) {
+      playMemoriesTheme();
     }
   });
 
