@@ -974,3 +974,190 @@ button:focus-visible{outline:3px solid #fff3b0;outline-offset:4px}
     grid-column:1 / -1;
   }
 }
+
+
+/* Memórias da Jornada — troféus de conclusão */
+.memories-screen{
+  background:
+    radial-gradient(circle at 50% 12%,rgba(194,104,25,.16),transparent 28rem),
+    linear-gradient(rgba(4,7,13,.95),rgba(4,7,13,.99)),
+    url("assets/images/menu/menu-poster.webp") center/cover fixed;
+}
+.memories-heading{
+  width:min(1180px,100%);
+  margin-left:auto;
+  margin-right:auto;
+  grid-template-columns:auto 1fr auto;
+}
+.memories-intro{
+  margin:.35rem 0 0;
+  color:#c6b28d;
+  font-family:Georgia,serif;
+  font-style:italic;
+}
+.trophy-progress{
+  align-self:center;
+  min-width:112px;
+  padding:.6rem .85rem;
+  text-align:center;
+  background:#080b12e8;
+  border:1px solid #d89b2f66;
+  box-shadow:inset 0 0 0 2px #160d05,0 8px 24px #0008;
+}
+.trophy-progress span,.trophy-progress strong{display:block}
+.trophy-progress span{font-size:.66rem;letter-spacing:.16em;color:#be8b38}
+.trophy-progress strong{margin-top:.18rem;color:#ffe2a0;font-size:1.2rem}
+
+.memory-trophy-grid{
+  width:min(1180px,100%);
+  margin:0 auto;
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:1.35rem;
+  padding-bottom:2rem;
+}
+.memory-trophy{
+  position:relative;
+  overflow:hidden;
+  min-width:0;
+  background:linear-gradient(180deg,#11131bfa,#07090efa);
+  border:1px solid #7e511f;
+  box-shadow:
+    0 0 0 2px #130b05,
+    0 0 0 4px #50310f,
+    0 18px 38px #000b;
+  transition:transform .22s ease,border-color .22s ease,box-shadow .22s ease;
+}
+.memory-trophy.is-unlocked{
+  border-color:#d99a2f;
+  box-shadow:
+    0 0 0 2px #1a0e05,
+    0 0 0 4px #9a641b,
+    0 0 28px #e68a1d20,
+    0 22px 44px #000c;
+}
+.memory-trophy.is-unlocked:hover{transform:translateY(-5px)}
+.memory-trophy-art{
+  position:relative;
+  aspect-ratio:16/9;
+  overflow:hidden;
+  background:
+    radial-gradient(circle at 50% 38%,#392618,#0b0e17 56%,#04060a 100%);
+  border-bottom:1px solid #ba7a2555;
+}
+.memory-trophy-art::before,.memory-trophy-art::after{
+  content:"✦";
+  position:absolute;
+  z-index:4;
+  top:10px;
+  color:#e3a633;
+  text-shadow:0 0 10px #f28c1e;
+  pointer-events:none;
+}
+.memory-trophy-art::before{left:12px}
+.memory-trophy-art::after{right:12px}
+.memory-trophy-art img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  display:block;
+  transform:scale(1.01);
+  transition:transform .35s ease,filter .35s ease,opacity .35s ease;
+}
+.memory-trophy.is-unlocked:hover .memory-trophy-art img{transform:scale(1.045)}
+.memory-trophy.is-locked .memory-trophy-art{
+  background:
+    linear-gradient(135deg,#10131c,#06080d),
+    repeating-linear-gradient(45deg,#ffffff05 0 2px,#0000 2px 8px);
+}
+.memory-trophy.is-locked .memory-trophy-art::after{
+  content:"";
+  inset:0;
+  top:0;right:0;
+  background:linear-gradient(180deg,#05070a44,#03050ae8);
+}
+.memory-trophy-lock{
+  position:absolute;
+  z-index:5;
+  inset:0;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:.65rem;
+  color:#756b5d;
+  text-align:center;
+}
+.memory-trophy-lock b{
+  display:grid;
+  place-items:center;
+  width:64px;height:64px;
+  border:1px solid #9d7339;
+  background:#090b10e8;
+  box-shadow:0 0 0 4px #25170a,0 10px 28px #000;
+  font-size:1.65rem;
+  color:#a67b3c;
+}
+.memory-trophy-lock span{
+  font-family:Georgia,serif;
+  font-style:italic;
+  font-size:.9rem;
+}
+.memory-trophy.is-unlocked .memory-trophy-lock{display:none}
+.memory-trophy-number{
+  position:absolute;
+  z-index:6;
+  right:12px;
+  bottom:10px;
+  min-width:42px;
+  padding:.26rem .5rem;
+  color:#ffe0a0;
+  background:#090804db;
+  border:1px solid #ca8c2d;
+  text-align:center;
+  font:700 .86rem Georgia,serif;
+}
+.memory-trophy-copy{padding:1rem 1.05rem 1.15rem}
+.memory-trophy-copy p{
+  margin:0 0 .24rem;
+  color:#d47c22;
+  font-size:.72rem;
+  letter-spacing:.15em;
+}
+.memory-trophy-copy h3{
+  margin:0;
+  color:#f4d58d;
+  font:700 1.28rem Georgia,serif;
+}
+.memory-trophy-copy blockquote{
+  margin:.7rem 0 .85rem;
+  padding:.55rem .7rem;
+  border-left:2px solid #a56822;
+  color:#cbb990;
+  font:italic .9rem/1.45 Georgia,serif;
+  background:#ffffff03;
+}
+.memory-trophy-status{
+  display:inline-flex;
+  align-items:center;
+  min-height:28px;
+  padding:.28rem .58rem;
+  color:#897f6d;
+  border:1px solid #51432f;
+  background:#090b10;
+  font-size:.72rem;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+}
+.memory-trophy.is-unlocked .memory-trophy-status{
+  color:#ffe2a0;
+  border-color:#bd7b27;
+  background:#2a1608;
+  box-shadow:0 0 12px #ed8a1b1a;
+}
+
+@media (max-width:760px){
+  .memories-heading{grid-template-columns:auto 1fr}
+  .trophy-progress{grid-column:1/-1;justify-self:start;margin-left:calc(46px + 1rem)}
+  .memory-trophy-grid{grid-template-columns:1fr}
+}
