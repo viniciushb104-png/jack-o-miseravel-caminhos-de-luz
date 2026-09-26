@@ -1,7 +1,7 @@
 (()=>{"use strict";
 const c=document.getElementById("game"),x=c.getContext("2d"),W=1280,H=720,WORLD=9200,G=1500;
 const ui={obj:document.querySelector("#objective strong"),gear:document.getElementById("gearValue"),banner:document.getElementById("sectionBanner"),msg:document.getElementById("message"),intro:document.getElementById("intro")};
-const input={left:false,right:false,run:false,jump:false,down:false};let running=false,last=performance.now(),cam=0,camY=0,jack=null,light=0,cool=0,section=-1;
+const input={left:false,right:false,run:false,jump:false,down:false};let running=false,last=performance.now(),cam=0,camY=0,jack=null,ameliaMap={},light=0,cool=0,section=-1;
 const dialogue=new window.DialogueSystem(document.getElementById("dialogue"));
 const interactPrompt=document.getElementById("interactPrompt");
 const urlParams=new URLSearchParams(location.search),journey=window.JackJourney||null,journeyMode=urlParams.get("journey")==="1",replayMode=urlParams.get("replay")==="1",forceNewRun=urlParams.get("new")==="1",SAVE_KEY="jack-phase2-save";
@@ -83,6 +83,9 @@ if(loadedSave){
 }
 function img(src){return new Promise((r,j)=>{const i=new Image;i.onload=()=>r(i);i.onerror=j;i.src=src+"?v=p2proto2"})}
 img("../assets/game/phase1/sprites-hd/jack-atlas-hd.png").then(i=>jack=i).catch(()=>{});
+const ameliaMapFiles=["neutral","feliz","triste","surpresa","irritada","cansada","assustada"];
+Promise.allSettled(ameliaMapFiles.map(n=>img("../assets/game/phase2/amelia-sprites/amelia-map-"+n+".png")))
+  .then(rs=>rs.forEach((r,i)=>{if(r.status==="fulfilled")ameliaMap[ameliaMapFiles[i]]=r.value}));
 const jackPortraitFiles=["jack-00-neutral.png","jack-01-serious.png","jack-02-smirk.png","jack-03-surprised.png","jack-04-determined.png","jack-05-resolved.png"];
 const ameliaPortraitFiles=["amelia-00-neutral.png","amelia-01-cansada.png","amelia-02-triste.png","amelia-03-surpresa.png","amelia-04-irritada.png","amelia-05-culpada.png","amelia-06-chorando.png","amelia-07-abatida.png","amelia-08-assustada.png","amelia-09-sorriso-suave.png"];
 Promise.all([
@@ -160,6 +163,37 @@ else if(!towerMechanism)ui.obj.textContent="Os 3 enigmas foram resolvidos. Suba 
 else ui.obj.textContent="Tudo foi resolvido. Suba ao selo no topo da Torre.";
 cam+=(Math.max(0,Math.min(WORLD-W,p.x-W*.36))-cam)*Math.min(1,dt*5);camY+=((p.x>7150?Math.min(0,p.y-390):0)-camY)*Math.min(1,dt*4);p.anim+=dt;saveClock+=dt;if(saveClock>=.75){saveClock=0;saveJourney()}}
 function drawJack(){const py=p.y-camY;if(!jack){x.fillStyle="#eee";x.fillRect(p.x-cam,py,p.w,p.h);return}const A=window.JACK_ANIMATIONS,arr=p.attack>0?A.animations.attack:(!p.on?(p.vy<-80?A.animations.jumpRise:A.animations.jumpFall):(Math.abs(p.vx)>35?(input.run?A.animations.run:A.animations.walk):A.animations.idle));const fps=input.run?12:9,idx=arr[Math.floor(p.anim*fps)%arr.length],sx=(idx%8)*320,sy=Math.floor(idx/8)*320,rw=190,rh=190,dx=p.x-cam+p.w/2-rw/2,dy=py-132;if(p.dir<0){x.save();x.translate(dx+rw,0);x.scale(-1,1);x.drawImage(jack,sx,sy,320,320,0,dy,rw,rh);x.restore()}else x.drawImage(jack,sx,sy,320,320,dx,dy,rw,rh)}
+
+function ameliaMapMood(){
+  if(bossDefeated)return "feliz";
+  if(finalLorePlayed||bossActive)return "assustada";
+  const found=gears.filter(g=>g.got).length;
+  if(!ameliaMet)return "cansada";
+  if(found===0)return "neutral";
+  if(found===1)return "triste";
+  if(found===2)return "cansada";
+  return "assustada";
+}
+function drawAmelia(){
+  const mood=ameliaMapMood(),sprite=ameliaMap[mood]||ameliaMap.neutral;
+  const cx=2638,ground=430,bob=Math.sin(p.anim*2.25)*2;
+  x.save();
+  x.globalAlpha=.35;x.fillStyle="#000";x.beginPath();x.ellipse(cx,ground-2,48,12,0,0,Math.PI*2);x.fill();x.globalAlpha=1;
+  if(sprite){
+    const size=180;
+    x.drawImage(sprite,cx-size/2,ground-size+bob,size,size);
+  }else{
+    x.fillStyle="#39273d";x.fillRect(cx-18,ground-78,36,78);
+    x.fillStyle="#d8c3ad";x.beginPath();x.arc(cx,ground-91,19,0,Math.PI*2);x.fill();
+  }
+  if(nearAmelia()&&!dialogue.active){
+    x.fillStyle="#ffe7a1";x.strokeStyle="#6e3b20";x.lineWidth=3;
+    x.beginPath();x.arc(cx,ground-188+bob,17,0,Math.PI*2);x.fill();x.stroke();
+    x.fillStyle="#2a1720";x.font="bold 15px Georgia";x.textAlign="center";x.fillText("E",cx,ground-183+bob);x.textAlign="left";
+  }
+  x.fillStyle="#f0cf76";x.font="bold 12px Georgia";x.textAlign="center";x.fillText("AMÉLIA",cx,ground+19);x.textAlign="left";
+  x.restore();
+}
 function draw(){const gr=x.createLinearGradient(0,0,0,H);gr.addColorStop(0,"#061024");gr.addColorStop(.65,"#17132b");gr.addColorStop(1,"#27131d");x.fillStyle=gr;x.fillRect(0,0,W,H);x.fillStyle="#e7d4b0";x.globalAlpha=.35;for(let i=0;i<18;i++){const px=((i*431-cam*.12)%1500+1500)%1500;x.fillRect(px,80+(i*71)%220,2,2)}x.globalAlpha=1;
 x.save();x.translate(-cam,-camY);x.fillStyle="#17131b";for(let bx=250;bx<WORLD;bx+=430){const h=150+(bx%170);x.fillRect(bx,590-h,260,h);x.fillStyle="#5a321d";for(let wy=590-h+35;wy<550;wy+=60){x.fillRect(bx+35,wy,28,38);x.fillRect(bx+150,wy,28,38)}x.fillStyle="#17131b"}
 // Torre protótipo: cilindro central e anéis arquitetônicos para comunicar a subida em espiral.
@@ -194,8 +228,8 @@ if(bossActive&&!bossDefeated){
 }
 if(bossDefeated){x.fillStyle="#f3d98a";x.globalAlpha=.75;x.font="bold 18px Georgia";x.fillText("O tempo voltou a respirar.",7940,-760);x.globalAlpha=1}
 for(const s of bossShots){x.globalAlpha=.22;x.fillStyle="#c95b9a";x.beginPath();x.arc(s.x,s.y,s.r*2.1,0,Math.PI*2);x.fill();x.globalAlpha=1;x.fillStyle="#ffcf72";x.beginPath();x.arc(s.x,s.y,s.r,0,Math.PI*2);x.fill();x.strokeStyle="#7b315f";x.stroke()}
-// Amélia provisória na praça: marcador visual até criarmos o sprite oficial.
-x.save();x.translate(2620,505);x.fillStyle="#39273d";x.fillRect(-18,0,36,78);x.fillStyle="#d8c3ad";x.beginPath();x.arc(0,-13,19,0,Math.PI*2);x.fill();x.fillStyle="#b7a8b8";x.fillRect(-18,-30,36,8);x.fillStyle="#d9b65c";x.fillRect(16,22,24,6);x.fillStyle="#f0cf76";x.font="12px Georgia";x.fillText("AMÉLIA",-30,100);x.restore();
+// Amélia Vesper oficial: sprite de mapa com expressão ligada ao estado da história.
+drawAmelia();
 for(const e of enemies){if(e.dead)continue;x.fillStyle="#d56a20";x.beginPath();x.arc(e.x,e.y,24,0,Math.PI*2);x.fill();x.fillStyle="#ffe099";x.fillRect(e.x-11,e.y-5,6,6);x.fillRect(e.x+5,e.y-5,6,6)}
 for(const b of bells){x.fillStyle=b.on?"#ffe099":"#8d693d";x.beginPath();x.moveTo(b.x,b.y-45);x.lineTo(b.x-22,b.y);x.lineTo(b.x+22,b.y);x.closePath();x.fill()}
 for(const g of gears){if(g.got)continue;x.save();x.translate(g.x,g.y);x.rotate(p.anim);x.strokeStyle="#ffd36b";x.lineWidth=8;x.beginPath();x.arc(0,0,24,0,Math.PI*2);x.stroke();for(let i=0;i<8;i++){x.rotate(Math.PI/4);x.fillStyle="#ffd36b";x.fillRect(20,-5,13,10)}x.restore()}
