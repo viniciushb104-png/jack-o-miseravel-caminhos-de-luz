@@ -3,6 +3,14 @@
   const hero = document.querySelector('#inicio');
   const toast = document.querySelector('#toast');
   const video = document.querySelector('#menuVideo');
+  const menuMusicButton = document.querySelector('#menuMusicToggle');
+  const mainThemeAudio = new Audio('assets/audio/main-theme.mp3');
+  mainThemeAudio.loop = true;
+  mainThemeAudio.preload = 'auto';
+  mainThemeAudio.volume = 0;
+  const MAIN_THEME_VOLUME = .46;
+  let menuMusicEnabled = localStorage.getItem('jack-menu-music-muted') !== '1';
+  let mainThemeFadeToken = 0;
 
   function showToast(message) {
     if (!toast) return;
@@ -12,14 +20,74 @@
     showToast.timer = setTimeout(() => toast.classList.remove('show'), 2200);
   }
 
+  function updateMenuMusicButton(state = '') {
+    if (!menuMusicButton) return;
+    const copy = menuMusicButton.querySelector('.menu-music-copy strong');
+    const playing = !mainThemeAudio.paused && mainThemeAudio.volume > .02;
+    menuMusicButton.classList.toggle('is-playing', playing);
+    menuMusicButton.classList.toggle('is-blocked', state === 'blocked');
+    menuMusicButton.setAttribute('aria-pressed', playing ? 'true' : 'false');
+    menuMusicButton.setAttribute('aria-label', playing ? 'Silenciar música da tela inicial' : 'Ativar música da tela inicial');
+    if (copy) copy.textContent = playing ? 'MÚSICA LIGADA' : (state === 'blocked' ? 'ATIVAR MÚSICA' : (menuMusicEnabled ? 'TOCAR TEMA' : 'MÚSICA DESLIGADA'));
+  }
+
+  function animateMainThemeVolume(target, duration = 650, pauseAtEnd = false) {
+    const token = ++mainThemeFadeToken;
+    const from = mainThemeAudio.volume;
+    const started = performance.now();
+
+    function tick(now) {
+      if (token !== mainThemeFadeToken) return;
+      const progress = Math.min(1, (now - started) / Math.max(1, duration));
+      const eased = progress * (2 - progress);
+      mainThemeAudio.volume = from + (target - from) * eased;
+      if (progress < 1) {
+        requestAnimationFrame(tick);
+      } else {
+        mainThemeAudio.volume = target;
+        if (pauseAtEnd && target <= .001) mainThemeAudio.pause();
+        updateMenuMusicButton();
+      }
+    }
+    requestAnimationFrame(tick);
+  }
+
+  function playMainTheme() {
+    if (!menuMusicEnabled || hero.style.display === 'none') return;
+    stopMusicalVideos();
+    if (typeof pauseSoundtrack === 'function') pauseSoundtrack();
+    ++mainThemeFadeToken;
+    mainThemeAudio.volume = Math.min(mainThemeAudio.volume, .04);
+    mainThemeAudio.play().then(() => {
+      animateMainThemeVolume(MAIN_THEME_VOLUME, 900, false);
+      updateMenuMusicButton();
+    }).catch(() => {
+      updateMenuMusicButton('blocked');
+    });
+  }
+
+  function fadeOutMainTheme(duration = 500) {
+    if (mainThemeAudio.paused) {
+      mainThemeAudio.volume = 0;
+      updateMenuMusicButton();
+      return;
+    }
+    animateMainThemeVolume(0, duration, true);
+  }
+
   function openScreen(id) {
     if (id === 'inicio') {
       screens.forEach(screen => screen.classList.remove('active-screen'));
       hero.style.display = '';
       history.replaceState(null, '', '#inicio');
       window.scrollTo({ top: 0, behavior: 'smooth' });
+      stopMusicalVideos();
+      if (typeof pauseSoundtrack === 'function') pauseSoundtrack();
+      if (menuMusicEnabled) playMainTheme();
       return;
     }
+
+    fadeOutMainTheme(420);
 
     const target = document.getElementById(id);
     if (!target) return;
@@ -60,6 +128,28 @@
     });
   }
 
+  if (menuMusicButton) {
+    menuMusicButton.addEventListener('click', () => {
+      if (!mainThemeAudio.paused && mainThemeAudio.volume > .02) {
+        menuMusicEnabled = false;
+        localStorage.setItem('jack-menu-music-muted', '1');
+        fadeOutMainTheme(350);
+      } else {
+        menuMusicEnabled = true;
+        localStorage.setItem('jack-menu-music-muted', '0');
+        playMainTheme();
+      }
+      updateMenuMusicButton();
+    });
+  }
+  updateMenuMusicButton();
+
+  // Tentamos iniciar o tema. Navegadores que exigem gesto do usuário
+  // mantêm o botão "ATIVAR MÚSICA" visível, sem quebrar a experiência.
+  if (menuMusicEnabled && !location.hash.replace('#', '')) {
+    playMainTheme();
+  }
+
   // Videoteca do musical: o iframe do YouTube só é criado depois do clique.
   // Mantemos apenas um player ativo por vez para evitar áudio concorrente.
   const musicalFrames = [...document.querySelectorAll('.video-frame[data-youtube-id]')];
@@ -83,6 +173,7 @@
       if (!id) return;
 
       stopMusicalVideos(frame);
+      fadeOutMainTheme(250);
 
       const iframe = document.createElement('iframe');
       iframe.src = 'https://www.youtube-nocookie.com/embed/' + encodeURIComponent(id) + '?autoplay=1&rel=0&modestbranding=1&playsinline=1';
@@ -104,6 +195,15 @@
 
   // Fonógrafo da Lanterna: faixas são liberadas pelo progresso salvo do jogo.
   const soundtrackTracks = [
+    {
+      phase: 1,
+      secret: true,
+      chapter: 'TEMA PRINCIPAL · CAMINHOS DE LUZ',
+      title: 'Caminhos de Luz — Tema de Jack',
+      lockedChapter: 'ARQUIVO OCULTO · CAMINHOS DE LUZ',
+      lockedTitle: '??? — Tema Principal',
+      src: 'assets/audio/main-theme.mp3'
+    },
     {
       phase: 1,
       chapter: 'HALLOWEEN I · AS CASAS DOS PERDIDOS',
@@ -168,9 +268,13 @@
       button.classList.toggle('is-unlocked', open);
       const state = button.querySelector('.track-state');
       const action = button.querySelector('.track-action');
+      const small = button.querySelector('.track-copy small');
+      const strong = button.querySelector('.track-copy strong');
       if (state) state.textContent = open ? '✦' : '🔒';
-      if (action) action.textContent = open ? 'OUVIR' : 'BLOQUEADA';
-      button.setAttribute('aria-label', open ? 'Ouvir ' + track.title : track.title + ' — bloqueada até concluir o Halloween ' + track.phase);
+      if (action) action.textContent = open ? 'OUVIR' : (track.secret ? 'DESCUBRA' : 'BLOQUEADA');
+      if (small) small.textContent = open ? track.chapter : (track.lockedChapter || track.chapter);
+      if (strong) strong.textContent = open ? track.title : (track.lockedTitle || track.title);
+      button.setAttribute('aria-label', open ? 'Ouvir ' + track.title : (track.secret ? 'Faixa secreta — conclua o Halloween ' + track.phase + ' para revelar' : track.title + ' — bloqueada até concluir o Halloween ' + track.phase));
     });
 
     if (soundtrackUI.play) soundtrackUI.play.disabled = unlocked.length === 0;
@@ -212,6 +316,7 @@
     if (!unlocked.length) return;
     if (soundtrackIndex < 0 || !unlocked.includes(soundtrackIndex)) selectSoundtrack(unlocked[0], false);
     stopMusicalVideos();
+    fadeOutMainTheme(250);
     soundtrackAudio.play().then(() => {
       if (soundtrackUI.play) {
         soundtrackUI.play.textContent = '❚❚';
@@ -288,11 +393,21 @@
     });
   });
 
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      fadeOutMainTheme(180);
+    } else if (hero.style.display !== 'none' && menuMusicEnabled) {
+      playMainTheme();
+    }
+  });
+
   window.addEventListener('storage', refreshSoundtrackUnlocks);
   refreshSoundtrackUnlocks();
 
   const initial = location.hash.replace('#', '');
   if (initial && initial !== 'inicio' && document.getElementById(initial)) {
     openScreen(initial);
+  } else if (initial === 'inicio' && menuMusicEnabled) {
+    playMainTheme();
   }
 })();
