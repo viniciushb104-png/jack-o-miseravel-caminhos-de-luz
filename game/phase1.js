@@ -348,7 +348,7 @@
       img.onload = () => resolve(img);
       img.onerror = () => reject(new Error("Falha ao carregar " + path));
       const sep = path.includes("?") ? "&" : "?";
-      img.src = path + sep + "v=phase1-assets-33";
+      img.src = path + sep + "v=phase1-assets-34";
     });
   }
 
@@ -1761,10 +1761,14 @@
     const scale=item.h/img.naturalHeight;
     const dw=img.naturalWidth*scale;
     const x=item.x-cameraX;
+    // Os recortes têm uma pequena margem transparente na base.
+    // Afundamos visualmente os props no piso para eliminar a sensação de flutuação,
+    // sem alterar plataformas, colisões ou posições lógicas da fase.
+    const groundY=item.y+12;
     if(x+dw/2<-160||x-dw/2>W+160)return true;
 
     if(item.glow){
-      const gy=item.y-item.h*.57;
+      const gy=groundY-item.h*.57;
       const radius=Math.max(42,item.h*.34);
       const glow=ctx.createRadialGradient(x,gy,3,x,gy,radius);
       glow.addColorStop(0,"rgba(255,220,126,.26)");
@@ -1780,7 +1784,7 @@
     ctx.globalAlpha=.20;
     ctx.fillStyle="#07070c";
     ctx.beginPath();
-    ctx.ellipse(x,item.y-2,shadowW/2,7,0,0,Math.PI*2);
+    ctx.ellipse(x,groundY-2,shadowW/2,7,0,0,Math.PI*2);
     ctx.fill();
     ctx.restore();
 
@@ -1789,11 +1793,11 @@
     ctx.imageSmoothingQuality="high";
     ctx.globalAlpha=item.alpha??1;
     if(item.flip){
-      ctx.translate(x+dw/2,item.y-item.h);
+      ctx.translate(x+dw/2,groundY-item.h);
       ctx.scale(-1,1);
       ctx.drawImage(img,0,0,dw,item.h);
     }else{
-      ctx.drawImage(img,x-dw/2,item.y-item.h,dw,item.h);
+      ctx.drawImage(img,x-dw/2,groundY-item.h,dw,item.h);
     }
     ctx.restore();
     return true;
