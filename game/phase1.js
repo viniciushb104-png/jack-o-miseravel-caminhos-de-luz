@@ -117,23 +117,62 @@
   };
   const BACKGROUND_BLEND = 300;
   let lightPulse = 0, lightCooldown = 0, shake = 0, sectionIndex = -1;
-  let checkpointReached = localStorage.getItem(story.states.checkpoint) === "bridge";
+
+  // Checkpoints da Fase 1.
+  // Saves antigos que ainda dizem "bridge" são migrados para o Cemitério.
+  let activeCheckpoint = localStorage.getItem(story.states.checkpoint) || "";
+  if(activeCheckpoint==="bridge"){
+    activeCheckpoint="cemetery";
+    localStorage.setItem(story.states.checkpoint,activeCheckpoint);
+  }
+
   let metEleanor = localStorage.getItem(story.states.metEleanor) === "1";
   let ruinsScenePlayed = false, finalSequence = false, gateMessageCooldown = 0;
 
-  const CHECKPOINT_POST = Object.freeze({
-    x:6160,
-    groundY:470,      // base lógica para colisão/ativação
-    visualGroundY:494,// arte um pouco mais baixa para parecer encaixada na ponte
-    renderW:250,
-    renderH:250,
-    hitW:126,
-    hitH:205
-  });
+  const CHECKPOINT_POSTS = Object.freeze([
+    {
+      id:"cemetery",
+      name:"Cemitério das Velas",
+      x:4200,
+      groundY:590,
+      visualGroundY:604,
+      respawnX:4100,
+      respawnY:547,
+      renderW:250,
+      renderH:250,
+      hitW:126,
+      hitH:205,
+      requiresMemories:0
+    },
+    {
+      id:"preboss",
+      name:"Última Lanterna",
+      x:8620,
+      groundY:590,
+      visualGroundY:604,
+      respawnX:8500,
+      respawnY:547,
+      renderW:250,
+      renderH:250,
+      hitW:126,
+      hitH:205,
+      requiresMemories:5
+    }
+  ]);
 
+  function checkpointRank(id){
+    return id==="preboss"?2:id==="cemetery"?1:0;
+  }
+
+  function currentRespawn(){
+    const cp=CHECKPOINT_POSTS.find(p=>p.id===activeCheckpoint);
+    return cp ? {x:cp.respawnX,y:cp.respawnY} : {x:130,y:470};
+  }
+
+  const initialRespawn=currentRespawn();
   const player = {
-    x: checkpointReached ? 6120 : 130,
-    y: checkpointReached ? 370 : 470,
+    x: initialRespawn.x,
+    y: initialRespawn.y,
     w: 46, h: 86, vx:0, vy:0, dir:1, onGround:false,
     coyote:0, jumpBuffer:0, anim:0, attackT:0, landT:0, hp:3, inv:0
   };
@@ -217,7 +256,7 @@
       img.onload = () => resolve(img);
       img.onerror = () => reject(new Error("Falha ao carregar " + path));
       const sep = path.includes("?") ? "&" : "?";
-      img.src = path + sep + "v=phase1-assets-28";
+      img.src = path + sep + "v=phase1-assets-30";
     });
   }
 
@@ -720,8 +759,9 @@
   }
 
   function resetPlayer(full=false){
-    player.x = checkpointReached && !full ? 6120 : 130;
-    player.y = checkpointReached && !full ? 360 : 470;
+    const respawn=full ? {x:130,y:470} : currentRespawn();
+    player.x=respawn.x;
+    player.y=respawn.y;
     player.vx=0; player.vy=0; player.hp=3; player.inv=0; player.attackT=0; player.landT=0;
     cameraX = Math.max(0, player.x - 420);
     projectiles.length=0;
@@ -853,18 +893,34 @@
     });
   }
 
-  function playerTouchesCheckpoint(){
+  function playerTouchesCheckpoint(cp){
     const left=player.x-player.w/2;
     const right=player.x+player.w/2;
     const top=player.y-player.h/2;
     const bottom=player.y+player.h/2;
 
-    const postLeft=CHECKPOINT_POST.x-CHECKPOINT_POST.hitW/2;
-    const postRight=CHECKPOINT_POST.x+CHECKPOINT_POST.hitW/2;
-    const postTop=CHECKPOINT_POST.groundY-CHECKPOINT_POST.hitH;
-    const postBottom=CHECKPOINT_POST.groundY;
+    const postLeft=cp.x-cp.hitW/2;
+    const postRight=cp.x+cp.hitW/2;
+    const postTop=cp.groundY-cp.hitH;
+    const postBottom=cp.groundY;
 
     return right>=postLeft && left<=postRight && bottom>=postTop && top<=postBottom;
+  }
+
+  function checkpointIsLit(cp){
+    return checkpointRank(activeCheckpoint) >= checkpointRank(cp.id);
+  }
+
+  function activateCheckpoint(cp){
+    if(checkpointIsLit(cp)) return;
+    if(memoryCount() < (cp.requiresMemories||0)) return;
+
+    activeCheckpoint=cp.id;
+    localStorage.setItem(story.states.checkpoint,cp.id);
+    localStorage.setItem("jack-light-level","02");
+    showMessage("✦ Checkpoint — "+cp.name+" aceso.");
+    shake=.12;
+    syncHud();
   }
 
   function updatePlayer(dt){
@@ -951,13 +1007,10 @@
     lightPulse=Math.max(0,lightPulse-dt);
     gateMessageCooldown=Math.max(0,gateMessageCooldown-dt);
 
-    if(!checkpointReached && playerTouchesCheckpoint()){
-      checkpointReached=true;
-      localStorage.setItem(story.states.checkpoint,"bridge");
-      localStorage.setItem("jack-light-level","02");
-      showMessage("✦ Checkpoint — Poste da Abóbora aceso.");
-      shake=.12;
-      syncHud();
+    for(const cp of CHECKPOINT_POSTS){
+      if(!checkpointIsLit(cp) && memoryCount()>=(cp.requiresMemories||0) && playerTouchesCheckpoint(cp)){
+        activateCheckpoint(cp);
+      }
     }
 
     const nearEleanor=Math.abs(player.x-1240)<125 && player.x<1550;
@@ -1581,14 +1634,14 @@
     return true;
   }
 
-  function drawCheckpointPost(){
-    const cp=CHECKPOINT_POST;
+  function drawCheckpointPost(cp){
     const x=cp.x-cameraX;
     const visualY=cp.visualGroundY ?? cp.groundY;
+    const lit=checkpointIsLit(cp);
     if(x<-260||x>W+260)return;
 
-    if(checkpointReached){
-      const pulse=.82+Math.sin(performance.now()/280)*.12;
+    if(lit){
+      const pulse=.82+Math.sin(performance.now()/280+cp.x*.001)*.12;
       const glow=ctx.createRadialGradient(x+44,visualY-145,12,x+44,visualY-145,125);
       glow.addColorStop(0,`rgba(255,190,72,${.28*pulse})`);
       glow.addColorStop(.55,`rgba(255,126,28,${.12*pulse})`);
@@ -1599,14 +1652,13 @@
 
     if(art.checkpoint){
       drawAtlasCell(
-        art.checkpoint,2,1,checkpointReached?1:0,0,
+        art.checkpoint,2,1,lit?1:0,0,
         x-cp.renderW/2,visualY-cp.renderH,
         cp.renderW,cp.renderH,false,1,true
       );
       return;
     }
 
-    // Fallback simples caso o arquivo de arte falhe.
     ctx.save();
     ctx.translate(x,visualY);
     ctx.fillStyle="#20243a";
@@ -1615,9 +1667,13 @@
     ctx.fillRect(-12,-190,24,190);
     ctx.fillStyle="#bb5b15";
     ctx.beginPath();ctx.arc(48,-145,38,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle=checkpointReached?"#ffd56b":"#28160f";
+    ctx.fillStyle=lit?"#ffd56b":"#28160f";
     ctx.beginPath();ctx.arc(48,-145,20,0,Math.PI*2);ctx.fill();
     ctx.restore();
+  }
+
+  function drawCheckpointPosts(){
+    for(const cp of CHECKPOINT_POSTS) drawCheckpointPost(cp);
   }
 
   function drawPlatformStructureAccents(){
@@ -1656,17 +1712,17 @@
       for(let x=1580;x<3180;x+=390){artProp(x,590,"tree",.8);artProp(x+150,590,"cart",.58);}
       // Cemitério
       for(let x=3290;x<4970;x+=235)artProp(x,590,"grave",.78);
-      artProp(3910,590,"shrine",.88);artProp(3440,590,"lantern",.72);artProp(4680,590,"lantern",.74);
+      artProp(4470,590,"shrine",.82);artProp(3440,590,"lantern",.72);artProp(4680,590,"lantern",.74);
       // Pontes
       artProp(5210,590,"fence",.75);artProp(6800,520,"lantern",.67);
       // Ruínas
       for(let x=7080;x<8700;x+=465){artProp(x,590,"grave",.72);artProp(x+190,590,"tree",.55);}
       artProp(7860,590,"cottage",.76);artProp(8450,590,"shrine",.82);
       // Arena
-      artProp(9200,590,"lantern",.82);artProp(10700,590,"lantern",.82);
+      artProp(10700,590,"lantern",.82);
       artProp(9650,590,"gate",1.15);
       gate(8820);
-      drawCheckpointPost();
+      drawCheckpointPosts();
       return;
     }
     // Vila
@@ -1676,17 +1732,17 @@
     for(let x=1580;x<3180;x+=360){tree(x,590,.78);pumpkin(x+115,590,.95);pumpkin(x+160,590,.72)}
     // Cemitério
     for(let x=3270,i=0;x<4970;x+=190,i++)grave(x,590,i);
-    shrine(3900,590);lantern(3440,590,.72);lantern(4680,590,.75);
+    shrine(4470,590);lantern(3440,590,.72);lantern(4680,590,.75);
     // Pontes
     lantern(5200,590,.8);lantern(6800,520,.7);
     // Ruínas
     for(let x=7070;x<8700;x+=440){grave(x,590,1);tree(x+180,590,.62)}
     cottage(7860,590,.78);shrine(8450,590);
     // Arena
-    gate(8820);lantern(9200,590,.85);lantern(10700,590,.85);
+    gate(8820);lantern(10700,590,.85);
     ctx.fillStyle="#172038";
     const ax=9700-cameraX; if(ax>-350&&ax<W+350){ctx.fillRect(ax-250,240,35,350);ctx.fillRect(ax+215,240,35,350);ctx.strokeStyle="#25304d";ctx.lineWidth=25;ctx.beginPath();ctx.arc(ax,300,235,Math.PI,0);ctx.stroke();}
-    drawCheckpointPost();
+    drawCheckpointPosts();
   }
 
   function drawEleanor(wx,groundY,pose=0,scale=1){
