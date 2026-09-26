@@ -54,8 +54,6 @@
 
   function playMainTheme() {
     if (!menuMusicEnabled || hero.style.display === 'none') return;
-    stopMusicalVideos();
-    if (typeof pauseSoundtrack === 'function') pauseSoundtrack();
     ++mainThemeFadeToken;
     mainThemeAudio.volume = Math.min(mainThemeAudio.volume, .04);
     mainThemeAudio.play().then(() => {
