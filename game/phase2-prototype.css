@@ -107,3 +107,133 @@
   .dialogue{width:min(900px,92vw);max-height:45vh}
   .dialogue-text{font-size:.7rem;line-height:1.28}
 }
+
+
+/* Alinhamento fino da moldura temporal: mesmas regras da Fase 1 */
+.dialogue-shell{
+  position:absolute;
+  inset:0;
+  display:block;
+  overflow:hidden;
+}
+.dialogue-portrait{
+  position:absolute;
+  left:4.15%;
+  top:17.2%;
+  bottom:22.5%;
+  width:22.15%;
+  margin:0;
+  border:0;
+  background-color:transparent;
+  background-repeat:no-repeat;
+  background-position:center bottom;
+  background-size:contain;
+  filter:none;
+  z-index:2;
+}
+.dialogue-portrait.is-hd-portrait{
+  background-size:contain!important;
+  background-position:center bottom!important;
+}
+.dialogue-main{
+  position:absolute;
+  inset:0;
+  display:block;
+  padding:0;
+  overflow:visible;
+  z-index:3;
+  pointer-events:none;
+}
+.dialogue-name{
+  position:absolute;
+  left:31.05%;
+  top:16.8%;
+  width:38.3%;
+  height:13.5%;
+  margin:0;
+  padding:0 2%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:#ffe2a0;
+  background:transparent;
+  border:0;
+  font-size:clamp(.58rem,1.12vw,.9rem);
+  line-height:1;
+  letter-spacing:.12em;
+  text-align:center;
+  text-shadow:0 2px 2px #000,0 0 8px #8d4316;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.dialogue-text{
+  position:absolute;
+  left:28.7%;
+  right:10.1%;
+  top:36.9%;
+  bottom:23.2%;
+  margin:0;
+  padding:2.1% 2.4%;
+  display:block;
+  overflow:hidden;
+  color:#f8e7c0;
+  font-size:clamp(.74rem,1.35vw,1.02rem);
+  line-height:1.42;
+  text-align:left;
+  text-shadow:0 2px 3px #000;
+  overflow-wrap:anywhere;
+}
+.dialogue-next{
+  position:absolute;
+  right:8.25%;
+  bottom:25.3%;
+  width:4.2%;
+  height:15%;
+  min-width:0;
+  min-height:0;
+  margin:0;
+  padding:0;
+  z-index:5;
+  pointer-events:auto;
+}
+@media(max-width:700px){
+  .dialogue-portrait{
+    left:4.15%;
+    top:17.2%;
+    bottom:22.5%;
+    width:22.15%;
+    margin:0;
+  }
+  .dialogue-main{position:absolute;inset:0;padding:0;overflow:visible}
+  .dialogue-name{
+    left:31.05%;
+    top:16.8%;
+    width:38.3%;
+    height:13.5%;
+    font-size:clamp(.45rem,2vw,.62rem);
+  }
+  .dialogue-text{
+    left:28.7%;
+    right:10.1%;
+    top:36.9%;
+    bottom:23.2%;
+    margin:0;
+    padding:2% 2.2%;
+    max-height:none;
+    font-size:clamp(.56rem,2.15vw,.74rem);
+    line-height:1.28;
+  }
+  .dialogue-next{
+    right:8.25%;
+    bottom:25.3%;
+    width:4.2%;
+    height:15%;
+    min-width:0;
+    min-height:0;
+  }
+}
+@media(max-height:520px) and (orientation:landscape){
+  .dialogue-name{font-size:.58rem}
+  .dialogue-text{font-size:.66rem;line-height:1.25}
+}
