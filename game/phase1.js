@@ -123,7 +123,8 @@
 
   const CHECKPOINT_POST = Object.freeze({
     x:6160,
-    groundY:470,
+    groundY:470,      // base lógica para colisão/ativação
+    visualGroundY:494,// arte um pouco mais baixa para parecer encaixada na ponte
     renderW:250,
     renderH:250,
     hitW:126,
@@ -216,7 +217,7 @@
       img.onload = () => resolve(img);
       img.onerror = () => reject(new Error("Falha ao carregar " + path));
       const sep = path.includes("?") ? "&" : "?";
-      img.src = path + sep + "v=phase1-assets-27";
+      img.src = path + sep + "v=phase1-assets-28";
     });
   }
 
@@ -1233,20 +1234,18 @@
     const x=p.x-cameraX;
     if(x+p.w<-100||x>W+100)return true;
 
-    ctx.fillStyle="#1b1719";
-    ctx.fillRect(x,p.y,p.w,p.h);
-
-    // One complete bridge module per collision platform. The top boards align
-    // exactly with p.y; rope, posts and ivy are free to hang below.
+    // A plataforma física continua existindo para a colisão, mas não é pintada.
+    // Jack parece caminhar diretamente sobre a ponte ilustrada, sem uma barra
+    // retangular aparecendo por cima do cenário.
     ctx.save();
     ctx.beginPath();
-    ctx.rect(x-4,p.y-18,p.w+8,138);
+    ctx.rect(x-8,p.y-24,p.w+16,150);
     ctx.clip();
     drawCrop(
       art.platformBridge,
       .012,.018,.585,.205,
-      Math.round(x-5),Math.round(p.y-14),
-      Math.round(p.w+10),126,
+      Math.round(x-6),Math.round(p.y-14),
+      Math.round(p.w+12),128,
       1,true
     );
     ctx.restore();
@@ -1443,22 +1442,23 @@
   function drawCheckpointPost(){
     const cp=CHECKPOINT_POST;
     const x=cp.x-cameraX;
+    const visualY=cp.visualGroundY ?? cp.groundY;
     if(x<-260||x>W+260)return;
 
     if(checkpointReached){
       const pulse=.82+Math.sin(performance.now()/280)*.12;
-      const glow=ctx.createRadialGradient(x+44,cp.groundY-145,12,x+44,cp.groundY-145,125);
+      const glow=ctx.createRadialGradient(x+44,visualY-145,12,x+44,visualY-145,125);
       glow.addColorStop(0,`rgba(255,190,72,${.28*pulse})`);
       glow.addColorStop(.55,`rgba(255,126,28,${.12*pulse})`);
       glow.addColorStop(1,"rgba(255,90,10,0)");
       ctx.fillStyle=glow;
-      ctx.beginPath();ctx.arc(x+44,cp.groundY-145,125,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.arc(x+44,visualY-145,125,0,Math.PI*2);ctx.fill();
     }
 
     if(art.checkpoint){
       drawAtlasCell(
         art.checkpoint,2,1,checkpointReached?1:0,0,
-        x-cp.renderW/2,cp.groundY-cp.renderH,
+        x-cp.renderW/2,visualY-cp.renderH,
         cp.renderW,cp.renderH,false,1,true
       );
       return;
@@ -1466,7 +1466,7 @@
 
     // Fallback simples caso o arquivo de arte falhe.
     ctx.save();
-    ctx.translate(x,cp.groundY);
+    ctx.translate(x,visualY);
     ctx.fillStyle="#20243a";
     ctx.fillRect(-18,-205,36,205);
     ctx.fillStyle="#4a2b16";
