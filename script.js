@@ -9,6 +9,8 @@
   mainThemeAudio.preload = 'auto';
   mainThemeAudio.volume = 0;
   const MAIN_THEME_VOLUME = .46;
+  const journey = window.JackJourney || null;
+  journey?.restoreReplay();
   let menuMusicEnabled = localStorage.getItem('jack-menu-music-muted') !== '1';
   let mainThemeFadeToken = 0;
 
@@ -68,6 +70,62 @@
     clearTimeout(showToast.timer);
     showToast.timer = setTimeout(() => toast.classList.remove('show'), 2200);
   }
+
+  const startJourneyButton = document.getElementById('startJourneyBtn');
+  const continueJourneyButton = document.getElementById('continueJourneyBtn');
+  const chapterTwo = document.getElementById('chapterTwo');
+
+  function syncJourneyUI() {
+    if (!journey) return;
+
+    const active = journey.isActive();
+    if (continueJourneyButton) {
+      continueJourneyButton.hidden = !active;
+      if (active) {
+        continueJourneyButton.href = './game/' + journey.continueFile() + '?journey=1';
+        const label = continueJourneyButton.querySelector('span:nth-child(2)');
+        if (label) label.textContent = 'Continuar Jornada · Halloween ' + String(journey.currentPhase()).padStart(2, '0');
+      }
+    }
+
+    if (chapterTwo) {
+      const unlocked = journey.isPhaseUnlocked(2);
+      chapterTwo.classList.toggle('chapter-card--open', unlocked);
+      chapterTwo.setAttribute('aria-disabled', unlocked ? 'false' : 'true');
+      const status = chapterTwo.querySelector('[data-phase-status]');
+      const arrow = chapterTwo.querySelector('[data-phase-arrow]');
+      if (unlocked) {
+        chapterTwo.href = './game/phase2-prototype.html?replay=1&new=1';
+        if (status) status.textContent = 'Desbloqueada · rejogar esta fase';
+        if (arrow) arrow.textContent = '›';
+      } else {
+        chapterTwo.removeAttribute('href');
+        if (status) status.textContent = 'Conclua o Halloween I para desbloquear';
+        if (arrow) arrow.textContent = '🔒';
+      }
+    }
+  }
+
+  startJourneyButton?.addEventListener('click', () => {
+    if (journey?.isActive()) {
+      const restart = window.confirm('Iniciar uma nova jornada? O ponto atual da Jornada será reiniciado. Fases, troféus, memórias e músicas já conquistados continuarão salvos.');
+      if (!restart) return;
+    }
+    journey?.startNew();
+    location.href = './game/phase1.html?journey=1&new=1';
+  });
+
+  chapterTwo?.addEventListener('click', event => {
+    if (chapterTwo.getAttribute('aria-disabled') === 'true') {
+      event.preventDefault();
+      showToast('Conclua o Halloween I para abrir A Vila sem Amanhecer.');
+    }
+  });
+
+  syncJourneyUI();
+  window.addEventListener('pageshow', syncJourneyUI);
+  window.addEventListener('storage', syncJourneyUI);
+  document.querySelector('[data-target="fases"]')?.addEventListener('click', syncJourneyUI);
 
   function updateMenuMusicButton(state = '') {
     if (!menuMusicButton) return;
