@@ -35,6 +35,16 @@
   const input = { left:false, right:false, run:false, jump:false };
   let running = false, finished = false, cameraX = 0, last = performance.now();
   let jack = null, jackPortraits = null, eleanorPortraits = null;
+  const art = {
+    background:null,
+    terrain:null,
+    props:null,
+    eleanor:null,
+    enemies:null,
+    memories:null,
+    boss:null,
+    dialogueFrame:null
+  };
   let lightPulse = 0, lightCooldown = 0, shake = 0, sectionIndex = -1;
   let checkpointReached = localStorage.getItem(story.states.checkpoint) === "bridge";
   let metEleanor = localStorage.getItem(story.states.metEleanor) === "1";
@@ -107,7 +117,7 @@
 
   async function imageFromChunks(paths) {
     const chunks = await Promise.all(paths.map(async path => {
-      const r = await fetch(path, { cache:"force-cache" });
+      const r = await fetch(path, { cache:"no-cache" });
       if (!r.ok) throw new Error("Falha ao carregar " + path);
       return (await r.text()).trim();
     }));
@@ -125,13 +135,73 @@
       "../assets/sprites/jack/data/jack-mini.2.b64",
       "../assets/sprites/jack/data/jack-mini.3.b64"
     ]);
+
     const optional = await Promise.allSettled([
       imageFromChunks(["../assets/portraits/jack/data/portraits.1.b64","../assets/portraits/jack/data/portraits.2.b64"]),
-      imageFromChunks(["../assets/portraits/eleanor/data/portraits.1.b64","../assets/portraits/eleanor/data/portraits.2.b64"])
+      imageFromChunks(["../assets/portraits/eleanor/data/portraits.1.b64","../assets/portraits/eleanor/data/portraits.2.b64"]),
+      imageFromChunks(["../assets/game/phase1/data/background.b64"]),
+      imageFromChunks(["../assets/game/phase1/data/terrain.b64"]),
+      imageFromChunks(["../assets/game/phase1/data/props.b64"]),
+      imageFromChunks(["../assets/game/phase1/data/eleanor-sprites.1.b64","../assets/game/phase1/data/eleanor-sprites.2.b64"]),
+      imageFromChunks(["../assets/game/phase1/data/enemies.b64"]),
+      imageFromChunks(["../assets/game/phase1/data/memories.b64"]),
+      imageFromChunks(["../assets/game/phase1/data/boss.b64"]),
+      imageFromChunks(["../assets/game/phase1/data/dialogue-frame.b64"])
     ]);
+
     if (optional[0].status === "fulfilled") jackPortraits = optional[0].value;
     if (optional[1].status === "fulfilled") eleanorPortraits = optional[1].value;
+    if (optional[2].status === "fulfilled") art.background = optional[2].value;
+    if (optional[3].status === "fulfilled") art.terrain = optional[3].value;
+    if (optional[4].status === "fulfilled") art.props = optional[4].value;
+    if (optional[5].status === "fulfilled") art.eleanor = optional[5].value;
+    if (optional[6].status === "fulfilled") art.enemies = optional[6].value;
+    if (optional[7].status === "fulfilled") art.memories = optional[7].value;
+    if (optional[8].status === "fulfilled") art.boss = optional[8].value;
+    if (optional[9].status === "fulfilled") art.dialogueFrame = optional[9].value;
+
     dialogue.setAssets({ jack:jackPortraits, eleanor:eleanorPortraits });
+
+    if (art.dialogueFrame) {
+      const shell = document.querySelector(".dialogue-shell");
+      if (shell) {
+        shell.classList.add("has-art");
+        shell.style.backgroundImage = 'url("' + art.dialogueFrame.src + '")';
+      }
+    }
+
+    const loaded = Object.entries(art).filter(([,img]) => !!img).map(([name]) => name);
+    console.info("[Fase 1] assets ilustrados carregados:", loaded.join(", "));
+  }
+
+  function drawAtlasCell(img, cols, rows, col, row, dx, dy, dw, dh, flip=false, alpha=1){
+    if(!img) return false;
+    const sw=img.naturalWidth/cols, sh=img.naturalHeight/rows;
+    ctx.save();
+    ctx.globalAlpha*=alpha;
+    if(flip){
+      ctx.translate(dx+dw,dy);
+      ctx.scale(-1,1);
+      ctx.drawImage(img,col*sw,row*sh,sw,sh,0,0,dw,dh);
+    }else{
+      ctx.drawImage(img,col*sw,row*sh,sw,sh,dx,dy,dw,dh);
+    }
+    ctx.restore();
+    return true;
+  }
+
+  function drawCrop(img, sx, sy, sw, sh, dx, dy, dw, dh, alpha=1){
+    if(!img) return false;
+    ctx.save();
+    ctx.globalAlpha*=alpha;
+    ctx.drawImage(
+      img,
+      sx*img.naturalWidth, sy*img.naturalHeight,
+      sw*img.naturalWidth, sh*img.naturalHeight,
+      dx,dy,dw,dh
+    );
+    ctx.restore();
+    return true;
   }
 
   function memoryCount(){ return memories.filter(m => m.collected).length; }
@@ -453,6 +523,19 @@
 
   function sky(){
     const sec=sectionForX(player.x);
+
+    if(art.background){
+      const drift=(cameraX*.025)%W;
+      ctx.drawImage(art.background,-drift,0,W,H);
+      ctx.drawImage(art.background,W-drift,0,W,H);
+      const tint=ctx.createLinearGradient(0,0,0,H);
+      tint.addColorStop(0,sec>=4?"#12092733":"#04102818");
+      tint.addColorStop(1,"#02040a66");
+      ctx.fillStyle=tint;
+      ctx.fillRect(0,0,W,H);
+      return;
+    }
+
     const colors=sec===5?["#030716","#151331"]:sec>=4?["#07091c","#261630"]:["#02091d","#10254b"];
     const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,colors[0]);g.addColorStop(.7,colors[1]);g.addColorStop(1,"#111323");
     ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
@@ -488,6 +571,30 @@
 
   function ground(p){
     const x=p.x-cameraX;if(x+p.w<-80||x>W+80)return;
+
+    if(art.terrain){
+      const base=p.type==="earth"?"#28150c":p.type==="arena"?"#10152a":"#111a2d";
+      ctx.fillStyle=base;
+      ctx.fillRect(x,p.y,p.w,p.h);
+
+      let crop={sx:0,sy:0,sw:.28,sh:.24};
+      let tileW=190, tileH=Math.min(95,p.h+20);
+
+      if(p.type==="wood"){crop={sx:0,sy:.27,sw:.48,sh:.22};tileW=220;tileH=72;}
+      else if(p.type==="bridge"){crop={sx:.10,sy:.48,sw:.48,sh:.22};tileW=230;tileH=66;}
+      else if(p.type==="earth"){crop={sx:0,sy:.83,sw:.38,sh:.17};tileW=230;tileH=78;}
+      else if(p.type==="ruin"){crop={sx:.58,sy:.52,sw:.30,sh:.25};tileW=180;tileH=82;}
+      else if(p.type==="arena"){crop={sx:.57,sy:.79,sw:.39,sh:.20};tileW=230;tileH=84;}
+
+      ctx.save();
+      ctx.beginPath();ctx.rect(x,p.y,p.w,p.h);ctx.clip();
+      for(let xx=x;xx<x+p.w+tileW;xx+=tileW-8){
+        drawCrop(art.terrain,crop.sx,crop.sy,crop.sw,crop.sh,xx,p.y-8,tileW,tileH);
+      }
+      ctx.restore();
+      return;
+    }
+
     if(p.type==="wood"||p.type==="bridge"){drawWood(p);return;}
     const base=p.type==="earth"?"#372112":p.type==="arena"?"#17203a":"#17243e";
     ctx.fillStyle=base;ctx.fillRect(x,p.y,p.w,p.h);
@@ -558,8 +665,54 @@
     ctx.restore();
   }
 
+  function artProp(wx,groundY,kind,scale=1){
+    if(!art.props) return false;
+    const x=wx-cameraX;
+    if(x<-320||x>W+320) return true;
+
+    const map={
+      tree:     [.00,.00,.32,.42,250,280],
+      lantern:  [.30,.00,.22,.36,120,180],
+      fence:    [.58,.00,.42,.24,270,120],
+      cart:     [.00,.34,.43,.25,235,135],
+      grave:    [.42,.31,.21,.25,120,135],
+      cottage:  [.66,.27,.34,.34,245,225],
+      crates:   [.00,.58,.35,.24,220,145],
+      shrine:   [.39,.58,.31,.28,165,160],
+      gate:     [.72,.58,.28,.29,190,170]
+    };
+    const a=map[kind]; if(!a) return false;
+    const [sx,sy,sw,sh,bw,bh]=a;
+    const dw=bw*scale, dh=bh*scale;
+    drawCrop(art.props,sx,sy,sw,sh,x-dw/2,groundY-dh,dw,dh);
+    return true;
+  }
+
   function scenery(){
     for(const p of platforms)ground(p);
+
+    if(art.props){
+      // Vila
+      artProp(520,590,"cottage",.92);artProp(1040,590,"cottage",.82);
+      artProp(280,590,"tree",.9);artProp(1380,590,"tree",.78);
+      artProp(160,590,"lantern",.88);artProp(760,590,"lantern",.82);artProp(1320,590,"lantern",.86);
+      artProp(385,590,"cart",.72);artProp(910,590,"crates",.58);
+      // Pomar
+      for(let x=1580;x<3180;x+=390){artProp(x,590,"tree",.8);artProp(x+150,590,"cart",.58);}
+      // Cemitério
+      for(let x=3290;x<4970;x+=235)artProp(x,590,"grave",.78);
+      artProp(3910,590,"shrine",.88);artProp(3440,590,"lantern",.72);artProp(4680,590,"lantern",.74);
+      // Pontes
+      artProp(5210,590,"fence",.75);artProp(6160,470,"shrine",.72);artProp(6800,520,"lantern",.67);
+      // Ruínas
+      for(let x=7080;x<8700;x+=465){artProp(x,590,"grave",.72);artProp(x+190,590,"tree",.55);}
+      artProp(7860,590,"cottage",.76);artProp(8450,590,"shrine",.82);
+      // Arena
+      artProp(9200,590,"lantern",.82);artProp(10700,590,"lantern",.82);
+      artProp(9650,590,"gate",1.15);
+      gate(8820);
+      return;
+    }
     // Vila
     cottage(520,590,.75);cottage(1040,590,.68);tree(280,590,.8);tree(1380,590,.72);
     lantern(160,590,.9);lantern(760,590,.85);lantern(1320,590,.9);pumpkin(380,590,.8);pumpkin(890,590,.75);
@@ -582,6 +735,17 @@
   function drawEleanor(wx,groundY,pose=0,scale=1){
     const x=wx-cameraX;if(x<-100||x>W+100)return;
     const bob=Math.sin(performance.now()/430+pose)*5;
+
+    if(art.eleanor){
+      const frame=Math.max(0,Math.min(7,pose|0));
+      const col=frame%4,row=Math.floor(frame/4);
+      const dw=112*scale,dh=168*scale;
+      const g=ctx.createRadialGradient(x,groundY-86,8,x,groundY-86,72*scale);
+      g.addColorStop(0,"#a7eeff55");g.addColorStop(1,"#53cfff00");
+      ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,groundY-86,72*scale,0,Math.PI*2);ctx.fill();
+      drawAtlasCell(art.eleanor,4,2,col,row,x-dw/2,groundY-dh+20+bob,dw,dh);
+      return;
+    }
     ctx.save();ctx.translate(x,groundY-72+bob);ctx.scale(scale,scale);
     const glow=ctx.createRadialGradient(0,-20,4,0,-20,56);glow.addColorStop(0,"#a9efff66");glow.addColorStop(1,"#4ccfff00");ctx.fillStyle=glow;ctx.beginPath();ctx.arc(0,-20,56,0,Math.PI*2);ctx.fill();
     // ghost tail
@@ -601,6 +765,20 @@
 
   function drawMemory(m){
     if(m.collected)return;const x=m.x-cameraX;if(x<-80||x>W+80)return;const y=m.y+Math.sin(performance.now()/380+m.bob)*9;
+
+    if(art.memories){
+      const frames={key:0,storm:1,candle:2,letter:3,family:4};
+      const frame=frames[m.id] ?? 5;
+      const col=frame%3,row=Math.floor(frame/3);
+      const pulse=1+Math.sin(performance.now()/260+m.bob)*.05;
+      const dw=90*pulse,dh=90*pulse;
+      const g=ctx.createRadialGradient(x,y,2,x,y,57);
+      g.addColorStop(0,"#dfffffaa");g.addColorStop(.42,"#62dcff55");g.addColorStop(1,"#3b89ff00");
+      ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,57,0,Math.PI*2);ctx.fill();
+      drawAtlasCell(art.memories,3,3,col,row,x-dw/2,y-dh/2,dw,dh);
+      return;
+    }
+
     ctx.save();ctx.translate(x,y);
     const g=ctx.createRadialGradient(0,0,2,0,0,44);g.addColorStop(0,"#eaffffdd");g.addColorStop(.35,"#62ddff77");g.addColorStop(1,"#298be000");ctx.fillStyle=g;ctx.beginPath();ctx.arc(0,0,44,0,Math.PI*2);ctx.fill();
     ctx.strokeStyle="#7eeaff";ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(0,-28);ctx.lineTo(18,-7);ctx.lineTo(7,23);ctx.lineTo(-16,14);ctx.lineTo(-20,-9);ctx.closePath();ctx.stroke();
@@ -615,7 +793,20 @@
   }
 
   function drawEnemy(e){
-    if(!e.alive)return;const x=e.x-cameraX;if(x<-110||x>W+110)return;ctx.save();ctx.translate(x,e.y);
+    if(!e.alive)return;const x=e.x-cameraX;if(x<-110||x>W+110)return;
+
+    if(art.enemies){
+      const row=e.type==="crow"?0:e.type==="wisp"?1:2;
+      let frame=e.hit>0?3:Math.floor(e.t*5)%2;
+      if(e.attack>1.75)frame=2;
+      const sizes=e.type==="crow"?[108,92]:e.type==="wisp"?[118,104]:[118,92];
+      const [dw,dh]=sizes;
+      const flip=e.type!=="wisp" && e.dir<0;
+      drawAtlasCell(art.enemies,4,3,frame,row,x-dw/2,e.y-dh/2,dw,dh,flip,e.hit>0?.62:1);
+      return;
+    }
+
+    ctx.save();ctx.translate(x,e.y);
     if(e.hit>0)ctx.globalAlpha=.55;
     if(e.type==="crow"){
       ctx.scale(e.dir,1);ctx.fillStyle="#11101a";ctx.beginPath();ctx.ellipse(0,0,23,15,0,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.moveTo(-5,-5);ctx.lineTo(-40,-25-Math.sin(e.t*10)*10);ctx.lineTo(-17,7);ctx.fill();ctx.beginPath();ctx.moveTo(4,-7);ctx.lineTo(36,-28+Math.sin(e.t*10)*10);ctx.lineTo(17,7);ctx.fill();ctx.fillStyle="#ff7c22";ctx.fillRect(10,-5,4,4);ctx.fillStyle="#3a2630";ctx.beginPath();ctx.moveTo(20,-2);ctx.lineTo(34,2);ctx.lineTo(20,5);ctx.fill();
@@ -629,6 +820,22 @@
 
   function drawBoss(){
     if((!boss.started&& !boss.defeated)||boss.defeated)return;const x=boss.x-cameraX;if(x<-220||x>W+220)return;
+
+    if(art.boss){
+      let frame=0;
+      if(boss.hit>0)frame=6;
+      else if(boss.hp<=3)frame=5;
+      else if(boss.shot>.95)frame=2;
+      else frame=Math.floor(boss.t*2)%2;
+      const col=frame%4,row=Math.floor(frame/4);
+      const dw=265,dh=330;
+      const g=ctx.createRadialGradient(x,boss.y,10,x,boss.y,170);
+      g.addColorStop(0,"#6ee8ff55");g.addColorStop(.55,"#6e5eff22");g.addColorStop(1,"#552cff00");
+      ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,boss.y,170,0,Math.PI*2);ctx.fill();
+      drawAtlasCell(art.boss,4,2,col,row,x-dw/2,boss.y-dh/2,dw,dh,false,boss.hit>0?.65:1);
+      return;
+    }
+
     ctx.save();ctx.translate(x,boss.y);if(boss.hit>0)ctx.globalAlpha=.55;
     const g=ctx.createRadialGradient(0,10,10,0,10,150);g.addColorStop(0,"#6ee8ff55");g.addColorStop(1,"#7f45ff00");ctx.fillStyle=g;ctx.beginPath();ctx.arc(0,10,150,0,Math.PI*2);ctx.fill();
     // spectral tail
