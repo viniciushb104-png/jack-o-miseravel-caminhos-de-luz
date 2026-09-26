@@ -217,7 +217,7 @@
       img.onload = () => resolve(img);
       img.onerror = () => reject(new Error("Falha ao carregar " + path));
       const sep = path.includes("?") ? "&" : "?";
-      img.src = path + sep + "v=phase1-assets-28";
+      img.src = path + sep + "v=phase1-assets-29";
     });
   }
 
@@ -1252,6 +1252,54 @@
     return true;
   }
 
+  function drawBridgeForeground(p){
+    if(!art.platformBridge || p.type!=="bridge")return;
+    const x=p.x-cameraX;
+    if(x+p.w<-100||x>W+100)return;
+
+    const dx=Math.round(x-6);
+    const dy=Math.round(p.y-14);
+    const dw=Math.round(p.w+12);
+    const dh=128;
+
+    ctx.save();
+
+    // Front deck / rail band: covers only Jack's feet and lower legs.
+    ctx.beginPath();
+    ctx.rect(x-8,p.y-5,p.w+16,58);
+    ctx.clip();
+    drawCrop(
+      art.platformBridge,
+      .012,.018,.585,.205,
+      dx,dy,dw,dh,
+      1,true
+    );
+    ctx.restore();
+
+    // Posts at the bridge ends stay in front too, giving proper depth
+    // when Jack enters or exits the illustrated bridge.
+    const postW=Math.min(48,Math.max(28,p.w*.09));
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(x-8,p.y-24,postW+18,150);
+    ctx.rect(x+p.w-postW-10,p.y-24,postW+18,150);
+    ctx.clip();
+    drawCrop(
+      art.platformBridge,
+      .012,.018,.585,.205,
+      dx,dy,dw,dh,
+      1,true
+    );
+    ctx.restore();
+  }
+
+  function drawBridgeForegrounds(){
+    for(const p of platforms){
+      if(p.type==="bridge") drawBridgeForeground(p);
+    }
+  }
+
   function drawPlatformHD(p){
     if(p.type==="bridge") return drawBridgeHD(p);
 
@@ -1930,6 +1978,7 @@
     drawBoss();
     drawProjectiles();
     drawPlayer();
+    drawBridgeForegrounds();
     // arena mist / final path
     if(boss.defeated||finalSequence){
       for(let i=0;i<9;i++){const x=9300+i*150-cameraX,y=545-Math.sin(performance.now()/350+i)*16;ctx.globalAlpha=.38;ctx.fillStyle="#71e8ff";ctx.beginPath();ctx.arc(x,y,8+(i%3)*3,0,Math.PI*2);ctx.fill();}ctx.globalAlpha=1;
