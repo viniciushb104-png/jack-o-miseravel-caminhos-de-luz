@@ -38,19 +38,19 @@ window.PHASE1_DIALOGUES = {
     { speaker:"Jack", portrait:"jack", expression:5, text:"Então está na hora de descobrir quem manteve esse medo preso aqui." }
   ],
   preBoss: [
-    { speaker:"Guardiã", portrait:null, text:"Pare. Você devolve dor ao que eu mantive adormecido." },
+    { speaker:"Guardiã", portrait:"guardian", expression:1, text:"Pare. Você devolve dor ao que eu mantive adormecido." },
     { speaker:"Jack", portrait:"jack", expression:1, text:"Eu chamaria de devolver a história." },
-    { speaker:"Guardiã", portrait:null, text:"As lembranças prendem os mortos. O esquecimento é misericórdia." },
+    { speaker:"Guardiã", portrait:"guardian", expression:0, text:"As lembranças prendem os mortos. O esquecimento é misericórdia." },
     { speaker:"Jack", portrait:"jack", expression:4, text:"Curioso. Porque o seu esquecimento está prendendo Eleanor." },
-    { speaker:"Guardiã", portrait:null, text:"A Torre ordenou silêncio. Nenhuma luz deve atravessar." },
+    { speaker:"Guardiã", portrait:"guardian", expression:2, text:"A Torre ordenou silêncio. Nenhuma luz deve atravessar." },
     { speaker:"Jack", portrait:"jack", expression:5, text:"Então diga à Torre que ela escolheu a lanterna errada para apagar." }
   ],
   bossDefeated: [
-    { speaker:"Guardiã", portrait:null, text:"Eu... só queria que parassem de sofrer." },
+    { speaker:"Guardiã", portrait:"guardian", expression:5, text:"Eu... só queria que parassem de sofrer." },
     { speaker:"Jack", portrait:"jack", expression:0, text:"Esquecer não é o mesmo que seguir em frente." },
-    { speaker:"Guardiã", portrait:null, text:"O sino não toca para guiar, Jack. Ele toca para chamar." },
+    { speaker:"Guardiã", portrait:"guardian", expression:4, text:"O sino não toca para guiar, Jack. Ele toca para chamar." },
     { speaker:"Jack", portrait:"jack", expression:3, text:"A Torre?" },
-    { speaker:"Guardiã", portrait:null, text:"Agora ela sabe o seu nome." }
+    { speaker:"Guardiã", portrait:"guardian", expression:3, text:"Agora ela sabe o seu nome." }
   ],
   farewell: [
     { speaker:"Eleanor", portrait:"eleanor", expression:2, text:"Então... ninguém vai voltar?" },
