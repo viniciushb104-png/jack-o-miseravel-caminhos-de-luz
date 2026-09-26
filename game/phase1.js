@@ -578,13 +578,11 @@
     const sec=sectionForX(player.x);
 
     if(art.background){
-      // Pixel art nítido: sem interpolação bilinear ("derretida") e sem
-      // deslocamento subpixel, que borrava o cenário durante o movimento.
-      const drift=Math.round((cameraX*.025)%W);
+      // A arte HQ é uma pintura completa, não um tile repetível. Mantê-la inteira
+      // evita costuras, repetição do castelo e deformação visual durante a câmera.
       ctx.save();
       ctx.imageSmoothingEnabled=false;
-      ctx.drawImage(art.background,-drift,0,W,H);
-      ctx.drawImage(art.background,W-drift,0,W,H);
+      ctx.drawImage(art.background,0,0,W,H);
       ctx.restore();
       const tint=ctx.createLinearGradient(0,0,0,H);
       tint.addColorStop(0,sec>=4?"#12092733":"#04102818");
@@ -638,12 +636,13 @@
       ctx.fillRect(x,p.y,p.w,p.h);
 
       const tile=art.terrainStone;
-      const tileH=Math.max(42,Math.min(72,p.h+14));
-      const tileW=Math.max(76,Math.round(tileH*(tile.naturalWidth/tile.naturalHeight)));
+      const tileH=Math.max(40,Math.min(58,p.h+10));
+      const tileW=Math.max(78,Math.round(tileH*(tile.naturalWidth/tile.naturalHeight)));
 
       ctx.save();
       ctx.beginPath();ctx.rect(x,p.y,p.w,p.h);ctx.clip();
-      ctx.imageSmoothingEnabled=false;
+      ctx.imageSmoothingEnabled=true;
+      ctx.imageSmoothingQuality="high";
       const startX=Math.round(x);
       for(let xx=startX;xx<x+p.w+tileW;xx+=Math.max(64,tileW-10)){
         ctx.drawImage(tile,Math.round(xx),Math.round(p.y-8),Math.round(tileW),Math.round(tileH));
