@@ -426,12 +426,67 @@ function drawTowerInterior(){
   veil.addColorStop(0,"rgba(5,3,10,.18)");veil.addColorStop(.5,"rgba(5,3,10,.02)");veil.addColorStop(1,"rgba(5,3,10,.18)");
   x.fillStyle=veil;x.fillRect(left,top,w,h);x.restore();
 }
+function drawClockGear(cx,cy,r,alpha=.72){
+  x.save();x.globalAlpha=alpha;x.strokeStyle="#9b6a35";x.lineWidth=Math.max(2,r*.16);
+  x.beginPath();x.arc(cx,cy,r*.62,0,Math.PI*2);x.stroke();
+  x.lineWidth=Math.max(2,r*.12);
+  for(let i=0;i<8;i++){const a=i*Math.PI/4;x.beginPath();x.moveTo(cx+Math.cos(a)*r*.62,cy+Math.sin(a)*r*.62);x.lineTo(cx+Math.cos(a)*r,cy+Math.sin(a)*r);x.stroke()}
+  x.fillStyle="#3a2725";x.beginPath();x.arc(cx,cy,r*.2,0,Math.PI*2);x.fill();x.restore();
+}
+function drawClockChain(cx,cy,links=4){
+  x.save();x.strokeStyle="#725039";x.lineWidth=3;x.globalAlpha=.72;
+  for(let i=0;i<links;i++){x.beginPath();x.ellipse(cx,cy+i*12,5,8,i%2?Math.PI/2:0,0,Math.PI*2);x.stroke()}
+  x.restore();
+}
+function drawClockworkPlatform(q,arena=false){
+  const floor=q.w>650||q.h>=50,topH=floor?12:9;
+  x.save();
+  x.fillStyle="rgba(4,2,7,.42)";x.fillRect(q.x+7,q.y+8,q.w,q.h+8);
+  const body=x.createLinearGradient(0,q.y,0,q.y+Math.max(36,q.h+34));
+  body.addColorStop(0,arena?"#51352f":"#4a342f");body.addColorStop(.48,"#2b2025");body.addColorStop(1,"#171219");
+  x.fillStyle=body;x.fillRect(q.x,q.y,q.w,Math.max(q.h,floor?72:34));
+  const rail=x.createLinearGradient(q.x,q.y,q.x+q.w,q.y);
+  rail.addColorStop(0,"#6d472b");rail.addColorStop(.5,"#d09a4b");rail.addColorStop(1,"#6d472b");
+  x.fillStyle=rail;x.fillRect(q.x,q.y,q.w,topH);
+  x.fillStyle="#1b1117";x.fillRect(q.x,q.y+topH,q.w,4);
+
+  // Tábuas e placas escuras dão à colisão existente a aparência de passarela real.
+  x.strokeStyle="rgba(198,137,66,.22)";x.lineWidth=2;
+  for(let px=q.x+28;px<q.x+q.w;px+=42){x.beginPath();x.moveTo(px,q.y+topH+4);x.lineTo(px,q.y+Math.min(q.h,32));x.stroke()}
+  x.fillStyle="#c38a43";
+  for(let px=q.x+18;px<q.x+q.w-8;px+=64){x.beginPath();x.arc(px,q.y+topH/2,2.5,0,Math.PI*2);x.fill()}
+
+  if(floor){
+    // Base da Torre: arcos e engrenagens embutidos em vez de um grande retângulo cinza.
+    for(let px=q.x+90;px<q.x+q.w-40;px+=180){
+      x.strokeStyle="rgba(143,91,48,.42)";x.lineWidth=6;x.beginPath();x.arc(px,q.y+66,54,Math.PI,Math.PI*2);x.stroke();
+      drawClockGear(px+62,q.y+52,18,.42);
+    }
+  }else{
+    // Mãos-francesas, engrenagens e correntes fazem cada degrau parecer preso à maquinaria.
+    const left=q.x+24,right=q.x+q.w-24,under=q.y+q.h;
+    x.strokeStyle="#69462f";x.lineWidth=7;
+    x.beginPath();x.moveTo(left,q.y+12);x.lineTo(left+28,under+34);x.lineTo(left+58,q.y+12);x.stroke();
+    x.beginPath();x.moveTo(right,q.y+12);x.lineTo(right-28,under+34);x.lineTo(right-58,q.y+12);x.stroke();
+    drawClockGear(q.x+q.w*.5,under+22,16,.68);
+    if((Math.floor(q.x/100)+Math.floor(Math.abs(q.y)/80))%2===0)drawClockChain(q.x+13,under+9,4);
+    else drawClockChain(q.x+q.w-13,under+9,4);
+  }
+  x.restore();
+}
+function drawPhasePlatform(q){
+  if(q.x>=7200)drawClockworkPlatform(q,false);
+  else{
+    x.fillStyle=q.y<560?"#4a3b38":"#30252a";x.fillRect(q.x,q.y,q.w,q.h);
+    x.fillStyle="#75604b";x.fillRect(q.x,q.y,q.w,7);
+  }
+}
 function draw(){drawPhase2Backdrop();x.fillStyle="#e7d4b0";x.globalAlpha=.22;for(let i=0;i<18;i++){const px=((i*431-cam*.12)%1500+1500)%1500;x.fillRect(px,80+(i*71)%220,2,2)}x.globalAlpha=1;
 x.save();x.translate(-cam,-camY);
 // O interior da Torre é um plano do próprio mundo: fica à frente do fundo da fase
 // e recebe exatamente o mesmo deslocamento vertical das plataformas durante a subida.
 drawTowerInterior();
-for(const q of plats){x.fillStyle=q.y<560?"#4a3b38":"#30252a";x.fillRect(q.x,q.y,q.w,q.h);x.fillStyle="#75604b";x.fillRect(q.x,q.y,q.w,7)}
+for(const q of plats)drawPhasePlatform(q);
 drawPhase2Checkpoints();
 if(bossUnlocked||bossActive||bossDefeated){
   // Arena protótipo no topo: um grande mostrador quebrado sustentado por engrenagens.
@@ -439,8 +494,8 @@ if(bossUnlocked||bossActive||bossDefeated){
   x.strokeStyle="#d18b35";x.lineWidth=10;x.beginPath();x.arc(8050,-860,210,0,Math.PI*2);x.stroke();
   for(let i=0;i<12;i++){const a=i*Math.PI/6;x.beginPath();x.moveTo(8050+Math.cos(a)*175,-860+Math.sin(a)*175);x.lineTo(8050+Math.cos(a)*205,-860+Math.sin(a)*205);x.stroke()}
   x.strokeStyle="#f0c264";x.lineWidth=8;x.beginPath();x.moveTo(8050,-860);x.lineTo(7980,-940);x.moveTo(8050,-860);x.lineTo(8145,-835);x.stroke();x.restore();
-  for(const q of arenaPlats){x.fillStyle=q.y===-650?"#211725":"#49323a";x.fillRect(q.x,q.y,q.w,q.h);x.fillStyle="#c08137";x.fillRect(q.x,q.y,q.w,7);x.strokeStyle="#6f4528";x.strokeRect(q.x,q.y,q.w,q.h)}
-  for(let gx=7290;gx<8840;gx+=150){x.strokeStyle="#7d542d";x.lineWidth=5;x.beginPath();x.arc(gx,-624,24,0,Math.PI*2);x.stroke()}
+  for(const q of arenaPlats)drawClockworkPlatform(q,true);
+  for(let gx=7290;gx<8840;gx+=150)drawClockGear(gx,-624,24,.58);
 }
 for(const q of reveal){if(q.t>0){x.globalAlpha=Math.min(1,q.t*2);x.fillStyle="#b7eaff";x.fillRect(q.x,q.y,q.w,q.h);x.globalAlpha=1}}
 // Marcadores dos enigmas obrigatórios.
