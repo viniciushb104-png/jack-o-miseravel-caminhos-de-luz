@@ -39,7 +39,11 @@
     bossHud: document.getElementById("bossHud"),
     bossHealth: document.getElementById("bossHealth"),
     finish: document.getElementById("finish"),
-    message: document.getElementById("message")
+    message: document.getElementById("message"),
+    achievement: document.getElementById("achievementToast"),
+    achievementEyebrow: document.getElementById("achievementEyebrow"),
+    achievementTitle: document.getElementById("achievementTitle"),
+    achievementDetail: document.getElementById("achievementDetail")
   };
 
   /* A primeira abertura da versão completa começa limpa, sem herdar o checkpoint
@@ -1037,6 +1041,33 @@
     phaseAudio.switchTrack("theme", { fadeOut:1100, fadeIn:1500 });
   }
 
+  let achievementTimer = null;
+
+  function showAchievement({
+    eyebrow="CONQUISTA DESBLOQUEADA",
+    title="Uma Luz na Escuridão",
+    detail="Halloween I — As Casas dos Perdidos",
+    duration=5200
+  }={}){
+    if(!ui.achievement) return;
+
+    clearTimeout(achievementTimer);
+    ui.achievementEyebrow.textContent=eyebrow;
+    ui.achievementTitle.textContent=title;
+    ui.achievementDetail.textContent=detail;
+    ui.achievement.hidden=false;
+
+    // Reinicia a animação caso a mesma conquista seja exibida novamente.
+    ui.achievement.classList.remove("show");
+    void ui.achievement.offsetWidth;
+    ui.achievement.classList.add("show");
+
+    achievementTimer=setTimeout(()=>{
+      ui.achievement.classList.remove("show");
+      setTimeout(()=>{ ui.achievement.hidden=true; },420);
+    },duration);
+  }
+
   function finishBossDefeat(){
     if (boss.defeated) return;
     boss.dying=false;
@@ -1056,12 +1087,24 @@
     openDialogue(dialogues.farewell, () => {
       localStorage.setItem(story.states.eleanorSaved,"1");
       setTimeout(() => openDialogue(dialogues.tower, () => {
+        const firstClear=localStorage.getItem("jack-phase1-complete")!=="yes";
         finished=true;
-        ui.finish.hidden=false;
         localStorage.setItem("jack-phase1-complete","yes");
         localStorage.setItem("jack-phase1-run-active","0");
         localStorage.setItem("jack-phase1-clear-count", String(Number(localStorage.getItem("jack-phase1-clear-count")||0)+1));
         localStorage.setItem("jack-light-level","03");
+
+        showAchievement({
+          eyebrow:firstClear?"CONQUISTA DESBLOQUEADA":"MEMÓRIA REVIVIDA",
+          title:firstClear?"Uma Luz na Escuridão":"As Casas dos Perdidos",
+          detail:firstClear
+            ?"Eleanor encontrou a luz · Troféu e memória adicionados ao arquivo"
+            :"Halloween I concluído novamente",
+          duration:5400
+        });
+
+        // O cartão final entra depois do aviso, como em uma conquista de videogame.
+        setTimeout(()=>{ ui.finish.hidden=false; },850);
         phaseAudio.fadeOut(1800);
       }), 700);
     });
