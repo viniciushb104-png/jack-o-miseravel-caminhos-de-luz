@@ -102,6 +102,195 @@
     });
   });
 
+  // Fonógrafo da Lanterna: faixas são liberadas pelo progresso salvo do jogo.
+  const soundtrackTracks = [
+    {
+      phase: 1,
+      chapter: 'HALLOWEEN I · AS CASAS DOS PERDIDOS',
+      title: 'As Casas dos Perdidos',
+      src: 'assets/audio/phase1/phase1-theme.mp3'
+    },
+    {
+      phase: 1,
+      chapter: 'HALLOWEEN I · BATALHA FINAL',
+      title: 'A Guardiã da Última Lanterna',
+      src: 'assets/audio/phase1/phase1-boss.mp3'
+    }
+  ];
+
+  const soundtrackAudio = new Audio();
+  soundtrackAudio.preload = 'metadata';
+  soundtrackAudio.volume = .68;
+  let soundtrackIndex = -1;
+
+  const soundtrackUI = {
+    player: document.querySelector('#soundtrackPlayer'),
+    unlocked: document.querySelector('#soundtrackUnlocked'),
+    chapter: document.querySelector('#soundtrackChapter'),
+    name: document.querySelector('#soundtrackName'),
+    status: document.querySelector('#soundtrackStatus'),
+    disc: document.querySelector('#soundtrackDisc'),
+    play: document.querySelector('#soundtrackPlay'),
+    prev: document.querySelector('#soundtrackPrev'),
+    next: document.querySelector('#soundtrackNext'),
+    seek: document.querySelector('#soundtrackSeek'),
+    current: document.querySelector('#soundtrackCurrent'),
+    duration: document.querySelector('#soundtrackDuration'),
+    volume: document.querySelector('#soundtrackVolume'),
+    tracks: [...document.querySelectorAll('.soundtrack-track[data-track-index]')]
+  };
+
+  function phaseIsCleared(phase) {
+    if (phase === 1) return localStorage.getItem('jack-phase1-complete') === 'yes';
+    return localStorage.getItem('jack-phase' + phase + '-complete') === 'yes';
+  }
+
+  function formatAudioTime(seconds) {
+    if (!Number.isFinite(seconds) || seconds < 0) return '0:00';
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return mins + ':' + String(secs).padStart(2, '0');
+  }
+
+  function unlockedTrackIndexes() {
+    return soundtrackTracks.map((track, index) => phaseIsCleared(track.phase) ? index : -1).filter(index => index >= 0);
+  }
+
+  function refreshSoundtrackUnlocks() {
+    const unlocked = unlockedTrackIndexes();
+    if (soundtrackUI.unlocked) soundtrackUI.unlocked.textContent = unlocked.length + '/' + soundtrackTracks.length;
+
+    soundtrackUI.tracks.forEach(button => {
+      const index = Number(button.dataset.trackIndex);
+      const track = soundtrackTracks[index];
+      const open = !!track && phaseIsCleared(track.phase);
+      button.disabled = !open;
+      button.classList.toggle('is-unlocked', open);
+      const state = button.querySelector('.track-state');
+      const action = button.querySelector('.track-action');
+      if (state) state.textContent = open ? '✦' : '🔒';
+      if (action) action.textContent = open ? 'OUVIR' : 'BLOQUEADA';
+      button.setAttribute('aria-label', open ? 'Ouvir ' + track.title : track.title + ' — bloqueada até concluir o Halloween ' + track.phase);
+    });
+
+    if (soundtrackUI.play) soundtrackUI.play.disabled = unlocked.length === 0;
+    if (soundtrackUI.prev) soundtrackUI.prev.disabled = unlocked.length < 2;
+    if (soundtrackUI.next) soundtrackUI.next.disabled = unlocked.length < 2;
+    if (soundtrackUI.seek) soundtrackUI.seek.disabled = unlocked.length === 0;
+
+    if (unlocked.length && soundtrackIndex < 0) {
+      soundtrackIndex = unlocked[0];
+      const first = soundtrackTracks[soundtrackIndex];
+      soundtrackAudio.src = first.src;
+      if (soundtrackUI.chapter) soundtrackUI.chapter.textContent = first.chapter;
+      if (soundtrackUI.name) soundtrackUI.name.textContent = first.title;
+      if (soundtrackUI.status) soundtrackUI.status.textContent = 'Faixa conquistada · pronta para ouvir';
+      soundtrackUI.tracks[soundtrackIndex]?.classList.add('is-selected');
+    }
+  }
+
+  function selectSoundtrack(index, autoplay = false) {
+    const track = soundtrackTracks[index];
+    if (!track || !phaseIsCleared(track.phase)) return;
+    const changed = soundtrackIndex !== index;
+    soundtrackIndex = index;
+    if (changed || !soundtrackAudio.src) {
+      soundtrackAudio.src = track.src;
+      soundtrackAudio.load();
+    }
+    soundtrackUI.tracks.forEach((button, i) => button.classList.toggle('is-selected', i === index));
+    if (soundtrackUI.chapter) soundtrackUI.chapter.textContent = track.chapter;
+    if (soundtrackUI.name) soundtrackUI.name.textContent = track.title;
+    if (soundtrackUI.status) soundtrackUI.status.textContent = autoplay ? 'Tocando agora' : 'Faixa conquistada · pronta para ouvir';
+    if (soundtrackUI.seek) soundtrackUI.seek.value = '0';
+    if (soundtrackUI.current) soundtrackUI.current.textContent = '0:00';
+    if (autoplay) playSoundtrack();
+  }
+
+  function playSoundtrack() {
+    const unlocked = unlockedTrackIndexes();
+    if (!unlocked.length) return;
+    if (soundtrackIndex < 0 || !unlocked.includes(soundtrackIndex)) selectSoundtrack(unlocked[0], false);
+    stopMusicalVideos();
+    soundtrackAudio.play().then(() => {
+      if (soundtrackUI.play) {
+        soundtrackUI.play.textContent = '❚❚';
+        soundtrackUI.play.setAttribute('aria-label', 'Pausar faixa');
+      }
+      soundtrackUI.disc?.classList.add('is-spinning');
+      if (soundtrackUI.status) soundtrackUI.status.textContent = 'Tocando agora';
+    }).catch(() => {
+      if (soundtrackUI.status) soundtrackUI.status.textContent = 'Toque novamente para iniciar a música.';
+    });
+  }
+
+  function pauseSoundtrack() {
+    soundtrackAudio.pause();
+    if (soundtrackUI.play) {
+      soundtrackUI.play.textContent = '▶';
+      soundtrackUI.play.setAttribute('aria-label', 'Reproduzir faixa');
+    }
+    soundtrackUI.disc?.classList.remove('is-spinning');
+    if (soundtrackIndex >= 0 && soundtrackUI.status) soundtrackUI.status.textContent = 'Pausada';
+  }
+
+  function stepSoundtrack(direction) {
+    const unlocked = unlockedTrackIndexes();
+    if (!unlocked.length) return;
+    const position = Math.max(0, unlocked.indexOf(soundtrackIndex));
+    const next = unlocked[(position + direction + unlocked.length) % unlocked.length];
+    selectSoundtrack(next, true);
+  }
+
+  soundtrackUI.tracks.forEach(button => {
+    button.addEventListener('click', () => {
+      const index = Number(button.dataset.trackIndex);
+      if (!Number.isInteger(index) || !phaseIsCleared(soundtrackTracks[index]?.phase)) return;
+      selectSoundtrack(index, true);
+    });
+  });
+
+  soundtrackUI.play?.addEventListener('click', () => soundtrackAudio.paused ? playSoundtrack() : pauseSoundtrack());
+  soundtrackUI.prev?.addEventListener('click', () => stepSoundtrack(-1));
+  soundtrackUI.next?.addEventListener('click', () => stepSoundtrack(1));
+  soundtrackUI.volume?.addEventListener('input', () => {
+    soundtrackAudio.volume = Math.max(0, Math.min(1, Number(soundtrackUI.volume.value) / 100));
+  });
+  soundtrackUI.seek?.addEventListener('input', () => {
+    if (!Number.isFinite(soundtrackAudio.duration) || soundtrackAudio.duration <= 0) return;
+    soundtrackAudio.currentTime = (Number(soundtrackUI.seek.value) / 1000) * soundtrackAudio.duration;
+  });
+
+  soundtrackAudio.addEventListener('loadedmetadata', () => {
+    if (soundtrackUI.duration) soundtrackUI.duration.textContent = formatAudioTime(soundtrackAudio.duration);
+  });
+  soundtrackAudio.addEventListener('timeupdate', () => {
+    if (soundtrackUI.current) soundtrackUI.current.textContent = formatAudioTime(soundtrackAudio.currentTime);
+    if (soundtrackUI.seek && Number.isFinite(soundtrackAudio.duration) && soundtrackAudio.duration > 0) {
+      soundtrackUI.seek.value = String(Math.round((soundtrackAudio.currentTime / soundtrackAudio.duration) * 1000));
+    }
+  });
+  soundtrackAudio.addEventListener('ended', () => stepSoundtrack(1));
+  soundtrackAudio.addEventListener('error', () => {
+    if (soundtrackUI.status) soundtrackUI.status.textContent = 'Não foi possível carregar esta faixa.';
+    pauseSoundtrack();
+  });
+
+  // Vídeo e fonógrafo nunca disputam o áudio.
+  musicalFrames.forEach(frame => {
+    frame.querySelector('.video-play')?.addEventListener('click', pauseSoundtrack);
+  });
+
+  document.querySelectorAll('[data-target]').forEach(control => {
+    control.addEventListener('click', () => {
+      if (control.dataset.target !== 'musical') pauseSoundtrack();
+      if (control.dataset.target === 'musical') refreshSoundtrackUnlocks();
+    });
+  });
+
+  window.addEventListener('storage', refreshSoundtrackUnlocks);
+  refreshSoundtrackUnlocks();
+
   const initial = location.hash.replace('#', '');
   if (initial && initial !== 'inicio' && document.getElementById(initial)) {
     openScreen(initial);
