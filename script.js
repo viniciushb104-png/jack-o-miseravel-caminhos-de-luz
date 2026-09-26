@@ -100,6 +100,36 @@
     button.addEventListener('click', () => openScreen(button.dataset.target));
   });
 
+  let jackProfileLoading = null;
+  function loadJackProfileArt() {
+    const img = document.querySelector('#jackProfileArt');
+    if (!img || img.src || jackProfileLoading) return jackProfileLoading;
+
+    const parts = Array.from({ length: 7 }, (_, i) =>
+      'assets/images/characters/jack-profile.' + (i + 1) + '.b64'
+    );
+
+    jackProfileLoading = Promise.all(parts.map(path =>
+      fetch(path).then(response => {
+        if (!response.ok) throw new Error('Falha ao carregar arte do Jack');
+        return response.text();
+      })
+    )).then(chunks => {
+      img.src = 'data:image/webp;base64,' + chunks.join('');
+      img.addEventListener('load', () => {
+        img.closest('.jack-character-art')?.classList.add('is-ready');
+      }, { once: true });
+    }).catch(() => {
+      const loading = img.closest('.jack-character-art')?.querySelector('.character-art-loading strong');
+      if (loading) loading.textContent = 'A ARTE SE PERDEU NA NÉVOA';
+    });
+
+    return jackProfileLoading;
+  }
+
+  document.querySelector('[data-target="personagens"]')?.addEventListener('click', loadJackProfileArt);
+  if (location.hash === '#personagens') loadJackProfileArt();
+
   const savedMemories = Math.min(8, Math.max(0, Number(localStorage.getItem('jack-memories') || 0)));
   const memoryCounter = document.querySelector('#memoryCount');
   if (memoryCounter) memoryCounter.textContent = savedMemories + '/8';
