@@ -140,3 +140,67 @@ button,a{font-family:inherit}
   .hud-audio{min-width:42px}
   .hud-audio span{display:none}
 }
+
+
+/* Identidade musical e transições de trilha */
+.music-banner{
+  position:fixed;
+  z-index:34;
+  left:24px;
+  top:92px;
+  min-width:250px;
+  max-width:min(390px,72vw);
+  padding:9px 15px 10px 44px;
+  background:linear-gradient(90deg,#07152ff2,#0a1733df 78%,transparent);
+  border-left:3px solid #e3a12b;
+  color:#f5dfaa;
+  opacity:0;
+  transform:translateX(-18px);
+  pointer-events:none;
+  transition:opacity .28s ease,transform .28s ease;
+  text-shadow:0 2px 2px #000;
+}
+.music-banner:before{
+  content:"♫";
+  position:absolute;
+  left:14px;
+  top:50%;
+  transform:translateY(-50%);
+  color:#ffd36b;
+  font-size:1.25rem;
+  filter:drop-shadow(0 0 7px #f58b22);
+}
+.music-banner span{
+  display:block;
+  color:#b99a62;
+  font-size:.48rem;
+  letter-spacing:.18em;
+}
+.music-banner strong{
+  display:block;
+  margin-top:2px;
+  color:#ffe8b1;
+  font-size:.76rem;
+  font-weight:700;
+  letter-spacing:.035em;
+}
+.music-banner[data-track="boss"]{
+  border-left-color:#72e5ff;
+  background:linear-gradient(90deg,#10102ff4,#20143ce3 78%,transparent);
+}
+.music-banner[data-track="boss"]:before{
+  color:#8eeeff;
+  filter:drop-shadow(0 0 9px #7a62ff);
+}
+.music-banner.show{
+  opacity:1;
+  transform:translateX(0);
+}
+@media (pointer:coarse),(max-width:900px){
+  .music-banner{left:10px;top:94px;min-width:205px;padding:7px 12px 8px 37px}
+  .music-banner:before{left:11px;font-size:1rem}
+  .music-banner strong{font-size:.64rem}
+}
+@media (max-height:480px){
+  .music-banner{top:70px}
+}
