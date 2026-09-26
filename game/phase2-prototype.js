@@ -12,8 +12,8 @@ let ameliaMet=false, introLorePlayed=false, gearLore=[false,false,false], finalL
 const arenaPlats=[{x:7580,y:-480,w:250,h:24},{x:7860,y:-565,w:250,h:24},{x:7200,y:-650,w:1700,h:60}];
 const boss={x:8360,y:-770,hp:10,maxHp:10,dir:-1,t:0,shot:.8,invuln:0};
 const bossShots=[];let playerLife=3,playerHit=0;
-const ameliaShadowAssets={dialogue:[],transform:[],boss:[]};
-const shadowCutscene={active:false,t:0};
+const ameliaShadowAssets={dialogue:[],transform:[],boss:[],effects:[],map:[]};
+const shadowCutscene={active:false,t:0,cue:0};
 const lore={
 arrival:[
 {speaker:"JACK",portrait:"jack",expression:1,text:"Outra vila. Outra noite. E nenhum sinal do amanhecer."},
@@ -63,7 +63,7 @@ function activateShadowBoss(){
   banner("SOMBRA DE AMÉLIA — O ÚLTIMO MINUTO");say("A dor das 4:13 tomou forma. Use a LUZ para libertá-la.");
 }
 function startShadowCutscene(){
-  bossUnlocked=true;bossActive=false;bossDefeated=false;shadowCutscene.active=true;shadowCutscene.t=0;
+  bossUnlocked=true;bossActive=false;bossDefeated=false;shadowCutscene.active=true;shadowCutscene.t=0;shadowCutscene.cue=0;
   input.left=input.right=input.down=false;p.vx=0;p.vy=0;banner("A SOMBRA DAS 4:13");
 }
 function nearAmelia(){
@@ -109,7 +109,7 @@ if(loadedSave){
   bellStep=Number(loadedSave.bellStep)||0;windowStep=Number(loadedSave.windowStep)||0;shadowStep=Number(loadedSave.shadowStep)||0;towerStep=Number(loadedSave.towerStep)||0;
   ui.gear.textContent=gears.filter(z=>z.got).length+"/3";
 }
-function img(src){return new Promise((r,j)=>{const i=new Image;i.onload=()=>r(i);i.onerror=j;i.src=src+"?v=p2shadow1"})}
+function img(src){return new Promise((r,j)=>{const i=new Image;i.onload=()=>r(i);i.onerror=j;i.src=src+"?v=p2shadowv2"})}
 img("../assets/game/phase1/sprites-hd/jack-atlas-hd.png").then(i=>jack=i).catch(()=>{});
 let phase2Background=null;
 img("../assets/game/phase2/backgrounds-hd/phase2-vila-torre-background-reference.png")
@@ -118,19 +118,25 @@ img("../assets/game/phase2/backgrounds-hd/phase2-vila-torre-background-reference
 const ameliaMapFiles=["neutral","feliz","triste","surpresa","irritada","cansada","assustada"];
 Promise.allSettled(ameliaMapFiles.map(n=>img("../assets/game/phase2/amelia-sprites/amelia-map-"+n+".png")))
   .then(rs=>rs.forEach((r,i)=>{if(r.status==="fulfilled")ameliaMap[ameliaMapFiles[i]]=r.value}));
-const revealDialogueFiles=["amelia-dialogue-00-neutra.png","amelia-dialogue-01-triste.png","amelia-dialogue-02-irritada.png","amelia-dialogue-03-surpresa.png","amelia-dialogue-04-assustada.png","amelia-dialogue-05-pensativa.png","amelia-dialogue-06-chorando.png","amelia-dialogue-07-determinada.png"];
-const transformFiles=["amelia-transform-00-dor-1.png","amelia-transform-01-dor-2.png","amelia-transform-02-dor-3.png","amelia-transform-03-dor-4.png","amelia-transform-04-sombra-1.png","amelia-transform-05-sombra-2.png","amelia-transform-06-sombra-3.png","amelia-transform-07-transformacao.png","amelia-transform-08-transicao-1.png","amelia-transform-09-transicao-2.png","amelia-transform-10-revelacao-1.png","amelia-transform-11-revelacao-2.png"];
-const shadowBossFiles=["amelia-shadow-boss-00-idle.png","amelia-shadow-boss-01-andando.png","amelia-shadow-boss-02-ataque-1.png","amelia-shadow-boss-03-ataque-2.png","amelia-shadow-boss-04-ataque-3.png","amelia-shadow-boss-05-magia.png","amelia-shadow-boss-06-dano-1.png","amelia-shadow-boss-07-dano-2.png","amelia-shadow-boss-08-transicao.png"];
-Promise.allSettled(transformFiles.map(f=>img("../assets/game/phase2/amelia-shadow/transformation/"+f)))
+const revealDialogueFiles=["amelia-dialogue-00-neutra.png","amelia-dialogue-01-feliz.png","amelia-dialogue-02-triste.png","amelia-dialogue-03-irritada.png","amelia-dialogue-04-surpresa.png","amelia-dialogue-05-assustada.png","amelia-dialogue-06-determinada.png","amelia-dialogue-07-chorando.png"];
+const transformFiles=["amelia-transform-00-surpresa.png","amelia-transform-01-recua.png","amelia-transform-02-perde-equilibrio.png","amelia-transform-03-cai-joelhos.png","amelia-transform-04-no-chao-inicio.png","amelia-transform-05-no-chao-dor-1.png","amelia-transform-06-no-chao-dor-2.png","amelia-transform-07-grito.png","amelia-transform-08-lanterna-cai.png","amelia-transform-09-primeiras-sombras.png","amelia-transform-10-sombras-envolvem.png","amelia-transform-11-transformacao-1.png","amelia-transform-12-transformacao-2.png"];
+const shadowBossFiles=["amelia-shadow-boss-00-idle.png","amelia-shadow-boss-01-walk-1.png","amelia-shadow-boss-02-walk-2.png","amelia-shadow-boss-03-ataque-1.png","amelia-shadow-boss-04-ataque-2.png","amelia-shadow-boss-05-ataque-3.png","amelia-shadow-boss-06-magia.png","amelia-shadow-boss-07-dano.png","amelia-shadow-boss-08-transicao.png"];
+const shadowEffectFiles=["effect-00-lanterna-caida.png","effect-01-sombra-1.png","effect-02-sombra-2.png","effect-03-sombra-3.png","effect-04-circulo-magico.png","effect-05-engrenagens.png","effect-06-petalas.png","effect-07-relogio.png","effect-08-brilhos.png"];
+const shadowMapFiles=["amelia-map-00-idle.png","amelia-map-01-walk-left-1.png","amelia-map-02-walk-left-2.png","amelia-map-03-walk-right-1.png","amelia-map-04-walk-right-2.png"];
+Promise.allSettled(transformFiles.map(f=>img("../assets/game/phase2/amelia-shadow-v2/transformation/"+f)))
   .then(rs=>ameliaShadowAssets.transform=rs.map(r=>r.status==="fulfilled"?r.value:null));
-Promise.allSettled(shadowBossFiles.map(f=>img("../assets/game/phase2/amelia-shadow/boss/"+f)))
+Promise.allSettled(shadowBossFiles.map(f=>img("../assets/game/phase2/amelia-shadow-v2/boss/"+f)))
   .then(rs=>ameliaShadowAssets.boss=rs.map(r=>r.status==="fulfilled"?r.value:null));
+Promise.allSettled(shadowEffectFiles.map(f=>img("../assets/game/phase2/amelia-shadow-v2/effects/"+f)))
+  .then(rs=>ameliaShadowAssets.effects=rs.map(r=>r.status==="fulfilled"?r.value:null));
+Promise.allSettled(shadowMapFiles.map(f=>img("../assets/game/phase2/amelia-shadow-v2/map/"+f)))
+  .then(rs=>ameliaShadowAssets.map=rs.map(r=>r.status==="fulfilled"?r.value:null));
 const jackPortraitFiles=["jack-00-neutral.png","jack-01-serious.png","jack-02-smirk.png","jack-03-surprised.png","jack-04-determined.png","jack-05-resolved.png"];
 const ameliaPortraitFiles=["amelia-00-neutral.png","amelia-01-cansada.png","amelia-02-triste.png","amelia-03-surpresa.png","amelia-04-irritada.png","amelia-05-culpada.png","amelia-06-chorando.png","amelia-07-abatida.png","amelia-08-assustada.png","amelia-09-sorriso-suave.png"];
 Promise.all([
   Promise.allSettled(jackPortraitFiles.map(f=>img("../assets/game/phase1/portraits-hd/"+f))),
   Promise.allSettled(ameliaPortraitFiles.map(f=>img("../assets/game/phase2/portraits-hd/"+f))),
-  Promise.allSettled(revealDialogueFiles.map(f=>img("../assets/game/phase2/amelia-shadow/dialogue/"+f)))
+  Promise.allSettled(revealDialogueFiles.map(f=>img("../assets/game/phase2/amelia-shadow-v2/dialogue/"+f)))
 ]).then(([jackRs,ameliaRs,revealRs])=>{
   const normalAmelia=ameliaRs.map(r=>r.status==="fulfilled"?r.value:null);
   ameliaShadowAssets.dialogue=revealRs.map(r=>r.status==="fulfilled"?r.value:null);
@@ -173,7 +179,9 @@ if(shadowCutscene.active){
   shadowCutscene.t+=dt;p.vx=0;p.vy=0;p.anim+=dt;interactPrompt.hidden=true;
   cam+=(Math.max(0,Math.min(WORLD-W,8050-W*.52))-cam)*Math.min(1,dt*3.2);
   camY+=(-890-camY)*Math.min(1,dt*3.2);
-  if(shadowCutscene.t>=4.6){shadowCutscene.active=false;openDialogue(lore.shadowBorn,activateShadowBoss)}
+  if(shadowCutscene.t>=2.55&&shadowCutscene.cue<1){shadowCutscene.cue=1;say("AMÉLIA: AAAAAH!")}
+  if(shadowCutscene.t>=5.55&&shadowCutscene.cue<2){shadowCutscene.cue=2;banner("A SOMBRA SE DESPRENDE DE AMÉLIA")}
+  if(shadowCutscene.t>=7.15){shadowCutscene.active=false;openDialogue(lore.shadowBorn,activateShadowBoss)}
   return
 }
 cool=Math.max(0,cool-dt);light=Math.max(0,light-dt);p.attack=Math.max(0,p.attack-dt);reveal.forEach(q=>q.t=Math.max(0,q.t-dt));p.coyote=p.on?.12:Math.max(0,p.coyote-dt);if(input.jump){p.buffer=.14;input.jump=false}else p.buffer=Math.max(0,p.buffer-dt);
@@ -247,16 +255,58 @@ function drawAmelia(){
   x.fillStyle="#f0cf76";x.font="bold 12px Georgia";x.textAlign="center";x.fillText("AMÉLIA",cx,ground+19);x.textAlign="left";
   x.restore();
 }
+function drawAssetBottom(img,cx,ground,targetH,alpha=1){
+  if(!img)return false;
+  const iw=img.naturalWidth||img.width||1,ih=img.naturalHeight||img.height||1,w=targetH*(iw/ih);
+  x.save();x.globalAlpha=alpha;x.drawImage(img,cx-w/2,ground-targetH,w,targetH);x.restore();return true;
+}
 function drawShadowCutscene(){
   if(!shadowCutscene.active)return;
-  const frames=ameliaShadowAssets.transform,step=Math.min(11,Math.floor(shadowCutscene.t/.38)),sprite=frames[step]||ameliaMap.assustada||ameliaMap.cansada;
-  const cx=8050,ground=-650;
-  x.save();
-  const darkness=Math.min(.65,shadowCutscene.t/5*.65);x.globalAlpha=darkness;x.fillStyle="#180619";x.beginPath();x.arc(cx,ground-135,150+shadowCutscene.t*22,0,Math.PI*2);x.fill();x.globalAlpha=1;
-  if(sprite){const size=step<4?230:(step<8?285:360);x.drawImage(sprite,cx-size/2,ground-size,size,size)}
-  else{x.fillStyle="#3a183e";x.beginPath();x.arc(cx,ground-90,75+step*8,0,Math.PI*2);x.fill()}
-  if(step>=4){x.globalAlpha=.18+Math.sin(shadowCutscene.t*8)*.06;x.fillStyle="#e23b63";x.beginPath();x.arc(cx,ground-135,115+step*9,0,Math.PI*2);x.fill();x.globalAlpha=1}
-  x.fillStyle="#ffe2a0";x.font="bold 15px Georgia";x.textAlign="center";x.fillText(step<4?"AMÉLIA":"A SOMBRA DAS 4:13",cx,ground+28);x.textAlign="left";x.restore();
+  const t=shadowCutscene.t,frames=ameliaShadowAssets.transform,effects=ameliaShadowAssets.effects,bossFrames=ameliaShadowAssets.boss;
+  const frameDur=.42,transformEnd=frames.length?frames.length*frameDur:5.46;
+  const cx=8050,ground=-650,step=Math.min(12,Math.floor(t/frameDur));
+  const shake=t>2.45?Math.sin(t*42)*Math.min(9,(t-2.45)*2.4):0;
+  x.save();x.translate(shake,0);
+
+  const darkness=Math.min(.72,t/6*.72);
+  x.globalAlpha=darkness;x.fillStyle="#170516";x.beginPath();x.arc(cx,ground-130,155+t*28,0,Math.PI*2);x.fill();x.globalAlpha=1;
+
+  if(t<transformEnd){
+    const sprite=frames[step]||ameliaShadowAssets.map[0]||ameliaMap.assustada||ameliaMap.cansada;
+    const h=step<=2?220:(step<=8?255:310);
+    drawAssetBottom(sprite,cx,ground,h);
+
+    if(step>=8&&effects.length){
+      const ei=Math.min(3,Math.max(1,step-7)),fx=effects[ei];
+      if(fx){x.save();x.globalAlpha=.42;drawAssetBottom(fx,cx+25,ground+5,245,.42);x.restore()}
+    }
+    if(step===7){
+      x.save();x.globalAlpha=.18+.12*Math.sin(t*30);x.fillStyle="#ff5578";x.beginPath();x.arc(cx,ground-150,155,0,Math.PI*2);x.fill();x.restore();
+    }
+  }else{
+    // A Amélia continua caída: quem se ergue é a sombra.
+    const sep=Math.min(1,(t-transformEnd)/1.45);
+    const fallen=frames[6]||frames[5]||ameliaShadowAssets.map[0];
+    const shadow=bossFrames[8]||bossFrames[0];
+    drawAssetBottom(fallen,cx-155,ground,235);
+    if(effects[3])drawAssetBottom(effects[3],cx+95,ground+8,250,.52);
+    if(shadow)drawAssetBottom(shadow,cx+145,ground,225+sep*155);
+    else{x.globalAlpha=.55;x.fillStyle="#4b123e";x.beginPath();x.arc(cx+145,ground-135,85+sep*75,0,Math.PI*2);x.fill();x.globalAlpha=1}
+  }
+
+  if(t>2.35&&t<3.65){
+    x.fillStyle="#fff0c0";x.font="bold 26px Georgia";x.textAlign="center";x.fillText("AAAAAH!",cx,ground-310);x.textAlign="left";
+  }
+  x.fillStyle="#ffe2a0";x.font="bold 15px Georgia";x.textAlign="center";
+  x.fillText(t<transformEnd?"AMÉLIA VESPER":"A SOMBRA SE DESPRENDE",cx,ground+30);x.textAlign="left";
+  x.restore();
+}
+function drawTowerAmelia(){
+  if(shadowCutscene.active||!bossUnlocked||(!bossActive&&!bossDefeated))return;
+  const fallen=ameliaShadowAssets.transform[6]||ameliaShadowAssets.transform[5];
+  if(!fallen)return;
+  drawAssetBottom(fallen,8830,-650,215,bossDefeated?1:.82);
+  x.save();x.fillStyle="#e9cf86";x.font="bold 12px Georgia";x.textAlign="center";x.fillText(bossDefeated?"AMÉLIA — LIVRE":"AMÉLIA",8830,-624);x.textAlign="left";x.restore();
 }
 function clamp01(v){return Math.max(0,Math.min(1,v))}
 function drawPhase2Backdrop(){
@@ -313,7 +363,7 @@ for(const z of shadowSeals){x.fillStyle=z.on?"#b9eaff":"#171b2c";x.beginPath();x
 for(const z of towerSeals){x.fillStyle=z.on?"#fff0a8":"#512c65";x.beginPath();x.arc(z.x,z.y,22,0,Math.PI*2);x.fill();x.strokeStyle="#d0a65b";x.stroke()}
 x.fillStyle=allRequired()?"#e9c35e":"#4d344d";x.fillRect(7725,-480,300,70);x.strokeStyle="#d0a65b";x.lineWidth=4;x.strokeRect(7725,-480,300,70);x.fillStyle="#fff0b0";x.font="bold 14px Georgia";x.fillText(allRequired()?"SELO ABERTO — AÇÃO":"SELO FECHADO — "+solvedCount()+"/3 · TORRE "+(towerMechanism?"✓":"○"),7780,-438);
 if(bossActive&&!bossDefeated){
-  const attackFlash=boss.shot<.22,bi=boss.invuln>0?6:(attackFlash?2+Math.floor(boss.t*8)%4:(Math.floor(boss.t*4)%3===0?1:0)),bs=ameliaShadowAssets.boss[bi]||ameliaShadowAssets.boss[0];
+  const attackFlash=boss.shot<.42,bi=boss.invuln>0?7:(boss.shot<.16?6:(attackFlash?3+Math.floor(boss.t*9)%3:Math.floor(boss.t*5)%3)),bs=ameliaShadowAssets.boss[bi]||ameliaShadowAssets.boss[0];
   if(bs){
     const size=330+(Math.sin(boss.t*4)*5);x.save();x.globalAlpha=boss.invuln>0?.55:1;
     if(boss.dir<0){x.translate(boss.x+size/2,boss.y-size/2);x.scale(-1,1);x.drawImage(bs,-size/2,-size/2,size,size)}
@@ -332,7 +382,7 @@ if(bossActive&&!bossDefeated){
 if(bossDefeated){x.fillStyle="#f3d98a";x.globalAlpha=.75;x.font="bold 18px Georgia";x.fillText("O tempo voltou a respirar.",7940,-760);x.globalAlpha=1}
 for(const s of bossShots){x.globalAlpha=.22;x.fillStyle="#c95b9a";x.beginPath();x.arc(s.x,s.y,s.r*2.1,0,Math.PI*2);x.fill();x.globalAlpha=1;x.fillStyle="#ffcf72";x.beginPath();x.arc(s.x,s.y,s.r,0,Math.PI*2);x.fill();x.strokeStyle="#7b315f";x.stroke()}
 // Amélia Vesper oficial e sua revelação no topo da torre.
-drawAmelia();drawShadowCutscene();
+drawAmelia();drawShadowCutscene();drawTowerAmelia();
 for(const e of enemies){if(e.dead)continue;x.fillStyle="#d56a20";x.beginPath();x.arc(e.x,e.y,24,0,Math.PI*2);x.fill();x.fillStyle="#ffe099";x.fillRect(e.x-11,e.y-5,6,6);x.fillRect(e.x+5,e.y-5,6,6)}
 for(const b of bells){x.fillStyle=b.on?"#ffe099":"#8d693d";x.beginPath();x.moveTo(b.x,b.y-45);x.lineTo(b.x-22,b.y);x.lineTo(b.x+22,b.y);x.closePath();x.fill()}
 for(const g of gears){if(g.got)continue;x.save();x.translate(g.x,g.y);x.rotate(p.anim);x.strokeStyle="#ffd36b";x.lineWidth=8;x.beginPath();x.arc(0,0,24,0,Math.PI*2);x.stroke();for(let i=0;i<8;i++){x.rotate(Math.PI/4);x.fillStyle="#ffd36b";x.fillRect(20,-5,13,10)}x.restore()}
