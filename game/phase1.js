@@ -138,9 +138,9 @@
     {k:"trees/tree-03.png",x:6980,y:590,h:165},
 
     // Ruínas — casario mais estreito, túmulos, cercas e árvores quebram a repetição.
-    {k:"houses/house-03.png",x:7860,y:590,h:225},
+    {k:"houses/house-03.png",x:7865,y:445,h:225}, // sobre a plataforma flutuante central
     {k:"houses/house-05.png",x:8500,y:590,h:214},
-    {k:"trees/tree-01.png",x:7100,y:590,h:174,flip:1},
+    {k:"trees/tree-01.png",x:7370,y:500,h:174,flip:1}, // inteira sobre a primeira plataforma flutuante
     {k:"trees/tree-02.png",x:8700,y:590,h:180},
     {k:"fences/fence-03.png",x:7200,y:590,h:90},
     {k:"fences/fence-05.png",x:8360,y:590,h:88},
@@ -348,7 +348,7 @@
       img.onload = () => resolve(img);
       img.onerror = () => reject(new Error("Falha ao carregar " + path));
       const sep = path.includes("?") ? "&" : "?";
-      img.src = path + sep + "v=phase1-assets-34";
+      img.src = path + sep + "v=phase1-assets-35";
     });
   }
 
