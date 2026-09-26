@@ -105,6 +105,7 @@
   let crowFrames = [];
   let wispFrames = [];
   let pumpkinFrames = [];
+  let checkpointFrames = [];
   let guardianFrames = [];
   let jackFrameOverrides = {};
 
@@ -264,7 +265,7 @@
       img.onload = () => resolve(img);
       img.onerror = () => reject(new Error("Falha ao carregar " + path));
       const sep = path.includes("?") ? "&" : "?";
-      img.src = path + sep + "v=phase1-assets-31";
+      img.src = path + sep + "v=phase1-assets-32";
     });
   }
 
@@ -303,6 +304,7 @@
     ]);
     if(checkpointResult[0].status === "fulfilled"){
       art.checkpoint = checkpointResult[0].value;
+      checkpointFrames = buildCheckpointFrames(art.checkpoint);
     }else{
       console.warn("[Fase 1] sprite do checkpoint indisponível; usando fallback desenhado.");
     }
@@ -612,6 +614,52 @@
       }
     }
     return height;
+  }
+
+  function spriteStableAnchor(canvas){
+    const c=canvas.getContext("2d",{willReadFrequently:true});
+    const {width,height}=canvas;
+    const data=c.getImageData(0,0,width,height).data;
+    let minX=width,maxX=-1,maxY=-1;
+    // Ignora brilhos muito transparentes: a âncora vem da estrutura sólida.
+    for(let y=Math.floor(height*.22);y<height;y++){
+      for(let x=0;x<width;x++){
+        const a=data[(y*width+x)*4+3];
+        if(a<96) continue;
+        if(x<minX)minX=x;
+        if(x>maxX)maxX=x;
+        if(y>maxY)maxY=y;
+      }
+    }
+    return {
+      x:maxX>=minX ? (minX+maxX+1)/2 : width/2,
+      y:maxY>=0 ? maxY+1 : height
+    };
+  }
+
+  function buildCheckpointFrames(img){
+    const sw=Math.floor(img.naturalWidth/2);
+    const sh=img.naturalHeight;
+    return [0,1].map(col=>{
+      const canvas=cropSpriteFrame(img,col*sw,0,sw,sh);
+      return {canvas,anchor:spriteStableAnchor(canvas)};
+    });
+  }
+
+  function drawStableCheckpoint(frame,cx,groundY,targetH,alpha=1){
+    if(!frame?.canvas)return false;
+    const img=frame.canvas;
+    const scale=targetH/img.height;
+    const dw=img.width*scale;
+    const dx=cx-frame.anchor.x*scale;
+    const dy=groundY-frame.anchor.y*scale;
+    ctx.save();
+    ctx.globalAlpha*=alpha;
+    ctx.imageSmoothingEnabled=true;
+    ctx.imageSmoothingQuality="high";
+    ctx.drawImage(img,dx,dy,dw,targetH);
+    ctx.restore();
+    return true;
   }
 
   function buildPumpkinFrames(img){
@@ -1556,11 +1604,18 @@
     }
 
     if(art.checkpoint){
-      drawAtlasCell(
-        art.checkpoint,2,1,lit?1:0,0,
-        x-cp.renderW/2,visualY-cp.renderH,
-        cp.renderW,cp.renderH,false,1,true
-      );
+      // Ativar o checkpoint NÃO altera x, y, escala ou colisão.
+      // A única mudança visual é trocar o estado apagado pelo aceso.
+      const frame=checkpointFrames[lit?1:0];
+      if(frame){
+        drawStableCheckpoint(frame,x,visualY,cp.renderH,1);
+      }else{
+        drawAtlasCell(
+          art.checkpoint,2,1,lit?1:0,0,
+          x-cp.renderW/2,visualY-cp.renderH,
+          cp.renderW,cp.renderH,false,1,true
+        );
+      }
       return;
     }
 
