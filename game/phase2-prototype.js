@@ -10,7 +10,7 @@ if(forceNewRun){localStorage.removeItem(SAVE_KEY);localStorage.removeItem(CHECKP
 let loadedSave=null;if(journeyMode&&!replayMode){try{loadedSave=JSON.parse(localStorage.getItem(SAVE_KEY)||"null")}catch(e){loadedSave=null}}
 let ameliaMet=false, introLorePlayed=false, gearLore=[false,false,false], finalLorePlayed=false,bossUnlocked=false,bossActive=false,bossDefeated=false;const puzzles={sinos:false,janelas:false,sombras:false};let towerMechanism=false;
 const arenaPlats=[{x:7580,y:-480,w:250,h:24},{x:7860,y:-565,w:250,h:24},{x:7200,y:-650,w:1700,h:60}];
-const boss={x:8360,y:-770,hp:10,maxHp:10,dir:-1,t:0,shot:.8,invuln:0};
+const boss={x:8360,y:-770,hp:10,maxHp:10,dir:-1,t:0,shot:1.25,invuln:0,spawn:0,cast:0,animT:0};
 const bossShots=[];let playerLife=3,playerHit=0;
 const ameliaShadowAssets={dialogue:[],transform:[],boss:[],effects:[],map:[]};
 const shadowCutscene={active:false,t:0,cue:0};
@@ -91,7 +91,7 @@ shadowBorn:[
 ]};
 function openDialogue(lines,onComplete){input.left=input.right=input.down=false;p.vx=0;dialogue.open(lines,onComplete)}
 function activateShadowBoss(){
-  shadowCutscene.active=false;bossUnlocked=true;bossActive=true;bossDefeated=false;boss.hp=boss.maxHp;boss.t=0;boss.shot=.8;playerLife=3;bossShots.length=0;
+  shadowCutscene.active=false;bossUnlocked=true;bossActive=true;bossDefeated=false;boss.hp=boss.maxHp;boss.t=0;boss.shot=1.25;boss.spawn=1.05;boss.cast=0;boss.animT=0;playerLife=3;bossShots.length=0;
   banner("SOMBRA DE AMÉLIA — O ÚLTIMO MINUTO");say("A dor das 4:13 tomou forma. Use a LUZ para libertá-la.");
 }
 function startShadowCutscene(){
@@ -235,21 +235,32 @@ enemies.forEach(e=>{if(e.dead)return;e.x+=e.d*70*dt;if(e.x<e.a||e.x>e.b)e.d*=-1}
 boss.invuln=Math.max(0,boss.invuln-dt);playerHit=Math.max(0,playerHit-dt);
 if(bossActive&&!bossDefeated){
   p.x=Math.max(7225,Math.min(8870-p.w,p.x));
-  boss.t+=dt;boss.x+=boss.dir*(82+Math.min(55,boss.t*2))*dt;
-  if(boss.x<7600){boss.x=7600;boss.dir=1}if(boss.x>8560){boss.x=8560;boss.dir=-1}
-  boss.y=-770+Math.sin(boss.t*2.1)*24;
-  boss.shot-=dt;
-  if(boss.shot<=0){
-    boss.shot=Math.max(.72,1.45-boss.t*.012);
-    const tx=p.x+p.w/2,ty=p.y+p.h/2,dx=tx-boss.x,dy=ty-boss.y,len=Math.hypot(dx,dy)||1,speed=255+Math.min(90,boss.t*2);
-    bossShots.push({x:boss.x,y:boss.y,vx:dx/len*speed,vy:dy/len*speed,r:13,life:5});
+  boss.t+=dt;boss.animT+=dt;boss.spawn=Math.max(0,boss.spawn-dt);boss.cast=Math.max(0,boss.cast-dt);
+  boss.y=-770+Math.sin(boss.t*1.7)*8;
+
+  if(boss.spawn<=0){
+    boss.shot-=dt;
+    const preparing=boss.shot<=.62;
+    // Durante a preparação e a magia o corpo para: nada de "patinar" enquanto ataca.
+    if(!preparing&&boss.cast<=0){
+      boss.x+=boss.dir*(72+Math.min(38,boss.t*1.15))*dt;
+      if(boss.x<7600){boss.x=7600;boss.dir=1;boss.animT=0}
+      if(boss.x>8560){boss.x=8560;boss.dir=-1;boss.animT=0}
+    }
+    if(boss.shot<=0&&boss.cast<=0){
+      boss.cast=.30;
+      boss.shot=Math.max(.82,1.55-boss.t*.010);
+      const tx=p.x+p.w/2,ty=p.y+p.h/2,dx=tx-boss.x,dy=ty-boss.y,len=Math.hypot(dx,dy)||1,speed=255+Math.min(90,boss.t*2);
+      const muzzleX=boss.x+boss.dir*62,muzzleY=boss.y-12;
+      bossShots.push({x:muzzleX,y:muzzleY,vx:dx/len*speed,vy:dy/len*speed,r:13,life:5});
+    }
   }
   for(let i=bossShots.length-1;i>=0;i--){
     const s=bossShots[i];s.x+=s.vx*dt;s.y+=s.vy*dt;s.life-=dt;
     if(s.life<=0){bossShots.splice(i,1);continue}
     if(playerHit<=0&&Math.abs(s.x-(p.x+p.w/2))<s.r+p.w*.42&&Math.abs(s.y-(p.y+p.h/2))<s.r+p.h*.42){
       bossShots.splice(i,1);playerLife--;playerHit=.9;
-      if(playerLife<=0){playerLife=3;boss.hp=boss.maxHp;boss.t=0;bossShots.length=0;say("O tempo venceu esta tentativa — a arena reiniciou.");}
+      if(playerLife<=0){playerLife=3;boss.hp=boss.maxHp;boss.t=0;boss.shot=1.25;boss.spawn=.75;boss.cast=0;boss.animT=0;bossShots.length=0;say("O tempo venceu esta tentativa — a arena reiniciou.");}
       else say("O tempo atingiu Jack — "+playerLife+"/3 luzes restantes.");
       p.x=7350;p.y=-736;p.vx=0;p.vy=0;
     }
@@ -504,12 +515,38 @@ for(const z of shadowSeals){x.fillStyle=z.on?"#b9eaff":"#171b2c";x.beginPath();x
 for(const z of towerSeals){x.fillStyle=z.on?"#fff0a8":"#512c65";x.beginPath();x.arc(z.x,z.y,22,0,Math.PI*2);x.fill();x.strokeStyle="#d0a65b";x.stroke()}
 x.fillStyle=allRequired()?"#e9c35e":"#4d344d";x.fillRect(7725,-480,300,70);x.strokeStyle="#d0a65b";x.lineWidth=4;x.strokeRect(7725,-480,300,70);x.fillStyle="#fff0b0";x.font="bold 14px Georgia";x.fillText(allRequired()?"SELO ABERTO — AÇÃO":"SELO FECHADO — "+solvedCount()+"/3 · TORRE "+(towerMechanism?"✓":"○"),7780,-438);
 if(bossActive&&!bossDefeated){
-  const attackFlash=boss.shot<.42,bi=boss.invuln>0?7:(boss.shot<.16?6:(attackFlash?3+Math.floor(boss.t*9)%3:Math.floor(boss.t*5)%3)),bs=ameliaShadowAssets.boss[bi]||ameliaShadowAssets.boss[0];
+  let bi=0;
+  if(boss.spawn>0)bi=8;
+  else if(boss.invuln>0)bi=7;
+  else if(boss.cast>0)bi=6;
+  else if(boss.shot<=.62){
+    const wind=Math.max(0,Math.min(.619,.62-boss.shot));
+    bi=3+Math.min(2,Math.floor(wind/.207));
+  }else{
+    const walkCycle=Math.floor(boss.animT/0.15)%4;
+    bi=[0,1,0,2][walkCycle];
+  }
+  const bs=ameliaShadowAssets.boss[bi]||ameliaShadowAssets.boss[0];
   if(bs){
-    const size=330+(Math.sin(boss.t*4)*5);x.save();x.globalAlpha=boss.invuln>0?.55:1;
-    if(boss.dir<0){x.translate(boss.x+size/2,boss.y-size/2);x.scale(-1,1);x.drawImage(bs,-size/2,-size/2,size,size)}
-    else x.drawImage(bs,boss.x-size/2,boss.y-size/2,size,size);
+    // Âncora fixa no chão visual: todos os quadros mantêm o mesmo centro e escala.
+    // O único movimento vertical é uma respiração mínima; sem pulos entre frames.
+    const size=344;
+    const breathe=(boss.spawn>0||boss.cast>0||boss.invuln>0)?0:Math.sin(boss.t*2.2)*2;
+    const drawY=boss.y-size/2+breathe;
+    x.save();
+    x.globalAlpha=boss.invuln>0?.62:1;
+    if(boss.dir<0){
+      x.translate(boss.x,0);x.scale(-1,1);x.drawImage(bs,-size/2,drawY,size,size);
+    }else x.drawImage(bs,boss.x-size/2,drawY,size,size);
     x.restore();
+
+    // Telegraph de ataque: a luz cresce antes do projétil sair, sincronizada aos 3 frames.
+    if(boss.spawn<=0&&boss.invuln<=0&&boss.shot<=.62&&boss.cast<=0){
+      const charge=Math.max(0,Math.min(1,(.62-boss.shot)/.62));
+      const orbX=boss.x+boss.dir*68,orbY=boss.y-10;
+      x.save();x.globalAlpha=.18+charge*.52;x.fillStyle="#ff5b9d";x.beginPath();x.arc(orbX,orbY,10+charge*24,0,Math.PI*2);x.fill();
+      x.globalAlpha=.55+charge*.45;x.fillStyle="#ffd978";x.beginPath();x.arc(orbX,orbY,5+charge*9,0,Math.PI*2);x.fill();x.restore();
+    }
   }else{
     // Fallback até os sprites da sombra serem enviados.
     x.save();x.translate(boss.x,boss.y);const pulse=1+Math.sin(boss.t*5)*.05;x.scale(pulse,pulse);
