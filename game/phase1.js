@@ -217,7 +217,7 @@
       img.onload = () => resolve(img);
       img.onerror = () => reject(new Error("Falha ao carregar " + path));
       const sep = path.includes("?") ? "&" : "?";
-      img.src = path + sep + "v=phase1-assets-29";
+      img.src = path + sep + "v=phase1-assets-28";
     });
   }
 
@@ -1253,44 +1253,138 @@
   }
 
   function drawBridgeForeground(p){
-    if(!art.platformBridge || p.type!=="bridge")return;
+    if(p.type!=="bridge")return;
     const x=p.x-cameraX;
-    if(x+p.w<-100||x>W+100)return;
+    if(x+p.w<-120||x>W+120)return;
 
-    const dx=Math.round(x-6);
-    const dy=Math.round(p.y-14);
-    const dw=Math.round(p.w+12);
-    const dh=128;
+    // 1) Lábio frontal do piso: passa na frente apenas dos pés.
+    if(art.platformBridge){
+      const dx=Math.round(x-6);
+      const dy=Math.round(p.y-14);
+      const dw=Math.round(p.w+12);
+      const dh=128;
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(x-8,p.y-2,p.w+16,55);
+      ctx.clip();
+      drawCrop(
+        art.platformBridge,
+        .012,.018,.585,.205,
+        dx,dy,dw,dh,
+        1,true
+      );
+      ctx.restore();
+    }
+
+    // 2) Guarda-corpo frontal independente da plataforma.
+    // É desenhado DEPOIS do Jack: personagem passa visualmente atrás das cordas.
+    const railTop=p.y-72;
+    const postBottom=p.y+13;
+    const spacing=112;
+    const first=Math.floor((p.x-18)/spacing)*spacing;
 
     ctx.save();
+    ctx.lineCap="round";
+    ctx.lineJoin="round";
 
-    // Front deck / rail band: covers only Jack's feet and lower legs.
-    ctx.beginPath();
-    ctx.rect(x-8,p.y-5,p.w+16,58);
-    ctx.clip();
-    drawCrop(
-      art.platformBridge,
-      .012,.018,.585,.205,
-      dx,dy,dw,dh,
-      1,true
-    );
-    ctx.restore();
+    // Cordas em duas alturas, com sombra e pequeno caimento entre postes.
+    const drawRope=(y,sag)=>{
+      ctx.beginPath();
+      let started=false;
+      for(let wx=first;wx<=p.x+p.w+spacing;wx+=spacing){
+        const nx=wx+spacing;
+        const sx=wx-cameraX;
+        const ex=nx-cameraX;
+        if(ex<x-24||sx>x+p.w+24)continue;
+        const a=Math.max(sx,x-6);
+        const b=Math.min(ex,x+p.w+6);
+        const mid=(a+b)/2;
+        if(!started){ctx.moveTo(a,y);started=true;}
+        ctx.quadraticCurveTo(mid,y+sag,b,y);
+      }
+      ctx.strokeStyle="rgba(20,9,5,.82)";
+      ctx.lineWidth=8;
+      ctx.stroke();
 
-    // Posts at the bridge ends stay in front too, giving proper depth
-    // when Jack enters or exits the illustrated bridge.
-    const postW=Math.min(48,Math.max(28,p.w*.09));
+      ctx.beginPath();
+      started=false;
+      for(let wx=first;wx<=p.x+p.w+spacing;wx+=spacing){
+        const nx=wx+spacing;
+        const sx=wx-cameraX;
+        const ex=nx-cameraX;
+        if(ex<x-24||sx>x+p.w+24)continue;
+        const a=Math.max(sx,x-6);
+        const b=Math.min(ex,x+p.w+6);
+        const mid=(a+b)/2;
+        if(!started){ctx.moveTo(a,y-1);started=true;}
+        ctx.quadraticCurveTo(mid,y+sag-1,b,y-1);
+      }
+      ctx.strokeStyle="#8f5427";
+      ctx.lineWidth=5;
+      ctx.stroke();
 
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(x-8,p.y-24,postW+18,150);
-    ctx.rect(x+p.w-postW-10,p.y-24,postW+18,150);
-    ctx.clip();
-    drawCrop(
-      art.platformBridge,
-      .012,.018,.585,.205,
-      dx,dy,dw,dh,
-      1,true
-    );
+      ctx.beginPath();
+      started=false;
+      for(let wx=first;wx<=p.x+p.w+spacing;wx+=spacing){
+        const nx=wx+spacing;
+        const sx=wx-cameraX;
+        const ex=nx-cameraX;
+        if(ex<x-24||sx>x+p.w+24)continue;
+        const a=Math.max(sx,x-6);
+        const b=Math.min(ex,x+p.w+6);
+        const mid=(a+b)/2;
+        if(!started){ctx.moveTo(a,y-3);started=true;}
+        ctx.quadraticCurveTo(mid,y+sag-3,b,y-3);
+      }
+      ctx.strokeStyle="rgba(224,145,63,.72)";
+      ctx.lineWidth=1.5;
+      ctx.stroke();
+    };
+
+    drawRope(railTop+18,12);
+    drawRope(railTop+48,9);
+
+    // Postes de madeira/ferro: corpo escuro, face quente e topo metálico.
+    for(let wx=first;wx<=p.x+p.w+spacing;wx+=spacing){
+      if(wx<p.x-12||wx>p.x+p.w+12)continue;
+      const sx=Math.round(wx-cameraX);
+      ctx.fillStyle="rgba(13,8,7,.9)";
+      ctx.fillRect(sx-8,railTop-5,18,postBottom-railTop+7);
+      ctx.fillStyle="#5b321d";
+      ctx.fillRect(sx-6,railTop-7,13,postBottom-railTop+5);
+      ctx.fillStyle="#9b5928";
+      ctx.fillRect(sx-4,railTop-5,3,postBottom-railTop-1);
+      ctx.fillStyle="#24130d";
+      ctx.fillRect(sx-10,railTop-10,21,8);
+      ctx.fillStyle="#c57931";
+      ctx.fillRect(sx-7,railTop-9,14,2);
+
+      // Abraçadeiras / nós das cordas.
+      for(const yy of [railTop+18,railTop+48]){
+        ctx.fillStyle="#2a160d";
+        ctx.fillRect(sx-9,yy-5,19,10);
+        ctx.fillStyle="#c4772e";
+        ctx.fillRect(sx-7,yy-3,15,3);
+      }
+
+      // Folhas discretas no primeiro plano para integrar o guarda-corpo ao cenário.
+      if(((wx/spacing)|0)%2===0){
+        ctx.fillStyle="#7e2418";
+        ctx.fillRect(sx+7,postBottom-17,8,5);
+        ctx.fillStyle="#c84d1d";
+        ctx.fillRect(sx+12,postBottom-24,7,5);
+        ctx.fillStyle="#df7622";
+        ctx.fillRect(sx+4,postBottom-29,6,4);
+      }
+    }
+
+    // Sombra de contato no piso, reforçando que Jack está dentro da ponte.
+    const shade=ctx.createLinearGradient(0,p.y-6,0,p.y+24);
+    shade.addColorStop(0,"rgba(20,8,4,0)");
+    shade.addColorStop(1,"rgba(20,8,4,.32)");
+    ctx.fillStyle=shade;
+    ctx.fillRect(x-4,p.y-6,p.w+8,30);
+
     ctx.restore();
   }
 
@@ -1902,6 +1996,16 @@
     return jackSequenceFrame(anims.idle,cfg.timing?.idleFps||2.4);
   }
 
+  function bridgeUnderPlayer(){
+    const footY=player.y+player.h/2;
+    return platforms.find(p =>
+      p.type==="bridge" &&
+      player.x>=p.x-6 &&
+      player.x<=p.x+p.w+6 &&
+      Math.abs(footY-p.y)<18
+    ) || null;
+  }
+
   function drawPlayer(){
     const x=player.x-cameraX;
     const blinkAlpha=player.inv>0&&Math.floor(player.inv*12)%2?.35:1;
@@ -1913,7 +2017,10 @@
       const row=Math.floor(frame/cfg.cols);
       const dw=cfg.render?.width||190;
       const dh=cfg.render?.height||190;
-      const dy=player.y+(cfg.render?.offsetY??-132);
+      // Nas pontes, a colisão continua exatamente igual, mas o desenho do Jack
+      // desce alguns pixels para os pés assentarem no piso em vez de "flutuar".
+      const bridgeDepth=bridgeUnderPlayer()?24:0;
+      const dy=player.y+(cfg.render?.offsetY??-132)+bridgeDepth;
 
       const cleanFrame=jackFrameOverrides[frame];
       if(cleanFrame){
@@ -1939,7 +2046,7 @@
     }else if(jack){
       ctx.save();
       ctx.globalAlpha=blinkAlpha;
-      ctx.translate(x,player.y);
+      ctx.translate(x,player.y+(bridgeUnderPlayer()?24:0));
       ctx.scale(player.dir,1);
       ctx.drawImage(jack,playerFrame()*128,0,128,128,-66,-82,132,132);
       ctx.restore();
