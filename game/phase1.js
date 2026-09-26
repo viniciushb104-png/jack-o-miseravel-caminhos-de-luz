@@ -75,6 +75,7 @@
   let running = false, finished = false, cameraX = 0, last = performance.now();
   let jack = null, jackHD = null, jackPortraits = null, eleanorPortraits = null, guardianPortraits = null;
   const portraitHD = { jack:[], eleanor:[], guardian:[] };
+  const memoryHD = { key:null, storm:null, candle:null, letter:null, family:null };
   const art = {
     background:null,
     terrain:null,
@@ -263,7 +264,7 @@
       img.onload = () => resolve(img);
       img.onerror = () => reject(new Error("Falha ao carregar " + path));
       const sep = path.includes("?") ? "&" : "?";
-      img.src = path + sep + "v=phase1-assets-30";
+      img.src = path + sep + "v=phase1-assets-31";
     });
   }
 
@@ -316,6 +317,27 @@
     platformResults.forEach((result,index)=>{
       if(result.status==="fulfilled") art[platformKeys[index]]=result.value;
       else console.warn("[Fase 1] plataforma HD não carregada:",platformKeys[index],result.reason);
+    });
+
+    // Fragmentos de Memória HD: PNGs individuais, preservando a arte enviada.
+    // O atlas antigo continua abaixo apenas como fallback de segurança.
+    const memoryFiles = {
+      key:"memory-key-hd.png",
+      storm:"memory-storm-hd.png",
+      candle:"memory-candle-hd.png",
+      letter:"memory-letter-hd.png",
+      family:"memory-family-hd.png"
+    };
+    const memoryResults = await Promise.allSettled(
+      Object.entries(memoryFiles).map(async ([id,file]) => [id, await imageFromFile("../assets/game/phase1/memories-hd/" + file)])
+    );
+    memoryResults.forEach(result => {
+      if(result.status==="fulfilled"){
+        const [id,img]=result.value;
+        memoryHD[id]=img;
+      }else{
+        console.warn("[Fase 1] fragmento HD não carregado; usando fallback.",result.reason);
+      }
     });
 
     const optional = await Promise.allSettled([
@@ -1660,13 +1682,49 @@
   }
 
   function drawMemory(m){
-    if(m.collected)return;const x=m.x-cameraX;if(x<-80||x>W+80)return;const y=m.y+Math.sin(performance.now()/380+m.bob)*9;
+    if(m.collected)return;
+    const x=m.x-cameraX;
+    if(x<-100||x>W+100)return;
 
+    const now=performance.now();
+    const y=m.y+Math.sin(now/380+m.bob)*9;
+    const pulse=1+Math.sin(now/260+m.bob)*.045;
+    const hd=memoryHD[m.id];
+
+    if(hd){
+      // Aura suave separada da imagem: mantém o PNG HD limpo e nítido.
+      const glowR=64*pulse;
+      const g=ctx.createRadialGradient(x,y,4,x,y,glowR);
+      g.addColorStop(0,"rgba(226,251,255,.58)");
+      g.addColorStop(.38,"rgba(91,215,255,.28)");
+      g.addColorStop(1,"rgba(59,137,255,0)");
+      ctx.fillStyle=g;
+      ctx.beginPath();
+      ctx.arc(x,y,glowR,0,Math.PI*2);
+      ctx.fill();
+
+      // Preserva a proporção de cada fragmento em vez de forçar quadrado.
+      const maxW=118*pulse;
+      const maxH=112*pulse;
+      const scale=Math.min(maxW/hd.naturalWidth,maxH/hd.naturalHeight);
+      const dw=hd.naturalWidth*scale;
+      const dh=hd.naturalHeight*scale;
+
+      ctx.save();
+      ctx.imageSmoothingEnabled=true;
+      ctx.imageSmoothingQuality="high";
+      ctx.shadowColor="rgba(84,205,255,.52)";
+      ctx.shadowBlur=12;
+      ctx.drawImage(hd,x-dw/2,y-dh/2,dw,dh);
+      ctx.restore();
+      return;
+    }
+
+    // Fallback: atlas antigo, caso algum PNG HD falhe ao carregar.
     if(art.memories){
       const frames={key:0,storm:1,candle:2,letter:3,family:4};
       const frame=frames[m.id] ?? 5;
       const col=frame%3,row=Math.floor(frame/3);
-      const pulse=1+Math.sin(performance.now()/260+m.bob)*.05;
       const dw=90*pulse,dh=90*pulse;
       const g=ctx.createRadialGradient(x,y,2,x,y,57);
       g.addColorStop(0,"#dfffffaa");g.addColorStop(.42,"#62dcff55");g.addColorStop(1,"#3b89ff00");
