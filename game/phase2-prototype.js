@@ -95,7 +95,7 @@ function activateShadowBoss(){
   banner("SOMBRA DE AMÉLIA — O ÚLTIMO MINUTO");say("A dor das 4:13 tomou forma. Use a LUZ para libertá-la.");
 }
 function startShadowCutscene(){
-  bossUnlocked=true;bossActive=false;bossDefeated=false;shadowCutscene.active=true;shadowCutscene.t=0;shadowCutscene.cue=0;
+  finalLorePlayed=true;bossUnlocked=true;bossActive=false;bossDefeated=false;shadowCutscene.active=true;shadowCutscene.t=0;shadowCutscene.cue=0;
   input.left=input.right=input.down=false;p.vx=0;p.vy=0;banner("A SOMBRA DAS 4:13");
 }
 function nearAmelia(){
@@ -105,9 +105,22 @@ function nearAmelia(){
 }
 function solvedCount(){return Object.values(puzzles).filter(Boolean).length}
 function allRequired(){return gears.every(g=>g.got)&&Object.values(puzzles).every(Boolean)&&towerMechanism}
-function interact(){if(dialogue.active){dialogue.advance();return}if(nearAmelia()){ameliaMet=true;openDialogue(lore.amelia);return}
-if(p.x>7680&&p.x<8060&&p.y<-350){if(!allRequired()){say("SELO DO TOPO: "+solvedCount()+"/3 enigmas · "+gears.filter(g=>g.got).length+"/3 engrenagens · mecanismo "+(towerMechanism?"ativo":"pendente"));return}
-if(!finalLorePlayed){finalLorePlayed=true;openDialogue(lore.tower,()=>openDialogue(lore.shadowReveal,startShadowCutscene));}}}
+function nearTopSeal(){
+  const center=p.x+p.w/2,midY=p.y+p.h/2;
+  return center>7550&&center<8200&&midY<-285;
+}
+function interact(){
+  if(dialogue.active){dialogue.advance();return}
+  if(nearAmelia()){ameliaMet=true;openDialogue(lore.amelia);return}
+  if(!nearTopSeal()||bossActive||bossDefeated||shadowCutscene.active)return;
+  if(!allRequired()){
+    say("SELO DO TOPO: "+solvedCount()+"/3 enigmas · "+gears.filter(g=>g.got).length+"/3 engrenagens · mecanismo "+(towerMechanism?"ativo":"pendente"));
+    return;
+  }
+  // Sempre permite recuperar a sequência se um save/reload interrompeu o diálogo anterior.
+  bossUnlocked=false;
+  openDialogue(lore.tower,()=>openDialogue(lore.shadowReveal,startShadowCutscene));
+}
 const checkpointStart=currentCheckpointRespawn();
 const p={x:checkpointStart.x,y:checkpointStart.y,w:46,h:86,vx:0,vy:0,dir:1,on:false,coyote:0,buffer:0,anim:0,attack:0};
 const plats=[
@@ -142,6 +155,16 @@ if(loadedSave){
   if(Array.isArray(loadedSave.gearLore))gearLore=loadedSave.gearLore.map(Boolean).slice(0,3);
   bellStep=Number(loadedSave.bellStep)||0;windowStep=Number(loadedSave.windowStep)||0;shadowStep=Number(loadedSave.shadowStep)||0;towerStep=Number(loadedSave.towerStep)||0;
   ui.gear.textContent=gears.filter(z=>z.got).length+"/3";
+}
+// Recuperação de progresso: evita soft-lock em saves feitos durante diálogos/cutscenes
+// e corrige flags antigas quando os próprios elementos da fase já estão concluídos.
+if(bellStep>=3||bells.every(z=>z.on)){bellStep=3;puzzles.sinos=true}
+if(windowStep>=3||windows.every(z=>z.on)){windowStep=3;puzzles.janelas=true}
+if(shadowStep>=3||shadowSeals.every(z=>z.on)){shadowStep=3;puzzles.sombras=true}
+if(towerStep>=2||towerSeals.every(z=>z.on)){towerStep=2;towerMechanism=true}
+if(finalLorePlayed&&!bossActive&&!bossDefeated){
+  finalLorePlayed=false;
+  bossUnlocked=false;
 }
 function img(src){return new Promise((r,j)=>{const i=new Image;i.onload=()=>r(i);i.onerror=j;i.src=src+"?v=p2shadowv2"})}
 img("../assets/game/phase1/sprites-hd/jack-atlas-hd.png").then(i=>jack=i).catch(()=>{});
@@ -267,14 +290,14 @@ if(bossActive&&!bossDefeated){
   }
 }else if(bossShots.length)bossShots.length=0;
 gears.forEach((g,gi)=>{if(!g.got&&Math.abs(g.x-p.x)<70&&Math.abs(g.y-p.y)<120){g.got=true;say(g.n+" RECUPERADA");ui.gear.textContent=gears.filter(z=>z.got).length+"/3";if(!gearLore[gi]){gearLore[gi]=true;setTimeout(()=>openDialogue(lore.gears[gi]),250)}}});
-interactPrompt.hidden=!(nearAmelia()||(p.x>7680&&p.x<8060&&p.y<-350&&!bossActive&&!bossDefeated));
+interactPrompt.hidden=!(nearAmelia()||(nearTopSeal()&&!bossActive&&!bossDefeated&&!shadowCutscene.active));
 let si=0;for(let i=0;i<sections.length;i++)if(p.x>=sections[i].x)si=i;if(si!==section){section=si;banner(sections[si].n)}
 if(bossDefeated)ui.obj.textContent="PROTÓTIPO CONCLUÍDO — O Último Minuto foi dissipado. A arena final está pronta para refinarmos.";
 else if(bossActive)ui.obj.textContent="BOSS: SOMBRA DE AMÉLIA — O ÚLTIMO MINUTO. Desvie e use F / LUZ para romper a prisão das 4:13.";
 else if(!ameliaMet&&p.x<3150)ui.obj.textContent="Encontre a relojoeira da praça e descubra por que tudo parou às 4:13.";
 else if(!gears.every(g=>g.got)||solvedCount()<3)ui.obj.textContent="Engrenagens "+gears.filter(z=>z.got).length+"/3 · Enigmas "+solvedCount()+"/3 — use a Luz e observe as pistas.";
 else if(!towerMechanism)ui.obj.textContent="Os 3 enigmas foram resolvidos. Suba a Torre e ative os 2 selos temporais com a Luz.";
-else ui.obj.textContent="Tudo foi resolvido. Suba ao selo no topo da Torre.";
+else ui.obj.textContent="Tudo foi resolvido. Aproxime-se do selo no topo da Torre e pressione E / AÇÃO para chamar Amélia.";
 cam+=(Math.max(0,Math.min(WORLD-W,p.x-W*.36))-cam)*Math.min(1,dt*5);camY+=((p.x>7150?Math.min(0,p.y-390):0)-camY)*Math.min(1,dt*4);p.anim+=dt;saveClock+=dt;if(saveClock>=.75){saveClock=0;saveJourney()}}
 function drawJack(){const py=p.y-camY;if(!jack){x.fillStyle="#eee";x.fillRect(p.x-cam,py,p.w,p.h);return}const A=window.JACK_ANIMATIONS,arr=p.attack>0?A.animations.attack:(!p.on?(p.vy<-80?A.animations.jumpRise:A.animations.jumpFall):(Math.abs(p.vx)>35?(input.run?A.animations.run:A.animations.walk):A.animations.idle));const fps=input.run?12:9,idx=arr[Math.floor(p.anim*fps)%arr.length],sx=(idx%8)*320,sy=Math.floor(idx/8)*320,rw=190,rh=190,dx=p.x-cam+p.w/2-rw/2,dy=py-132;if(p.dir<0){x.save();x.translate(dx+rw,0);x.scale(-1,1);x.drawImage(jack,sx,sy,320,320,0,dy,rw,rh);x.restore()}else x.drawImage(jack,sx,sy,320,320,dx,dy,rw,rh)}
 
