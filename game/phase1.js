@@ -578,10 +578,11 @@
     const sec=sectionForX(player.x);
 
     if(art.background){
-      const drift=(cameraX*.025)%W;
+      // Pixel art nítido: sem interpolação bilinear ("derretida") e sem
+      // deslocamento subpixel, que borrava o cenário durante o movimento.
+      const drift=Math.round((cameraX*.025)%W);
       ctx.save();
-      ctx.imageSmoothingEnabled=true;
-      ctx.imageSmoothingQuality="high";
+      ctx.imageSmoothingEnabled=false;
       ctx.drawImage(art.background,-drift,0,W,H);
       ctx.drawImage(art.background,W-drift,0,W,H);
       ctx.restore();
@@ -642,10 +643,10 @@
 
       ctx.save();
       ctx.beginPath();ctx.rect(x,p.y,p.w,p.h);ctx.clip();
-      ctx.imageSmoothingEnabled=true;
-      ctx.imageSmoothingQuality="high";
-      for(let xx=x;xx<x+p.w+tileW;xx+=Math.max(64,tileW-10)){
-        ctx.drawImage(tile,xx,p.y-8,tileW,tileH);
+      ctx.imageSmoothingEnabled=false;
+      const startX=Math.round(x);
+      for(let xx=startX;xx<x+p.w+tileW;xx+=Math.max(64,tileW-10)){
+        ctx.drawImage(tile,Math.round(xx),Math.round(p.y-8),Math.round(tileW),Math.round(tileH));
       }
       if(p.h>54){
         const shade=ctx.createLinearGradient(0,p.y+46,0,p.y+p.h);
@@ -970,6 +971,9 @@
   }
 
   function draw(){
+    // O projeto usa estética 16-bit: desliga o filtro bilinear globalmente.
+    // Isso mantém sprites, plataformas e cenário firmes mesmo em telas grandes.
+    ctx.imageSmoothingEnabled=false;
     ctx.save();
     if(shake>0)ctx.translate((Math.random()-.5)*10,(Math.random()-.5)*7);
     sky();scenery();
