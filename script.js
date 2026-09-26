@@ -413,6 +413,24 @@
       chapter: 'ARQUIVO DE MEMÓRIAS · HALLOWEEN I',
       title: 'Memórias que Ainda Brilham',
       src: 'assets/audio/memories/memories-theme.mp3'
+    },
+    {
+      phase: 2,
+      chapter: 'HALLOWEEN II · A VILA SEM AMANHECER',
+      title: '4:13 — A Vila sem Amanhecer',
+      src: 'assets/audio/phase2/phase2-village-413.mp3'
+    },
+    {
+      phase: 2,
+      chapter: 'HALLOWEEN II · TORRE DAS 4:13',
+      title: 'Engrenagens das 4:13 — A Torre sem Tempo',
+      src: 'assets/audio/phase2/phase2-clock-tower.mp3'
+    },
+    {
+      phase: 2,
+      chapter: 'HALLOWEEN II · O ÚLTIMO MINUTO',
+      title: 'O Último Minuto — A Sombra de Amélia',
+      src: 'assets/audio/phase2/phase2-boss-last-minute.mp3'
     }
   ];
 
