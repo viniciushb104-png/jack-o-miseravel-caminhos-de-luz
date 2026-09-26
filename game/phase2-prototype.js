@@ -111,6 +111,10 @@ if(loadedSave){
 }
 function img(src){return new Promise((r,j)=>{const i=new Image;i.onload=()=>r(i);i.onerror=j;i.src=src+"?v=p2shadow1"})}
 img("../assets/game/phase1/sprites-hd/jack-atlas-hd.png").then(i=>jack=i).catch(()=>{});
+let phase2Background=null;
+img("../assets/game/phase2/backgrounds-hd/phase2-vila-torre-background-reference.png")
+  .then(i=>phase2Background=i)
+  .catch(()=>{});
 const ameliaMapFiles=["neutral","feliz","triste","surpresa","irritada","cansada","assustada"];
 Promise.allSettled(ameliaMapFiles.map(n=>img("../assets/game/phase2/amelia-sprites/amelia-map-"+n+".png")))
   .then(rs=>rs.forEach((r,i)=>{if(r.status==="fulfilled")ameliaMap[ameliaMapFiles[i]]=r.value}));
@@ -254,11 +258,43 @@ function drawShadowCutscene(){
   if(step>=4){x.globalAlpha=.18+Math.sin(shadowCutscene.t*8)*.06;x.fillStyle="#e23b63";x.beginPath();x.arc(cx,ground-135,115+step*9,0,Math.PI*2);x.fill();x.globalAlpha=1}
   x.fillStyle="#ffe2a0";x.font="bold 15px Georgia";x.textAlign="center";x.fillText(step<4?"AMÉLIA":"A SOMBRA DAS 4:13",cx,ground+28);x.textAlign="left";x.restore();
 }
-function draw(){const gr=x.createLinearGradient(0,0,0,H);gr.addColorStop(0,"#061024");gr.addColorStop(.65,"#17132b");gr.addColorStop(1,"#27131d");x.fillStyle=gr;x.fillRect(0,0,W,H);x.fillStyle="#e7d4b0";x.globalAlpha=.35;for(let i=0;i<18;i++){const px=((i*431-cam*.12)%1500+1500)%1500;x.fillRect(px,80+(i*71)%220,2,2)}x.globalAlpha=1;
-x.save();x.translate(-cam,-camY);x.fillStyle="#17131b";for(let bx=250;bx<WORLD;bx+=430){const h=150+(bx%170);x.fillRect(bx,590-h,260,h);x.fillStyle="#5a321d";for(let wy=590-h+35;wy<550;wy+=60){x.fillRect(bx+35,wy,28,38);x.fillRect(bx+150,wy,28,38)}x.fillStyle="#17131b"}
-// Torre protótipo: cilindro central e anéis arquitetônicos para comunicar a subida em espiral.
-x.fillStyle="#0c0b12";x.fillRect(7350,-520,1200,1110);x.strokeStyle="#62442e";x.lineWidth=12;x.strokeRect(7350,-520,1200,1110);
-for(let ty=-440;ty<520;ty+=160){x.strokeStyle="#38291f";x.lineWidth=5;x.beginPath();x.ellipse(7950,ty,520,78,0,0,Math.PI*2);x.stroke()}
+function clamp01(v){return Math.max(0,Math.min(1,v))}
+function drawPhase2Backdrop(){
+  const gr=x.createLinearGradient(0,0,0,H);gr.addColorStop(0,"#061024");gr.addColorStop(.65,"#17132b");gr.addColorStop(1,"#27131d");x.fillStyle=gr;x.fillRect(0,0,W,H);
+  if(!phase2Background)return;
+  const iw=phase2Background.naturalWidth||phase2Background.width,ih=phase2Background.naturalHeight||phase2Background.height;
+  const villageY=0,villageH=Math.min(326,ih);
+  const towerY=Math.min(340,ih-1),towerH=Math.max(1,ih-towerY);
+  const villageSW=Math.min(iw,villageH*(W/H));
+  const towerSW=Math.min(iw,towerH*(W/H));
+  const villageProgress=clamp01(cam/Math.max(1,7200-W));
+  const towerProgress=clamp01(((cam-6900)/Math.max(1,WORLD-6900-W))*.72+(-camY/1050)*.28);
+  const villageSX=(iw-villageSW)*villageProgress;
+  const towerSX=(iw-towerSW)*towerProgress;
+  const towerMix=clamp01((cam-6400)/850);
+
+  x.save();
+  x.imageSmoothingEnabled=true;
+  if(towerMix<1){
+    x.globalAlpha=1-towerMix;
+    x.drawImage(phase2Background,villageSX,villageY,villageSW,villageH,0,0,W,H);
+  }
+  if(towerMix>0){
+    x.globalAlpha=towerMix;
+    x.drawImage(phase2Background,towerSX,towerY,towerSW,towerH,0,0,W,H);
+  }
+  const shade=x.createLinearGradient(0,0,0,H);
+  shade.addColorStop(0,"rgba(5,4,18,.08)");
+  shade.addColorStop(.62,"rgba(7,5,16,.16)");
+  shade.addColorStop(1,"rgba(3,2,8,.48)");
+  x.globalAlpha=1;x.fillStyle=shade;x.fillRect(0,0,W,H);
+  x.restore();
+}
+function draw(){drawPhase2Backdrop();x.fillStyle="#e7d4b0";x.globalAlpha=.22;for(let i=0;i<18;i++){const px=((i*431-cam*.12)%1500+1500)%1500;x.fillRect(px,80+(i*71)%220,2,2)}x.globalAlpha=1;
+x.save();x.translate(-cam,-camY);
+// O cenário HD agora carrega a vila, as estátuas congeladas, os relógios derretendo e a Torre.
+// Mantemos apenas uma sombra arquitetônica discreta para dar profundidade sem cobrir a arte.
+x.save();x.globalAlpha=.16;x.fillStyle="#08070d";x.fillRect(7350,-520,1200,1110);x.strokeStyle="#6b4329";x.lineWidth=8;x.strokeRect(7350,-520,1200,1110);x.restore();
 x.fillStyle="#d0a65b";x.font="bold 26px Georgia";x.fillText("4:13",7910,-455);
 for(const q of plats){x.fillStyle=q.y<560?"#4a3b38":"#30252a";x.fillRect(q.x,q.y,q.w,q.h);x.fillStyle="#75604b";x.fillRect(q.x,q.y,q.w,7)}
 if(bossUnlocked||bossActive||bossDefeated){
