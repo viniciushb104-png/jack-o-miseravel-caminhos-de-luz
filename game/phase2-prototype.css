@@ -291,3 +291,34 @@
     background-size:90% auto!important;
   }
 }
+
+
+/* Retrato da Fase 2 — mesmo método de enquadramento usado na Fase 1 */
+.dialogue-portrait,
+.dialogue-shell .dialogue-portrait.is-hd-portrait{
+  left:5.35%;
+  top:20.2%;
+  bottom:24.1%;
+  width:19.9%;
+  margin:0;
+  border:0;
+  background-color:transparent;
+  background-repeat:no-repeat;
+  background-size:contain!important;
+  background-position:center!important;
+  box-shadow:none;
+  filter:none;
+  transform:translateZ(0);
+  backface-visibility:hidden;
+}
+@media(max-width:700px){
+  .dialogue-portrait,
+  .dialogue-shell .dialogue-portrait.is-hd-portrait{
+    left:5.35%;
+    top:20.2%;
+    bottom:24.1%;
+    width:19.9%;
+    background-size:contain!important;
+    background-position:center!important;
+  }
+}
