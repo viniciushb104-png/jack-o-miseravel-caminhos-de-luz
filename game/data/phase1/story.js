@@ -16,12 +16,12 @@ window.PHASE1_STORY = {
     eleanorSaved: "jack-phase1-eleanor-saved"
   },
   sections: [
-    { id:"village",  name:"1. Entrada da Vila",       start:0,    end:1500 },
-    { id:"orchard",  name:"2. Pomar das Abóboras",   start:1500, end:3200 },
-    { id:"cemetery", name:"3. Cemitério das Velas",  start:3200, end:5000 },
-    { id:"bridges",  name:"4. Pontes dos Perdidos",  start:5000, end:7000 },
-    { id:"ruins",    name:"5. Ruínas da Memória",    start:7000, end:8800 },
-    { id:"arena",    name:"6. Arena da Guardiã",     start:8800, end:11000 }
+    { id:"village",  name:"1. Entrada da Vila",       start:0,    end:1500,  background:"village" },
+    { id:"orchard",  name:"2. Pomar das Abóboras",   start:1500, end:3200,  background:"forest" },
+    { id:"cemetery", name:"3. Cemitério das Velas",  start:3200, end:5000,  background:"forest" },
+    { id:"bridges",  name:"4. Pontes dos Perdidos",  start:5000, end:7000,  background:"memoryBridge" },
+    { id:"ruins",    name:"5. Ruínas da Memória",    start:7000, end:8800,  background:"memoryBridge" },
+    { id:"arena",    name:"6. Arena da Guardiã",     start:8800, end:11000, background:"bellTower" }
   ],
   memories: [
     { id:"key",    title:"A Chave",              x:2320, y:405, state:"memoryKey",    dialogue:"memoryKey" },
