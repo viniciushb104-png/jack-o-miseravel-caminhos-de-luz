@@ -388,3 +388,22 @@
     background-position:calc(50% + clamp(5px,1.4vw,10px)) center!important;
   }
 }
+
+
+/* Ajuste pelo print: preserva a centralização e libera a abóbora decorativa */
+.dialogue-portrait,
+.dialogue-shell .dialogue-portrait.is-hd-portrait{
+  top:17.8%;
+  bottom:31.2%;
+  background-position:calc(50% + clamp(6px,1.4vw,16px)) center!important;
+  background-size:contain!important;
+}
+@media(max-width:700px){
+  .dialogue-portrait,
+  .dialogue-shell .dialogue-portrait.is-hd-portrait{
+    top:17.8%;
+    bottom:31.2%;
+    background-position:calc(50% + clamp(5px,1.4vw,10px)) center!important;
+    background-size:contain!important;
+  }
+}
