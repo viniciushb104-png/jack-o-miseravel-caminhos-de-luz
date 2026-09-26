@@ -74,6 +74,7 @@
   const input = { left:false, right:false, run:false, jump:false, down:false };
   let running = false, finished = false, cameraX = 0, last = performance.now();
   let jack = null, jackHD = null, jackPortraits = null, eleanorPortraits = null, guardianPortraits = null;
+  const portraitHD = { jack:[], eleanor:[], guardian:[] };
   const art = {
     background:null,
     terrain:null,
@@ -215,7 +216,7 @@
       img.onload = () => resolve(img);
       img.onerror = () => reject(new Error("Falha ao carregar " + path));
       const sep = path.includes("?") ? "&" : "?";
-      img.src = path + sep + "v=phase1-assets-26";
+      img.src = path + sep + "v=phase1-assets-27";
     });
   }
 
@@ -324,6 +325,48 @@
       console.warn("[Fase 1] retratos da Guardiã não carregados.", guardianPortraitResult[0].reason);
     }
 
+    // Retratos HD individuais: preservam a resolução original de cada expressão.
+    // Se qualquer arquivo falhar, o DialogueSystem usa o spritesheet antigo
+    // somente naquela expressão/personagem como fallback.
+    const portraitFiles = {
+      jack:[
+        "jack-00-neutral.png",
+        "jack-01-serious.png",
+        "jack-02-smirk.png",
+        "jack-03-surprised.png",
+        "jack-04-determined.png",
+        "jack-05-resolved.png"
+      ],
+      eleanor:[
+        "eleanor-00-neutral.png",
+        "eleanor-01-curious.png",
+        "eleanor-02-sad.png",
+        "eleanor-03-surprised.png",
+        "eleanor-04-hopeful.png",
+        "eleanor-05-peaceful.png"
+      ],
+      guardian:[
+        "guardian-00-neutral.png",
+        "guardian-01-determined.png",
+        "guardian-02-angry.png",
+        "guardian-03-surprised.png",
+        "guardian-04-worried.png",
+        "guardian-05-sad.png"
+      ]
+    };
+    await Promise.all(Object.entries(portraitFiles).map(async ([character,files]) => {
+      const results = await Promise.allSettled(
+        files.map(file => imageFromFile("../assets/game/phase1/portraits-hd/" + file))
+      );
+      portraitHD[character] = results.map(result =>
+        result.status === "fulfilled" ? result.value : null
+      );
+      const loaded = portraitHD[character].filter(Boolean).length;
+      if (loaded !== files.length) {
+        console.warn(`[Fase 1] ${character}: ${loaded}/${files.length} retratos HD carregados; fallback ativo.`);
+      }
+    }));
+
     // Sprites HD enviados manualmente. Se algum deles ainda não existir,
     // os antigos continuam funcionando como fallback.
     const spriteResults = await Promise.allSettled([
@@ -348,7 +391,11 @@
       guardianFrames = buildGuardianFrames(art.boss);
     }
 
-    dialogue.setAssets({ jack:jackPortraits, eleanor:eleanorPortraits, guardian:guardianPortraits });
+    dialogue.setAssets({
+      jack:{ frames:portraitHD.jack, sheet:jackPortraits },
+      eleanor:{ frames:portraitHD.eleanor, sheet:eleanorPortraits },
+      guardian:{ frames:portraitHD.guardian, sheet:guardianPortraits }
+    });
 
     if (art.dialogueFrame) {
       const shell = document.querySelector(".dialogue-shell");
