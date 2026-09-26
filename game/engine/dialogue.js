@@ -75,15 +75,37 @@
       if (!character || !this.assets[character]) {
         this.portraitEl.style.backgroundImage = "none";
         this.portraitEl.classList.add("is-hidden");
+        this.portraitEl.classList.remove("is-hd-portrait");
         return;
       }
       this.portraitEl.classList.remove("is-hidden");
-      const image = this.assets[character];
-      const col = expression % 3;
-      const row = Math.floor(expression / 3);
+      const asset = this.assets[character];
+      const frame = asset?.frames?.[expression] || null;
+      const sheet = asset?.sheet || (asset?.src ? asset : null);
+      const image = frame || sheet;
+
+      if (!image?.src) {
+        this.portraitEl.style.backgroundImage = "none";
+        this.portraitEl.classList.add("is-hidden");
+        this.portraitEl.classList.remove("is-hd-portrait");
+        return;
+      }
+
       this.portraitEl.style.backgroundImage = `url("${image.src}")`;
-      this.portraitEl.style.backgroundSize = "300% 200%";
-      this.portraitEl.style.backgroundPosition = `${col * 50}% ${row * 100}%`;
+
+      if (frame) {
+        // PNG individual: nada de ampliar uma célula de spritesheet.
+        this.portraitEl.classList.add("is-hd-portrait");
+        this.portraitEl.style.backgroundSize = "contain";
+        this.portraitEl.style.backgroundPosition = "center";
+      } else {
+        // Fallback compatível com os antigos sheets 3x2.
+        this.portraitEl.classList.remove("is-hd-portrait");
+        const col = expression % 3;
+        const row = Math.floor(expression / 3);
+        this.portraitEl.style.backgroundSize = "300% 200%";
+        this.portraitEl.style.backgroundPosition = `${col * 50}% ${row * 100}%`;
+      }
     }
 
     typeText(text) {
