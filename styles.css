@@ -1178,3 +1178,23 @@ button:focus-visible{outline:3px solid #fff3b0;outline-offset:4px}
   .trophy-progress{grid-column:1/-1;justify-self:start;margin-left:calc(46px + 1rem)}
   .memory-trophy-grid{grid-template-columns:1fr}
 }
+
+
+/* Arte final desbloqueável — Halloween I */
+.memory-trophy--phase1.is-unlocked .memory-trophy-art{
+  background:#080b12;
+  box-shadow:inset 0 0 28px rgba(255,137,31,.14);
+}
+.memory-trophy--phase1 .memory-trophy-art img{
+  object-position:center 46%;
+  filter:saturate(.96) contrast(1.04) brightness(.92);
+}
+.memory-trophy--phase1.is-unlocked .memory-trophy-art::before,
+.memory-trophy--phase1.is-unlocked .memory-trophy-art::after{
+  color:#ffc45e;
+  text-shadow:0 0 12px rgba(255,133,29,.72);
+}
+.memory-trophy--phase1.is-unlocked .memory-trophy-copy{
+  background:
+    linear-gradient(180deg,rgba(45,22,7,.30),rgba(7,9,14,.94));
+}
