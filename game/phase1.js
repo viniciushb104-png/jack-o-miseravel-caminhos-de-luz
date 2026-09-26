@@ -83,7 +83,8 @@
     enemies:null,
     memories:null,
     boss:null,
-    dialogueFrame:null
+    dialogueFrame:null,
+    checkpoint:null
   };
 
   const spriteHD = {
@@ -113,6 +114,15 @@
   let checkpointReached = localStorage.getItem(story.states.checkpoint) === "bridge";
   let metEleanor = localStorage.getItem(story.states.metEleanor) === "1";
   let ruinsScenePlayed = false, finalSequence = false, gateMessageCooldown = 0;
+
+  const CHECKPOINT_POST = Object.freeze({
+    x:6160,
+    groundY:470,
+    renderW:220,
+    renderH:275,
+    hitW:126,
+    hitH:205
+  });
 
   const player = {
     x: checkpointReached ? 6120 : 130,
@@ -200,7 +210,7 @@
       img.onload = () => resolve(img);
       img.onerror = () => reject(new Error("Falha ao carregar " + path));
       const sep = path.includes("?") ? "&" : "?";
-      img.src = path + sep + "v=phase1-assets-20";
+      img.src = path + sep + "v=phase1-assets-21";
     });
   }
 
@@ -233,6 +243,15 @@
       if(result.status === "fulfilled") sceneBackgrounds[backgroundKeys[index]] = result.value;
       else console.warn("[Fase 1] fundo não carregado:", backgroundKeys[index], result.reason);
     });
+
+    const checkpointResult = await Promise.allSettled([
+      imageFromFile("../assets/game/phase1/sprites-hd/checkpoint-pumpkin.webp")
+    ]);
+    if(checkpointResult[0].status === "fulfilled"){
+      art.checkpoint = checkpointResult[0].value;
+    }else{
+      console.warn("[Fase 1] sprite do checkpoint indisponível; usando fallback desenhado.");
+    }
 
     const optional = await Promise.allSettled([
       imageFromChunks(["../assets/portraits/jack/data/portraits.1.b64","../assets/portraits/jack/data/portraits.2.b64"]),
@@ -700,6 +719,20 @@
     });
   }
 
+  function playerTouchesCheckpoint(){
+    const left=player.x-player.w/2;
+    const right=player.x+player.w/2;
+    const top=player.y-player.h/2;
+    const bottom=player.y+player.h/2;
+
+    const postLeft=CHECKPOINT_POST.x-CHECKPOINT_POST.hitW/2;
+    const postRight=CHECKPOINT_POST.x+CHECKPOINT_POST.hitW/2;
+    const postTop=CHECKPOINT_POST.groundY-CHECKPOINT_POST.hitH;
+    const postBottom=CHECKPOINT_POST.groundY;
+
+    return right>=postLeft && left<=postRight && bottom>=postTop && top<=postBottom;
+  }
+
   function updatePlayer(dt){
     const wasOnGround=player.onGround;
     const axis=(input.right?1:0)-(input.left?1:0);
@@ -784,11 +817,12 @@
     lightPulse=Math.max(0,lightPulse-dt);
     gateMessageCooldown=Math.max(0,gateMessageCooldown-dt);
 
-    if(!checkpointReached && player.x>6050 && player.x<6350){
+    if(!checkpointReached && playerTouchesCheckpoint()){
       checkpointReached=true;
       localStorage.setItem(story.states.checkpoint,"bridge");
       localStorage.setItem("jack-light-level","02");
-      showMessage("✦ Checkpoint — Lanterna das Pontes acesa.");
+      showMessage("✦ Checkpoint — Poste da Abóbora aceso.");
+      shake=.12;
       syncHud();
     }
 
@@ -1180,6 +1214,44 @@
     return true;
   }
 
+  function drawCheckpointPost(){
+    const cp=CHECKPOINT_POST;
+    const x=cp.x-cameraX;
+    if(x<-260||x>W+260)return;
+
+    if(checkpointReached){
+      const pulse=.82+Math.sin(performance.now()/280)*.12;
+      const glow=ctx.createRadialGradient(x+44,cp.groundY-145,12,x+44,cp.groundY-145,125);
+      glow.addColorStop(0,`rgba(255,190,72,${.28*pulse})`);
+      glow.addColorStop(.55,`rgba(255,126,28,${.12*pulse})`);
+      glow.addColorStop(1,"rgba(255,90,10,0)");
+      ctx.fillStyle=glow;
+      ctx.beginPath();ctx.arc(x+44,cp.groundY-145,125,0,Math.PI*2);ctx.fill();
+    }
+
+    if(art.checkpoint){
+      drawAtlasCell(
+        art.checkpoint,2,1,checkpointReached?1:0,0,
+        x-cp.renderW/2,cp.groundY-cp.renderH,
+        cp.renderW,cp.renderH,false,1,true
+      );
+      return;
+    }
+
+    // Fallback simples caso o arquivo de arte falhe.
+    ctx.save();
+    ctx.translate(x,cp.groundY);
+    ctx.fillStyle="#20243a";
+    ctx.fillRect(-18,-205,36,205);
+    ctx.fillStyle="#4a2b16";
+    ctx.fillRect(-12,-190,24,190);
+    ctx.fillStyle="#bb5b15";
+    ctx.beginPath();ctx.arc(48,-145,38,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=checkpointReached?"#ffd56b":"#28160f";
+    ctx.beginPath();ctx.arc(48,-145,20,0,Math.PI*2);ctx.fill();
+    ctx.restore();
+  }
+
   function scenery(){
     for(const p of platforms)ground(p);
 
@@ -1195,7 +1267,7 @@
       for(let x=3290;x<4970;x+=235)artProp(x,590,"grave",.78);
       artProp(3910,590,"shrine",.88);artProp(3440,590,"lantern",.72);artProp(4680,590,"lantern",.74);
       // Pontes
-      artProp(5210,590,"fence",.75);artProp(6160,470,"shrine",.72);artProp(6800,520,"lantern",.67);
+      artProp(5210,590,"fence",.75);artProp(6800,520,"lantern",.67);
       // Ruínas
       for(let x=7080;x<8700;x+=465){artProp(x,590,"grave",.72);artProp(x+190,590,"tree",.55);}
       artProp(7860,590,"cottage",.76);artProp(8450,590,"shrine",.82);
@@ -1203,6 +1275,7 @@
       artProp(9200,590,"lantern",.82);artProp(10700,590,"lantern",.82);
       artProp(9650,590,"gate",1.15);
       gate(8820);
+      drawCheckpointPost();
       return;
     }
     // Vila
@@ -1214,7 +1287,7 @@
     for(let x=3270,i=0;x<4970;x+=190,i++)grave(x,590,i);
     shrine(3900,590);lantern(3440,590,.72);lantern(4680,590,.75);
     // Pontes
-    lantern(5200,590,.8);shrine(6160,470);lantern(6800,520,.7);
+    lantern(5200,590,.8);lantern(6800,520,.7);
     // Ruínas
     for(let x=7070;x<8700;x+=440){grave(x,590,1);tree(x+180,590,.62)}
     cottage(7860,590,.78);shrine(8450,590);
@@ -1222,6 +1295,7 @@
     gate(8820);lantern(9200,590,.85);lantern(10700,590,.85);
     ctx.fillStyle="#172038";
     const ax=9700-cameraX; if(ax>-350&&ax<W+350){ctx.fillRect(ax-250,240,35,350);ctx.fillRect(ax+215,240,35,350);ctx.strokeStyle="#25304d";ctx.lineWidth=25;ctx.beginPath();ctx.arc(ax,300,235,Math.PI,0);ctx.stroke();}
+    drawCheckpointPost();
   }
 
   function drawEleanor(wx,groundY,pose=0,scale=1){
