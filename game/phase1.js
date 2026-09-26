@@ -397,13 +397,16 @@
   }
 
   function buildWispFrames(img){
-    // Segunda linha do sheet HD: três poses de flutuação, ataque de chama
-    // e dano. Os limites terminam antes do sprite seguinte para evitar vazamento.
+    // Segunda linha do sheet HD.
+    // A pose de ataque original ocupa uma faixa muito larga porque a própria
+    // ilustração contém o jato de fogo e invade a área do sprite seguinte.
+    // Para o jogo usamos apenas o corpo/conjuração do fantasma e deixamos a
+    // chama viajar como projétil independente. Assim ele nunca "duplica".
     const boxes=[
       [5,460,245,290],
       [245,465,245,290],
       [485,465,235,290],
-      [715,465,535,300],
+      [710,460,235,300],
       [1250,490,198,275]
     ];
     return boxes.map(box => cropSpriteFrame(img,box[0],box[1],box[2],box[3]));
@@ -713,7 +716,7 @@
         if(Math.abs(player.x-e.x)<520&&e.attack<=0){
           e.dir=player.x>=e.x?1:-1;
           e.attack=2.4;
-          shoot(e.x+e.dir*46,e.y+8,player.x,player.y,205,"ember");
+          shoot(e.x+e.dir*62,e.y+8,player.x,player.y,205,"ember");
         }
       } else {
         const close=Math.abs(player.x-e.x)<230;
@@ -1157,7 +1160,7 @@
         if(e.attack>1.75) frame=2;
       }else if(e.type==="wisp"){
         if(e.hit>0) frame=4;
-        else if(e.attack>1.72) frame=3;
+        else if(e.attack>2.08) frame=3;
         else {
           const floatCycle=[0,1,2,1];
           frame=floatCycle[Math.floor(e.t*4)%floatCycle.length];
