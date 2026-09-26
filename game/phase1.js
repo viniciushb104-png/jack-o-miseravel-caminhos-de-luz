@@ -86,6 +86,12 @@
     dialogueFrame:null
   };
 
+  const spriteHD = {
+    eleanor:false,
+    enemies:false,
+    boss:false
+  };
+
   // Fundos HD da fase. Cada ambiente é um PNG independente para preservar
   // a arte original e permitir que a paisagem mude conforme Jack avança.
   const sceneBackgrounds = {
@@ -246,6 +252,26 @@
     if (optional[9].status === "fulfilled") art.dialogueFrame = optional[9].value;
     if (optional[10].status === "fulfilled") art.terrainStone = optional[10].value;
 
+    // Sprites HD enviados manualmente. Se algum deles ainda não existir,
+    // os antigos continuam funcionando como fallback.
+    const spriteResults = await Promise.allSettled([
+      imageFromFile("../assets/game/phase1/sprites-hd/eleanor-hd.png"),
+      imageFromFile("../assets/game/phase1/sprites-hd/enemies-hd.png"),
+      imageFromFile("../assets/game/phase1/sprites-hd/guardian-hd.png")
+    ]);
+    if (spriteResults[0].status === "fulfilled") {
+      art.eleanor = spriteResults[0].value;
+      spriteHD.eleanor = true;
+    }
+    if (spriteResults[1].status === "fulfilled") {
+      art.enemies = spriteResults[1].value;
+      spriteHD.enemies = true;
+    }
+    if (spriteResults[2].status === "fulfilled") {
+      art.boss = spriteResults[2].value;
+      spriteHD.boss = true;
+    }
+
     dialogue.setAssets({ jack:jackPortraits, eleanor:eleanorPortraits });
 
     if (art.dialogueFrame) {
@@ -260,19 +286,41 @@
     const loadedBackgrounds = Object.entries(sceneBackgrounds).filter(([,img]) => !!img).map(([name]) => name);
     console.info("[Fase 1] assets ilustrados carregados:", loaded.join(", "));
     console.info("[Fase 1] cenários HD carregados:", loadedBackgrounds.join(", "));
+    console.info("[Fase 1] sprites HD:", Object.entries(spriteHD).filter(([,ok]) => ok).map(([name]) => name).join(", ") || "fallbacks antigos");
   }
 
-  function drawAtlasCell(img, cols, rows, col, row, dx, dy, dw, dh, flip=false, alpha=1){
+  function drawAtlasCell(img, cols, rows, col, row, dx, dy, dw, dh, flip=false, alpha=1, smooth=true){
     if(!img) return false;
     const sw=img.naturalWidth/cols, sh=img.naturalHeight/rows;
     ctx.save();
     ctx.globalAlpha*=alpha;
+    ctx.imageSmoothingEnabled=smooth;
+    if(smooth) ctx.imageSmoothingQuality="high";
     if(flip){
       ctx.translate(dx+dw,dy);
       ctx.scale(-1,1);
       ctx.drawImage(img,col*sw,row*sh,sw,sh,0,0,dw,dh);
     }else{
       ctx.drawImage(img,col*sw,row*sh,sw,sh,dx,dy,dw,dh);
+    }
+    ctx.restore();
+    return true;
+  }
+
+  function drawSpriteCropFit(img, sx, sy, sw, sh, cx, cy, targetH, flip=false, alpha=1){
+    if(!img) return false;
+    const aspect=sw/sh;
+    const dw=targetH*aspect, dh=targetH;
+    ctx.save();
+    ctx.globalAlpha*=alpha;
+    ctx.imageSmoothingEnabled=true;
+    ctx.imageSmoothingQuality="high";
+    if(flip){
+      ctx.translate(cx+dw/2,cy-dh/2);
+      ctx.scale(-1,1);
+      ctx.drawImage(img,sx,sy,sw,sh,0,0,dw,dh);
+    }else{
+      ctx.drawImage(img,sx,sy,sw,sh,cx-dw/2,cy-dh/2,dw,dh);
     }
     ctx.restore();
     return true;
@@ -942,7 +990,7 @@
     if(art.eleanor){
       const frame=Math.max(0,Math.min(7,pose|0));
       const col=frame%4,row=Math.floor(frame/4);
-      const dw=112*scale,dh=168*scale;
+      const dw=120*scale,dh=180*scale;
       const g=ctx.createRadialGradient(x,groundY-86,8,x,groundY-86,72*scale);
       g.addColorStop(0,"#a7eeff55");g.addColorStop(1,"#53cfff00");
       ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,groundY-86,72*scale,0,Math.PI*2);ctx.fill();
@@ -999,13 +1047,43 @@
     if(!e.alive)return;const x=e.x-cameraX;if(x<-110||x>W+110)return;
 
     if(art.enemies){
-      const row=e.type==="crow"?0:e.type==="wisp"?1:2;
       let frame=e.hit>0?3:Math.floor(e.t*5)%2;
       if(e.attack>1.75)frame=2;
-      const sizes=e.type==="crow"?[108,92]:e.type==="wisp"?[118,104]:[118,92];
-      const [dw,dh]=sizes;
       const flip=e.type!=="wisp" && e.dir<0;
-      drawAtlasCell(art.enemies,4,3,frame,row,x-dw/2,e.y-dh/2,dw,dh,flip,e.hit>0?.62:1);
+
+      if(spriteHD.enemies){
+        // O novo sheet é ilustrado e não usa células uniformes.
+        // Estes recortes preservam cada pose sem esmagar ou esticar a arte.
+        const crops={
+          crow:[
+            [20,105,225,257],
+            [235,85,335,277],
+            [700,105,350,257],
+            [1210,155,238,207]
+          ],
+          wisp:[
+            [5,362,245,362],
+            [245,362,255,362],
+            [705,362,545,362],
+            [1210,362,238,362]
+          ],
+          pumpkin:[
+            [0,724,280,362],
+            [280,724,255,362],
+            [760,724,435,362],
+            [1140,724,308,362]
+          ]
+        };
+        const crop=(crops[e.type]||crops.crow)[frame] || (crops[e.type]||crops.crow)[0];
+        const targetH=e.type==="crow"?104:e.type==="wisp"?112:110;
+        const cy=e.type==="pumpkin" ? e.y-4 : e.y;
+        drawSpriteCropFit(art.enemies,crop[0],crop[1],crop[2],crop[3],x,cy,targetH,flip,e.hit>0?.68:1);
+      }else{
+        const row=e.type==="crow"?0:e.type==="wisp"?1:2;
+        const sizes=e.type==="crow"?[108,92]:e.type==="wisp"?[118,104]:[118,92];
+        const [dw,dh]=sizes;
+        drawAtlasCell(art.enemies,4,3,frame,row,x-dw/2,e.y-dh/2,dw,dh,flip,e.hit>0?.62:1);
+      }
       return;
     }
 
@@ -1031,7 +1109,7 @@
       else if(boss.shot>.95)frame=2;
       else frame=Math.floor(boss.t*2)%2;
       const col=frame%4,row=Math.floor(frame/4);
-      const dw=265,dh=330;
+      const dw=spriteHD.boss?250:265,dh=spriteHD.boss?375:330;
       const g=ctx.createRadialGradient(x,boss.y,10,x,boss.y,170);
       g.addColorStop(0,"#6ee8ff55");g.addColorStop(.55,"#6e5eff22");g.addColorStop(1,"#552cff00");
       ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,boss.y,170,0,Math.PI*2);ctx.fill();
