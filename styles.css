@@ -493,3 +493,117 @@ button:focus-visible{outline:3px solid #fff3b0;outline-offset:4px}
   .video-caption{grid-template-columns:46px 1fr;padding:.75rem}
   .video-number{width:40px;height:40px}
 }
+
+
+/* Fonógrafo da Lanterna — trilha desbloqueável */
+.sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+.soundtrack-vault{
+  width:min(1180px,100%);
+  margin:3.2rem auto 0;
+  padding:clamp(1rem,2.4vw,1.8rem);
+  background:
+    linear-gradient(135deg,rgba(12,25,43,.97),rgba(6,10,18,.985) 58%,rgba(28,14,7,.97));
+  border:1px solid #d89b2f66;
+  box-shadow:0 0 0 2px #160d05,0 0 0 4px #7b4e13,0 22px 48px #000a;
+}
+.soundtrack-heading{
+  display:flex;
+  justify-content:space-between;
+  gap:1.5rem;
+  align-items:flex-end;
+  padding-bottom:1.2rem;
+  border-bottom:1px solid #d89b2f2e;
+}
+.soundtrack-heading h3{margin:.18rem 0 .45rem;color:#ffe09a;font-size:clamp(1.7rem,3.3vw,2.8rem)}
+.soundtrack-heading p:last-child{margin:0;max-width:690px;color:#bbaa86;line-height:1.55}
+.soundtrack-progress{
+  flex:0 0 auto;
+  min-width:150px;
+  padding:.65rem .8rem;
+  text-align:center;
+  background:#080d16;
+  border:1px solid #d89b2f55;
+}
+.soundtrack-progress span{display:block;color:#9e7b3b;font-size:.54rem;letter-spacing:.13em}
+.soundtrack-progress strong{display:block;margin-top:.15rem;color:#ffd66e;font-size:1.45rem}
+.soundtrack-player{
+  margin:1.35rem 0;
+  padding:1rem;
+  background:linear-gradient(180deg,#071528,#050b14);
+  border:1px solid #d79a2c4d;
+  box-shadow:inset 0 0 34px #0008;
+}
+.soundtrack-now{display:grid;grid-template-columns:82px 1fr;gap:1rem;align-items:center}
+.soundtrack-disc{
+  width:76px;height:76px;border-radius:50%;display:grid;place-items:center;
+  background:repeating-radial-gradient(circle,#08090d 0 5px,#151822 6px 10px);
+  border:3px solid #2b1808;box-shadow:0 0 0 2px #b97b20,0 0 20px #f18b1c24;
+}
+.soundtrack-disc span{
+  width:30px;height:30px;border-radius:50%;display:grid;place-items:center;
+  color:#2c1807;background:#e6aa36;font-size:1rem;font-weight:700;
+}
+.soundtrack-disc.is-spinning{animation:soundtrackSpin 3.2s linear infinite}
+@keyframes soundtrackSpin{to{transform:rotate(360deg)}}
+.soundtrack-meta{min-width:0}
+.soundtrack-meta small{display:block;color:#b7812b;font-size:.59rem;letter-spacing:.13em}
+.soundtrack-meta strong{display:block;margin:.28rem 0;color:#f3dda6;font-size:clamp(1rem,2vw,1.35rem);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.soundtrack-meta span{display:block;color:#8f9baa;font-size:.75rem}
+.soundtrack-controls{
+  display:grid;
+  grid-template-columns:44px 52px 44px minmax(220px,1fr) minmax(110px,160px);
+  gap:.55rem;
+  align-items:center;
+  margin-top:1rem;
+}
+.soundtrack-control{
+  height:42px;border:1px solid #bd842a;color:#f7d995;background:#111827;cursor:pointer;
+  box-shadow:inset 0 0 10px #0008;
+}
+.soundtrack-control--play{height:48px;color:#fff0b8;background:#4c2308;border-color:#efad3b;font-size:1.05rem}
+.soundtrack-control:hover:not(:disabled),.soundtrack-control:focus-visible:not(:disabled){background:#6a3008;box-shadow:0 0 15px #f18c263d}
+.soundtrack-control:disabled{opacity:.34;cursor:not-allowed}
+.soundtrack-timeline{min-width:0;display:grid;grid-template-columns:38px 1fr 38px;gap:.45rem;align-items:center;color:#9d8f75;font-size:.68rem}
+.soundtrack-timeline input,.soundtrack-volume input{width:100%;accent-color:#e5a62f;cursor:pointer}
+.soundtrack-timeline input:disabled{cursor:not-allowed;opacity:.4}
+.soundtrack-volume{display:grid;grid-template-columns:18px 1fr;gap:.35rem;align-items:center;color:#dba139}
+.soundtrack-list{display:grid;gap:.55rem}
+.soundtrack-track,.soundtrack-future{
+  width:100%;min-height:66px;display:grid;grid-template-columns:34px 42px minmax(0,1fr) auto;
+  gap:.65rem;align-items:center;padding:.65rem .8rem;text-align:left;
+  background:#080d16;border:1px solid #7d5c293d;color:#8e846f;
+}
+.soundtrack-track{font:inherit;cursor:not-allowed}
+.soundtrack-track.is-unlocked{cursor:pointer;color:#d8c7a0;border-color:#b17b2859;background:linear-gradient(90deg,#0b1727,#0a101a)}
+.soundtrack-track.is-unlocked:hover,.soundtrack-track.is-unlocked:focus-visible{background:linear-gradient(90deg,#14243a,#15120d);border-color:#e5a72e}
+.soundtrack-track.is-selected{border-color:#ffc451;box-shadow:inset 3px 0 #f5a72b,0 0 14px #e9871521}
+.track-state{font-size:.9rem;text-align:center}
+.is-unlocked .track-state{color:#ffc75b;text-shadow:0 0 10px #ff921f}
+.track-index{color:#806b49;font-size:.7rem;letter-spacing:.08em}
+.track-copy{min-width:0}
+.track-copy small{display:block;color:#8e6a31;font-size:.55rem;letter-spacing:.1em}
+.track-copy strong{display:block;margin-top:.2rem;color:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.track-action{color:#796c55;font-size:.57rem;letter-spacing:.1em}
+.is-unlocked .track-action{color:#dca541}
+.soundtrack-future{grid-template-columns:34px 1fr auto;opacity:.58}
+.soundtrack-future div small{display:block;color:#8b6c3b;font-size:.55rem;letter-spacing:.11em}
+.soundtrack-future div strong{display:block;margin-top:.16rem;color:#a89a80}
+.soundtrack-future em{font-style:normal;color:#766b58;font-size:.64rem}
+.soundtrack-secret{margin:1rem 0 0;text-align:center;color:#806f53;font-size:.7rem}
+@media (max-width:760px){
+  .soundtrack-heading{align-items:flex-start;flex-direction:column}
+  .soundtrack-progress{min-width:130px;align-self:stretch}
+  .soundtrack-controls{grid-template-columns:44px 52px 44px 1fr}
+  .soundtrack-timeline{grid-column:1/-1;grid-row:2}
+  .soundtrack-volume{grid-column:4;grid-row:1}
+  .soundtrack-track{grid-template-columns:28px 34px minmax(0,1fr)}
+  .track-action{grid-column:3;margin-top:-.25rem}
+  .soundtrack-future{grid-template-columns:28px 1fr}
+  .soundtrack-future em{grid-column:2}
+}
+@media (max-width:420px){
+  .soundtrack-now{grid-template-columns:62px 1fr}
+  .soundtrack-disc{width:58px;height:58px}
+  .soundtrack-meta strong{font-size:.92rem}
+}
+@media (prefers-reduced-motion:reduce){.soundtrack-disc.is-spinning{animation:none}}
