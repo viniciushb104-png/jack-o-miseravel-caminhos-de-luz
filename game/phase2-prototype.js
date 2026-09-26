@@ -212,6 +212,20 @@ const phase2Backgrounds={village1:null,village2:null,village3:null,tower:null};
 ].forEach(([key,file])=>{
   img("../assets/game/phase2/backgrounds-hd/"+file).then(i=>phase2Backgrounds[key]=i).catch(()=>{});
 });
+const environmentSprites={village:{},tower:{}};
+const villagePlatformFiles=[
+  "vila-plataforma-longa-baixa.png","vila-plataforma-longa-folhas.png","vila-plataforma-longa-ruinas.png",
+  "vila-plataforma-media-folhas.png","vila-plataforma-media-vinhas.png","vila-plataforma-curta-a.png",
+  "vila-plataforma-curta-b.png","vila-plataforma-curta-vinhas.png","vila-plataforma-ruina-grande.png"
+];
+const towerPlatformFiles=[
+  "torre-plataforma-correntes.png","torre-plataforma-larga-engrenagem.png",
+  "torre-passarela-grade.png","torre-plataforma-colunas.png"
+];
+Promise.allSettled(villagePlatformFiles.map(f=>img("../assets/game/phase2/environment-sprites/vila/plataformas/"+f)))
+  .then(rs=>rs.forEach((r,i)=>{if(r.status==="fulfilled")environmentSprites.village[villagePlatformFiles[i]]=r.value}));
+Promise.allSettled(towerPlatformFiles.map(f=>img("../assets/game/phase2/environment-sprites/torre/plataformas/"+f)))
+  .then(rs=>rs.forEach((r,i)=>{if(r.status==="fulfilled")environmentSprites.tower[towerPlatformFiles[i]]=r.value}));
 img("../assets/game/phase2/checkpoints/checkpoint-phase2-off.png").then(i=>checkpointArt.off=i).catch(()=>{});
 img("../assets/game/phase2/checkpoints/checkpoint-phase2-on.png").then(i=>checkpointArt.on=i).catch(()=>{});
 const ameliaMapFiles=["neutral","feliz","triste","surpresa","irritada","cansada","assustada"];
@@ -507,55 +521,75 @@ function drawClockChain(cx,cy,links=4){
   for(let i=0;i<links;i++){x.beginPath();x.ellipse(cx,cy+i*12,5,8,i%2?Math.PI/2:0,0,Math.PI*2);x.stroke()}
   x.restore();
 }
-function drawClockworkPlatform(q,arena=false){
-  const floor=q.w>650||q.h>=50,topH=floor?12:9;
+function drawFallbackPlatform(q,tower=false){
   x.save();
-  x.fillStyle="rgba(4,2,7,.42)";x.fillRect(q.x+7,q.y+8,q.w,q.h+8);
-  const body=x.createLinearGradient(0,q.y,0,q.y+Math.max(36,q.h+34));
-  body.addColorStop(0,arena?"#51352f":"#4a342f");body.addColorStop(.48,"#2b2025");body.addColorStop(1,"#171219");
-  x.fillStyle=body;x.fillRect(q.x,q.y,q.w,Math.max(q.h,floor?72:34));
-  const rail=x.createLinearGradient(q.x,q.y,q.x+q.w,q.y);
-  rail.addColorStop(0,"#6d472b");rail.addColorStop(.5,"#d09a4b");rail.addColorStop(1,"#6d472b");
-  x.fillStyle=rail;x.fillRect(q.x,q.y,q.w,topH);
-  x.fillStyle="#1b1117";x.fillRect(q.x,q.y+topH,q.w,4);
-
-  // Tábuas e placas escuras dão à colisão existente a aparência de passarela real.
-  x.strokeStyle="rgba(198,137,66,.22)";x.lineWidth=2;
-  for(let px=q.x+28;px<q.x+q.w;px+=42){x.beginPath();x.moveTo(px,q.y+topH+4);x.lineTo(px,q.y+Math.min(q.h,32));x.stroke()}
-  x.fillStyle="#c38a43";
-  for(let px=q.x+18;px<q.x+q.w-8;px+=64){x.beginPath();x.arc(px,q.y+topH/2,2.5,0,Math.PI*2);x.fill()}
-
-  if(floor){
-    // Base da Torre: arcos e engrenagens embutidos em vez de um grande retângulo cinza.
-    for(let px=q.x+90;px<q.x+q.w-40;px+=180){
-      x.strokeStyle="rgba(143,91,48,.42)";x.lineWidth=6;x.beginPath();x.arc(px,q.y+66,54,Math.PI,Math.PI*2);x.stroke();
-      drawClockGear(px+62,q.y+52,18,.42);
-    }
-  }else{
-    // Mãos-francesas, engrenagens e correntes fazem cada degrau parecer preso à maquinaria.
-    const left=q.x+24,right=q.x+q.w-24,under=q.y+q.h;
-    x.strokeStyle="#69462f";x.lineWidth=7;
-    x.beginPath();x.moveTo(left,q.y+12);x.lineTo(left+28,under+34);x.lineTo(left+58,q.y+12);x.stroke();
-    x.beginPath();x.moveTo(right,q.y+12);x.lineTo(right-28,under+34);x.lineTo(right-58,q.y+12);x.stroke();
-    drawClockGear(q.x+q.w*.5,under+22,16,.68);
-    if((Math.floor(q.x/100)+Math.floor(Math.abs(q.y)/80))%2===0)drawClockChain(q.x+13,under+9,4);
-    else drawClockChain(q.x+q.w-13,under+9,4);
-  }
+  x.fillStyle=tower?"#2b2025":(q.y<560?"#4a3b38":"#30252a");x.fillRect(q.x,q.y,q.w,Math.max(30,q.h));
+  x.fillStyle=tower?"#b27a3a":"#75604b";x.fillRect(q.x,q.y,q.w,7);
   x.restore();
 }
-function drawPhasePlatform(q){
-  if(q.x>=7200)drawClockworkPlatform(q,false);
-  else{
-    x.fillStyle=q.y<560?"#4a3b38":"#30252a";x.fillRect(q.x,q.y,q.w,q.h);
-    x.fillStyle="#75604b";x.fillRect(q.x,q.y,q.w,7);
+function drawPlatformSprite(image,q,targetH,extraW=18){
+  if(!image)return false;
+  const iw=image.naturalWidth||image.width||1,ih=image.naturalHeight||image.height||1;
+  const drawW=q.w+extraW,ratio=ih/iw;
+  let drawH=Math.max(targetH*.72,Math.min(targetH*1.32,drawW*ratio));
+  const dx=q.x-extraW/2,dy=q.y-8;
+  x.save();x.imageSmoothingEnabled=true;x.drawImage(image,dx,dy,drawW,drawH);x.restore();
+  return true;
+}
+function drawTiledGround(image,q,targetH){
+  if(!image)return false;
+  const iw=image.naturalWidth||image.width||1,ih=image.naturalHeight||image.height||1;
+  const tileW=Math.max(245,targetH*(iw/ih)),overlap=18,step=tileW-overlap;
+  x.save();x.imageSmoothingEnabled=true;
+  for(let px=q.x-8;px<q.x+q.w+8;px+=step){
+    const w=Math.min(tileW,q.x+q.w+14-px);
+    if(w<35)break;
+    x.drawImage(image,0,0,iw,ih,px,q.y-8,w,targetH);
   }
+  x.restore();return true;
+}
+function villageSpriteFor(q,index){
+  const a=environmentSprites.village;
+  if(q.h>=100)return a["vila-plataforma-longa-baixa.png"]||a["vila-plataforma-longa-folhas.png"];
+  const names=[
+    "vila-plataforma-media-folhas.png","vila-plataforma-media-vinhas.png",
+    "vila-plataforma-longa-ruinas.png","vila-plataforma-curta-vinhas.png",
+    "vila-plataforma-ruina-grande.png","vila-plataforma-curta-a.png","vila-plataforma-curta-b.png"
+  ];
+  return a[names[index%names.length]]||a["vila-plataforma-media-folhas.png"];
+}
+function towerSpriteFor(q,index){
+  const a=environmentSprites.tower;
+  if(q.h>=100)return a["torre-plataforma-larga-engrenagem.png"]||a["torre-plataforma-correntes.png"];
+  const names=["torre-plataforma-correntes.png","torre-plataforma-larga-engrenagem.png","torre-passarela-grade.png"];
+  return a[names[index%names.length]]||a["torre-plataforma-correntes.png"];
+}
+function drawPhasePlatform(q,index){
+  const tower=q.x>=7200;
+  if(tower){
+    const sprite=towerSpriteFor(q,index);
+    if(q.h>=100){
+      if(!drawTiledGround(sprite,q,108))drawFallbackPlatform(q,true);
+    }else if(!drawPlatformSprite(sprite,q,105,24))drawFallbackPlatform(q,true);
+    return;
+  }
+  const sprite=villageSpriteFor(q,index);
+  if(q.h>=100){
+    if(!drawTiledGround(sprite,q,96))drawFallbackPlatform(q,false);
+  }else if(!drawPlatformSprite(sprite,q,92,22))drawFallbackPlatform(q,false);
+}
+function drawArenaPlatform(q,index){
+  const sprite=towerSpriteFor(q,index+2);
+  if(q.w>650){
+    if(!drawTiledGround(sprite,q,112))drawFallbackPlatform(q,true);
+  }else if(!drawPlatformSprite(sprite,q,108,24))drawFallbackPlatform(q,true);
 }
 function draw(){drawPhase2Backdrop();x.fillStyle="#e7d4b0";x.globalAlpha=.22;for(let i=0;i<18;i++){const px=((i*431-cam*.12)%1500+1500)%1500;x.fillRect(px,80+(i*71)%220,2,2)}x.globalAlpha=1;
 x.save();x.translate(-cam,-camY);
 // O interior da Torre é um plano do próprio mundo: fica à frente do fundo da fase
 // e recebe exatamente o mesmo deslocamento vertical das plataformas durante a subida.
 drawTowerInterior();
-for(const q of plats)drawPhasePlatform(q);
+plats.forEach((q,i)=>drawPhasePlatform(q,i));
 drawPhase2Checkpoints();
 if(bossUnlocked||bossActive||bossDefeated){
   // Arena protótipo no topo: um grande mostrador quebrado sustentado por engrenagens.
@@ -563,7 +597,7 @@ if(bossUnlocked||bossActive||bossDefeated){
   x.strokeStyle="#d18b35";x.lineWidth=10;x.beginPath();x.arc(8050,-860,210,0,Math.PI*2);x.stroke();
   for(let i=0;i<12;i++){const a=i*Math.PI/6;x.beginPath();x.moveTo(8050+Math.cos(a)*175,-860+Math.sin(a)*175);x.lineTo(8050+Math.cos(a)*205,-860+Math.sin(a)*205);x.stroke()}
   x.strokeStyle="#f0c264";x.lineWidth=8;x.beginPath();x.moveTo(8050,-860);x.lineTo(7980,-940);x.moveTo(8050,-860);x.lineTo(8145,-835);x.stroke();x.restore();
-  for(const q of arenaPlats)drawClockworkPlatform(q,true);
+  arenaPlats.forEach((q,i)=>drawArenaPlatform(q,i));
   for(let gx=7290;gx<8840;gx+=150)drawClockGear(gx,-624,24,.58);
 }
 for(const q of reveal){if(q.t>0){x.globalAlpha=Math.min(1,q.t*2);x.fillStyle="#b7eaff";x.fillRect(q.x,q.y,q.w,q.h);x.globalAlpha=1}}
