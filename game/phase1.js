@@ -96,6 +96,7 @@
   // que asas/penas de um sprite vizinho vazem para o frame atual.
   let crowFrames = [];
   let wispFrames = [];
+  let guardianFrames = [];
 
   // Fundos HD da fase. Cada ambiente é um PNG independente para preservar
   // a arte original e permitir que a paisagem mude conforme Jack avança.
@@ -278,6 +279,7 @@
     if (spriteResults[2].status === "fulfilled") {
       art.boss = spriteResults[2].value;
       spriteHD.boss = true;
+      guardianFrames = buildGuardianFrames(art.boss);
     }
 
     dialogue.setAssets({ jack:jackPortraits, eleanor:eleanorPortraits });
@@ -411,6 +413,24 @@
       [1250,490,198,275]
     ];
     return boxes.map(box => cropSpriteFrame(img,box[0],box[1],box[2],box[3]));
+  }
+
+  function buildGuardianFrames(img){
+    // O sheet da Guardiã não é uma grade 4x2 perfeita: as poses têm larguras
+    // diferentes e algumas atravessam a divisão matemática das células.
+    // Extraímos cada personagem por região real e mantemos apenas o componente
+    // principal. Isso elimina definitivamente o "meio sprite" de poses vizinhas.
+    const boxes=[
+      [0,120,350,480],      // 0 idle
+      [345,115,370,490],    // 1 idle 2
+      [690,120,400,470],    // 2 ataque
+      [1040,90,408,520],    // 3 invocação
+      [0,650,500,390],      // 4 investida
+      [450,680,320,390],    // 5 ferida
+      [720,550,450,520],    // 6 enfurecida
+      [1130,650,318,420]    // 7 derrota
+    ];
+    return boxes.map(box => isolateLargestSprite(img,box[0],box[1],box[2],box[3]));
   }
 
   function drawSpriteCropFit(img, sx, sy, sw, sh, cx, cy, targetH, flip=false, alpha=1){
@@ -1239,68 +1259,62 @@
   function drawBoss(){
     if((!boss.started && !boss.dying && !boss.defeated)||boss.defeated)return;
     const x=boss.x-cameraX;
-    if(x<-220||x>W+220)return;
+    if(x<-260||x>W+260)return;
 
-    if(art.boss){
+    if(art.boss && spriteHD.boss && guardianFrames.length){
       let frame=0;
       let alpha=1;
-      let scale=1;
+      let targetH=330;
       let lift=0;
 
-      if(spriteHD.boss){
-        // O sheet HD possui poses bonitas no topo, mas alguns quadros inferiores
-        // têm recortes parciais. Para a morte usamos uma dissolução feita no
-        // próprio jogo sobre um frame completo, evitando completamente o "meio sprite".
-        if(boss.dying){
-          const p=Math.max(0,Math.min(1,boss.deathT/.92));
-          frame=3;
-          alpha=1-p;
-          scale=1-p*.08;
-          lift=-p*28;
-        }else if(boss.hit>0){
-          frame=3;
-          alpha=.72;
-        }else if(boss.hp<=3){
-          frame=(Math.floor(boss.t*4)%2) ? 3 : 1;
-        }else if(boss.shot>.95){
-          frame=2;
-        }else{
-          frame=Math.floor(boss.t*2)%2;
-        }
+      if(boss.dying){
+        // Usa a pose de derrota REAL e já isolada do spritesheet.
+        // Nada de frame saudável ou célula 4x2 cortada durante a morte.
+        const p=Math.max(0,Math.min(1,boss.deathT/.92));
+        frame=7;
+        alpha=Math.max(0,1-p);
+        targetH=315*(1-p*.06);
+        lift=-p*34;
+      }else if(boss.hit>0){
+        frame=5;
+        alpha=.78;
+        targetH=320;
+      }else if(boss.hp<=3){
+        frame=6;
+        targetH=345;
+      }else if(boss.shot>.95){
+        frame=2;
+        targetH=330;
       }else{
-        if(boss.hit>0)frame=6;
-        else if(boss.hp<=3)frame=5;
-        else if(boss.shot>.95)frame=2;
-        else frame=Math.floor(boss.t*2)%2;
+        frame=Math.floor(boss.t*2)%2;
+        targetH=325;
       }
 
-      const col=frame%4,row=Math.floor(frame/4);
-      const baseW=spriteHD.boss?250:265,baseH=spriteHD.boss?375:330;
-      const dw=baseW*scale,dh=baseH*scale;
+      const guardian=guardianFrames[frame] || guardianFrames[0];
 
       const glowAlpha=boss.dying ? Math.max(0,.34*(1-boss.deathT/.92)) : .34;
       const g=ctx.createRadialGradient(x,boss.y,10,x,boss.y,170);
       g.addColorStop(0,`rgba(110,232,255,${glowAlpha})`);
-      g.addColorStop(.55,`rgba(110,94,255,${glowAlpha*.4})`);
+      g.addColorStop(.55,`rgba(110,94,255,${glowAlpha*.42})`);
       g.addColorStop(1,"rgba(85,44,255,0)");
-      ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,boss.y,170,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle=g;
+      ctx.beginPath();ctx.arc(x,boss.y,170,0,Math.PI*2);ctx.fill();
 
-      drawAtlasCell(
-        art.boss,4,2,col,row,
-        x-dw/2,boss.y-dh/2+lift,
-        dw,dh,false,alpha,true
+      drawSpriteCropFit(
+        guardian,0,0,guardian.width,guardian.height,
+        x,boss.y+lift,targetH,false,alpha
       );
 
       if(boss.dying){
         const p=Math.max(0,Math.min(1,boss.deathT/.92));
         ctx.save();
-        ctx.globalAlpha=(1-p)*.85;
+        ctx.globalAlpha=(1-p)*.9;
         ctx.fillStyle="#8cecff";
-        for(let i=0;i<7;i++){
-          const a=boss.t*2.4+i*.9;
-          const r=45+i*9+p*36;
+        for(let i=0;i<8;i++){
+          const a=boss.t*2.5+i*.82;
+          const r=44+i*8+p*40;
           const px=x+Math.cos(a)*r;
-          const py=boss.y-30+lift+Math.sin(a)*r*.42-p*38;
+          const py=boss.y-20+lift+Math.sin(a)*r*.42-p*42;
           ctx.beginPath();ctx.arc(px,py,3+(i%3),0,Math.PI*2);ctx.fill();
         }
         ctx.restore();
@@ -1308,6 +1322,7 @@
       return;
     }
 
+    // Fallback para o sheet antigo.
     ctx.save();ctx.translate(x,boss.y);if(boss.hit>0)ctx.globalAlpha=.55;
     const g=ctx.createRadialGradient(0,10,10,0,10,150);g.addColorStop(0,"#6ee8ff55");g.addColorStop(1,"#7f45ff00");ctx.fillStyle=g;ctx.beginPath();ctx.arc(0,10,150,0,Math.PI*2);ctx.fill();
     // spectral tail
@@ -1326,6 +1341,7 @@
     ctx.fillStyle="#4bdcff";for(let i=0;i<4;i++){const a=boss.t*1.8+i*Math.PI/2,fx=Math.cos(a)*105,fy=Math.sin(a)*55;ctx.beginPath();ctx.arc(fx,fy,12,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.moveTo(fx-8,fy);ctx.lineTo(fx,fy-25);ctx.lineTo(fx+8,fy);ctx.fill();}
     ctx.restore();
   }
+
 
   function drawProjectiles(){
     projectiles.forEach(p=>{
