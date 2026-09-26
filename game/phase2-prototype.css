@@ -237,3 +237,40 @@
   .dialogue-name{font-size:.58rem}
   .dialogue-text{font-size:.66rem;line-height:1.25}
 }
+
+
+/* Microajuste visual da moldura — retrato e placa de nome */
+.dialogue-portrait{
+  left:4.7%;
+  top:18.5%;
+  bottom:22.2%;
+  width:21.2%;
+  background-position:center 58%;
+  background-size:108% auto;
+}
+.dialogue-portrait.is-hd-portrait{
+  background-position:center 58%!important;
+  background-size:108% auto!important;
+}
+.dialogue-name{
+  top:19.2%;
+  height:12.8%;
+}
+@media(max-width:700px){
+  .dialogue-portrait{
+    left:4.7%;
+    top:18.5%;
+    bottom:22.2%;
+    width:21.2%;
+    background-position:center 58%;
+    background-size:108% auto;
+  }
+  .dialogue-portrait.is-hd-portrait{
+    background-position:center 58%!important;
+    background-size:108% auto!important;
+  }
+  .dialogue-name{
+    top:19.2%;
+    height:12.8%;
+  }
+}
