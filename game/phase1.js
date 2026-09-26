@@ -32,8 +32,19 @@
     localStorage.setItem("jack-light-level", "1");
   }
 
+  const urlParams = new URLSearchParams(location.search);
+  const forceNewRun = urlParams.get("new") === "1";
   const phaseCleared = localStorage.getItem("jack-phase1-complete") === "yes";
   const runWasActive = localStorage.getItem("jack-phase1-run-active") === "1";
+
+  // Ao entrar pela página Fases, a fase sempre começa do zero.
+  // A conclusão permanente e o contador de clears continuam preservados.
+  if (forceNewRun) {
+    Object.values(story.states).forEach(key => localStorage.removeItem(key));
+    localStorage.setItem("jack-phase1-run-active","0");
+    localStorage.setItem("jack-light-level","1");
+    history.replaceState(null,"",location.pathname);
+  }
 
   // Depois de concluir a fase, entrar novamente abre uma nova jornada limpa.
   // A conquista permanente continua salva em jack-phase1-complete para o mapa/progresso.
@@ -970,7 +981,7 @@
   const startButton=document.getElementById("startGame");
   const introText=document.querySelector("#intro span");
   if(phaseCleared){
-    const hasRunProgress=runWasActive && Object.values(story.states).some(key=>localStorage.getItem(key));
+    const hasRunProgress=!forceNewRun && runWasActive && Object.values(story.states).some(key=>localStorage.getItem(key));
     startButton.textContent=hasRunProgress?"✦ CONTINUAR REPLAY":"↻ JOGAR NOVAMENTE";
     if(introText) introText.textContent=hasRunProgress
       ?"A luz ainda guarda seu progresso desta nova jornada."
