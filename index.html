@@ -42,8 +42,11 @@
         </div>
 
         <nav class="game-menu" aria-label="Menu principal">
-          <a class="game-btn game-btn--active" href="./game/phase1.html">
+          <button class="game-btn game-btn--active" id="startJourneyBtn" type="button">
             <span class="menu-icon">✦</span><span>Iniciar Jornada</span><b>›</b>
+          </button>
+          <a class="game-btn" id="continueJourneyBtn" href="./game/phase1.html?journey=1" hidden>
+            <span class="menu-icon">↻</span><span>Continuar Jornada</span><b>›</b>
           </a>
           <button class="game-btn" data-target="historia">
             <span class="menu-icon">▤</span><span>A História</span><b>›</b>
@@ -319,12 +322,16 @@
         <div><p class="eyebrow">MAPA DA JORNADA</p><h2>Halloweens</h2></div>
       </div>
       <div class="chapter-list">
-        <a class="chapter-card chapter-card--open" id="chapterOne" href="./game/phase1.html?new=1">
+        <a class="chapter-card chapter-card--open" id="chapterOne" href="./game/phase1.html?replay=1&new=1">
           <span class="chapter-icon">✦</span>
-          <span><small>HALLOWEEN I</small><strong>As Casas dos Perdidos</strong><em>Disponível · clique para começar do início</em></span>
+          <span><small>HALLOWEEN I</small><strong>As Casas dos Perdidos</strong><em>Disponível · rejogar esta fase</em></span>
           <b>›</b>
         </a>
-        <button class="chapter-card" disabled><span class="chapter-icon">☾</span><span><small>HALLOWEEN II</small><strong>A Vila sem Amanhecer</strong><em>Em breve</em></span><b>🔒</b></button>
+        <a class="chapter-card" id="chapterTwo" aria-disabled="true">
+          <span class="chapter-icon">☾</span>
+          <span><small>HALLOWEEN II</small><strong>A Vila sem Amanhecer</strong><em data-phase-status>Conclua o Halloween I para desbloquear</em></span>
+          <b data-phase-arrow>🔒</b>
+        </a>
         <button class="chapter-card" disabled><span class="chapter-icon">♣</span><span><small>HALLOWEEN III</small><strong>O Bosque das Memórias</strong><em>Em breve</em></span><b>🔒</b></button>
         <button class="chapter-card" disabled><span class="chapter-icon">✧</span><span><small>HALLOWEEN IV</small><strong>A Estrada dos Esquecidos</strong><em>Em breve</em></span><b>🔒</b></button>
         <button class="chapter-card" disabled><span class="chapter-icon">✦</span><span><small>HALLOWEEN V</small><strong>A Última Lanterna</strong><em>Em breve</em></span><b>🔒</b></button>
@@ -418,6 +425,7 @@
   </main>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script src="script.js?v=8"></script>
+  <script src="game/engine/journey.js?v=1"></script>
+  <script src="script.js?v=9"></script>
 </body>
 </html>
