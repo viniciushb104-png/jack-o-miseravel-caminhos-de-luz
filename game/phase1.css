@@ -3,7 +3,7 @@
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#02050b;color:var(--cream);font-family:Georgia,"Times New Roman",serif;touch-action:none}
 button,a{font-family:inherit}
 .game-page{position:fixed;inset:0;display:grid;place-items:center;background:#02050b;overflow:hidden}
-#game{display:block;width:100vw;height:100vh;object-fit:contain;image-rendering:pixelated;background:#050914}
+#game{display:block;width:100vw;height:100vh;object-fit:contain;image-rendering:auto;background:#050914}
 .hud{position:fixed;z-index:30;top:max(8px,env(safe-area-inset-top));left:10px;right:10px;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px;pointer-events:none;text-shadow:0 2px 3px #000}
 .hud-btn{pointer-events:auto;text-decoration:none;color:var(--gold2);background:#07152de8;border:2px solid #9b6016;box-shadow:inset 0 0 0 2px #211205;padding:9px 13px;font-size:.7rem;letter-spacing:.1em}
 .hud-title{text-align:center;line-height:1.03}.hud-title small{display:block;color:var(--orange);font-size:.52rem;letter-spacing:.22em}.hud-title strong{font-size:clamp(.62rem,1.55vw,.98rem);color:var(--gold2);letter-spacing:.08em}
@@ -98,3 +98,7 @@ button,a{font-family:inherit}
   .dialogue-shell.has-art .dialogue-name{width:42%;max-width:46%;margin-bottom:7%;font-size:.59rem}
   .dialogue-shell.has-art .dialogue-text{font-size:.70rem;line-height:1.27;max-height:59%}
 }
+
+
+/* Polimento da versão 5: a pintura do cenário escala suavemente, sem perder o clima 16-bit. */
+#game{filter:saturate(.98) contrast(1.015)}
