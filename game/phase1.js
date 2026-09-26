@@ -84,7 +84,11 @@
     memories:null,
     boss:null,
     dialogueFrame:null,
-    checkpoint:null
+    checkpoint:null,
+    platformWood:null,
+    platformBridge:null,
+    platformStone:null,
+    platformStructures:null
   };
 
   const spriteHD = {
@@ -211,7 +215,7 @@
       img.onload = () => resolve(img);
       img.onerror = () => reject(new Error("Falha ao carregar " + path));
       const sep = path.includes("?") ? "&" : "?";
-      img.src = path + sep + "v=phase1-assets-25";
+      img.src = path + sep + "v=phase1-assets-26";
     });
   }
 
@@ -253,6 +257,18 @@
     }else{
       console.warn("[Fase 1] sprite do checkpoint indisponível; usando fallback desenhado.");
     }
+
+    const platformResults = await Promise.allSettled([
+      imageFromFile("../assets/game/phase1/platforms-hd/platforms-wood-hd.png"),
+      imageFromFile("../assets/game/phase1/platforms-hd/platforms-bridge-hd.png"),
+      imageFromFile("../assets/game/phase1/platforms-hd/platforms-stone-hd.png"),
+      imageFromFile("../assets/game/phase1/platforms-hd/platforms-structures-hd.png")
+    ]);
+    const platformKeys=["platformWood","platformBridge","platformStone","platformStructures"];
+    platformResults.forEach((result,index)=>{
+      if(result.status==="fulfilled") art[platformKeys[index]]=result.value;
+      else console.warn("[Fase 1] plataforma HD não carregada:",platformKeys[index],result.reason);
+    });
 
     const optional = await Promise.allSettled([
       imageFromChunks(["../assets/portraits/jack/data/portraits.1.b64","../assets/portraits/jack/data/portraits.2.b64"]),
@@ -1124,8 +1140,101 @@
     for(let x=off-62;x<W+62;x+=62){const h=105+((x*17)%45);ctx.fillRect(x-3,520-h*.25,6,h*.25);for(let j=0;j<4;j++){const y=520-h+j*h*.18,half=15+j*7;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x-half,y+h*.32);ctx.lineTo(x+half,y+h*.32);ctx.fill();}}
   }
 
+  function drawPlatformStrip(img,crop,p,{visualH=92,tileW=360,topOffset=-9,base="#151827",overlap=12}={}){
+    if(!img)return false;
+    const x=p.x-cameraX;
+    if(x+p.w<-100||x>W+100)return true;
+
+    // Collision remains exactly the same. This is only the illustrated skin.
+    ctx.fillStyle=base;
+    ctx.fillRect(x,p.y,p.w,p.h);
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(x-2,p.y+topOffset,p.w+4,Math.max(p.h-topOffset,visualH+18));
+    ctx.clip();
+
+    // Large original pieces are reused as scenic modules, never stretched over
+    // the whole 11,000px world. This keeps leaves, ropes and masonry crisp.
+    const step=Math.max(96,tileW-overlap);
+    for(let xx=x;xx<x+p.w+tileW;xx+=step){
+      const dw=Math.min(tileW,x+p.w-xx+overlap);
+      if(dw<=0)break;
+      drawCrop(
+        img,crop.sx,crop.sy,crop.sw,crop.sh,
+        Math.round(xx),Math.round(p.y+topOffset),
+        Math.round(Math.max(dw,96)),Math.round(visualH),
+        1,true
+      );
+    }
+
+    // Darken only the deep body of ground platforms so the gameplay silhouette
+    // stays readable while the illustrated surface remains bright.
+    if(p.h>65){
+      const shade=ctx.createLinearGradient(0,p.y+52,0,p.y+p.h);
+      shade.addColorStop(0,"rgba(0,0,0,0)");
+      shade.addColorStop(1,"rgba(0,0,0,.48)");
+      ctx.fillStyle=shade;
+      ctx.fillRect(x,p.y+48,p.w,Math.max(0,p.h-48));
+    }
+    ctx.restore();
+    return true;
+  }
+
+  function drawBridgeHD(p){
+    if(!art.platformBridge)return false;
+    const x=p.x-cameraX;
+    if(x+p.w<-100||x>W+100)return true;
+
+    ctx.fillStyle="#1b1719";
+    ctx.fillRect(x,p.y,p.w,p.h);
+
+    // One complete bridge module per collision platform. The top boards align
+    // exactly with p.y; rope, posts and ivy are free to hang below.
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(x-4,p.y-18,p.w+8,138);
+    ctx.clip();
+    drawCrop(
+      art.platformBridge,
+      .012,.018,.585,.205,
+      Math.round(x-5),Math.round(p.y-14),
+      Math.round(p.w+10),126,
+      1,true
+    );
+    ctx.restore();
+    return true;
+  }
+
+  function drawPlatformHD(p){
+    if(p.type==="bridge") return drawBridgeHD(p);
+
+    if(p.type==="wood" && art.platformWood){
+      return drawPlatformStrip(
+        art.platformWood,
+        {sx:.015,sy:.018,sw:.635,sh:.165},
+        p,
+        {visualH:100,tileW:385,topOffset:-9,base:"#28170f",overlap:18}
+      );
+    }
+
+    if((p.type==="stone"||p.type==="ruin"||p.type==="arena") && art.platformStone){
+      const arena=p.type==="arena";
+      return drawPlatformStrip(
+        art.platformStone,
+        {sx:.012,sy:.012,sw:.645,sh:.115},
+        p,
+        {visualH:p.h>70?118:94,tileW:420,topOffset:-8,base:arena?"#10162b":"#11182b",overlap:14}
+      );
+    }
+
+    return false;
+  }
+
   function ground(p){
     const x=p.x-cameraX;if(x+p.w<-80||x>W+80)return;
+
+    if(drawPlatformHD(p)) return;
 
     // Pedra refinada: usa um tile dedicado em resolução maior. Evita recortar e
     // esticar o atlas antigo, que era a principal fonte do aspecto granulado.
@@ -1322,7 +1431,30 @@
     ctx.restore();
   }
 
+  function drawPlatformStructureAccents(){
+    if(!art.platformStructures)return;
+    const accents=[
+      {x:1845,y:510,w:130,h:145},
+      {x:2305,y:455,w:128,h:150},
+      {x:2760,y:505,w:132,h:145},
+      {x:7370,y:500,w:118,h:135},
+      {x:8330,y:490,w:118,h:135}
+    ];
+    for(const a of accents){
+      const sx=a.x-cameraX;
+      if(sx+a.w<-120||sx>W+120)continue;
+      drawCrop(
+        art.platformStructures,
+        .018,.012,.105,.285,
+        sx-a.w/2,a.y-6,
+        a.w,a.h,
+        .94,true
+      );
+    }
+  }
+
   function scenery(){
+    drawPlatformStructureAccents();
     for(const p of platforms)ground(p);
 
     if(art.props){
