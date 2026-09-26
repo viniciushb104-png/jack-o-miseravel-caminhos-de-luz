@@ -92,6 +92,10 @@
     boss:false
   };
 
+  // Frames limpos do corvo. São isolados do sheet HD em memória para impedir
+  // que asas/penas de um sprite vizinho vazem para o frame atual.
+  let crowFrames = [];
+
   // Fundos HD da fase. Cada ambiente é um PNG independente para preservar
   // a arte original e permitir que a paisagem mude conforme Jack avança.
   const sceneBackgrounds = {
@@ -266,6 +270,7 @@
     if (spriteResults[1].status === "fulfilled") {
       art.enemies = spriteResults[1].value;
       spriteHD.enemies = true;
+      crowFrames = buildCrowFrames(art.enemies);
     }
     if (spriteResults[2].status === "fulfilled") {
       art.boss = spriteResults[2].value;
@@ -305,6 +310,78 @@
     }
     ctx.restore();
     return true;
+  }
+
+  function isolateLargestSprite(img, sx, sy, sw, sh){
+    const canvas=document.createElement("canvas");
+    canvas.width=sw;
+    canvas.height=sh;
+    const c=canvas.getContext("2d",{willReadFrequently:true});
+    c.clearRect(0,0,sw,sh);
+    c.drawImage(img,sx,sy,sw,sh,0,0,sw,sh);
+
+    const imageData=c.getImageData(0,0,sw,sh);
+    const data=imageData.data;
+    const total=sw*sh;
+    const labels=new Int32Array(total);
+    const queue=new Int32Array(total);
+    let label=0;
+    let bestLabel=0;
+    let bestSize=0;
+
+    for(let p=0;p<total;p++){
+      if(labels[p]!==0 || data[p*4+3] < 12) continue;
+      label++;
+      let head=0,tail=0,size=0;
+      queue[tail++]=p;
+      labels[p]=label;
+
+      while(head<tail){
+        const q=queue[head++];
+        size++;
+        const x=q%sw;
+        const y=(q/sw)|0;
+
+        for(let oy=-1;oy<=1;oy++){
+          const ny=y+oy;
+          if(ny<0||ny>=sh) continue;
+          for(let ox=-1;ox<=1;ox++){
+            if(ox===0&&oy===0) continue;
+            const nx=x+ox;
+            if(nx<0||nx>=sw) continue;
+            const np=ny*sw+nx;
+            if(labels[np]===0 && data[np*4+3]>=12){
+              labels[np]=label;
+              queue[tail++]=np;
+            }
+          }
+        }
+      }
+
+      if(size>bestSize){
+        bestSize=size;
+        bestLabel=label;
+      }
+    }
+
+    for(let p=0;p<total;p++){
+      if(labels[p]!==bestLabel) data[p*4+3]=0;
+    }
+    c.putImageData(imageData,0,0);
+    return canvas;
+  }
+
+  function buildCrowFrames(img){
+    // O sheet HD tem poses que se sobrepõem visualmente. Estes recortes
+    // abrangem cada ave inteira e isolateLargestSprite remove automaticamente
+    // qualquer pedaço do frame vizinho ou pena solta.
+    const boxes=[
+      [230,150,310,290], // asa subindo
+      [460,90,330,360],  // asa alta
+      [710,145,330,310], // asa descendo / avanço
+      [990,105,300,350]  // impacto
+    ];
+    return boxes.map(box => isolateLargestSprite(img,box[0],box[1],box[2],box[3]));
   }
 
   function drawSpriteCropFit(img, sx, sy, sw, sh, cx, cy, targetH, flip=false, alpha=1){
@@ -1048,36 +1125,40 @@
 
     if(art.enemies){
       let frame=e.hit>0?3:Math.floor(e.t*5)%2;
-      if(e.attack>1.75)frame=2;
+      if(e.type==="crow" && e.hit<=0){
+        const flap=[0,1,2,1];
+        frame=flap[Math.floor(e.t*7)%flap.length];
+        if(e.attack>1.75) frame=2;
+      }else if(e.attack>1.75){
+        frame=2;
+      }
       const flip=e.type!=="wisp" && e.dir<0;
 
       if(spriteHD.enemies){
-        // O novo sheet é ilustrado e não usa células uniformes.
-        // Estes recortes preservam cada pose sem esmagar ou esticar a arte.
-        const crops={
-          crow:[
-            [20,105,225,257],
-            [235,85,335,277],
-            [700,105,350,257],
-            [1210,155,238,207]
-          ],
-          wisp:[
-            [5,362,245,362],
-            [245,362,255,362],
-            [705,362,545,362],
-            [1210,362,238,362]
-          ],
-          pumpkin:[
-            [0,724,280,362],
-            [280,724,255,362],
-            [760,724,435,362],
-            [1140,724,308,362]
-          ]
-        };
-        const crop=(crops[e.type]||crops.crow)[frame] || (crops[e.type]||crops.crow)[0];
-        const targetH=e.type==="crow"?104:e.type==="wisp"?112:110;
-        const cy=e.type==="pumpkin" ? e.y-4 : e.y;
-        drawSpriteCropFit(art.enemies,crop[0],crop[1],crop[2],crop[3],x,cy,targetH,flip,e.hit>0?.68:1);
+        if(e.type==="crow" && crowFrames.length){
+          const crow=crowFrames[frame] || crowFrames[0];
+          drawSpriteCropFit(crow,0,0,crow.width,crow.height,x,e.y,98,flip,e.hit>0?.68:1);
+        }else{
+          // Wisp e abóbora continuam usando seus recortes do sheet HD.
+          const crops={
+            wisp:[
+              [5,362,245,362],
+              [245,362,255,362],
+              [705,362,545,362],
+              [1210,362,238,362]
+            ],
+            pumpkin:[
+              [0,724,280,362],
+              [280,724,255,362],
+              [760,724,435,362],
+              [1140,724,308,362]
+            ]
+          };
+          const crop=(crops[e.type]||crops.wisp)[frame] || (crops[e.type]||crops.wisp)[0];
+          const targetH=e.type==="wisp"?112:110;
+          const cy=e.type==="pumpkin" ? e.y-4 : e.y;
+          drawSpriteCropFit(art.enemies,crop[0],crop[1],crop[2],crop[3],x,cy,targetH,flip,e.hit>0?.68:1);
+        }
       }else{
         const row=e.type==="crow"?0:e.type==="wisp"?1:2;
         const sizes=e.type==="crow"?[108,92]:e.type==="wisp"?[118,104]:[118,92];
