@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#07101f">
   <meta name="description" content="Jack o Miserável — Caminhos de Luz. Uma aventura narrativa de Halloween em estética 16-bit.">
   <title>Jack o Miserável — Caminhos de Luz</title>
-  <link rel="stylesheet" href="styles.css?v=6">
+  <link rel="stylesheet" href="styles.css?v=7">
 </head>
 <body>
   <div class="scanlines" aria-hidden="true"></div>
@@ -70,7 +70,7 @@
           <div class="save-content">
             <div class="save-portrait">J</div>
             <div class="save-stats">
-              <span><b>▤</b> Memórias <strong id="memoryCount">0/8</strong></span>
+              <span><b>▤</b> Memórias <strong id="memoryCount">0/5</strong></span>
               <span><b>▣</b> Luz <strong id="lightLevel">01</strong></span>
             </div>
           </div>
@@ -329,14 +329,71 @@
       </div>
     </section>
 
-    <section id="memorias" class="screen content-screen">
+    <section id="memorias" class="screen content-screen memories-screen">
       <button class="back-btn" data-target="inicio">‹ Voltar</button>
-      <div class="section-heading">
+      <div class="section-heading memories-heading">
         <span class="chapter-number">✦</span>
-        <div><p class="eyebrow">COLEÇÃO</p><h2>Memórias Encontradas</h2></div>
+        <div>
+          <p class="eyebrow">GALERIA DE TROFÉUS</p>
+          <h2>Memórias da Jornada</h2>
+          <p class="memories-intro">Cada Halloween concluído deixa uma lembrança acesa no arquivo de Jack.</p>
+        </div>
+        <div class="trophy-progress" aria-label="Progresso de fases concluídas">
+          <span>TROFÉUS</span>
+          <strong id="trophyProgress">0/5</strong>
+        </div>
       </div>
-      <div class="memory-grid">
-        <button class="memory-slot" disabled><span>01</span><b>?</b><small>Não encontrada</small></button><button class="memory-slot" disabled><span>02</span><b>?</b><small>Não encontrada</small></button><button class="memory-slot" disabled><span>03</span><b>?</b><small>Não encontrada</small></button><button class="memory-slot" disabled><span>04</span><b>?</b><small>Não encontrada</small></button><button class="memory-slot" disabled><span>05</span><b>?</b><small>Não encontrada</small></button><button class="memory-slot" disabled><span>06</span><b>?</b><small>Não encontrada</small></button><button class="memory-slot" disabled><span>07</span><b>?</b><small>Não encontrada</small></button><button class="memory-slot" disabled><span>08</span><b>?</b><small>Não encontrada</small></button>
+
+      <div class="memory-trophy-grid" aria-label="Troféus das fases">
+        <article class="memory-trophy is-locked" data-memory-trophy data-phase="1" data-complete-key="jack-phase1-complete" data-complete-value="yes">
+          <div class="memory-trophy-art">
+            <img data-trophy-art data-src="assets/game/memories/phase1-trophy.svg" alt="Troféu de Halloween I — As Casas dos Perdidos" loading="lazy">
+            <div class="memory-trophy-lock" aria-hidden="true"><b>✦</b><span>Memória ainda adormecida</span></div>
+            <span class="memory-trophy-number">I</span>
+          </div>
+          <div class="memory-trophy-copy">
+            <p>HALLOWEEN I</p>
+            <h3>As Casas dos Perdidos</h3>
+            <blockquote>“Na vila dos esquecidos, uma luz voltou a brilhar.”</blockquote>
+            <span class="memory-trophy-status">Não conquistada</span>
+          </div>
+        </article>
+
+        <article class="memory-trophy is-locked" data-memory-trophy data-phase="2" data-complete-key="jack-phase2-complete" data-complete-value="yes">
+          <div class="memory-trophy-art memory-trophy-art--future">
+            <img data-trophy-art data-src="assets/game/memories/phase2-trophy.png" alt="Troféu de Halloween II" loading="lazy">
+            <div class="memory-trophy-lock" aria-hidden="true"><b>☾</b><span>Memória ainda adormecida</span></div>
+            <span class="memory-trophy-number">II</span>
+          </div>
+          <div class="memory-trophy-copy"><p>HALLOWEEN II</p><h3>A Vila sem Amanhecer</h3><blockquote>Uma nova lembrança aguarda na névoa.</blockquote><span class="memory-trophy-status">Bloqueada</span></div>
+        </article>
+
+        <article class="memory-trophy is-locked" data-memory-trophy data-phase="3" data-complete-key="jack-phase3-complete" data-complete-value="yes">
+          <div class="memory-trophy-art memory-trophy-art--future">
+            <img data-trophy-art data-src="assets/game/memories/phase3-trophy.png" alt="Troféu de Halloween III" loading="lazy">
+            <div class="memory-trophy-lock" aria-hidden="true"><b>♣</b><span>Memória ainda adormecida</span></div>
+            <span class="memory-trophy-number">III</span>
+          </div>
+          <div class="memory-trophy-copy"><p>HALLOWEEN III</p><h3>O Bosque das Memórias</h3><blockquote>Algumas lembranças criam raízes profundas.</blockquote><span class="memory-trophy-status">Bloqueada</span></div>
+        </article>
+
+        <article class="memory-trophy is-locked" data-memory-trophy data-phase="4" data-complete-key="jack-phase4-complete" data-complete-value="yes">
+          <div class="memory-trophy-art memory-trophy-art--future">
+            <img data-trophy-art data-src="assets/game/memories/phase4-trophy.png" alt="Troféu de Halloween IV" loading="lazy">
+            <div class="memory-trophy-lock" aria-hidden="true"><b>✧</b><span>Memória ainda adormecida</span></div>
+            <span class="memory-trophy-number">IV</span>
+          </div>
+          <div class="memory-trophy-copy"><p>HALLOWEEN IV</p><h3>A Estrada dos Esquecidos</h3><blockquote>Toda estrada guarda os passos de alguém.</blockquote><span class="memory-trophy-status">Bloqueada</span></div>
+        </article>
+
+        <article class="memory-trophy is-locked" data-memory-trophy data-phase="5" data-complete-key="jack-phase5-complete" data-complete-value="yes">
+          <div class="memory-trophy-art memory-trophy-art--future">
+            <img data-trophy-art data-src="assets/game/memories/phase5-trophy.png" alt="Troféu de Halloween V" loading="lazy">
+            <div class="memory-trophy-lock" aria-hidden="true"><b>✦</b><span>Memória ainda adormecida</span></div>
+            <span class="memory-trophy-number">V</span>
+          </div>
+          <div class="memory-trophy-copy"><p>HALLOWEEN V</p><h3>A Última Lanterna</h3><blockquote>A última luz ainda não contou sua história.</blockquote><span class="memory-trophy-status">Bloqueada</span></div>
+        </article>
       </div>
     </section>
 
@@ -355,6 +412,6 @@
   </main>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script src="script.js?v=5"></script>
+  <script src="script.js?v=6"></script>
 </body>
 </html>
