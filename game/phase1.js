@@ -169,6 +169,7 @@
   const projectiles = [];
   const boss = {
     started:false, defeated: localStorage.getItem(story.states.bossDefeated) === "1",
+    dying:false, deathT:0,
     x:10120, y:325, hp:10, maxHp:10, t:0, shot:0, summon:0, hit:0
   };
 
@@ -456,7 +457,7 @@
     ui.memories.textContent = memoryCount() + "/5";
     ui.health.textContent = hearts();
     ui.light.textContent = String(Number(localStorage.getItem("jack-light-level") || 1)).padStart(2,"0");
-    if (boss.started && !boss.defeated) {
+    if (boss.started && !boss.defeated && !boss.dying) {
       ui.bossHud.hidden = false;
       ui.bossHealth.style.width = Math.max(0,boss.hp/boss.maxHp*100) + "%";
     } else ui.bossHud.hidden = true;
@@ -586,14 +587,24 @@
   }
 
   function defeatBoss(){
-    if (boss.defeated) return;
-    boss.defeated=true; boss.started=false;
-    localStorage.setItem(story.states.bossDefeated,"1");
+    if (boss.defeated || boss.dying) return;
+    boss.dying=true;
+    boss.deathT=0;
+    boss.hit=0;
     projectiles.length=0;
     ui.bossHud.hidden=true;
+    shake=.28;
+    phaseAudio.switchTrack("theme", { fadeOut:1100, fadeIn:1500 });
+  }
+
+  function finishBossDefeat(){
+    if (boss.defeated) return;
+    boss.dying=false;
+    boss.defeated=true;
+    boss.started=false;
+    localStorage.setItem(story.states.bossDefeated,"1");
     localStorage.setItem("jack-light-level","03");
     syncHud();
-    phaseAudio.switchTrack("theme", { fadeOut:1100, fadeIn:1500 });
     openDialogue(dialogues.bossDefeated, () => {
       setTimeout(() => startFinalSequence(), 350);
     });
@@ -743,7 +754,19 @@
   }
 
   function updateBoss(dt){
-    if(!boss.started||boss.defeated||dialogue.active)return;
+    if(boss.defeated||dialogue.active)return;
+
+    if(boss.dying){
+      boss.t+=dt;
+      boss.deathT+=dt;
+      boss.hit=0;
+      // A Guardiã sobe suavemente enquanto a forma espectral se desfaz.
+      boss.y-=16*dt;
+      if(boss.deathT>=.92) finishBossDefeat();
+      return;
+    }
+
+    if(!boss.started)return;
     boss.t+=dt; boss.hit=Math.max(0,boss.hit-dt);
     boss.x=10000+Math.sin(boss.t*.7)*260;
     boss.y=330+Math.sin(boss.t*1.25)*70;
@@ -1214,20 +1237,74 @@
   }
 
   function drawBoss(){
-    if((!boss.started&& !boss.defeated)||boss.defeated)return;const x=boss.x-cameraX;if(x<-220||x>W+220)return;
+    if((!boss.started && !boss.dying && !boss.defeated)||boss.defeated)return;
+    const x=boss.x-cameraX;
+    if(x<-220||x>W+220)return;
 
     if(art.boss){
       let frame=0;
-      if(boss.hit>0)frame=6;
-      else if(boss.hp<=3)frame=5;
-      else if(boss.shot>.95)frame=2;
-      else frame=Math.floor(boss.t*2)%2;
+      let alpha=1;
+      let scale=1;
+      let lift=0;
+
+      if(spriteHD.boss){
+        // O sheet HD possui poses bonitas no topo, mas alguns quadros inferiores
+        // têm recortes parciais. Para a morte usamos uma dissolução feita no
+        // próprio jogo sobre um frame completo, evitando completamente o "meio sprite".
+        if(boss.dying){
+          const p=Math.max(0,Math.min(1,boss.deathT/.92));
+          frame=3;
+          alpha=1-p;
+          scale=1-p*.08;
+          lift=-p*28;
+        }else if(boss.hit>0){
+          frame=3;
+          alpha=.72;
+        }else if(boss.hp<=3){
+          frame=(Math.floor(boss.t*4)%2) ? 3 : 1;
+        }else if(boss.shot>.95){
+          frame=2;
+        }else{
+          frame=Math.floor(boss.t*2)%2;
+        }
+      }else{
+        if(boss.hit>0)frame=6;
+        else if(boss.hp<=3)frame=5;
+        else if(boss.shot>.95)frame=2;
+        else frame=Math.floor(boss.t*2)%2;
+      }
+
       const col=frame%4,row=Math.floor(frame/4);
-      const dw=spriteHD.boss?250:265,dh=spriteHD.boss?375:330;
+      const baseW=spriteHD.boss?250:265,baseH=spriteHD.boss?375:330;
+      const dw=baseW*scale,dh=baseH*scale;
+
+      const glowAlpha=boss.dying ? Math.max(0,.34*(1-boss.deathT/.92)) : .34;
       const g=ctx.createRadialGradient(x,boss.y,10,x,boss.y,170);
-      g.addColorStop(0,"#6ee8ff55");g.addColorStop(.55,"#6e5eff22");g.addColorStop(1,"#552cff00");
+      g.addColorStop(0,`rgba(110,232,255,${glowAlpha})`);
+      g.addColorStop(.55,`rgba(110,94,255,${glowAlpha*.4})`);
+      g.addColorStop(1,"rgba(85,44,255,0)");
       ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,boss.y,170,0,Math.PI*2);ctx.fill();
-      drawAtlasCell(art.boss,4,2,col,row,x-dw/2,boss.y-dh/2,dw,dh,false,boss.hit>0?.65:1);
+
+      drawAtlasCell(
+        art.boss,4,2,col,row,
+        x-dw/2,boss.y-dh/2+lift,
+        dw,dh,false,alpha,true
+      );
+
+      if(boss.dying){
+        const p=Math.max(0,Math.min(1,boss.deathT/.92));
+        ctx.save();
+        ctx.globalAlpha=(1-p)*.85;
+        ctx.fillStyle="#8cecff";
+        for(let i=0;i<7;i++){
+          const a=boss.t*2.4+i*.9;
+          const r=45+i*9+p*36;
+          const px=x+Math.cos(a)*r;
+          const py=boss.y-30+lift+Math.sin(a)*r*.42-p*38;
+          ctx.beginPath();ctx.arc(px,py,3+(i%3),0,Math.PI*2);ctx.fill();
+        }
+        ctx.restore();
+      }
       return;
     }
 
