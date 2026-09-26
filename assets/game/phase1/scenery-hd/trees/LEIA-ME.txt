@@ -1,0 +1,2 @@
+Sprites HD de cenário — trees
+Envie nesta pasta os PNGs correspondentes do pacote jack_fase1_sprites_cenario_hd.zip.
