@@ -60,6 +60,48 @@
     });
   }
 
+  // Videoteca do musical: o iframe do YouTube só é criado depois do clique.
+  // Mantemos apenas um player ativo por vez para evitar áudio concorrente.
+  const musicalFrames = [...document.querySelectorAll('.video-frame[data-youtube-id]')];
+
+  function stopMusicalVideos(except = null) {
+    musicalFrames.forEach(frame => {
+      if (frame === except) return;
+      const iframe = frame.querySelector('iframe');
+      if (iframe) iframe.remove();
+      frame.classList.remove('is-playing');
+    });
+  }
+
+  musicalFrames.forEach(frame => {
+    const playButton = frame.querySelector('.video-play');
+    if (!playButton) return;
+
+    playButton.addEventListener('click', () => {
+      const id = frame.dataset.youtubeId;
+      const title = frame.dataset.videoTitle || 'Vídeo do musical';
+      if (!id) return;
+
+      stopMusicalVideos(frame);
+
+      const iframe = document.createElement('iframe');
+      iframe.src = 'https://www.youtube-nocookie.com/embed/' + encodeURIComponent(id) + '?autoplay=1&rel=0&modestbranding=1&playsinline=1';
+      iframe.title = title;
+      iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+      iframe.referrerPolicy = 'strict-origin-when-cross-origin';
+      iframe.allowFullscreen = true;
+
+      frame.appendChild(iframe);
+      frame.classList.add('is-playing');
+    });
+  });
+
+  document.querySelectorAll('[data-target]').forEach(control => {
+    control.addEventListener('click', () => {
+      if (control.dataset.target !== 'musical') stopMusicalVideos();
+    });
+  });
+
   const initial = location.hash.replace('#', '');
   if (initial && initial !== 'inicio' && document.getElementById(initial)) {
     openScreen(initial);
