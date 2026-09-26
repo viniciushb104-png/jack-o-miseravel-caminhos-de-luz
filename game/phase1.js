@@ -82,6 +82,36 @@
   const memoryHD = { key:null, storm:null, candle:null, letter:null, family:null };
   const sceneryHD = Object.create(null);
   let sceneryHDLoaded = 0;
+  const finalRuinsHD = Object.create(null);
+  let finalRuinsHDLoaded = 0;
+
+  const FINAL_RUINS_HD_FILES = Object.freeze([
+    "portals/portal-01.png","portals/portal-02.png","portals/portal-03.png","portals/portal-04.png","portals/portal-05.png",
+    "arches/arch-01.png","arches/arch-02.png","arches/arch-03.png","arches/arch-04.png","arches/arch-05.png",
+    "arches/fence-pillars-01.png","arches/lantern-ruin-01.png","arches/pillar-01.png","arches/pillar-02.png","arches/pillar-03.png",
+    "platforms/platform-01.png","platforms/platform-02.png","platforms/platform-03.png","platforms/platform-04.png","platforms/platform-05.png",
+    "platforms/platform-06.png","platforms/platform-07.png","platforms/platform-08.png","platforms/stairs-01.png","platforms/stairs-02.png",
+    "decor/banner-01.png","decor/candles-rubble-01.png","decor/gothic-ornaments-01.png","decor/guardian-statue-01.png","decor/ruin-pillar-01.png",
+    "effects/magic-rubble-01.png","effects/vortex-pair-01.png"
+  ]);
+
+  // Máscara artística da reta final. A física e as plataformas originais permanecem intactas.
+  const FINAL_RUINS_LAYOUT = Object.freeze([
+    // Última plataforma das Ruínas da Memória.
+    {k:"arches/arch-03.png",x:8325,y:490,h:180},
+    {k:"arches/pillar-03.png",x:8535,y:590,h:188},
+    {k:"decor/banner-01.png",x:8615,y:590,h:155},
+
+    // Entrada da arena: arquitetura nova substitui visualmente os arcos antigos.
+    {k:"arches/arch-04.png",x:9050,y:590,h:205},
+    {k:"arches/fence-pillars-01.png",x:9320,y:590,h:158},
+    {k:"arches/arch-05.png",x:9560,y:590,h:205},
+    {k:"arches/lantern-ruin-01.png",x:9780,y:590,h:178},
+    {k:"decor/ruin-pillar-01.png",x:9900,y:590,h:145},
+    {k:"decor/gothic-ornaments-01.png",x:10015,y:590,h:92},
+    {k:"decor/candles-rubble-01.png",x:10465,y:590,h:92},
+    {k:"decor/guardian-statue-01.png",x:10825,y:590,h:205}
+  ]);
 
   const SCENERY_HD_FILES = Object.freeze([
     "houses/house-01.png","houses/house-02.png","houses/house-03.png","houses/house-04.png","houses/house-05.png",
@@ -352,7 +382,7 @@
       img.onload = () => resolve(img);
       img.onerror = () => reject(new Error("Falha ao carregar " + path));
       const sep = path.includes("?") ? "&" : "?";
-      img.src = path + sep + "v=phase1-assets-36";
+      img.src = path + sep + "v=phase1-assets-37";
     });
   }
 
@@ -419,6 +449,20 @@
         sceneryHDLoaded++;
       }else{
         console.warn("[Fase 1] prop HD não carregado:",result.reason);
+      }
+    });
+
+    // Ruínas Finais HD: portal, arcos e ornamentos que mascaram a arquitetura antiga.
+    const finalRuinsResults = await Promise.allSettled(
+      FINAL_RUINS_HD_FILES.map(async file => [file, await imageFromFile("../assets/game/phase1/final-ruins-hd/" + file)])
+    );
+    finalRuinsResults.forEach(result => {
+      if(result.status==="fulfilled"){
+        const [file,img]=result.value;
+        finalRuinsHD[file]=img;
+        finalRuinsHDLoaded++;
+      }else{
+        console.warn("[Fase 1] sprite das Ruínas Finais não carregado:",result.reason);
       }
     });
 
@@ -1697,7 +1741,47 @@
   }
 
   function gate(wx){
-    const x=wx-cameraX;if(x<-140||x>W+140)return;ctx.save();ctx.translate(x,590);
+    const x=wx-cameraX;
+    const portal=finalRuinsHD["portals/portal-03.png"];
+    if(portal){
+      const h=330;
+      const scale=h/portal.naturalHeight;
+      const w=portal.naturalWidth*scale;
+      if(x+w/2<-180||x-w/2>W+180)return;
+      const groundY=602;
+
+      // Halo atrás do portal: integra o violeta mágico à paleta azul/laranja da fase.
+      const pulse=.88+Math.sin(performance.now()/520)*.08;
+      const glow=ctx.createRadialGradient(x,groundY-h*.52,18,x,groundY-h*.52,150);
+      glow.addColorStop(0,`rgba(143,78,255,${.20*pulse})`);
+      glow.addColorStop(.55,`rgba(83,64,210,${.10*pulse})`);
+      glow.addColorStop(1,"rgba(62,45,170,0)");
+      ctx.fillStyle=glow;
+      ctx.beginPath();ctx.arc(x,groundY-h*.52,150,0,Math.PI*2);ctx.fill();
+
+      ctx.save();
+      ctx.imageSmoothingEnabled=true;
+      ctx.imageSmoothingQuality="high";
+      ctx.drawImage(portal,x-w/2,groundY-h,w,h);
+      ctx.restore();
+
+      // O selo continua funcional: Jack só atravessa depois das cinco memórias.
+      if(memoryCount()<5){
+        ctx.save();
+        ctx.globalAlpha=.42+.08*Math.sin(performance.now()/180);
+        const seal=ctx.createLinearGradient(x-48,0,x+48,0);
+        seal.addColorStop(0,"rgba(105,216,255,0)");
+        seal.addColorStop(.5,"rgba(169,117,255,.78)");
+        seal.addColorStop(1,"rgba(105,216,255,0)");
+        ctx.fillStyle=seal;
+        ctx.fillRect(x-52,groundY-228,104,205);
+        ctx.restore();
+      }
+      return;
+    }
+
+    // Fallback procedural caso o PNG não carregue.
+    if(x<-140||x>W+140)return;ctx.save();ctx.translate(x,590);
     ctx.fillStyle="#1a2033";ctx.fillRect(-70,-230,28,230);ctx.fillRect(42,-230,28,230);ctx.beginPath();ctx.arc(0,-210,85,Math.PI,0);ctx.lineWidth=22;ctx.strokeStyle="#1a2033";ctx.stroke();
     ctx.strokeStyle="#59d7ff";ctx.lineWidth=3;ctx.beginPath();ctx.arc(0,-210,70,Math.PI,0);ctx.stroke();
     if(memoryCount()<5){ctx.globalAlpha=.6;ctx.fillStyle="#58dfff";for(let y=-190;y<-20;y+=24)ctx.fillRect(-45,y,90,6)}
@@ -1783,7 +1867,7 @@
       {x:2305,y:455,w:128,h:150},
       {x:2760,y:505,w:132,h:145},
       {x:7370,y:500,w:118,h:135},
-      {x:8330,y:490,w:118,h:135}
+      ...(finalRuinsHDLoaded>=10 ? [] : [{x:8330,y:490,w:118,h:135}])
     ];
     for(const a of accents){
       const sx=a.x-cameraX;
@@ -1846,9 +1930,51 @@
     return true;
   }
 
+  function drawFinalRuinsSprite(item){
+    const img=finalRuinsHD[item.k];
+    if(!img)return false;
+    const scale=item.h/img.naturalHeight;
+    const dw=img.naturalWidth*scale;
+    const x=item.x-cameraX;
+    const groundY=item.y+12;
+    if(x+dw/2<-220||x-dw/2>W+220)return true;
+
+    ctx.save();
+    ctx.globalAlpha=.18;
+    ctx.fillStyle="#07070c";
+    ctx.beginPath();
+    ctx.ellipse(x,groundY-2,Math.min(dw*.34,105),7,0,0,Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.save();
+    ctx.imageSmoothingEnabled=true;
+    ctx.imageSmoothingQuality="high";
+    ctx.globalAlpha=item.alpha??1;
+    if(item.flip){
+      ctx.translate(x+dw/2,groundY-item.h);
+      ctx.scale(-1,1);
+      ctx.drawImage(img,0,0,dw,item.h);
+    }else{
+      ctx.drawImage(img,x-dw/2,groundY-item.h,dw,item.h);
+    }
+    ctx.restore();
+    return true;
+  }
+
+  function drawFinalRuinsHD(){
+    if(finalRuinsHDLoaded<10)return false;
+    for(const item of FINAL_RUINS_LAYOUT) drawFinalRuinsSprite(item);
+    return true;
+  }
+
   function drawSceneryHD(){
     if(sceneryHDLoaded<10)return false;
-    for(const item of SCENERY_HD_LAYOUT) drawSceneryHDSprite(item);
+    for(const item of SCENERY_HD_LAYOUT){
+      // Na arena, o pacote final-ruins-hd assume a direção de arte.
+      if(finalRuinsHDLoaded>=10 && item.x>=8800)continue;
+      drawSceneryHDSprite(item);
+    }
     return true;
   }
 
@@ -1857,7 +1983,9 @@
     for(const p of platforms)ground(p);
 
     if(drawSceneryHD()){
-      // Elementos funcionais continuam por cima da decoração: checkpoint e portão.
+      // O conjunto gótico final mascara os arcos antigos sem mudar colisões.
+      drawFinalRuinsHD();
+      // O portal continua sendo o bloqueio funcional das cinco memórias.
       gate(8820);
       drawCheckpointPosts();
       return;
