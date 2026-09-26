@@ -118,8 +118,8 @@
   const CHECKPOINT_POST = Object.freeze({
     x:6160,
     groundY:470,
-    renderW:220,
-    renderH:275,
+    renderW:250,
+    renderH:250,
     hitW:126,
     hitH:205
   });
@@ -210,7 +210,7 @@
       img.onload = () => resolve(img);
       img.onerror = () => reject(new Error("Falha ao carregar " + path));
       const sep = path.includes("?") ? "&" : "?";
-      img.src = path + sep + "v=phase1-assets-23";
+      img.src = path + sep + "v=phase1-assets-24";
     });
   }
 
@@ -245,7 +245,7 @@
     });
 
     const checkpointResult = await Promise.allSettled([
-      imageFromFile("../assets/game/phase1/sprites-hd/checkpoint-pumpkin.svg")
+      imageFromFile("../assets/game/phase1/sprites-hd/checkpoint-pumpkin.png")
     ]);
     if(checkpointResult[0].status === "fulfilled"){
       art.checkpoint = checkpointResult[0].value;
