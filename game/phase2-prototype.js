@@ -105,7 +105,7 @@ if(loadedSave){
   bellStep=Number(loadedSave.bellStep)||0;windowStep=Number(loadedSave.windowStep)||0;shadowStep=Number(loadedSave.shadowStep)||0;towerStep=Number(loadedSave.towerStep)||0;
   ui.gear.textContent=gears.filter(z=>z.got).length+"/3";
 }
-function img(src){return new Promise((r,j)=>{const i=new Image;i.onload=()=>r(i);i.onerror=j;i.src=src+"?v=p2proto2"})}
+function img(src){return new Promise((r,j)=>{const i=new Image;i.onload=()=>r(i);i.onerror=j;i.src=src+"?v=p2shadow1"})}
 img("../assets/game/phase1/sprites-hd/jack-atlas-hd.png").then(i=>jack=i).catch(()=>{});
 const ameliaMapFiles=["neutral","feliz","triste","surpresa","irritada","cansada","assustada"];
 Promise.allSettled(ameliaMapFiles.map(n=>img("../assets/game/phase2/amelia-sprites/amelia-map-"+n+".png")))
@@ -113,19 +113,19 @@ Promise.allSettled(ameliaMapFiles.map(n=>img("../assets/game/phase2/amelia-sprit
 const revealDialogueFiles=["amelia-dialogue-00-neutra.png","amelia-dialogue-01-triste.png","amelia-dialogue-02-irritada.png","amelia-dialogue-03-surpresa.png","amelia-dialogue-04-assustada.png","amelia-dialogue-05-pensativa.png","amelia-dialogue-06-chorando.png","amelia-dialogue-07-determinada.png"];
 const transformFiles=["amelia-transform-00-dor-1.png","amelia-transform-01-dor-2.png","amelia-transform-02-dor-3.png","amelia-transform-03-dor-4.png","amelia-transform-04-sombra-1.png","amelia-transform-05-sombra-2.png","amelia-transform-06-sombra-3.png","amelia-transform-07-transformacao.png","amelia-transform-08-transicao-1.png","amelia-transform-09-transicao-2.png","amelia-transform-10-revelacao-1.png","amelia-transform-11-revelacao-2.png"];
 const shadowBossFiles=["amelia-shadow-boss-00-idle.png","amelia-shadow-boss-01-andando.png","amelia-shadow-boss-02-ataque-1.png","amelia-shadow-boss-03-ataque-2.png","amelia-shadow-boss-04-ataque-3.png","amelia-shadow-boss-05-magia.png","amelia-shadow-boss-06-dano-1.png","amelia-shadow-boss-07-dano-2.png","amelia-shadow-boss-08-transicao.png"];
-Promise.allSettled(revealDialogueFiles.map(f=>img("../assets/game/phase2/amelia-shadow/dialogue/"+f))).then(rs=>{
-  ameliaShadowAssets.dialogue=rs.map(r=>r.status==="fulfilled"?r.value:null);
-  if(ameliaShadowAssets.dialogue.some(Boolean))dialogue.setAssets({ameliaReveal:{frames:ameliaShadowAssets.dialogue}});
-});
-Promise.allSettled(transformFiles.map(f=>img("../assets/game/phase2/amelia-shadow/transformation/"+f))).then(rs=>ameliaShadowAssets.transform=rs.map(r=>r.status==="fulfilled"?r.value:null));
-Promise.allSettled(shadowBossFiles.map(f=>img("../assets/game/phase2/amelia-shadow/boss/"+f))).then(rs=>ameliaShadowAssets.boss=rs.map(r=>r.status==="fulfilled"?r.value:null));
+Promise.allSettled(transformFiles.map(f=>img("../assets/game/phase2/amelia-shadow/transformation/"+f)))
+  .then(rs=>ameliaShadowAssets.transform=rs.map(r=>r.status==="fulfilled"?r.value:null));
+Promise.allSettled(shadowBossFiles.map(f=>img("../assets/game/phase2/amelia-shadow/boss/"+f)))
+  .then(rs=>ameliaShadowAssets.boss=rs.map(r=>r.status==="fulfilled"?r.value:null));
 const jackPortraitFiles=["jack-00-neutral.png","jack-01-serious.png","jack-02-smirk.png","jack-03-surprised.png","jack-04-determined.png","jack-05-resolved.png"];
 const ameliaPortraitFiles=["amelia-00-neutral.png","amelia-01-cansada.png","amelia-02-triste.png","amelia-03-surpresa.png","amelia-04-irritada.png","amelia-05-culpada.png","amelia-06-chorando.png","amelia-07-abatida.png","amelia-08-assustada.png","amelia-09-sorriso-suave.png"];
 Promise.all([
   Promise.allSettled(jackPortraitFiles.map(f=>img("../assets/game/phase1/portraits-hd/"+f))),
-  Promise.allSettled(ameliaPortraitFiles.map(f=>img("../assets/game/phase2/portraits-hd/"+f)))
-]).then(([jackRs,ameliaRs])=>{
+  Promise.allSettled(ameliaPortraitFiles.map(f=>img("../assets/game/phase2/portraits-hd/"+f))),
+  Promise.allSettled(revealDialogueFiles.map(f=>img("../assets/game/phase2/amelia-shadow/dialogue/"+f)))
+]).then(([jackRs,ameliaRs,revealRs])=>{
   const normalAmelia=ameliaRs.map(r=>r.status==="fulfilled"?r.value:null);
+  ameliaShadowAssets.dialogue=revealRs.map(r=>r.status==="fulfilled"?r.value:null);
   dialogue.setAssets({
     jack:{frames:jackRs.map(r=>r.status==="fulfilled"?r.value:null)},
     amelia:{frames:normalAmelia},
