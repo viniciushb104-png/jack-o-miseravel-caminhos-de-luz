@@ -4,7 +4,7 @@ const ui={obj:document.querySelector("#objective strong"),gear:document.getEleme
 const input={left:false,right:false,run:false,jump:false,down:false};let running=false,last=performance.now(),cam=0,camY=0,jack=null,light=0,cool=0,section=-1;
 const dialogue=new window.DialogueSystem(document.getElementById("dialogue"));
 const interactPrompt=document.getElementById("interactPrompt");
-let ameliaMet=false, introLorePlayed=false, gearLore=[false,false,false], finalLorePlayed=false;
+let ameliaMet=false, introLorePlayed=false, gearLore=[false,false,false], finalLorePlayed=false,bossUnlocked=false,bossActive=false;const puzzles={sinos:false,janelas:false,sombras:false,torre:false};
 const lore={
 arrival:[
 {speaker:"JACK",portrait:"jack",expression:1,text:"Outra vila. Outra noite. E nenhum sinal do amanhecer."},
@@ -36,7 +36,11 @@ tower:[
 ]};
 function openDialogue(lines,onComplete){input.left=input.right=input.down=false;p.vx=0;dialogue.open(lines,onComplete)}
 function nearAmelia(){return p.x>2460&&p.x<2760&&p.y>390}
-function interact(){if(dialogue.active){dialogue.advance();return}if(nearAmelia()){ameliaMet=true;openDialogue(lore.amelia);return}if(p.x>7700&&p.y<0&&gears.every(g=>g.got)&&!finalLorePlayed){finalLorePlayed=true;openDialogue(lore.tower);}}
+function solvedCount(){return Object.values(puzzles).filter(Boolean).length}
+function allRequired(){return gears.every(g=>g.got)&&Object.values(puzzles).every(Boolean)}
+function interact(){if(dialogue.active){dialogue.advance();return}if(nearAmelia()){ameliaMet=true;openDialogue(lore.amelia);return}
+if(p.x>7680&&p.x<8060&&p.y<-350){if(!allRequired()){say("SELO DO TOPO: "+solvedCount()+"/4 enigmas · "+gears.filter(g=>g.got).length+"/3 engrenagens");return}
+if(!finalLorePlayed){finalLorePlayed=true;openDialogue(lore.tower,()=>{bossUnlocked=true;bossActive=true;say("O ÚLTIMO MINUTO DESPERTOU");});}}}
 const p={x:120,y:470,w:46,h:86,vx:0,vy:0,dir:1,on:false,coyote:0,buffer:0,anim:0,attack:0};
 const plats=[
 {x:0,y:590,w:1100,h:130},{x:1160,y:590,w:760,h:130},{x:1350,y:505,w:260,h:32},{x:1660,y:440,w:230,h:32},
@@ -51,13 +55,21 @@ const reveal=[{x:1010,y:505,w:150,h:28,t:0},{x:3030,y:475,w:120,h:28,t:0},{x:426
 const enemies=[{x:780,y:548,a:620,b:970,d:1},{x:2320,y:548,a:2070,b:2850,d:1},{x:4680,y:548,a:4480,b:5300,d:1},{x:6100,y:548,a:5750,b:6500,d:1}];
 const gears=[{x:1870,y:385,n:"ENGRENAGEM DAS HORAS",got:false},{x:4240,y:450,n:"ENGRENAGEM DOS MINUTOS",got:false},{x:6750,y:450,n:"ENGRENAGEM DO AMANHECER",got:false}];
 const bells=[{x:3320,y:545,id:0,on:false},{x:3650,y:545,id:1,on:false},{x:4020,y:545,id:2,on:false}];let bellStep=0;
+const windows=[{x:4620,y:390,on:false},{x:4910,y:320,on:false},{x:5200,y:390,on:false}];let windowStep=0;
+const shadowSeals=[{x:5850,y:455,on:false},{x:6250,y:375,on:false},{x:6640,y:455,on:false}];let shadowStep=0;
+const towerSeals=[{x:7850,y:55,on:false},{x:8350,y:-185,on:false}];let towerStep=0;
 const sections=[{x:0,n:"ESTRADA DAS LANTERNAS MORTAS"},{x:1100,n:"VILA BAIXA"},{x:1980,n:"PRAÇA DAS 4:13"},{x:3150,n:"DISTRITO DOS SINOS"},{x:4380,n:"JANELAS APAGADAS"},{x:5600,n:"CAMINHO DA TORRE"},{x:7200,n:"A TORRE DAS 4:13"}];
 function img(src){return new Promise((r,j)=>{const i=new Image;i.onload=()=>r(i);i.onerror=j;i.src=src+"?v=p2proto1"})}
 img("../assets/game/phase1/sprites-hd/jack-atlas-hd.png").then(i=>jack=i).catch(()=>{});
 Promise.allSettled(["jack-00-neutral.png","jack-01-serious.png","jack-02-smirk.png","jack-03-surprised.png","jack-04-determined.png","jack-05-resolved.png"].map(f=>img("../assets/game/phase1/portraits-hd/"+f))).then(rs=>dialogue.setAssets({jack:{frames:rs.map(r=>r.status==="fulfilled"?r.value:null)}}));
 function say(s){ui.msg.textContent=s;ui.msg.classList.add("show");clearTimeout(say.t);say.t=setTimeout(()=>ui.msg.classList.remove("show"),1800)}
 function banner(s){ui.banner.textContent=s;ui.banner.classList.add("show");clearTimeout(banner.t);banner.t=setTimeout(()=>ui.banner.classList.remove("show"),1500)}
-function lightUse(){if(cool>0)return;cool=.55;light=.48;p.attack=.48;reveal.forEach(q=>{if(Math.abs((q.x+q.w/2)-(p.x+p.w/2))<310)q.t=3});bells.forEach(b=>{if(Math.abs(b.x-p.x)<120){const order=[1,0,2];if(b.id===order[bellStep]){b.on=true;bellStep++;say("Sino correto: "+bellStep+"/3");if(bellStep===3)say("A sequência abriu o caminho.")}else{bells.forEach(z=>z.on=false);bellStep=0;say("A sequência se perdeu no silêncio...")}}});enemies.forEach(e=>{if(Math.abs(e.x-p.x)<180)e.dead=true})}
+function lightUse(){if(cool>0)return;cool=.55;light=.48;p.attack=.48;reveal.forEach(q=>{if(Math.abs((q.x+q.w/2)-(p.x+p.w/2))<310)q.t=3});bells.forEach(b=>{if(Math.abs(b.x-p.x)<120){const order=[1,0,2];if(b.id===order[bellStep]){b.on=true;bellStep++;say("Sino correto: "+bellStep+"/3");if(bellStep===3){puzzles.sinos=true;say("ENIGMA DOS SINOS CONCLUÍDO") }}else{bells.forEach(z=>z.on=false);bellStep=0;say("A sequência se perdeu no silêncio...")}}});
+const touchSeq=(arr,stepName,order,finish)=>{for(const z of arr){if(Math.abs(z.x-p.x)<125&&Math.abs(z.y-p.y)<145&&!z.on){let step=stepName==="window"?windowStep:stepName==="shadow"?shadowStep:towerStep;if(z===arr[order[step]]){z.on=true;if(stepName==="window")windowStep++;else if(stepName==="shadow")shadowStep++;else towerStep++;const ns=step+1;if(ns===order.length)finish();else say("Selo correto: "+ns+"/"+order.length)}else{arr.forEach(a=>a.on=false);if(stepName==="window")windowStep=0;else if(stepName==="shadow")shadowStep=0;else towerStep=0;say("A ordem se desfez...")}}}};
+touchSeq(windows,"window",[0,2,1],()=>{puzzles.janelas=true;say("ENIGMA DAS JANELAS CONCLUÍDO")});
+touchSeq(shadowSeals,"shadow",[1,0,2],()=>{puzzles.sombras=true;say("ENIGMA DAS SOMBRAS CONCLUÍDO")});
+touchSeq(towerSeals,"tower",[0,1],()=>{puzzles.torre=true;say("MECANISMO DA TORRE CONCLUÍDO")});
+enemies.forEach(e=>{if(Math.abs(e.x-p.x)<180)e.dead=true})}
 function bind(id,key){const b=document.getElementById(id);["pointerdown","pointerup","pointercancel","pointerleave"].forEach(ev=>b.addEventListener(ev,()=>input[key]=ev==="pointerdown"))}
 bind("leftBtn","left");bind("rightBtn","right");bind("downBtn","down");document.getElementById("jumpBtn").addEventListener("pointerdown",()=>input.jump=true);document.getElementById("lightBtn").addEventListener("pointerdown",lightUse);document.getElementById("interactBtn").addEventListener("pointerdown",interact);interactPrompt.addEventListener("click",interact);
 addEventListener("keydown",e=>{if(["ArrowLeft","a","A"].includes(e.key))input.left=true;if(["ArrowRight","d","D"].includes(e.key))input.right=true;if(["ArrowDown","s","S"].includes(e.key))input.down=true;if(e.key==="Shift")input.run=true;if(e.code==="Space"){input.jump=true;e.preventDefault()}if(["f","F"].includes(e.key))lightUse();if(["e","E"].includes(e.key))interact()});
@@ -70,9 +82,9 @@ const solids=plats.concat(reveal.filter(q=>q.t>0));for(const q of solids){if(p.x
 if(p.y>760){p.x=Math.max(80,p.x-380);p.y=430;p.vy=0;say("Jack retorna à última rua segura.");}
 enemies.forEach(e=>{if(e.dead)return;e.x+=e.d*70*dt;if(e.x<e.a||e.x>e.b)e.d*=-1});
 gears.forEach((g,gi)=>{if(!g.got&&Math.abs(g.x-p.x)<70&&Math.abs(g.y-p.y)<120){g.got=true;say(g.n+" RECUPERADA");ui.gear.textContent=gears.filter(z=>z.got).length+"/3";if(!gearLore[gi]){gearLore[gi]=true;setTimeout(()=>openDialogue(lore.gears[gi]),250)}}});
-interactPrompt.hidden=!(nearAmelia()||(p.x>7700&&p.y<0&&gears.every(g=>g.got)&&!finalLorePlayed));
+interactPrompt.hidden=!(nearAmelia()||(p.x>7680&&p.x<8060&&p.y<-350&&!bossActive));
 let si=0;for(let i=0;i<sections.length;i++)if(p.x>=sections[i].x)si=i;if(si!==section){section=si;banner(sections[si].n)}
-ui.obj.textContent=!ameliaMet&&p.x<3150?"Encontre a relojoeira da praça e descubra por que tudo parou às 4:13.":(gears.filter(z=>z.got).length<3?"Recupere as três engrenagens. A Luz revela caminhos que a vila esconde.":"As três engrenagens respondem. Alcance a Torre do Relógio.");
+ui.obj.textContent=!ameliaMet&&p.x<3150?"Encontre a relojoeira da praça e descubra por que tudo parou às 4:13.":(!allRequired()?"Engrenagens "+gears.filter(z=>z.got).length+"/3 · Enigmas "+solvedCount()+"/4 — use a Luz e observe as pistas.":(!bossActive?"Tudo foi resolvido. Suba ao selo no topo da Torre.":"O ÚLTIMO MINUTO — protótipo da arena final desbloqueado."));
 cam+=(Math.max(0,Math.min(WORLD-W,p.x-W*.36))-cam)*Math.min(1,dt*5);camY+=((p.x>7150?Math.min(0,p.y-390):0)-camY)*Math.min(1,dt*4);p.anim+=dt;}
 function drawJack(){const py=p.y-camY;if(!jack){x.fillStyle="#eee";x.fillRect(p.x-cam,py,p.w,p.h);return}const A=window.JACK_ANIMATIONS,arr=p.attack>0?A.animations.attack:(!p.on?(p.vy<-80?A.animations.jumpRise:A.animations.jumpFall):(Math.abs(p.vx)>35?(input.run?A.animations.run:A.animations.walk):A.animations.idle));const fps=input.run?12:9,idx=arr[Math.floor(p.anim*fps)%arr.length],sx=(idx%8)*320,sy=Math.floor(idx/8)*320,rw=190,rh=190,dx=p.x-cam+p.w/2-rw/2,dy=py-132;if(p.dir<0){x.save();x.translate(dx+rw,0);x.scale(-1,1);x.drawImage(jack,sx,sy,320,320,0,dy,rw,rh);x.restore()}else x.drawImage(jack,sx,sy,320,320,dx,dy,rw,rh)}
 function draw(){const gr=x.createLinearGradient(0,0,0,H);gr.addColorStop(0,"#061024");gr.addColorStop(.65,"#17132b");gr.addColorStop(1,"#27131d");x.fillStyle=gr;x.fillRect(0,0,W,H);x.fillStyle="#e7d4b0";x.globalAlpha=.35;for(let i=0;i<18;i++){const px=((i*431-cam*.12)%1500+1500)%1500;x.fillRect(px,80+(i*71)%220,2,2)}x.globalAlpha=1;
@@ -83,6 +95,12 @@ for(let ty=-440;ty<520;ty+=160){x.strokeStyle="#38291f";x.lineWidth=5;x.beginPat
 x.fillStyle="#d0a65b";x.font="bold 26px Georgia";x.fillText("4:13",7910,-455);
 for(const q of plats){x.fillStyle=q.y<560?"#4a3b38":"#30252a";x.fillRect(q.x,q.y,q.w,q.h);x.fillStyle="#75604b";x.fillRect(q.x,q.y,q.w,7)}
 for(const q of reveal){if(q.t>0){x.globalAlpha=Math.min(1,q.t*2);x.fillStyle="#b7eaff";x.fillRect(q.x,q.y,q.w,q.h);x.globalAlpha=1}}
+// Marcadores dos enigmas obrigatórios.
+for(const z of windows){x.fillStyle=z.on?"#ffe7a1":"#402d45";x.fillRect(z.x,z.y,44,58);x.strokeStyle="#c88b35";x.strokeRect(z.x,z.y,44,58)}
+for(const z of shadowSeals){x.fillStyle=z.on?"#b9eaff":"#171b2c";x.beginPath();x.arc(z.x,z.y,20,0,Math.PI*2);x.fill();x.strokeStyle="#78a5bb";x.stroke()}
+for(const z of towerSeals){x.fillStyle=z.on?"#fff0a8":"#512c65";x.beginPath();x.arc(z.x,z.y,22,0,Math.PI*2);x.fill();x.strokeStyle="#d0a65b";x.stroke()}
+x.fillStyle=allRequired()?"#e9c35e":"#4d344d";x.fillRect(7725,-480,300,70);x.strokeStyle="#d0a65b";x.lineWidth=4;x.strokeRect(7725,-480,300,70);x.fillStyle="#fff0b0";x.font="bold 14px Georgia";x.fillText(allRequired()?"SELO ABERTO — AÇÃO":"SELO FECHADO — "+solvedCount()+"/4",7780,-438);
+if(bossActive){x.fillStyle="#1a0a18";x.fillRect(7550,-650,900,170);x.strokeStyle="#e19a36";x.lineWidth=6;x.strokeRect(7550,-650,900,170);x.fillStyle="#f0b04c";x.font="bold 30px Georgia";x.fillText("O ÚLTIMO MINUTO",7850,-560);x.fillStyle="#c9a56b";x.fillRect(7730,-525,540,12);x.fillStyle="#ffdf83";x.fillRect(7730,-525,540,12)}
 // Amélia provisória na praça: marcador visual até criarmos o sprite oficial.
 x.save();x.translate(2620,505);x.fillStyle="#39273d";x.fillRect(-18,0,36,78);x.fillStyle="#d8c3ad";x.beginPath();x.arc(0,-13,19,0,Math.PI*2);x.fill();x.fillStyle="#b7a8b8";x.fillRect(-18,-30,36,8);x.fillStyle="#d9b65c";x.fillRect(16,22,24,6);x.fillStyle="#f0cf76";x.font="12px Georgia";x.fillText("AMÉLIA",-30,100);x.restore();
 for(const e of enemies){if(e.dead)continue;x.fillStyle="#d56a20";x.beginPath();x.arc(e.x,e.y,24,0,Math.PI*2);x.fill();x.fillStyle="#ffe099";x.fillRect(e.x-11,e.y-5,6,6);x.fillRect(e.x+5,e.y-5,6,6)}
@@ -90,6 +108,7 @@ for(const b of bells){x.fillStyle=b.on?"#ffe099":"#8d693d";x.beginPath();x.moveT
 for(const g of gears){if(g.got)continue;x.save();x.translate(g.x,g.y);x.rotate(p.anim);x.strokeStyle="#ffd36b";x.lineWidth=8;x.beginPath();x.arc(0,0,24,0,Math.PI*2);x.stroke();for(let i=0;i<8;i++){x.rotate(Math.PI/4);x.fillStyle="#ffd36b";x.fillRect(20,-5,13,10)}x.restore()}
 x.restore();drawJack();if(light>0){x.globalAlpha=Math.min(1,light*4);const rg=x.createRadialGradient(p.x-cam+p.w/2,p.y-camY+25,10,p.x-cam+p.w/2,p.y-camY+25,220);rg.addColorStop(0,"#fff6b8aa");rg.addColorStop(1,"#9beaff00");x.fillStyle=rg;x.beginPath();x.arc(p.x-cam+p.w/2,p.y-camY+25,220,0,Math.PI*2);x.fill();x.globalAlpha=1}
 x.fillStyle="#ffe099";x.font="15px Georgia";x.fillText("4:13",W-62,H-24);
-if(p.x>7150){x.fillStyle="#ffe099";x.font="13px Georgia";x.fillText("SUBIDA DA TORRE — siga as plataformas ao redor do relógio",28,H-24)}}
+if(p.x>7150){x.fillStyle="#ffe099";x.font="13px Georgia";x.fillText("SUBIDA DA TORRE — siga as plataformas ao redor do relógio",28,H-24)}
+x.fillStyle="#ffe099";x.font="12px Georgia";x.fillText("ENIGMAS "+solvedCount()+"/4",W-180,H-24)}
 function loop(t){if(!running)return;const dt=Math.min(.033,(t-last)/1000);last=t;update(dt);draw();requestAnimationFrame(loop)}draw();
 })();
