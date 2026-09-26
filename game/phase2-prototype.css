@@ -274,3 +274,20 @@
     height:12.8%;
   }
 }
+
+
+/* Microajuste: retrato no mesmo lugar, apenas menor */
+.dialogue-portrait{
+  background-size:90% auto;
+}
+.dialogue-portrait.is-hd-portrait{
+  background-size:90% auto!important;
+}
+@media(max-width:700px){
+  .dialogue-portrait{
+    background-size:90% auto;
+  }
+  .dialogue-portrait.is-hd-portrait{
+    background-size:90% auto!important;
+  }
+}
