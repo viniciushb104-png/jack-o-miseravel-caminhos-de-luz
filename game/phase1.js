@@ -210,7 +210,7 @@
       img.onload = () => resolve(img);
       img.onerror = () => reject(new Error("Falha ao carregar " + path));
       const sep = path.includes("?") ? "&" : "?";
-      img.src = path + sep + "v=phase1-assets-22";
+      img.src = path + sep + "v=phase1-assets-23";
     });
   }
 
@@ -294,7 +294,12 @@
     // Retratos da Guardiã seguem a mesma grade 3x2 usada por Jack e Eleanor,
     // permitindo trocar a expressão automaticamente em cada fala.
     const guardianPortraitResult = await Promise.allSettled([
-      imageFromChunks(["../assets/portraits/guardian/data/portraits.1.b64"])
+      imageFromChunks([
+        "../assets/portraits/guardian/data/portraits.1.b64",
+        "../assets/portraits/guardian/data/portraits.2.b64",
+        "../assets/portraits/guardian/data/portraits.3.b64",
+        "../assets/portraits/guardian/data/portraits.4.b64"
+      ])
     ]);
     if (guardianPortraitResult[0].status === "fulfilled") {
       guardianPortraits = guardianPortraitResult[0].value;
