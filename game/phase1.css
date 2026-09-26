@@ -113,3 +113,30 @@ button,a{font-family:inherit}
    Os sprites continuam sendo controlados dentro do canvas, sem forçar o fundo
    e as plataformas a virarem blocos quando a tela é maior que 1280x720. */
 #game{filter:saturate(.99) contrast(1.01);backface-visibility:hidden;transform:translateZ(0)}
+
+
+/* Música da fase */
+.hud-audio{
+  pointer-events:auto;
+  min-width:74px;
+  min-height:45px;
+  border:2px solid #9b6016;
+  background:linear-gradient(#0b1d39e8,#061126ee);
+  box-shadow:inset 0 0 0 2px #211205;
+  color:var(--gold2);
+  cursor:pointer;
+  padding:4px 8px;
+  text-shadow:0 2px 2px #000;
+}
+.hud-audio b{display:block;font-size:1rem;line-height:1;color:#ffd36b}
+.hud-audio span{display:block;margin-top:3px;font-size:.42rem;letter-spacing:.11em;color:#baa77c;white-space:nowrap}
+.hud-audio:hover,.hud-audio:focus-visible{filter:brightness(1.18);outline:1px solid #ffd36b;outline-offset:2px}
+.hud-audio[aria-pressed="true"]{filter:saturate(.55);opacity:.78}
+@media (pointer:coarse),(max-width:900px){
+  .hud-audio{min-width:48px;min-height:40px;padding:3px 5px}
+  .hud-audio span{font-size:.34rem}
+}
+@media (max-width:650px){
+  .hud-audio{min-width:42px}
+  .hud-audio span{display:none}
+}
