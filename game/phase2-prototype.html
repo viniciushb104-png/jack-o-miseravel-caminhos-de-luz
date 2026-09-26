@@ -1,21 +1,12 @@
 <!doctype html>
-<html lang="pt-BR">
-<head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
-<meta name="theme-color" content="#050914">
-<title>Halloween II — A Vila sem Amanhecer · Protótipo</title>
-<link rel="stylesheet" href="phase2-prototype.css?v=1">
-</head>
-<body>
-<main class="game-page">
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"><meta name="theme-color" content="#050914"><title>Halloween II — A Vila sem Amanhecer · Protótipo</title><link rel="stylesheet" href="phase2-prototype.css?v=2"></head>
+<body><main class="game-page">
 <canvas id="game" width="1280" height="720" aria-label="Protótipo jogável da Fase 2"></canvas>
 <header class="hud"><a class="hud-btn" href="../index.html#fases">‹ MAPA</a><div class="hud-title"><small>HALLOWEEN II · PROTÓTIPO</small><strong>A VILA SEM AMANHECER</strong></div><div class="hud-box"><span>ENGRENAGENS</span><b id="gearValue">0/3</b></div></header>
-<div id="objective" class="objective"><small>OBJETIVO</small><strong>Atravesse a vila e teste os novos enigmas.</strong></div>
-<div id="sectionBanner" class="section-banner"></div>
-<section id="intro" class="intro-card"><p>HALLOWEEN II · PROTÓTIPO</p><h1>A VILA SEM<br>AMANHECER</h1><span>A mesma plataforma da Fase 1. Agora a Lanterna também revela caminhos e resolve enigmas.</span><button id="startGame">✦ TESTAR FASE 2</button></section>
+<div id="objective" class="objective"><small>OBJETIVO</small><strong>Siga pela estrada e descubra por que a vila nunca amanhece.</strong></div><div id="sectionBanner" class="section-banner"></div>
+<section id="intro" class="intro-card"><p>HALLOWEEN II · PROTÓTIPO</p><h1>A VILA SEM<br>AMANHECER</h1><span>Todos os relógios marcam 4:13. Alguém ainda acredita que pode consertar aquela noite.</span><button id="startGame">✦ ENTRAR NA VILA</button></section>
 <div id="message" class="message"></div>
-<div class="mobile-controls"><div class="dpad"><button id="leftBtn">◀</button><button id="downBtn">▼</button><button id="rightBtn">▶</button></div><div class="actions"><button id="lightBtn">✦<small>LUZ</small></button><button id="jumpBtn">▲<small>PULAR</small></button></div></div>
-</main>
-<script src="data/phase1/jack-animations.js?v=1"></script>
-<script src="phase2-prototype.js?v=1"></script>
-</body></html>
+<button id="interactPrompt" class="interact-prompt" type="button" hidden><span>E</span> CONVERSAR</button>
+<section id="dialogue" class="dialogue" hidden aria-live="polite"><div class="dialogue-shell"><div class="dialogue-portrait" data-dialogue-portrait aria-hidden="true"></div><div class="dialogue-main"><div class="dialogue-name" data-dialogue-name></div><p class="dialogue-text" data-dialogue-text></p></div><button class="dialogue-next" data-dialogue-next type="button" aria-label="Próxima fala">▶</button></div></section>
+<div class="mobile-controls"><div class="dpad"><button id="leftBtn">◀</button><button id="downBtn">▼</button><button id="rightBtn">▶</button></div><div class="actions"><button id="lightBtn">✦<small>LUZ</small></button><button id="interactBtn">●<small>AÇÃO</small></button><button id="jumpBtn">▲<small>PULAR</small></button></div></div>
+</main><script src="engine/dialogue.js?v=6"></script><script src="data/phase1/jack-animations.js?v=1"></script><script src="phase2-prototype.js?v=2"></script></body></html>
