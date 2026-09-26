@@ -85,6 +85,16 @@
     boss:null,
     dialogueFrame:null
   };
+
+  // Fundos HD da fase. Cada ambiente é um PNG independente para preservar
+  // a arte original e permitir que a paisagem mude conforme Jack avança.
+  const sceneBackgrounds = {
+    village:null,
+    forest:null,
+    memoryBridge:null,
+    bellTower:null
+  };
+  const BACKGROUND_BLEND = 300;
   let lightPulse = 0, lightCooldown = 0, shake = 0, sectionIndex = -1;
   let checkpointReached = localStorage.getItem(story.states.checkpoint) === "bridge";
   let metEleanor = localStorage.getItem(story.states.metEleanor) === "1";
@@ -175,7 +185,7 @@
       img.onload = () => resolve(img);
       img.onerror = () => reject(new Error("Falha ao carregar " + path));
       const sep = path.includes("?") ? "&" : "?";
-      img.src = path + sep + "v=hd3";
+      img.src = path + sep + "v=phase1-bg-scenes-1";
     });
   }
 
@@ -185,6 +195,18 @@
       "../assets/sprites/jack/data/jack-mini.2.b64",
       "../assets/sprites/jack/data/jack-mini.3.b64"
     ]);
+
+    const backgroundResults = await Promise.allSettled([
+      imageFromFile("../assets/game/phase1/backgrounds/bg-village.png"),
+      imageFromFile("../assets/game/phase1/backgrounds/bg-forest.png"),
+      imageFromFile("../assets/game/phase1/backgrounds/bg-memory-bridge.png"),
+      imageFromFile("../assets/game/phase1/backgrounds/bg-bell-tower.png")
+    ]);
+    const backgroundKeys = ["village","forest","memoryBridge","bellTower"];
+    backgroundResults.forEach((result,index) => {
+      if(result.status === "fulfilled") sceneBackgrounds[backgroundKeys[index]] = result.value;
+      else console.warn("[Fase 1] fundo não carregado:", backgroundKeys[index], result.reason);
+    });
 
     const optional = await Promise.allSettled([
       imageFromChunks(["../assets/portraits/jack/data/portraits.1.b64","../assets/portraits/jack/data/portraits.2.b64"]),
@@ -235,7 +257,9 @@
     }
 
     const loaded = Object.entries(art).filter(([,img]) => !!img).map(([name]) => name);
+    const loadedBackgrounds = Object.entries(sceneBackgrounds).filter(([,img]) => !!img).map(([name]) => name);
     console.info("[Fase 1] assets ilustrados carregados:", loaded.join(", "));
+    console.info("[Fase 1] cenários HD carregados:", loadedBackgrounds.join(", "));
   }
 
   function drawAtlasCell(img, cols, rows, col, row, dx, dy, dw, dh, flip=false, alpha=1){
@@ -599,24 +623,81 @@
   /* ---------- PIXEL ART / CENÁRIOS ---------- */
   const stars=Array.from({length:105},(_,i)=>({x:(i*131+37)%W,y:30+(i*73)%300,r:i%13===0?2:1,a:.35+(i%7)*.07}));
 
-  function sky(){
-    const sec=sectionForX(player.x);
+  function drawSceneBackground(img, alpha=1){
+    if(!img) return false;
 
-    if(art.background){
-      // A arte HQ é uma pintura completa, não um tile repetível. Mantê-la inteira
-      // evita costuras, repetição do castelo e deformação visual durante a câmera.
-      ctx.save();
-      ctx.imageSmoothingEnabled=false;
-      ctx.drawImage(art.background,0,0,W,H);
-      ctx.restore();
+    const iw=img.naturalWidth||img.width;
+    const ih=img.naturalHeight||img.height;
+    if(!iw||!ih) return false;
+
+    // "Cover" pela área de origem: nunca estica a imagem fora da proporção.
+    // Como os PNGs são maiores que o canvas, o jogo só reduz a arte, evitando
+    // o antigo aspecto granulado/derretido causado por ampliar imagens pequenas.
+    const scale=Math.max(W/iw,H/ih);
+    const sw=W/scale;
+    const sh=H/scale;
+    const sx=(iw-sw)*.5;
+    const sy=(ih-sh)*.5;
+
+    ctx.save();
+    ctx.globalAlpha*=alpha;
+    ctx.imageSmoothingEnabled=true;
+    ctx.imageSmoothingQuality="high";
+    ctx.drawImage(img,sx,sy,sw,sh,0,0,W,H);
+    ctx.restore();
+    return true;
+  }
+
+  function backgroundStateForX(x){
+    let index=sectionForX(x);
+    if(index<0) index=0;
+
+    const current=story.sections[index] || story.sections[0];
+    const key=current.background || "village";
+    let nextKey=null, mix=0;
+
+    // Só cria transição quando a próxima seção realmente muda de ambiente.
+    const next=story.sections[index+1];
+    if(next && next.background && next.background!==key){
+      const start=current.end-BACKGROUND_BLEND;
+      if(x>start){
+        const t=Math.max(0,Math.min(1,(x-start)/BACKGROUND_BLEND));
+        // smoothstep: troca cinematográfica sem uma faixa visível de corte.
+        mix=t*t*(3-2*t);
+        nextKey=next.background;
+      }
+    }
+
+    return {key,nextKey,mix,index};
+  }
+
+  function sky(){
+    const state=backgroundStateForX(cameraX+W*.5);
+    const current=sceneBackgrounds[state.key] || art.background;
+    const next=state.nextKey ? (sceneBackgrounds[state.nextKey] || null) : null;
+
+    if(current){
+      drawSceneBackground(current,1);
+      if(next && state.mix>0) drawSceneBackground(next,state.mix);
+
+      // Color grading leve por ambiente, sem esconder os detalhes dos PNGs.
+      const tone={
+        village:"#06112612",
+        forest:"#03101f22",
+        memoryBridge:"#06172a14",
+        bellTower:"#140a281f"
+      }[state.nextKey && state.mix>.55 ? state.nextKey : state.key] || "#04102812";
+
       const tint=ctx.createLinearGradient(0,0,0,H);
-      tint.addColorStop(0,sec>=4?"#12092733":"#04102818");
-      tint.addColorStop(1,"#02040a66");
+      tint.addColorStop(0,tone);
+      tint.addColorStop(1,"#02040a42");
       ctx.fillStyle=tint;
       ctx.fillRect(0,0,W,H);
       return;
     }
 
+    // Fallback procedural caso alguma imagem seja removida do repositório.
+    const sec=sectionForX(player.x);
     const colors=sec===5?["#030716","#151331"]:sec>=4?["#07091c","#261630"]:["#02091d","#10254b"];
     const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,colors[0]);g.addColorStop(.7,colors[1]);g.addColorStop(1,"#111323");
     ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
