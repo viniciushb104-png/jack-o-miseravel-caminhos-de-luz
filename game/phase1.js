@@ -12,13 +12,22 @@
   const dialogueRoot = document.getElementById("dialogue");
   const dialogue = new window.DialogueSystem(dialogueRoot);
   const phaseAudio = new window.GameAudio({
-    musicSrc:"../assets/audio/phase1/phase1-theme.mp3",
+    tracks:{
+      theme:"../assets/audio/phase1/phase1-theme.mp3",
+      boss:"../assets/audio/phase1/phase1-boss.mp3"
+    },
+    trackLabels:{
+      theme:"As Casas dos Perdidos",
+      boss:"A Guardiã da Última Lanterna"
+    },
+    initialTrack:"theme",
     storagePrefix:"jack-phase1-audio",
     volume:0.58,
     duckRatio:0.30
   });
   phaseAudio.bindToggle(document.getElementById("musicToggle"));
   phaseAudio.bindDialogue(dialogueRoot);
+  phaseAudio.bindNowPlaying(document.getElementById("musicBanner"));
 
   const ui = {
     objective: document.querySelector("#objective strong"),
@@ -407,6 +416,7 @@
     ui.bossHud.hidden=true;
     localStorage.setItem("jack-light-level","03");
     syncHud();
+    phaseAudio.switchTrack("theme", { fadeOut:1100, fadeIn:1500 });
     openDialogue(dialogues.bossDefeated, () => {
       setTimeout(() => startFinalSequence(), 350);
     });
@@ -497,7 +507,12 @@
     if(memoryCount()>=5 && player.x>9000 && !boss.started && !boss.defeated && !dialogue.active){
       boss.started=true;
       player.vx=0;
-      openDialogue(dialogues.preBoss, () => { boss.started=true; syncHud(); });
+      phaseAudio.switchTrack("boss", { fadeOut:900, fadeIn:1050 });
+      openDialogue(dialogues.preBoss, () => {
+        boss.started=true;
+        syncHud();
+        showMessage("♫ A Guardiã da Última Lanterna");
+      });
     }
 
     const target=Math.max(0,Math.min(WORLD-W,player.x-W*.39));
