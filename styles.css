@@ -320,3 +320,176 @@ button:focus-visible{outline:3px solid #fff3b0;outline-offset:4px}
   *{scroll-behavior:auto!important;transition:none!important}
   .hero-video{display:none}
 }
+
+/* Videoteca — Músicas & Musical */
+.musical-screen{
+  background:
+    radial-gradient(circle at 50% 18%,rgba(119,58,10,.15),transparent 32rem),
+    linear-gradient(rgba(4,8,15,.93),rgba(4,8,15,.985)),
+    url("assets/images/menu/menu-poster.webp") center/cover fixed;
+}
+.musical-intro{margin-bottom:2.2rem}
+.video-library{
+  width:min(1180px,100%);
+  margin:0 auto;
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:1.35rem;
+}
+.musical-video-card{
+  position:relative;
+  min-width:0;
+  background:linear-gradient(180deg,#101724f2,#070b13f7);
+  border:1px solid #d89b2f55;
+  box-shadow:
+    0 0 0 2px #160d05,
+    0 0 0 4px #68410f,
+    0 18px 36px #0009;
+  transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;
+}
+.musical-video-card:hover{
+  transform:translateY(-4px);
+  border-color:#ffc35488;
+  box-shadow:0 0 0 2px #1d1005,0 0 0 4px #a26b18,0 0 26px #e8881824,0 22px 42px #000a;
+}
+.video-frame{
+  position:relative;
+  aspect-ratio:16/9;
+  overflow:hidden;
+  background:#03060b;
+  border-bottom:1px solid #d89b2f55;
+  isolation:isolate;
+}
+.video-frame::before,.video-frame::after{
+  content:"✦";
+  position:absolute;
+  z-index:5;
+  top:8px;
+  color:#e5a72e;
+  font-size:.68rem;
+  text-shadow:0 0 8px #ff8a1e;
+  pointer-events:none;
+}
+.video-frame::before{left:10px}
+.video-frame::after{right:10px}
+.video-frame img,.video-frame iframe{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  border:0;
+}
+.video-frame img{
+  object-fit:cover;
+  transform:scale(1.01);
+  filter:saturate(.82) contrast(1.08) brightness(.72);
+  transition:transform .35s ease,filter .35s ease;
+}
+.musical-video-card:hover .video-frame img{
+  transform:scale(1.045);
+  filter:saturate(.96) contrast(1.08) brightness(.82);
+}
+.video-vignette{
+  position:absolute;
+  z-index:2;
+  inset:0;
+  background:
+    radial-gradient(circle at 50% 50%,transparent 32%,#02050a99 100%),
+    linear-gradient(180deg,#02040a22,#02040a66);
+  pointer-events:none;
+}
+.video-play{
+  position:absolute;
+  z-index:4;
+  inset:0;
+  width:100%;
+  border:0;
+  cursor:pointer;
+  color:#ffe4a2;
+  background:transparent;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:.28rem;
+  text-shadow:0 2px 3px #000,0 0 12px #000;
+}
+.play-lantern{
+  width:66px;
+  height:66px;
+  display:grid;
+  place-items:center;
+  padding-left:5px;
+  margin-bottom:.3rem;
+  border:2px solid #ffc65b;
+  border-radius:50%;
+  color:#fff0bd;
+  background:radial-gradient(circle,#9b4008,#3b1604 68%,#130904);
+  box-shadow:inset 0 0 0 4px #3a1b07,0 0 0 2px #261306,0 0 30px #ff8c2c88;
+  font-size:1.5rem;
+  transition:transform .16s ease,box-shadow .16s ease;
+}
+.video-play:hover .play-lantern,.video-play:focus-visible .play-lantern{
+  transform:scale(1.08);
+  box-shadow:inset 0 0 0 4px #4c2308,0 0 0 2px #2d1607,0 0 42px #ffa034c4;
+}
+.video-play strong{font-size:.72rem;letter-spacing:.16em}
+.video-play small{font-size:.66rem;color:#d2b778;letter-spacing:.06em}
+.video-frame.is-playing::before,.video-frame.is-playing::after,
+.video-frame.is-playing .video-vignette,
+.video-frame.is-playing .video-play,
+.video-frame.is-playing > img{display:none}
+.video-frame.is-playing{
+  box-shadow:inset 0 0 30px #ff9d2d22;
+}
+.video-caption{
+  min-height:86px;
+  display:grid;
+  grid-template-columns:54px 1fr;
+  gap:.8rem;
+  align-items:center;
+  padding:.9rem 1rem;
+}
+.video-number{
+  width:46px;
+  height:46px;
+  display:grid;
+  place-items:center;
+  border:1px solid #c68b29;
+  color:#ffd775;
+  background:#100b08;
+  font-weight:700;
+  box-shadow:inset 0 0 12px #d16c0a18;
+}
+.video-caption small{
+  display:block;
+  margin-bottom:.22rem;
+  color:#b27d2a;
+  font-size:.58rem;
+  letter-spacing:.14em;
+}
+.video-caption h3{
+  margin:0;
+  color:#f2dca7;
+  font-size:1.05rem;
+  font-weight:600;
+}
+.video-library-note{
+  width:min(1180px,100%);
+  margin:1.5rem auto 0;
+  text-align:center;
+  color:#9f8d6a;
+  font-size:.78rem;
+  letter-spacing:.03em;
+}
+@media (max-width:980px){
+  .video-library{grid-template-columns:1fr;max-width:760px}
+  .video-caption{min-height:72px}
+}
+@media (max-width:760px) and (orientation:portrait){
+  .musical-intro{margin-bottom:1.5rem}
+  .video-library{gap:1.2rem}
+  .play-lantern{width:58px;height:58px;font-size:1.25rem}
+  .video-caption{grid-template-columns:46px 1fr;padding:.75rem}
+  .video-number{width:40px;height:40px}
+}
