@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#07101f">
   <meta name="description" content="Jack o Miserável — Caminhos de Luz. Uma aventura narrativa de Halloween em estética 16-bit.">
   <title>Jack o Miserável — Caminhos de Luz</title>
-  <link rel="stylesheet" href="styles.css?v=2">
+  <link rel="stylesheet" href="styles.css?v=3">
 </head>
 <body>
   <div class="scanlines" aria-hidden="true"></div>
@@ -178,6 +178,77 @@
       </div>
 
       <p class="video-library-note">✦ Ao reproduzir um vídeo, os outros permanecem em silêncio. Voltar ao menu encerra a reprodução.</p>
+
+      <section class="soundtrack-vault" aria-labelledby="soundtrackTitle">
+        <div class="soundtrack-heading">
+          <div>
+            <p class="eyebrow">TRILHA DESBLOQUEÁVEL</p>
+            <h3 id="soundtrackTitle">Fonógrafo da Lanterna</h3>
+            <p>As músicas de cada Halloween entram para sua coleção quando Jack conclui a fase correspondente.</p>
+          </div>
+          <div class="soundtrack-progress" aria-live="polite">
+            <span>FAIXAS ENCONTRADAS</span>
+            <strong id="soundtrackUnlocked">0/2</strong>
+          </div>
+        </div>
+
+        <div class="soundtrack-player" id="soundtrackPlayer">
+          <div class="soundtrack-now">
+            <div class="soundtrack-disc" id="soundtrackDisc" aria-hidden="true"><span>♫</span></div>
+            <div class="soundtrack-meta">
+              <small id="soundtrackChapter">ARQUIVO MUSICAL</small>
+              <strong id="soundtrackName">Nenhuma faixa selecionada</strong>
+              <span id="soundtrackStatus">Conclua um Halloween para acender o fonógrafo.</span>
+            </div>
+          </div>
+
+          <div class="soundtrack-controls">
+            <button id="soundtrackPrev" class="soundtrack-control" type="button" aria-label="Faixa anterior" disabled>◀</button>
+            <button id="soundtrackPlay" class="soundtrack-control soundtrack-control--play" type="button" aria-label="Reproduzir faixa" disabled>▶</button>
+            <button id="soundtrackNext" class="soundtrack-control" type="button" aria-label="Próxima faixa" disabled>▶▶</button>
+            <div class="soundtrack-timeline">
+              <span id="soundtrackCurrent">0:00</span>
+              <input id="soundtrackSeek" type="range" min="0" max="1000" value="0" aria-label="Posição da música" disabled>
+              <span id="soundtrackDuration">0:00</span>
+            </div>
+            <label class="soundtrack-volume">
+              <span aria-hidden="true">♪</span>
+              <span class="sr-only">Volume</span>
+              <input id="soundtrackVolume" type="range" min="0" max="100" value="68" aria-label="Volume da trilha">
+            </label>
+          </div>
+        </div>
+
+        <div class="soundtrack-list" id="soundtrackList" aria-label="Coleção de músicas">
+          <button class="soundtrack-track" type="button" data-track-index="0" data-phase="1">
+            <span class="track-state" aria-hidden="true">🔒</span>
+            <span class="track-index">01</span>
+            <span class="track-copy"><small>HALLOWEEN I · AS CASAS DOS PERDIDOS</small><strong>As Casas dos Perdidos</strong></span>
+            <span class="track-action">BLOQUEADA</span>
+          </button>
+          <button class="soundtrack-track" type="button" data-track-index="1" data-phase="1">
+            <span class="track-state" aria-hidden="true">🔒</span>
+            <span class="track-index">02</span>
+            <span class="track-copy"><small>HALLOWEEN I · BATALHA FINAL</small><strong>A Guardiã da Última Lanterna</strong></span>
+            <span class="track-action">BLOQUEADA</span>
+          </button>
+
+          <div class="soundtrack-future" data-phase="2">
+            <span>🔒</span><div><small>HALLOWEEN II</small><strong>Faixas ainda ocultas</strong></div><em>Conclua a fase para revelar</em>
+          </div>
+          <div class="soundtrack-future" data-phase="3">
+            <span>🔒</span><div><small>HALLOWEEN III</small><strong>Faixas ainda ocultas</strong></div><em>Conclua a fase para revelar</em>
+          </div>
+          <div class="soundtrack-future" data-phase="4">
+            <span>🔒</span><div><small>HALLOWEEN IV</small><strong>Faixas ainda ocultas</strong></div><em>Conclua a fase para revelar</em>
+          </div>
+          <div class="soundtrack-future" data-phase="5">
+            <span>🔒</span><div><small>HALLOWEEN V</small><strong>Faixas ainda ocultas</strong></div><em>Conclua a fase para revelar</em>
+          </div>
+        </div>
+
+        <p class="soundtrack-secret">✦ A coleção musical é salva neste navegador junto com o progresso de Jack.</p>
+      </section>
     </section>
 
     <section id="fases" class="screen content-screen">
@@ -229,6 +300,6 @@
   </main>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script src="script.js?v=2"></script>
+  <script src="script.js?v=3"></script>
 </body>
 </html>
