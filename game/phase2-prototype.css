@@ -3,3 +3,107 @@
 .interact-prompt{position:fixed;z-index:45;left:50%;bottom:118px;transform:translateX(-50%);border:1px solid #e3a12b;background:#061329f0;color:#f7e1aa;padding:8px 13px;font-weight:700;font-size:.66rem;letter-spacing:.09em;box-shadow:0 7px 24px #0009;cursor:pointer}.interact-prompt span{display:inline-grid;place-items:center;width:23px;height:23px;margin-right:6px;background:#6e3109;border:1px solid #ffbd3c}
 .dialogue{position:fixed;z-index:80;left:50%;bottom:max(8px,env(safe-area-inset-bottom));transform:translate(-50%,18px);opacity:0;width:min(900px,94vw);height:min(280px,40vh);pointer-events:auto;transition:.16s;filter:drop-shadow(0 18px 32px #000d)}.dialogue.is-open{opacity:1;transform:translate(-50%,0)}.dialogue-shell{position:absolute;inset:0;display:grid;grid-template-columns:220px 1fr 58px;align-items:stretch;background:linear-gradient(180deg,#0a1c3bf8,#061020fb);border:3px solid #d78a22;box-shadow:inset 0 0 0 3px #4b280b,inset 0 0 28px #16365b55}.dialogue-portrait{margin:12px;background-repeat:no-repeat;background-position:center;background-size:contain;border-right:1px solid #8a5b25}.dialogue-portrait.is-hidden{opacity:0}.dialogue-main{padding:24px 18px;min-width:0}.dialogue-name{color:#ffb23d;font-weight:700;letter-spacing:.12em;font-size:.82rem}.dialogue-text{color:#f7e7bf;font-size:clamp(.92rem,2vw,1.2rem);line-height:1.5;margin:12px 0}.dialogue-next{align-self:end;margin:0 12px 12px 0;width:44px;height:44px;border:1px solid #d78a22;background:#4b2107;color:#ffe099}.actions .action-btn{width:56px;height:56px}
 @media(max-width:700px){.dialogue{height:210px}.dialogue-shell{grid-template-columns:135px 1fr 46px}.dialogue-main{padding:16px 10px}.dialogue-text{font-size:.82rem}.dialogue-portrait{margin:8px}}
+
+
+/* Halloween II — moldura temporal oficial */
+.dialogue{
+  width:min(1180px,96vw);
+  height:auto;
+  aspect-ratio:2048/704;
+  max-height:43vh;
+  bottom:max(6px,env(safe-area-inset-bottom));
+  filter:drop-shadow(0 18px 34px #000e);
+}
+.dialogue-shell{
+  inset:0;
+  display:grid;
+  grid-template-columns:27% 68% 5%;
+  align-items:stretch;
+  border:0;
+  box-shadow:none;
+  background:
+    url("../assets/game/phase2/ui/phase2-ui-frame.png") center/100% 100% no-repeat;
+}
+.dialogue-portrait{
+  grid-column:1;
+  margin:12% 7% 15% 6%;
+  border:0;
+  background-position:center bottom;
+  background-size:contain;
+  filter:drop-shadow(0 5px 9px #000b);
+}
+.dialogue-main{
+  grid-column:2;
+  position:relative;
+  padding:8.5% 7% 8% 5%;
+  min-width:0;
+  overflow:hidden;
+}
+.dialogue-name{
+  position:absolute;
+  top:9%;
+  left:8%;
+  width:61%;
+  height:17%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:#ffd98a;
+  font-weight:700;
+  letter-spacing:.14em;
+  font-size:clamp(.58rem,1.15vw,.9rem);
+  text-shadow:0 2px 3px #000;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.dialogue-text{
+  margin:18% 3% 0 2%;
+  max-height:56%;
+  overflow:auto;
+  color:#f8e7c0;
+  font-size:clamp(.78rem,1.45vw,1.08rem);
+  line-height:1.48;
+  text-shadow:0 2px 3px #000;
+  scrollbar-width:thin;
+}
+.dialogue-next{
+  grid-column:3;
+  position:absolute;
+  right:5.8%;
+  bottom:24%;
+  width:7%;
+  height:18%;
+  min-width:34px;
+  min-height:34px;
+  margin:0;
+  padding:0;
+  border:0;
+  background:transparent;
+  color:transparent;
+  cursor:pointer;
+  filter:none;
+}
+.dialogue-next:hover,.dialogue-next:focus-visible{
+  outline:2px solid #ffd36b99;
+  outline-offset:2px;
+  border-radius:6px;
+}
+@media(max-width:700px){
+  .dialogue{
+    width:98vw;
+    height:auto;
+    aspect-ratio:2048/704;
+    max-height:46vh;
+  }
+  .dialogue-shell{grid-template-columns:27% 68% 5%}
+  .dialogue-portrait{margin:12% 5% 14% 5%}
+  .dialogue-main{padding:8% 5% 6% 4%}
+  .dialogue-name{top:8%;left:7%;width:62%;font-size:clamp(.48rem,2.1vw,.66rem)}
+  .dialogue-text{margin-top:18%;font-size:clamp(.62rem,2.3vw,.78rem);line-height:1.32;max-height:58%}
+  .dialogue-next{right:5.2%;bottom:23%;min-width:28px;min-height:28px}
+}
+@media(max-height:520px) and (orientation:landscape){
+  .dialogue{width:min(900px,92vw);max-height:45vh}
+  .dialogue-text{font-size:.7rem;line-height:1.28}
+}
