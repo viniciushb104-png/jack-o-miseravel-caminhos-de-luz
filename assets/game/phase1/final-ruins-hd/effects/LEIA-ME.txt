@@ -1,0 +1,2 @@
+Sprites HD das Ruínas Finais — effects
+Envie nesta pasta os PNGs correspondentes do pacote jack_fase1_ruinas_finais_sprites_hd.zip.
