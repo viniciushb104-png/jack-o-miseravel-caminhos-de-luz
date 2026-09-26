@@ -77,7 +77,7 @@ if(loadedSave){
   bellStep=Number(loadedSave.bellStep)||0;windowStep=Number(loadedSave.windowStep)||0;shadowStep=Number(loadedSave.shadowStep)||0;towerStep=Number(loadedSave.towerStep)||0;
   ui.gear.textContent=gears.filter(z=>z.got).length+"/3";
 }
-function img(src){return new Promise((r,j)=>{const i=new Image;i.onload=()=>r(i);i.onerror=j;i.src=src+"?v=p2proto1"})}
+function img(src){return new Promise((r,j)=>{const i=new Image;i.onload=()=>r(i);i.onerror=j;i.src=src+"?v=p2proto2"})}
 img("../assets/game/phase1/sprites-hd/jack-atlas-hd.png").then(i=>jack=i).catch(()=>{});
 const jackPortraitFiles=["jack-00-neutral.png","jack-01-serious.png","jack-02-smirk.png","jack-03-surprised.png","jack-04-determined.png","jack-05-resolved.png"];
 const ameliaPortraitFiles=["amelia-00-neutral.png","amelia-01-cansada.png","amelia-02-triste.png","amelia-03-surpresa.png","amelia-04-irritada.png","amelia-05-culpada.png","amelia-06-chorando.png","amelia-07-abatida.png","amelia-08-assustada.png","amelia-09-sorriso-suave.png"];
