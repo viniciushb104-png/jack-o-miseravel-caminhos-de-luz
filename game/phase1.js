@@ -59,6 +59,7 @@
   const art = {
     background:null,
     terrain:null,
+    terrainStone:null,
     props:null,
     eleanor:null,
     enemies:null,
@@ -150,6 +151,16 @@
     });
   }
 
+  async function imageFromFile(path) {
+    return new Promise((resolve,reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error("Falha ao carregar " + path));
+      const sep = path.includes("?") ? "&" : "?";
+      img.src = path + sep + "v=hd3";
+    });
+  }
+
   async function loadAssets(){
     jack = await imageFromChunks([
       "../assets/sprites/jack/data/jack-mini.1.b64",
@@ -160,7 +171,14 @@
     const optional = await Promise.allSettled([
       imageFromChunks(["../assets/portraits/jack/data/portraits.1.b64","../assets/portraits/jack/data/portraits.2.b64"]),
       imageFromChunks(["../assets/portraits/eleanor/data/portraits.1.b64","../assets/portraits/eleanor/data/portraits.2.b64"]),
-      imageFromChunks(["../assets/game/phase1/data/background.b64"]),
+      (async () => {
+        try {
+          return await imageFromFile("../assets/game/phase1/background-hq.webp");
+        } catch (err) {
+          console.warn("[Fase 1] background HD indisponível; usando fallback.", err);
+          return imageFromChunks(["../assets/game/phase1/data/background.b64"]);
+        }
+      })(),
       imageFromChunks(["../assets/game/phase1/data/terrain.b64"]),
       imageFromChunks(["../assets/game/phase1/data/props.b64"]),
       imageFromChunks(["../assets/game/phase1/data/eleanor-sprites.1.b64"]),
@@ -172,7 +190,8 @@
         "../assets/game/phase1/data/dialogue-frame-fixed.2.b64",
         "../assets/game/phase1/data/dialogue-frame-fixed.3.b64",
         "../assets/game/phase1/data/dialogue-frame-fixed.4.b64"
-      ])
+      ]),
+      imageFromFile("../assets/game/phase1/terrain-stone-hq.webp")
     ]);
 
     if (optional[0].status === "fulfilled") jackPortraits = optional[0].value;
@@ -185,6 +204,7 @@
     if (optional[7].status === "fulfilled") art.memories = optional[7].value;
     if (optional[8].status === "fulfilled") art.boss = optional[8].value;
     if (optional[9].status === "fulfilled") art.dialogueFrame = optional[9].value;
+    if (optional[10].status === "fulfilled") art.terrainStone = optional[10].value;
 
     dialogue.setAssets({ jack:jackPortraits, eleanor:eleanorPortraits });
 
@@ -608,6 +628,35 @@
 
   function ground(p){
     const x=p.x-cameraX;if(x+p.w<-80||x>W+80)return;
+
+    // Pedra refinada: usa um tile dedicado em resolução maior. Evita recortar e
+    // esticar o atlas antigo, que era a principal fonte do aspecto granulado.
+    if(art.terrainStone && p.type!=="wood" && p.type!=="bridge" && p.type!=="earth"){
+      const base=p.type==="arena"?"#121a31":"#17233b";
+      ctx.fillStyle=base;
+      ctx.fillRect(x,p.y,p.w,p.h);
+
+      const tile=art.terrainStone;
+      const tileH=Math.max(42,Math.min(72,p.h+14));
+      const tileW=Math.max(76,Math.round(tileH*(tile.naturalWidth/tile.naturalHeight)));
+
+      ctx.save();
+      ctx.beginPath();ctx.rect(x,p.y,p.w,p.h);ctx.clip();
+      ctx.imageSmoothingEnabled=true;
+      ctx.imageSmoothingQuality="high";
+      for(let xx=x;xx<x+p.w+tileW;xx+=Math.max(64,tileW-10)){
+        ctx.drawImage(tile,xx,p.y-8,tileW,tileH);
+      }
+      if(p.h>54){
+        const shade=ctx.createLinearGradient(0,p.y+46,0,p.y+p.h);
+        shade.addColorStop(0,"#00000008");
+        shade.addColorStop(1,"#00000062");
+        ctx.fillStyle=shade;
+        ctx.fillRect(x,p.y+44,p.w,Math.max(0,p.h-44));
+      }
+      ctx.restore();
+      return;
+    }
 
     if(art.terrain){
       const base=p.type==="earth"?"#2d1b10":p.type==="wood"||p.type==="bridge"?"#563019":p.type==="arena"?"#121a31":"#17233b";
