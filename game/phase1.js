@@ -210,7 +210,7 @@
       img.onload = () => resolve(img);
       img.onerror = () => reject(new Error("Falha ao carregar " + path));
       const sep = path.includes("?") ? "&" : "?";
-      img.src = path + sep + "v=phase1-assets-21";
+      img.src = path + sep + "v=phase1-assets-22";
     });
   }
 
@@ -245,7 +245,7 @@
     });
 
     const checkpointResult = await Promise.allSettled([
-      imageFromFile("../assets/game/phase1/sprites-hd/checkpoint-pumpkin.webp")
+      imageFromFile("../assets/game/phase1/sprites-hd/checkpoint-pumpkin.svg")
     ]);
     if(checkpointResult[0].status === "fulfilled"){
       art.checkpoint = checkpointResult[0].value;
