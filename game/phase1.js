@@ -73,7 +73,7 @@
 
   const input = { left:false, right:false, run:false, jump:false, down:false };
   let running = false, finished = false, cameraX = 0, last = performance.now();
-  let jack = null, jackHD = null, jackPortraits = null, eleanorPortraits = null;
+  let jack = null, jackHD = null, jackPortraits = null, eleanorPortraits = null, guardianPortraits = null;
   const art = {
     background:null,
     terrain:null,
@@ -291,6 +291,17 @@
     if (optional[9].status === "fulfilled") art.dialogueFrame = optional[9].value;
     if (optional[10].status === "fulfilled") art.terrainStone = optional[10].value;
 
+    // Retratos da Guardiã seguem a mesma grade 3x2 usada por Jack e Eleanor,
+    // permitindo trocar a expressão automaticamente em cada fala.
+    const guardianPortraitResult = await Promise.allSettled([
+      imageFromChunks(["../assets/portraits/guardian/data/portraits.1.b64"])
+    ]);
+    if (guardianPortraitResult[0].status === "fulfilled") {
+      guardianPortraits = guardianPortraitResult[0].value;
+    } else {
+      console.warn("[Fase 1] retratos da Guardiã não carregados.", guardianPortraitResult[0].reason);
+    }
+
     // Sprites HD enviados manualmente. Se algum deles ainda não existir,
     // os antigos continuam funcionando como fallback.
     const spriteResults = await Promise.allSettled([
@@ -314,7 +325,7 @@
       guardianFrames = buildGuardianFrames(art.boss);
     }
 
-    dialogue.setAssets({ jack:jackPortraits, eleanor:eleanorPortraits });
+    dialogue.setAssets({ jack:jackPortraits, eleanor:eleanorPortraits, guardian:guardianPortraits });
 
     if (art.dialogueFrame) {
       const shell = document.querySelector(".dialogue-shell");
