@@ -130,9 +130,58 @@
   document.querySelector('[data-target="personagens"]')?.addEventListener('click', loadJackProfileArt);
   if (location.hash === '#personagens') loadJackProfileArt();
 
-  const savedMemories = Math.min(8, Math.max(0, Number(localStorage.getItem('jack-memories') || 0)));
-  const memoryCounter = document.querySelector('#memoryCount');
-  if (memoryCounter) memoryCounter.textContent = savedMemories + '/8';
+  const phaseMemoryKeys = [
+    ['jack-phase1-complete','yes'],
+    ['jack-phase2-complete','yes'],
+    ['jack-phase3-complete','yes'],
+    ['jack-phase4-complete','yes'],
+    ['jack-phase5-complete','yes']
+  ];
+
+  function completedPhaseMemories(){
+    return phaseMemoryKeys.filter(([key,value]) => localStorage.getItem(key) === value).length;
+  }
+
+  function syncMemoryTrophies(){
+    const total=phaseMemoryKeys.length;
+    const completed=completedPhaseMemories();
+
+    const memoryCounter=document.querySelector('#memoryCount');
+    if(memoryCounter) memoryCounter.textContent=completed+'/'+total;
+
+    const trophyProgress=document.querySelector('#trophyProgress');
+    if(trophyProgress) trophyProgress.textContent=completed+'/'+total;
+
+    document.querySelectorAll('[data-memory-trophy]').forEach(card=>{
+      const key=card.dataset.completeKey;
+      const expected=card.dataset.completeValue || 'yes';
+      const unlocked=localStorage.getItem(key)===expected;
+      card.classList.toggle('is-unlocked',unlocked);
+      card.classList.toggle('is-locked',!unlocked);
+
+      const art=card.querySelector('[data-trophy-art]');
+      const status=card.querySelector('.memory-trophy-status');
+      const lock=card.querySelector('.memory-trophy-lock');
+
+      if(unlocked){
+        if(art && !art.src && art.dataset.src) art.src=art.dataset.src;
+        if(status) status.textContent='✦ Memória resgatada';
+        if(lock) lock.setAttribute('aria-hidden','true');
+      }else{
+        if(art) art.removeAttribute('src');
+        if(status) status.textContent=Number(card.dataset.phase)===1?'Conclua a fase para desbloquear':'Bloqueada';
+      }
+    });
+  }
+
+  syncMemoryTrophies();
+
+  // Se o jogador voltar para a página após concluir uma fase em outra aba/tela,
+  // a galeria se atualiza sem precisar apagar o progresso.
+  window.addEventListener('pageshow',syncMemoryTrophies);
+  window.addEventListener('storage',syncMemoryTrophies);
+  document.querySelector('[data-target="memorias"]')?.addEventListener('click',syncMemoryTrophies);
+
   const lightLevel = Math.max(1, Number(localStorage.getItem('jack-light-level') || 1));
   const lightCounter = document.querySelector('#lightLevel');
   if (lightCounter) lightCounter.textContent = String(lightLevel).padStart(2, '0');
