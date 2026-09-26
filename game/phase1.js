@@ -95,6 +95,7 @@
   // Frames limpos do corvo. São isolados do sheet HD em memória para impedir
   // que asas/penas de um sprite vizinho vazem para o frame atual.
   let crowFrames = [];
+  let wispFrames = [];
 
   // Fundos HD da fase. Cada ambiente é um PNG independente para preservar
   // a arte original e permitir que a paisagem mude conforme Jack avança.
@@ -271,6 +272,7 @@
       art.enemies = spriteResults[1].value;
       spriteHD.enemies = true;
       crowFrames = buildCrowFrames(art.enemies);
+      wispFrames = buildWispFrames(art.enemies);
     }
     if (spriteResults[2].status === "fulfilled") {
       art.boss = spriteResults[2].value;
@@ -382,6 +384,29 @@
       [990,105,300,350]  // impacto
     ];
     return boxes.map(box => isolateLargestSprite(img,box[0],box[1],box[2],box[3]));
+  }
+
+  function cropSpriteFrame(img, sx, sy, sw, sh){
+    const canvas=document.createElement("canvas");
+    canvas.width=sw;
+    canvas.height=sh;
+    const c=canvas.getContext("2d");
+    c.clearRect(0,0,sw,sh);
+    c.drawImage(img,sx,sy,sw,sh,0,0,sw,sh);
+    return canvas;
+  }
+
+  function buildWispFrames(img){
+    // Segunda linha do sheet HD: três poses de flutuação, ataque de chama
+    // e dano. Os limites terminam antes do sprite seguinte para evitar vazamento.
+    const boxes=[
+      [5,460,245,290],
+      [245,465,245,290],
+      [485,465,235,290],
+      [715,465,535,300],
+      [1250,490,198,275]
+    ];
+    return boxes.map(box => cropSpriteFrame(img,box[0],box[1],box[2],box[3]));
   }
 
   function drawSpriteCropFit(img, sx, sy, sw, sh, cx, cy, targetH, flip=false, alpha=1){
@@ -686,8 +711,9 @@
         if(e.x<e.min||e.x>e.max)e.dir*=-1;
         e.y=e.baseY+Math.sin(e.t*2.1)*32;
         if(Math.abs(player.x-e.x)<520&&e.attack<=0){
+          e.dir=player.x>=e.x?1:-1;
           e.attack=2.4;
-          shoot(e.x,e.y,player.x,player.y,205,"blue");
+          shoot(e.x+e.dir*46,e.y+8,player.x,player.y,205,"ember");
         }
       } else {
         const close=Math.abs(player.x-e.x)<230;
@@ -1129,24 +1155,29 @@
         const flap=[0,1,2,1];
         frame=flap[Math.floor(e.t*7)%flap.length];
         if(e.attack>1.75) frame=2;
+      }else if(e.type==="wisp"){
+        if(e.hit>0) frame=4;
+        else if(e.attack>1.72) frame=3;
+        else {
+          const floatCycle=[0,1,2,1];
+          frame=floatCycle[Math.floor(e.t*4)%floatCycle.length];
+        }
       }else if(e.attack>1.75){
         frame=2;
       }
-      const flip=e.type!=="wisp" && e.dir<0;
+      const flip=e.dir<0;
 
       if(spriteHD.enemies){
         if(e.type==="crow" && crowFrames.length){
           const crow=crowFrames[frame] || crowFrames[0];
           drawSpriteCropFit(crow,0,0,crow.width,crow.height,x,e.y,98,flip,e.hit>0?.68:1);
+        }else if(e.type==="wisp" && wispFrames.length){
+          const wisp=wispFrames[frame] || wispFrames[0];
+          const h=frame===3?118:112;
+          drawSpriteCropFit(wisp,0,0,wisp.width,wisp.height,x,e.y,h,flip,e.hit>0?.68:1);
         }else{
-          // Wisp e abóbora continuam usando seus recortes do sheet HD.
+          // A abóbora continua usando recortes do sheet HD.
           const crops={
-            wisp:[
-              [5,362,245,362],
-              [245,362,255,362],
-              [705,362,545,362],
-              [1210,362,238,362]
-            ],
             pumpkin:[
               [0,724,280,362],
               [280,724,255,362],
@@ -1154,10 +1185,9 @@
               [1140,724,308,362]
             ]
           };
-          const crop=(crops[e.type]||crops.wisp)[frame] || (crops[e.type]||crops.wisp)[0];
-          const targetH=e.type==="wisp"?112:110;
+          const crop=(crops[e.type]||crops.pumpkin)[frame] || (crops[e.type]||crops.pumpkin)[0];
           const cy=e.type==="pumpkin" ? e.y-4 : e.y;
-          drawSpriteCropFit(art.enemies,crop[0],crop[1],crop[2],crop[3],x,cy,targetH,flip,e.hit>0?.68:1);
+          drawSpriteCropFit(art.enemies,crop[0],crop[1],crop[2],crop[3],x,cy,110,flip,e.hit>0?.68:1);
         }
       }else{
         const row=e.type==="crow"?0:e.type==="wisp"?1:2;
@@ -1218,7 +1248,42 @@
   }
 
   function drawProjectiles(){
-    projectiles.forEach(p=>{const x=p.x-cameraX;if(x<-30||x>W+30)return;ctx.save();ctx.translate(x,p.y);const col=p.color==="violet"?"#9c72ff":"#69e8ff";const g=ctx.createRadialGradient(0,0,1,0,0,24);g.addColorStop(0,"#fff");g.addColorStop(.25,col);g.addColorStop(1,"#4a42ff00");ctx.fillStyle=g;ctx.beginPath();ctx.arc(0,0,24,0,Math.PI*2);ctx.fill();ctx.restore();});
+    projectiles.forEach(p=>{
+      const x=p.x-cameraX;
+      if(x<-40||x>W+40)return;
+      ctx.save();
+      ctx.translate(x,p.y);
+
+      if(p.color==="ember"){
+        const ang=Math.atan2(p.vy,p.vx);
+        ctx.rotate(ang);
+
+        const glow=ctx.createRadialGradient(0,0,2,0,0,26);
+        glow.addColorStop(0,"#fff4a8");
+        glow.addColorStop(.28,"#ffb21f");
+        glow.addColorStop(.68,"#ff6418");
+        glow.addColorStop(1,"#ff471000");
+        ctx.fillStyle=glow;
+        ctx.beginPath();ctx.arc(0,0,26,0,Math.PI*2);ctx.fill();
+
+        ctx.fillStyle="#ff7a17";
+        ctx.beginPath();
+        ctx.moveTo(13,0);
+        ctx.quadraticCurveTo(-3,-13,-28,-7);
+        ctx.quadraticCurveTo(-17,0,-31,7);
+        ctx.quadraticCurveTo(-3,13,13,0);
+        ctx.fill();
+
+        ctx.fillStyle="#ffe873";
+        ctx.beginPath();ctx.ellipse(5,0,10,7,0,0,Math.PI*2);ctx.fill();
+      }else{
+        const col=p.color==="violet"?"#9c72ff":"#69e8ff";
+        const g=ctx.createRadialGradient(0,0,1,0,0,24);
+        g.addColorStop(0,"#fff");g.addColorStop(.25,col);g.addColorStop(1,"#4a42ff00");
+        ctx.fillStyle=g;ctx.beginPath();ctx.arc(0,0,24,0,Math.PI*2);ctx.fill();
+      }
+      ctx.restore();
+    });
   }
 
   function playerFrame(){
