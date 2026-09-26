@@ -66,7 +66,11 @@ function startShadowCutscene(){
   bossUnlocked=true;bossActive=false;bossDefeated=false;shadowCutscene.active=true;shadowCutscene.t=0;
   input.left=input.right=input.down=false;p.vx=0;p.vy=0;banner("A SOMBRA DAS 4:13");
 }
-function nearAmelia(){return p.x>2460&&p.x<2760&&p.y>390}
+function nearAmelia(){
+  const ameliaX=2638,ameliaGround=430;
+  const playerCenter=p.x+p.w/2,playerFeet=p.y+p.h;
+  return Math.abs(playerCenter-ameliaX)<155&&Math.abs(playerFeet-ameliaGround)<125&&!shadowCutscene.active&&!bossActive;
+}
 function solvedCount(){return Object.values(puzzles).filter(Boolean).length}
 function allRequired(){return gears.every(g=>g.got)&&Object.values(puzzles).every(Boolean)&&towerMechanism}
 function interact(){if(dialogue.active){dialogue.advance();return}if(nearAmelia()){ameliaMet=true;openDialogue(lore.amelia);return}
