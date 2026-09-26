@@ -32,6 +32,16 @@
     localStorage.setItem("jack-light-level", "1");
   }
 
+  const phaseCleared = localStorage.getItem("jack-phase1-complete") === "yes";
+  const runWasActive = localStorage.getItem("jack-phase1-run-active") === "1";
+
+  // Depois de concluir a fase, entrar novamente abre uma nova jornada limpa.
+  // A conquista permanente continua salva em jack-phase1-complete para o mapa/progresso.
+  if (phaseCleared && !runWasActive) {
+    Object.values(story.states).forEach(key => localStorage.removeItem(key));
+    localStorage.setItem("jack-light-level", "1");
+  }
+
   const input = { left:false, right:false, run:false, jump:false };
   let running = false, finished = false, cameraX = 0, last = performance.now();
   let jack = null, jackPortraits = null, eleanorPortraits = null;
@@ -91,18 +101,18 @@
 
   let enemies = [
     enemy("crow", 1020, 430, 850, 1250),
-    enemy("pumpkin", 1880, 548, 1650, 2100),
+    enemy("pumpkin", 1880, 465, 1725, 1985, 510),
     enemy("crow", 2450, 360, 2150, 2780),
-    enemy("pumpkin", 2860, 548, 2580, 3130),
+    enemy("pumpkin", 2860, 460, 2605, 2915, 505),
     enemy("wisp", 3470, 405, 3290, 3750),
     enemy("crow", 4020, 360, 3700, 4300),
     enemy("wisp", 4550, 365, 4300, 4900),
     enemy("crow", 5550, 410, 5350, 5900),
     enemy("wisp", 6200, 330, 5950, 6460),
     enemy("crow", 6750, 390, 6480, 6960),
-    enemy("pumpkin", 7240, 548, 7060, 7550),
+    enemy("pumpkin", 7350, 455, 7245, 7495, 500),
     enemy("wisp", 7700, 360, 7420, 8050),
-    enemy("pumpkin", 8350, 548, 8110, 8650)
+    enemy("pumpkin", 8325, 445, 8195, 8455, 490)
   ];
 
   const projectiles = [];
@@ -111,8 +121,8 @@
     x:10120, y:325, hp:10, maxHp:10, t:0, shot:0, summon:0, hit:0
   };
 
-  function enemy(type,x,y,min,max){
-    return {type,x,y,min,max,dir:1,alive:true,hp:1,t:Math.random()*3,attack:0,hit:0,baseY:y};
+  function enemy(type,x,y,min,max,groundY=null){
+    return {type,x,y,min,max,dir:1,alive:true,hp:1,t:Math.random()*3,attack:0,hit:0,baseY:y,groundY};
   }
 
   async function imageFromChunks(paths) {
@@ -195,10 +205,14 @@
     return true;
   }
 
-  function drawCrop(img, sx, sy, sw, sh, dx, dy, dw, dh, alpha=1){
+  function drawCrop(img, sx, sy, sw, sh, dx, dy, dw, dh, alpha=1, smooth=false){
     if(!img) return false;
     ctx.save();
     ctx.globalAlpha*=alpha;
+    if(smooth){
+      ctx.imageSmoothingEnabled=true;
+      ctx.imageSmoothingQuality="high";
+    }
     ctx.drawImage(
       img,
       sx*img.naturalWidth, sy*img.naturalHeight,
@@ -367,6 +381,8 @@
         finished=true;
         ui.finish.hidden=false;
         localStorage.setItem("jack-phase1-complete","yes");
+        localStorage.setItem("jack-phase1-run-active","0");
+        localStorage.setItem("jack-phase1-clear-count", String(Number(localStorage.getItem("jack-phase1-clear-count")||0)+1));
         localStorage.setItem("jack-light-level","03");
       }), 700);
     });
@@ -471,8 +487,9 @@
       } else {
         const close=Math.abs(player.x-e.x)<230;
         e.x+=e.dir*(close?145:62)*dt;
-        if(e.x<e.min||e.x>e.max)e.dir*=-1;
-        e.y=548;
+        if(e.x<e.min){e.x=e.min;e.dir=1;}
+        if(e.x>e.max){e.x=e.max;e.dir=-1;}
+        e.y=(e.groundY ?? 590)-45;
       }
       if(Math.abs(player.x-e.x)<48 && Math.abs(player.y-e.y)<68) damagePlayer(e.x);
     }
@@ -531,8 +548,12 @@
 
     if(art.background){
       const drift=(cameraX*.025)%W;
+      ctx.save();
+      ctx.imageSmoothingEnabled=true;
+      ctx.imageSmoothingQuality="high";
       ctx.drawImage(art.background,-drift,0,W,H);
       ctx.drawImage(art.background,W-drift,0,W,H);
+      ctx.restore();
       const tint=ctx.createLinearGradient(0,0,0,H);
       tint.addColorStop(0,sec>=4?"#12092733":"#04102818");
       tint.addColorStop(1,"#02040a66");
@@ -578,23 +599,34 @@
     const x=p.x-cameraX;if(x+p.w<-80||x>W+80)return;
 
     if(art.terrain){
-      const base=p.type==="earth"?"#28150c":p.type==="arena"?"#10152a":"#111a2d";
+      const base=p.type==="earth"?"#2d1b10":p.type==="wood"||p.type==="bridge"?"#563019":p.type==="arena"?"#121a31":"#17233b";
       ctx.fillStyle=base;
       ctx.fillRect(x,p.y,p.w,p.h);
 
+      // A arte do tileset vira acabamento da superfície, em vez de ser esticada
+      // por toda a plataforma. Assim preservamos a pintura sem o aspecto granulado.
       let crop={sx:0,sy:0,sw:.28,sh:.24};
-      let tileW=190, tileH=Math.min(95,p.h+20);
+      let tileW=112, tileH=Math.min(58,p.h+10), topOffset=-7;
 
-      if(p.type==="wood"){crop={sx:0,sy:.27,sw:.48,sh:.22};tileW=220;tileH=72;}
-      else if(p.type==="bridge"){crop={sx:.10,sy:.48,sw:.48,sh:.22};tileW=230;tileH=66;}
-      else if(p.type==="earth"){crop={sx:0,sy:.83,sw:.38,sh:.17};tileW=230;tileH=78;}
-      else if(p.type==="ruin"){crop={sx:.58,sy:.52,sw:.30,sh:.25};tileW=180;tileH=82;}
-      else if(p.type==="arena"){crop={sx:.57,sy:.79,sw:.39,sh:.20};tileW=230;tileH=84;}
+      if(p.type==="wood"){crop={sx:0,sy:.27,sw:.48,sh:.22};tileW=128;tileH=48;topOffset=-5;}
+      else if(p.type==="bridge"){crop={sx:.10,sy:.48,sw:.48,sh:.22};tileW=132;tileH=44;topOffset=-6;}
+      else if(p.type==="earth"){crop={sx:0,sy:.83,sw:.38,sh:.17};tileW=126;tileH=48;topOffset=-5;}
+      else if(p.type==="ruin"){crop={sx:.58,sy:.52,sw:.30,sh:.25};tileW=108;tileH=54;topOffset=-7;}
+      else if(p.type==="arena"){crop={sx:.57,sy:.79,sw:.39,sh:.20};tileW=126;tileH=50;topOffset=-6;}
 
       ctx.save();
       ctx.beginPath();ctx.rect(x,p.y,p.w,p.h);ctx.clip();
-      for(let xx=x;xx<x+p.w+tileW;xx+=tileW-8){
-        drawCrop(art.terrain,crop.sx,crop.sy,crop.sw,crop.sh,xx,p.y-8,tileW,tileH);
+      for(let xx=x;xx<x+p.w+tileW;xx+=tileW-3){
+        drawCrop(art.terrain,crop.sx,crop.sy,crop.sw,crop.sh,xx,p.y+topOffset,tileW,tileH,1,true);
+      }
+
+      // Corpo da plataforma mais limpo e escuro para não competir com os personagens.
+      if(p.h>54){
+        const shade=ctx.createLinearGradient(0,p.y+48,0,p.y+p.h);
+        shade.addColorStop(0,"#00000010");
+        shade.addColorStop(1,"#00000066");
+        ctx.fillStyle=shade;
+        ctx.fillRect(x,p.y+45,p.w,Math.max(0,p.h-45));
       }
       ctx.restore();
       return;
@@ -935,14 +967,28 @@
   document.getElementById("interactBtn")?.addEventListener("pointerdown",e=>{e.preventDefault();tryInteract()});
   ui.interact?.addEventListener("click",tryInteract);
 
-  document.getElementById("startGame").onclick=()=>{
+  const startButton=document.getElementById("startGame");
+  const introText=document.querySelector("#intro span");
+  if(phaseCleared){
+    const hasRunProgress=runWasActive && Object.values(story.states).some(key=>localStorage.getItem(key));
+    startButton.textContent=hasRunProgress?"✦ CONTINUAR REPLAY":"↻ JOGAR NOVAMENTE";
+    if(introText) introText.textContent=hasRunProgress
+      ?"A luz ainda guarda seu progresso desta nova jornada."
+      :"Eleanor já encontrou a luz. A história permanece salva — mas a noite pode ser atravessada outra vez.";
+  }
+
+  startButton.onclick=()=>{
+    localStorage.setItem("jack-phase1-run-active","1");
     document.getElementById("intro").hidden=true;running=true;last=performance.now();syncHud();showSection(sectionForX(player.x));
     const t=document.getElementById("tutorial");t.classList.add("show");setTimeout(()=>t.classList.remove("show"),5500);
   };
 
   document.getElementById("restartBtn").onclick=()=>{
     Object.values(story.states).forEach(key=>localStorage.removeItem(key));
-    localStorage.removeItem("jack-phase1-complete");localStorage.setItem("jack-light-level","1");localStorage.setItem("jack-phase1-version","3");
+    // A conclusão permanente continua salva; só a tentativa atual é reiniciada.
+    localStorage.setItem("jack-phase1-run-active","1");
+    localStorage.setItem("jack-light-level","1");
+    localStorage.setItem("jack-phase1-version","3");
     location.reload();
   };
 
