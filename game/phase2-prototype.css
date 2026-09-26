@@ -407,3 +407,24 @@
     background-size:contain!important;
   }
 }
+
+
+/* Trilha dinâmica — Halloween II */
+.hud-cluster{display:flex;align-items:center;gap:8px}
+.hud-audio{pointer-events:auto;min-width:74px;min-height:45px;border:2px solid #9b6016;background:linear-gradient(#0b1d39e8,#061126ee);box-shadow:inset 0 0 0 2px #211205;color:#ffe099;cursor:pointer;padding:4px 8px;text-shadow:0 2px 2px #000}
+.hud-audio b{display:block;font-size:1rem;line-height:1;color:#ffd36b}
+.hud-audio span{display:block;margin-top:3px;font-size:.42rem;letter-spacing:.11em;color:#baa77c;white-space:nowrap}
+.hud-audio:hover,.hud-audio:focus-visible{filter:brightness(1.18);outline:1px solid #ffd36b;outline-offset:2px}
+.hud-audio[aria-pressed="true"]{filter:saturate(.55);opacity:.78}
+.music-banner{position:fixed;z-index:34;left:24px;top:92px;min-width:270px;max-width:min(430px,74vw);padding:9px 15px 10px 44px;background:linear-gradient(90deg,#07152ff2,#0a1733df 78%,transparent);border-left:3px solid #e3a12b;color:#f5dfaa;opacity:0;transform:translateX(-18px);pointer-events:none;transition:opacity .28s ease,transform .28s ease;text-shadow:0 2px 2px #000}
+.music-banner:before{content:"◷";position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#ffd36b;font-size:1.25rem;filter:drop-shadow(0 0 7px #f58b22)}
+.music-banner span{display:block;color:#b99a62;font-size:.48rem;letter-spacing:.18em}
+.music-banner strong{display:block;margin-top:2px;color:#ffe8b1;font-size:.76rem;font-weight:700;letter-spacing:.035em}
+.music-banner[data-track="tower"]{border-left-color:#c58cff;background:linear-gradient(90deg,#10102ff4,#20143ce3 78%,transparent)}
+.music-banner[data-track="tower"]:before{color:#d8a8ff;filter:drop-shadow(0 0 9px #7a62ff)}
+.music-banner[data-track="boss"]{border-left-color:#ff6d82;background:linear-gradient(90deg,#1c0815f4,#321020e8 78%,transparent)}
+.music-banner[data-track="boss"]:before{color:#ff9b8d;filter:drop-shadow(0 0 10px #ff365f)}
+.music-banner.show{opacity:1;transform:translateX(0)}
+@media(pointer:coarse),(max-width:900px){.hud-cluster{gap:4px}.hud-audio{min-width:48px;min-height:40px;padding:3px 5px}.hud-audio span{font-size:.34rem}.music-banner{left:10px;top:94px;min-width:205px;padding:7px 12px 8px 37px}.music-banner:before{left:11px;font-size:1rem}.music-banner strong{font-size:.64rem}}
+@media(max-width:650px){.hud-audio{min-width:42px}.hud-audio span{display:none}.hud-box{padding:4px 6px}}
+@media(max-height:480px){.music-banner{top:70px}}
