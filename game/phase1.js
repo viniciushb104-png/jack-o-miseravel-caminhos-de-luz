@@ -177,6 +177,13 @@
     coyote:0, jumpBuffer:0, anim:0, attackT:0, landT:0, hp:3, inv:0
   };
 
+  const BRIDGE_FRONT = Object.freeze({
+    crop:Object.freeze({sx:.012,sy:.018,sw:.585,sh:.205}),
+    renderH:128,
+    deckY:72, // linha visual do piso dentro do sprite
+    xPad:6
+  });
+
   const platforms = [
     {x:0,y:590,w:1500,h:130,type:"stone"},
     {x:1500,y:590,w:1700,h:130,type:"earth"},
@@ -256,7 +263,7 @@
       img.onload = () => resolve(img);
       img.onerror = () => reject(new Error("Falha ao carregar " + path));
       const sep = path.includes("?") ? "&" : "?";
-      img.src = path + sep + "v=phase1-assets-29";
+      img.src = path + sep + "v=phase1-assets-30";
     });
   }
 
@@ -1292,22 +1299,26 @@
   function drawBridgeForeground(p){
     if(!art.platformBridge || p.type!=="bridge")return;
     const x=p.x-cameraX;
-    if(x+p.w<-100||x>W+100)return;
+    if(x+p.w<-120||x>W+120)return;
 
-    // IMPORTANTE: é o próprio sprite HD da ponte enviado pelo usuário.
-    // Ele é renderizado inteiro DEPOIS do Jack. Assim:
-    // cenário -> plataforma física invisível -> Jack -> sprite da ponte.
-    // As cordas, bordas, postes e frente da ponte pertencem à própria arte,
-    // sem guarda-corpo desenhado por código.
+    const v=BRIDGE_FRONT;
+    const dx=Math.round(x-v.xPad);
+    const dy=Math.round(p.y-v.deckY);
+    const dw=Math.round(p.w+v.xPad*2);
+    const dh=v.renderH;
+
+    // O topo físico da plataforma (p.y) coincide com o piso desenhado da ponte.
+    // A plataforma permanece invisível; Jack é desenhado primeiro; depois o
+    // sprite ORIGINAL da ponte cobre a plataforma e fica em primeiro plano.
+    // Assim Jack caminha "dentro" da ponte e atrás das cordas/postes da própria arte.
     ctx.save();
     ctx.beginPath();
-    ctx.rect(x-8,p.y-24,p.w+16,150);
+    ctx.rect(dx-4,dy-4,dw+8,dh+8);
     ctx.clip();
     drawCrop(
       art.platformBridge,
-      .012,.018,.585,.205,
-      Math.round(x-6),Math.round(p.y-14),
-      Math.round(p.w+12),128,
+      v.crop.sx,v.crop.sy,v.crop.sw,v.crop.sh,
+      dx,dy,dw,dh,
       1,true
     );
     ctx.restore();
