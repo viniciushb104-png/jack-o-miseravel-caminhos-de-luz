@@ -607,3 +607,63 @@ button:focus-visible{outline:3px solid #fff3b0;outline-offset:4px}
   .soundtrack-meta strong{font-size:.92rem}
 }
 @media (prefers-reduced-motion:reduce){.soundtrack-disc.is-spinning{animation:none}}
+
+
+/* Tema da tela inicial */
+.menu-music-toggle{
+  position:absolute;
+  z-index:20;
+  left:clamp(1rem,3vw,2.4rem);
+  bottom:clamp(1rem,3vw,2rem);
+  min-height:52px;
+  display:grid;
+  grid-template-columns:38px 1fr;
+  gap:.65rem;
+  align-items:center;
+  padding:.55rem .85rem;
+  border:1px solid #d89b2f99;
+  color:#f4dda5;
+  background:linear-gradient(180deg,rgba(9,27,49,.94),rgba(5,14,27,.96));
+  box-shadow:inset 0 0 0 2px #1c1207,0 7px 22px #0009,0 0 18px #e68a1c1c;
+  cursor:pointer;
+  text-align:left;
+  transition:transform .15s ease,box-shadow .15s ease,background .15s ease;
+}
+.menu-music-toggle:hover,.menu-music-toggle:focus-visible{
+  transform:translateY(-2px);
+  background:linear-gradient(180deg,#153653,#0b1c31);
+  box-shadow:inset 0 0 0 2px #2b1907,0 9px 24px #000a,0 0 24px #f09b2c45;
+}
+.menu-music-toggle.is-playing{border-color:#ffc34f;background:linear-gradient(180deg,#4a2609e8,#1d120ae8)}
+.menu-music-toggle.is-blocked .menu-music-icon{animation:menuMusicPulse 1.5s ease-in-out infinite}
+.menu-music-icon{
+  width:34px;height:34px;display:grid;place-items:center;
+  border:1px solid #d79b31;color:#ffd66d;background:#0a101a;
+  box-shadow:inset 0 0 12px #d67c142b;
+  font-size:1.15rem;
+}
+.menu-music-copy{display:grid;gap:.05rem}
+.menu-music-copy small{color:#a98042;font-size:.52rem;letter-spacing:.13em}
+.menu-music-copy strong{color:#f5dda4;font-size:.68rem;letter-spacing:.09em}
+@keyframes menuMusicPulse{50%{box-shadow:inset 0 0 12px #d67c1450,0 0 18px #ff9b2f88;color:#fff0ae}}
+.soundtrack-track--secret:not(.is-unlocked){
+  background:linear-gradient(90deg,#090c12,#120d12);
+  border-color:#6d4c283d;
+}
+.soundtrack-track--secret:not(.is-unlocked) .track-copy strong{letter-spacing:.06em;color:#7e7467}
+@media (max-width:760px) and (orientation:portrait){
+  .menu-music-toggle{
+    position:relative;
+    left:auto;bottom:auto;
+    z-index:6;
+    width:min(92vw,420px);
+    margin:.8rem auto 0;
+  }
+}
+@media (max-width:760px) and (orientation:landscape){
+  .menu-music-toggle{left:.7rem;bottom:.55rem;min-height:40px;padding:.35rem .55rem;grid-template-columns:28px 1fr}
+  .menu-music-icon{width:26px;height:26px;font-size:.9rem}
+  .menu-music-copy small{display:none}
+  .menu-music-copy strong{font-size:.58rem}
+}
+@media (prefers-reduced-motion:reduce){.menu-music-toggle.is-blocked .menu-music-icon{animation:none}}
