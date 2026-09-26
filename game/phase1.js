@@ -142,11 +142,16 @@
       imageFromChunks(["../assets/game/phase1/data/background.b64"]),
       imageFromChunks(["../assets/game/phase1/data/terrain.b64"]),
       imageFromChunks(["../assets/game/phase1/data/props.b64"]),
-      imageFromChunks(["../assets/game/phase1/data/eleanor-sprites.1.b64","../assets/game/phase1/data/eleanor-sprites.2.b64"]),
+      imageFromChunks(["../assets/game/phase1/data/eleanor-sprites.1.b64"]),
       imageFromChunks(["../assets/game/phase1/data/enemies.b64"]),
       imageFromChunks(["../assets/game/phase1/data/memories.b64"]),
       imageFromChunks(["../assets/game/phase1/data/boss.b64"]),
-      imageFromChunks(["../assets/game/phase1/data/dialogue-frame.1.b64","../assets/game/phase1/data/dialogue-frame.2.b64"])
+      imageFromChunks([
+        "../assets/game/phase1/data/dialogue-frame-fixed.1.b64",
+        "../assets/game/phase1/data/dialogue-frame-fixed.2.b64",
+        "../assets/game/phase1/data/dialogue-frame-fixed.3.b64",
+        "../assets/game/phase1/data/dialogue-frame-fixed.4.b64"
+      ])
     ]);
 
     if (optional[0].status === "fulfilled") jackPortraits = optional[0].value;
