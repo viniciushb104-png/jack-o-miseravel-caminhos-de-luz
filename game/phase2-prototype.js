@@ -2,6 +2,41 @@
 const c=document.getElementById("game"),x=c.getContext("2d"),W=1280,H=720,WORLD=7200,G=1500;
 const ui={obj:document.querySelector("#objective strong"),gear:document.getElementById("gearValue"),banner:document.getElementById("sectionBanner"),msg:document.getElementById("message"),intro:document.getElementById("intro")};
 const input={left:false,right:false,run:false,jump:false,down:false};let running=false,last=performance.now(),cam=0,jack=null,light=0,cool=0,section=-1;
+const dialogue=new window.DialogueSystem(document.getElementById("dialogue"));
+const interactPrompt=document.getElementById("interactPrompt");
+let ameliaMet=false, introLorePlayed=false, gearLore=[false,false,false], finalLorePlayed=false;
+const lore={
+arrival:[
+{speaker:"JACK",portrait:"jack",expression:1,text:"Outra vila. Outra noite. E nenhum sinal do amanhecer."},
+{speaker:"JACK",portrait:"jack",expression:2,text:"Curioso... até os relógios quebrados daqui conseguiram concordar: 4:13."},
+{speaker:"???",text:"Não toque nos relógios, forasteiro. Eles já dão trabalho suficiente parados."}
+],
+amelia:[
+{speaker:"AMÉLIA VESPER",text:"Você não é daqui."},
+{speaker:"JACK",portrait:"jack",expression:2,text:"Foi a lanterna que denunciou ou o fato de eu ainda estar andando para algum lugar?"},
+{speaker:"AMÉLIA VESPER",text:"Sou Amélia Vesper. Relojoeira. Quando eu consertar o relógio da praça, o sol vai nascer."},
+{speaker:"JACK",portrait:"jack",expression:1,text:"Há quanto tempo está tentando?"},
+{speaker:"AMÉLIA VESPER",text:"Desde ontem."},
+{speaker:"JACK",portrait:"jack",expression:3,text:"E quando foi ontem?"},
+{speaker:"AMÉLIA VESPER",text:"... Encontre as três engrenagens. Horas. Minutos. Amanhecer. Depois conversamos."}
+],
+gears:[
+[{speaker:"AMÉLIA VESPER",text:"A Engrenagem das Horas... ainda estava aqui."},{speaker:"JACK",portrait:"jack",expression:1,text:"Você fala dela como quem esperava que tivesse desaparecido."}],
+[{speaker:"JACK",portrait:"jack",expression:1,text:"Minutos. Engraçado como poucos deles podem mudar uma vida inteira."},{speaker:"AMÉLIA VESPER",text:"Não filosofe com peças de relógio, Jack."}],
+[{speaker:"AMÉLIA VESPER",text:"A Engrenagem do Amanhecer..."},{speaker:"JACK",portrait:"jack",expression:1,text:"Você não parece feliz por eu ter encontrado."},{speaker:"AMÉLIA VESPER",text:"Leve-a até a Torre. Agora."}]
+],
+tower:[
+{speaker:"AMÉLIA VESPER",text:"Pare. Não coloque as três peças no mecanismo."},
+{speaker:"JACK",portrait:"jack",expression:1,text:"Você nunca quis consertar o relógio."},
+{speaker:"AMÉLIA VESPER",text:"Eu só precisava de mais cinco minutos naquela noite."},
+{speaker:"JACK",portrait:"jack",expression:1,text:"E desde então mantém todo mundo preso nesses cinco minutos."},
+{speaker:"AMÉLIA VESPER",text:"Se pudesse voltar à pior noite da sua vida... não voltaria?"},
+{speaker:"JACK",portrait:"jack",expression:5,text:"Toda noite."},
+{speaker:"JACK",portrait:"jack",expression:1,text:"Mas uma lanterna não serve para apagar o que aconteceu. Serve para enxergar o caminho depois."}
+]};
+function openDialogue(lines,onComplete){input.left=input.right=input.down=false;p.vx=0;dialogue.open(lines,onComplete)}
+function nearAmelia(){return p.x>2460&&p.x<2760}
+function interact(){if(dialogue.active){dialogue.advance();return}if(nearAmelia()){ameliaMet=true;openDialogue(lore.amelia);return}if(p.x>6800&&gears.every(g=>g.got)&&!finalLorePlayed){finalLorePlayed=true;openDialogue(lore.tower);}}
 const p={x:120,y:470,w:46,h:86,vx:0,vy:0,dir:1,on:false,coyote:0,buffer:0,anim:0,attack:0};
 const plats=[
 {x:0,y:590,w:1100,h:130},{x:1160,y:590,w:760,h:130},{x:1350,y:505,w:260,h:32},{x:1660,y:440,w:230,h:32},
@@ -16,23 +51,25 @@ const bells=[{x:3320,y:545,id:0,on:false},{x:3650,y:545,id:1,on:false},{x:4020,y
 const sections=[{x:0,n:"ESTRADA DAS LANTERNAS MORTAS"},{x:1100,n:"VILA BAIXA"},{x:1980,n:"PRAÇA DAS 4:13"},{x:3150,n:"DISTRITO DOS SINOS"},{x:4380,n:"JANELAS APAGADAS"},{x:5600,n:"CAMINHO DA TORRE"}];
 function img(src){return new Promise((r,j)=>{const i=new Image;i.onload=()=>r(i);i.onerror=j;i.src=src+"?v=p2proto1"})}
 img("../assets/game/phase1/sprites-hd/jack-atlas-hd.png").then(i=>jack=i).catch(()=>{});
+Promise.allSettled(["jack-00-neutral.png","jack-01-serious.png","jack-02-smirk.png","jack-03-surprised.png","jack-04-determined.png","jack-05-resolved.png"].map(f=>img("../assets/game/phase1/portraits-hd/"+f))).then(rs=>dialogue.setAssets({jack:{frames:rs.map(r=>r.status==="fulfilled"?r.value:null)}}));
 function say(s){ui.msg.textContent=s;ui.msg.classList.add("show");clearTimeout(say.t);say.t=setTimeout(()=>ui.msg.classList.remove("show"),1800)}
 function banner(s){ui.banner.textContent=s;ui.banner.classList.add("show");clearTimeout(banner.t);banner.t=setTimeout(()=>ui.banner.classList.remove("show"),1500)}
 function lightUse(){if(cool>0)return;cool=.55;light=.48;p.attack=.48;reveal.forEach(q=>{if(Math.abs((q.x+q.w/2)-(p.x+p.w/2))<310)q.t=3});bells.forEach(b=>{if(Math.abs(b.x-p.x)<120){const order=[1,0,2];if(b.id===order[bellStep]){b.on=true;bellStep++;say("Sino correto: "+bellStep+"/3");if(bellStep===3)say("A sequência abriu o caminho.")}else{bells.forEach(z=>z.on=false);bellStep=0;say("A sequência se perdeu no silêncio...")}}});enemies.forEach(e=>{if(Math.abs(e.x-p.x)<180)e.dead=true})}
 function bind(id,key){const b=document.getElementById(id);["pointerdown","pointerup","pointercancel","pointerleave"].forEach(ev=>b.addEventListener(ev,()=>input[key]=ev==="pointerdown"))}
-bind("leftBtn","left");bind("rightBtn","right");bind("downBtn","down");document.getElementById("jumpBtn").addEventListener("pointerdown",()=>input.jump=true);document.getElementById("lightBtn").addEventListener("pointerdown",lightUse);
-addEventListener("keydown",e=>{if(["ArrowLeft","a","A"].includes(e.key))input.left=true;if(["ArrowRight","d","D"].includes(e.key))input.right=true;if(["ArrowDown","s","S"].includes(e.key))input.down=true;if(e.key==="Shift")input.run=true;if(e.code==="Space"){input.jump=true;e.preventDefault()}if(["f","F"].includes(e.key))lightUse()});
+bind("leftBtn","left");bind("rightBtn","right");bind("downBtn","down");document.getElementById("jumpBtn").addEventListener("pointerdown",()=>input.jump=true);document.getElementById("lightBtn").addEventListener("pointerdown",lightUse);document.getElementById("interactBtn").addEventListener("pointerdown",interact);interactPrompt.addEventListener("click",interact);
+addEventListener("keydown",e=>{if(["ArrowLeft","a","A"].includes(e.key))input.left=true;if(["ArrowRight","d","D"].includes(e.key))input.right=true;if(["ArrowDown","s","S"].includes(e.key))input.down=true;if(e.key==="Shift")input.run=true;if(e.code==="Space"){input.jump=true;e.preventDefault()}if(["f","F"].includes(e.key))lightUse();if(["e","E"].includes(e.key))interact()});
 addEventListener("keyup",e=>{if(["ArrowLeft","a","A"].includes(e.key))input.left=false;if(["ArrowRight","d","D"].includes(e.key))input.right=false;if(["ArrowDown","s","S"].includes(e.key))input.down=false;if(e.key==="Shift")input.run=false});
-document.getElementById("startGame").onclick=()=>{ui.intro.hidden=true;running=true;last=performance.now();requestAnimationFrame(loop)};
-function update(dt){cool=Math.max(0,cool-dt);light=Math.max(0,light-dt);p.attack=Math.max(0,p.attack-dt);reveal.forEach(q=>q.t=Math.max(0,q.t-dt));p.coyote=p.on?.12:Math.max(0,p.coyote-dt);if(input.jump){p.buffer=.14;input.jump=false}else p.buffer=Math.max(0,p.buffer-dt);
+document.getElementById("startGame").onclick=()=>{ui.intro.hidden=true;running=true;last=performance.now();requestAnimationFrame(loop);setTimeout(()=>{if(!introLorePlayed){introLorePlayed=true;openDialogue(lore.arrival)}},450)};
+function update(dt){if(dialogue.active){p.vx*=.7;cam+=(Math.max(0,Math.min(WORLD-W,p.x-W*.36))-cam)*Math.min(1,dt*5);p.anim+=dt;interactPrompt.hidden=true;return}cool=Math.max(0,cool-dt);light=Math.max(0,light-dt);p.attack=Math.max(0,p.attack-dt);reveal.forEach(q=>q.t=Math.max(0,q.t-dt));p.coyote=p.on?.12:Math.max(0,p.coyote-dt);if(input.jump){p.buffer=.14;input.jump=false}else p.buffer=Math.max(0,p.buffer-dt);
 const speed=input.down?95:(input.run?335:235),dir=(input.right?1:0)-(input.left?1:0);p.vx+=((dir*speed)-p.vx)*Math.min(1,dt*12);if(dir)p.dir=dir;
 if(p.buffer>0&&p.coyote>0){p.vy=-575;p.on=false;p.coyote=0;p.buffer=0}p.vy+=G*dt;const oldY=p.y;p.x=Math.max(0,Math.min(WORLD-p.w,p.x+p.vx*dt));p.y+=p.vy*dt;p.on=false;
 const solids=plats.concat(reveal.filter(q=>q.t>0));for(const q of solids){if(p.x+p.w>q.x&&p.x<q.x+q.w&&oldY+p.h<=q.y+8&&p.y+p.h>=q.y&&p.vy>=0){p.y=q.y-p.h;p.vy=0;p.on=true}}
 if(p.y>760){p.x=Math.max(80,p.x-380);p.y=430;p.vy=0;say("Jack retorna à última rua segura.");}
 enemies.forEach(e=>{if(e.dead)return;e.x+=e.d*70*dt;if(e.x<e.a||e.x>e.b)e.d*=-1});
-gears.forEach(g=>{if(!g.got&&Math.abs(g.x-p.x)<70&&Math.abs(g.y-p.y)<120){g.got=true;say(g.n+" RECUPERADA");ui.gear.textContent=gears.filter(z=>z.got).length+"/3"}});
+gears.forEach((g,gi)=>{if(!g.got&&Math.abs(g.x-p.x)<70&&Math.abs(g.y-p.y)<120){g.got=true;say(g.n+" RECUPERADA");ui.gear.textContent=gears.filter(z=>z.got).length+"/3";if(!gearLore[gi]){gearLore[gi]=true;setTimeout(()=>openDialogue(lore.gears[gi]),250)}}});
+interactPrompt.hidden=!(nearAmelia()||(p.x>6800&&gears.every(g=>g.got)&&!finalLorePlayed));
 let si=0;for(let i=0;i<sections.length;i++)if(p.x>=sections[i].x)si=i;if(si!==section){section=si;banner(sections[si].n)}
-ui.obj.textContent=gears.filter(z=>z.got).length<3?"Encontre as três engrenagens e use a Luz para revelar caminhos.":"As três engrenagens respondem. Alcance a Torre do Relógio.";
+ui.obj.textContent=!ameliaMet&&p.x<3150?"Encontre a relojoeira da praça e descubra por que tudo parou às 4:13.":(gears.filter(z=>z.got).length<3?"Recupere as três engrenagens. A Luz revela caminhos que a vila esconde.":"As três engrenagens respondem. Alcance a Torre do Relógio.");
 cam+=(Math.max(0,Math.min(WORLD-W,p.x-W*.36))-cam)*Math.min(1,dt*5);p.anim+=dt;}
 function drawJack(){if(!jack){x.fillStyle="#eee";x.fillRect(p.x-cam,p.y,p.w,p.h);return}const A=window.JACK_ANIMATIONS,arr=p.attack>0?A.animations.attack:(!p.on?(p.vy<-80?A.animations.jumpRise:A.animations.jumpFall):(Math.abs(p.vx)>35?(input.run?A.animations.run:A.animations.walk):A.animations.idle));const fps=input.run?12:9,idx=arr[Math.floor(p.anim*fps)%arr.length],sx=(idx%8)*320,sy=Math.floor(idx/8)*320,rw=190,rh=190,dx=p.x-cam+p.w/2-rw/2,dy=p.y-132;if(p.dir<0){x.save();x.translate(dx+rw,0);x.scale(-1,1);x.drawImage(jack,sx,sy,320,320,0,dy,rw,rh);x.restore()}else x.drawImage(jack,sx,sy,320,320,dx,dy,rw,rh)}
 function draw(){const gr=x.createLinearGradient(0,0,0,H);gr.addColorStop(0,"#061024");gr.addColorStop(.65,"#17132b");gr.addColorStop(1,"#27131d");x.fillStyle=gr;x.fillRect(0,0,W,H);x.fillStyle="#e7d4b0";x.globalAlpha=.35;for(let i=0;i<18;i++){const px=((i*431-cam*.12)%1500+1500)%1500;x.fillRect(px,80+(i*71)%220,2,2)}x.globalAlpha=1;
