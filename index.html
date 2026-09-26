@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#07101f">
   <meta name="description" content="Jack o Miserável — Caminhos de Luz. Uma aventura narrativa de Halloween em estética 16-bit.">
   <title>Jack o Miserável — Caminhos de Luz</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=2">
 </head>
 <body>
   <div class="scanlines" aria-hidden="true"></div>
@@ -111,16 +111,73 @@
       </div>
     </section>
 
-    <section id="musical" class="screen content-screen">
+    <section id="musical" class="screen content-screen musical-screen">
       <button class="back-btn" data-target="inicio">‹ Voltar</button>
       <div class="section-heading">
         <span class="chapter-number">♫</span>
-        <div><p class="eyebrow">TRILHA & UNIVERSO</p><h2>Do musical para o jogo</h2></div>
+        <div><p class="eyebrow">TRILHA & UNIVERSO</p><h2>Músicas & Musical</h2></div>
       </div>
-      <div class="ornate-panel jukebox">
-        <div><p class="eyebrow">ORIGEM</p><h3>Jack o Miserável — Redentor dos Perdidos</h3><p>O jogo continua a história do musical e transforma seus temas em exploração, pequenas escolhas, memórias e encontros.</p></div>
+
+      <div class="ornate-panel jukebox musical-intro">
+        <div>
+          <p class="eyebrow">ORIGEM</p>
+          <h3>Jack o Miserável — Redentor dos Perdidos</h3>
+          <p>O jogo continua a história do musical e transforma seus temas em exploração, pequenas escolhas, memórias e encontros. Aqui você pode assistir aos três vídeos sem sair dos Caminhos de Luz.</p>
+        </div>
         <div class="record" aria-hidden="true"><span>J</span></div>
       </div>
+
+      <div class="video-library" aria-label="Vídeos de Jack o Miserável">
+        <article class="musical-video-card">
+          <div class="video-frame" data-youtube-id="s-TZ6pOycEc" data-video-title="Jack o Miserável — Musical · Vídeo I">
+            <img src="https://i.ytimg.com/vi/s-TZ6pOycEc/hqdefault.jpg" alt="" loading="lazy">
+            <div class="video-vignette" aria-hidden="true"></div>
+            <button class="video-play" type="button" aria-label="Reproduzir o primeiro vídeo do musical">
+              <span class="play-lantern" aria-hidden="true">▶</span>
+              <strong>REPRODUZIR</strong>
+              <small>assistir aqui</small>
+            </button>
+          </div>
+          <div class="video-caption">
+            <span class="video-number">I</span>
+            <div><small>REDENTOR DOS PERDIDOS</small><h3>Musical · Vídeo I</h3></div>
+          </div>
+        </article>
+
+        <article class="musical-video-card">
+          <div class="video-frame" data-youtube-id="-dC_3BrI7vE" data-video-title="Jack o Miserável — Musical · Vídeo II">
+            <img src="https://i.ytimg.com/vi/-dC_3BrI7vE/hqdefault.jpg" alt="" loading="lazy">
+            <div class="video-vignette" aria-hidden="true"></div>
+            <button class="video-play" type="button" aria-label="Reproduzir o segundo vídeo do musical">
+              <span class="play-lantern" aria-hidden="true">▶</span>
+              <strong>REPRODUZIR</strong>
+              <small>assistir aqui</small>
+            </button>
+          </div>
+          <div class="video-caption">
+            <span class="video-number">II</span>
+            <div><small>REDENTOR DOS PERDIDOS</small><h3>Musical · Vídeo II</h3></div>
+          </div>
+        </article>
+
+        <article class="musical-video-card">
+          <div class="video-frame" data-youtube-id="JCOoORbXrMo" data-video-title="Jack o Miserável — Musical · Vídeo III">
+            <img src="https://i.ytimg.com/vi/JCOoORbXrMo/hqdefault.jpg" alt="" loading="lazy">
+            <div class="video-vignette" aria-hidden="true"></div>
+            <button class="video-play" type="button" aria-label="Reproduzir o terceiro vídeo do musical">
+              <span class="play-lantern" aria-hidden="true">▶</span>
+              <strong>REPRODUZIR</strong>
+              <small>assistir aqui</small>
+            </button>
+          </div>
+          <div class="video-caption">
+            <span class="video-number">III</span>
+            <div><small>REDENTOR DOS PERDIDOS</small><h3>Musical · Vídeo III</h3></div>
+          </div>
+        </article>
+      </div>
+
+      <p class="video-library-note">✦ Ao reproduzir um vídeo, os outros permanecem em silêncio. Voltar ao menu encerra a reprodução.</p>
     </section>
 
     <section id="fases" class="screen content-screen">
@@ -172,6 +229,6 @@
   </main>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script src="script.js"></script>
+  <script src="script.js?v=2"></script>
 </body>
 </html>
