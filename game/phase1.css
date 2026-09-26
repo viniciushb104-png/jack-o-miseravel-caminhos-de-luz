@@ -74,7 +74,7 @@ button,a{font-family:inherit}
 .dialogue-shell.has-art .dialogue-name{
   position:absolute;
   left:0;
-  top:19%;
+  top:24%;
   min-width:0;
   width:38%;
   max-width:42%;
@@ -89,8 +89,8 @@ button,a{font-family:inherit}
   position:absolute;
   left:0;
   right:1%;
-  top:43%;
-  bottom:10%;
+  top:51%;
+  bottom:5%;
   margin:0;
   padding:0;
   overflow:hidden;
@@ -104,8 +104,8 @@ button,a{font-family:inherit}
 @media (pointer:coarse),(max-width:900px){
   .dialogue-shell.has-art .dialogue-portrait{left:8.6%;top:12%;bottom:15%;width:20.7%}
   .dialogue-shell.has-art .dialogue-main{left:32.8%;right:8%;top:0;bottom:0;display:block}
-  .dialogue-shell.has-art .dialogue-name{top:19%;width:42%;max-width:46%;margin:0;font-size:.59rem}
-  .dialogue-shell.has-art .dialogue-text{top:44%;bottom:9%;font-size:.70rem;line-height:1.27}
+  .dialogue-shell.has-art .dialogue-name{top:23%;width:42%;max-width:46%;margin:0;font-size:.59rem}
+  .dialogue-shell.has-art .dialogue-text{top:50%;bottom:5%;font-size:.69rem;line-height:1.24}
 }
 
 
