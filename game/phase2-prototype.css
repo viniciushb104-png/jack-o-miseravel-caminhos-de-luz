@@ -352,3 +352,26 @@
     left:4.15%;
   }
 }
+
+
+/* Centralização fina do retrato dentro do quadrado da moldura */
+.dialogue-portrait,
+.dialogue-shell .dialogue-portrait.is-hd-portrait{
+  left:4.65%;
+  top:19%;
+  bottom:25.3%;
+  width:19.9%;
+  background-position:center center!important;
+  background-size:contain!important;
+}
+@media(max-width:700px){
+  .dialogue-portrait,
+  .dialogue-shell .dialogue-portrait.is-hd-portrait{
+    left:4.65%;
+    top:19%;
+    bottom:25.3%;
+    width:19.9%;
+    background-position:center center!important;
+    background-size:contain!important;
+  }
+}
