@@ -146,7 +146,7 @@
       imageFromChunks(["../assets/game/phase1/data/enemies.b64"]),
       imageFromChunks(["../assets/game/phase1/data/memories.b64"]),
       imageFromChunks(["../assets/game/phase1/data/boss.b64"]),
-      imageFromChunks(["../assets/game/phase1/data/dialogue-frame.b64"])
+      imageFromChunks(["../assets/game/phase1/data/dialogue-frame.1.b64","../assets/game/phase1/data/dialogue-frame.2.b64"])
     ]);
 
     if (optional[0].status === "fulfilled") jackPortraits = optional[0].value;
