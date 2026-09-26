@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#07101f">
   <meta name="description" content="Jack o Miserável — Caminhos de Luz. Uma aventura narrativa de Halloween em estética 16-bit.">
   <title>Jack o Miserável — Caminhos de Luz</title>
-  <link rel="stylesheet" href="styles.css?v=3">
+  <link rel="stylesheet" href="styles.css?v=4">
 </head>
 <body>
   <div class="scanlines" aria-hidden="true"></div>
@@ -27,6 +27,11 @@
         <span>↻</span>
         <strong>Para a melhor experiência, gire o celular.</strong>
       </div>
+
+      <button id="menuMusicToggle" class="menu-music-toggle" type="button" aria-label="Ativar música da tela inicial" aria-pressed="false">
+        <span class="menu-music-icon" aria-hidden="true">♫</span>
+        <span class="menu-music-copy"><small>TEMA DE JACK</small><strong>ATIVAR MÚSICA</strong></span>
+      </button>
 
       <div class="hero-layout">
         <div class="hero-copy">
@@ -188,7 +193,7 @@
           </div>
           <div class="soundtrack-progress" aria-live="polite">
             <span>FAIXAS ENCONTRADAS</span>
-            <strong id="soundtrackUnlocked">0/2</strong>
+            <strong id="soundtrackUnlocked">0/3</strong>
           </div>
         </div>
 
@@ -220,15 +225,21 @@
         </div>
 
         <div class="soundtrack-list" id="soundtrackList" aria-label="Coleção de músicas">
-          <button class="soundtrack-track" type="button" data-track-index="0" data-phase="1">
+          <button class="soundtrack-track soundtrack-track--secret" type="button" data-track-index="0" data-phase="1">
             <span class="track-state" aria-hidden="true">🔒</span>
             <span class="track-index">01</span>
-            <span class="track-copy"><small>HALLOWEEN I · AS CASAS DOS PERDIDOS</small><strong>As Casas dos Perdidos</strong></span>
-            <span class="track-action">BLOQUEADA</span>
+            <span class="track-copy"><small>ARQUIVO OCULTO · CAMINHOS DE LUZ</small><strong>??? — Tema Principal</strong></span>
+            <span class="track-action">DESCUBRA</span>
           </button>
           <button class="soundtrack-track" type="button" data-track-index="1" data-phase="1">
             <span class="track-state" aria-hidden="true">🔒</span>
             <span class="track-index">02</span>
+            <span class="track-copy"><small>HALLOWEEN I · AS CASAS DOS PERDIDOS</small><strong>As Casas dos Perdidos</strong></span>
+            <span class="track-action">BLOQUEADA</span>
+          </button>
+          <button class="soundtrack-track" type="button" data-track-index="2" data-phase="1">
+            <span class="track-state" aria-hidden="true">🔒</span>
+            <span class="track-index">03</span>
             <span class="track-copy"><small>HALLOWEEN I · BATALHA FINAL</small><strong>A Guardiã da Última Lanterna</strong></span>
             <span class="track-action">BLOQUEADA</span>
           </button>
@@ -300,6 +311,6 @@
   </main>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script src="script.js?v=3"></script>
+  <script src="script.js?v=4"></script>
 </body>
 </html>
