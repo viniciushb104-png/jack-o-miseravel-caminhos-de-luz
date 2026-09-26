@@ -84,7 +84,7 @@
       if (active) {
         continueJourneyButton.href = './game/' + journey.continueFile() + '?journey=1';
         const label = continueJourneyButton.querySelector('span:nth-child(2)');
-        if (label) label.textContent = 'Continuar Jornada · Halloween ' + String(journey.currentPhase()).padStart(2, '0');
+        if (label) label.textContent = 'Continuar Jornada';
       }
     }
 
