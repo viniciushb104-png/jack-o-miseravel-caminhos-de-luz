@@ -550,6 +550,10 @@ function currentJackFrame(){
 }
 function drawJack(){
   const py=p.y-camY;
+  if(p.on){
+    x.save();x.globalAlpha=.22;x.fillStyle="#05030a";
+    x.beginPath();x.ellipse(p.x-cam+p.w/2,py+p.h+2,22,5,0,0,Math.PI*2);x.fill();x.restore();
+  }
   if(!jack){x.fillStyle="#eee";x.fillRect(p.x-cam,py,p.w,p.h);return}
   const cfg=window.JACK_ANIMATIONS||{},idx=currentJackFrame();
   const cell=cfg.cell||320,cols=cfg.cols||8;
@@ -747,24 +751,75 @@ function drawFallbackPlatform(q,tower=false){
   x.fillStyle=tower?"#b27a3a":"#75604b";x.fillRect(q.x,q.y,q.w,7);
   x.restore();
 }
+// Mede o recorte opaco e, principalmente, a linha visual onde a pedra/madeira
+// realmente começa. A colisão continua em q.y, mas agora o sprite é ancorado
+// nessa mesma linha. Isso elimina os trechos em que Jack parecia caminhar no ar
+// por causa das margens transparentes diferentes de cada PNG.
+const platformSpriteMetaCache=new WeakMap();
+function platformSpriteMeta(image){
+  if(!image)return null;
+  const cached=platformSpriteMetaCache.get(image);if(cached)return cached;
+  const iw=image.naturalWidth||image.width||1,ih=image.naturalHeight||image.height||1;
+  const cw=Math.max(1,Math.min(320,iw)),ch=Math.max(1,Math.min(260,ih));
+  const cv=document.createElement("canvas");cv.width=cw;cv.height=ch;
+  const cx=cv.getContext("2d",{willReadFrequently:true});
+  let meta={sx:0,sy:0,sw:iw,sh:ih,surfaceRatio:.08};
+  try{
+    cx.clearRect(0,0,cw,ch);cx.drawImage(image,0,0,cw,ch);
+    const data=cx.getImageData(0,0,cw,ch).data;
+    let minX=cw,minY=ch,maxX=-1,maxY=-1;
+    const rowCount=new Uint16Array(ch);
+    for(let yy=0;yy<ch;yy++)for(let xx=0;xx<cw;xx++){
+      const a=data[(yy*cw+xx)*4+3];
+      if(a>38){
+        rowCount[yy]++;
+        if(xx<minX)minX=xx;if(xx>maxX)maxX=xx;
+        if(yy<minY)minY=yy;if(yy>maxY)maxY=yy;
+      }
+    }
+    if(maxX>=minX&&maxY>=minY){
+      const opaqueW=Math.max(1,maxX-minX+1);
+      let surface=minY;
+      // Ignora folhas, correntes, pontas e ornamentos isolados acima da plataforma:
+      // a superfície precisa ter massa horizontal por algumas linhas seguidas.
+      const needed=Math.max(8,Math.floor(opaqueW*.24));
+      for(let yy=minY;yy<=maxY;yy++){
+        let solidRows=0;
+        for(let k=0;k<4&&yy+k<=maxY;k++)if(rowCount[yy+k]>=needed)solidRows++;
+        if(solidRows>=3){surface=yy;break}
+      }
+      const padX=Math.max(0,Math.floor(cw*.008));
+      minX=Math.max(0,minX-padX);maxX=Math.min(cw-1,maxX+padX);
+      const sx=minX/cw*iw,sy=minY/ch*ih,sw=(maxX-minX+1)/cw*iw,sh=(maxY-minY+1)/ch*ih;
+      meta={sx,sy,sw,sh,surfaceRatio:Math.max(0,Math.min(.55,(surface-minY)/Math.max(1,maxY-minY+1)))};
+    }
+  }catch(_){}
+  platformSpriteMetaCache.set(image,meta);return meta;
+}
 function drawPlatformSprite(image,q,targetH,extraW=18){
   if(!image)return false;
-  const iw=image.naturalWidth||image.width||1,ih=image.naturalHeight||image.height||1;
-  const drawW=q.w+extraW,ratio=ih/iw;
-  let drawH=Math.max(targetH*.72,Math.min(targetH*1.32,drawW*ratio));
-  const dx=q.x-extraW/2,dy=q.y-8;
-  x.save();x.imageSmoothingEnabled=true;x.drawImage(image,dx,dy,drawW,drawH);x.restore();
+  const m=platformSpriteMeta(image),drawW=q.w+extraW,ratio=m.sh/m.sw;
+  const drawH=Math.max(targetH*.72,Math.min(targetH*1.32,drawW*ratio));
+  const dx=q.x-extraW/2;
+  // +2 coloca os pés visualmente dentro da borda, evitando um filete de ar.
+  const dy=q.y-m.surfaceRatio*drawH+2;
+  x.save();x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";
+  x.drawImage(image,m.sx,m.sy,m.sw,m.sh,dx,dy,drawW,drawH);x.restore();
   return true;
 }
 function drawTiledGround(image,q,targetH){
   if(!image)return false;
-  const iw=image.naturalWidth||image.width||1,ih=image.naturalHeight||image.height||1;
-  const tileW=Math.max(245,targetH*(iw/ih)),overlap=18,step=tileW-overlap;
-  x.save();x.imageSmoothingEnabled=true;
+  const m=platformSpriteMeta(image);
+  const tileW=Math.max(245,targetH*(m.sw/m.sh)),overlap=20,step=tileW-overlap;
+  const dy=q.y-m.surfaceRatio*targetH+2;
+  x.save();x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";
   for(let px=q.x-8;px<q.x+q.w+8;px+=step){
     const w=Math.min(tileW,q.x+q.w+14-px);
     if(w<35)break;
-    x.drawImage(image,0,0,iw,ih,px,q.y-8,w,targetH);
+    // O recorte opaco remove as margens transparentes que deixavam buracos
+    // entre a hitbox da plataforma e a pintura.
+    const sourceW=m.sw*(w/tileW);
+    x.drawImage(image,m.sx,m.sy,sourceW,m.sh,px,dy,w,targetH);
   }
   x.restore();return true;
 }
