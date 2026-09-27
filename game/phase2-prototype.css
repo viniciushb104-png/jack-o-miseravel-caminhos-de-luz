@@ -428,3 +428,59 @@
 @media(pointer:coarse),(max-width:900px){.hud-cluster{gap:4px}.hud-audio{min-width:48px;min-height:40px;padding:3px 5px}.hud-audio span{font-size:.34rem}.music-banner{left:10px;top:94px;min-width:205px;padding:7px 12px 8px 37px}.music-banner:before{left:11px;font-size:1rem}.music-banner strong{font-size:.64rem}}
 @media(max-width:650px){.hud-audio{min-width:42px}.hud-audio span{display:none}.hud-box{padding:4px 6px}}
 @media(max-height:480px){.music-banner{top:70px}}
+
+
+/* Cutscene final parcial — Halloween II: 4:13 → 4:14 */
+.story-cutscene{
+  position:fixed;inset:0;z-index:120;
+  display:grid;place-items:center;
+  background:#02040a;
+  padding:0;
+  isolation:isolate;
+}
+.story-cutscene[hidden]{display:none!important}
+.story-cutscene-stage{
+  position:relative;width:100vw;height:100vh;
+  display:grid;place-items:center;
+  overflow:hidden;background:#02040a;
+}
+.story-cutscene video{
+  width:100%;height:100%;object-fit:contain;
+  background:#02040a;
+}
+.story-cutscene-vignette{
+  position:absolute;inset:0;pointer-events:none;
+  box-shadow:inset 0 0 12vw rgba(0,0,0,.72);
+  background:linear-gradient(180deg,rgba(2,4,10,.22),transparent 18%,transparent 78%,rgba(2,4,10,.36));
+}
+.story-cutscene-caption{
+  position:absolute;left:clamp(16px,4vw,58px);bottom:clamp(18px,5vh,54px);
+  color:#f5d995;text-shadow:0 2px 8px #000,0 0 18px rgba(231,142,39,.38);
+  opacity:0;transform:translateY(8px);
+  animation:phase2CutsceneCaption 2.8s ease .35s both;
+  pointer-events:none;
+}
+.story-cutscene-caption small{display:block;font-size:clamp(.48rem,.8vw,.68rem);letter-spacing:.25em;color:#b88a50}
+.story-cutscene-caption strong{display:block;margin-top:5px;font-family:Georgia,serif;font-size:clamp(.9rem,1.7vw,1.35rem);letter-spacing:.12em}
+.story-cutscene-skip{
+  position:absolute;right:clamp(12px,3vw,34px);top:clamp(12px,3vh,28px);
+  border:1px solid rgba(236,190,105,.52);background:rgba(4,9,20,.72);color:#dbc38f;
+  padding:8px 13px;font:700 .62rem Georgia,serif;letter-spacing:.14em;cursor:pointer;
+  opacity:.72;
+}
+.story-cutscene-skip:hover,.story-cutscene-skip:focus-visible{opacity:1;border-color:#ffd579;outline:none}
+.story-cutscene-play{
+  position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  border:2px solid #d89b35;background:rgba(5,10,24,.94);color:#ffe4a3;
+  padding:14px 22px;font:700 .78rem Georgia,serif;letter-spacing:.12em;cursor:pointer;
+  box-shadow:0 0 28px rgba(222,139,42,.24);
+}
+@keyframes phase2CutsceneCaption{
+  0%{opacity:0;transform:translateY(8px)}
+  18%,72%{opacity:.9;transform:translateY(0)}
+  100%{opacity:0;transform:translateY(-3px)}
+}
+@media(max-width:700px){
+  .story-cutscene-caption{bottom:72px}
+  .story-cutscene-skip{font-size:.52rem;padding:7px 10px}
+}
