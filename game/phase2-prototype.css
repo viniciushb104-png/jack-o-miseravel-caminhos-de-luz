@@ -646,3 +646,33 @@
     background-position:center bottom!important;
   }
 }
+
+
+/* v20 — enquadramento medido pela moldura real da gameplay.
+   Área útil do retrato: dentro do painel esquerdo, acima da abóbora e sem tocar nas bordas. */
+.dialogue-shell .dialogue-portrait,
+.dialogue-shell .dialogue-portrait.is-hd-portrait,
+.dialogue.amelia-boss-dialogue .dialogue-portrait,
+.dialogue.amelia-boss-dialogue .dialogue-portrait.is-hd-portrait{
+  left:7.25%!important;
+  top:23.5%!important;
+  bottom:30.5%!important;
+  width:18.25%!important;
+  height:auto!important;
+  margin:0!important;
+  background-position:center bottom!important;
+  background-size:contain!important;
+  background-repeat:no-repeat!important;
+}
+@media(max-width:700px){
+  .dialogue-shell .dialogue-portrait,
+  .dialogue-shell .dialogue-portrait.is-hd-portrait,
+  .dialogue.amelia-boss-dialogue .dialogue-portrait,
+  .dialogue.amelia-boss-dialogue .dialogue-portrait.is-hd-portrait{
+    left:7.15%!important;
+    top:23.5%!important;
+    bottom:30.5%!important;
+    width:18.35%!important;
+    background-position:center bottom!important;
+  }
+}
