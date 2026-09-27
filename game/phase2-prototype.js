@@ -31,7 +31,7 @@ if(forceNewRun){localStorage.removeItem(SAVE_KEY);localStorage.removeItem(CHECKP
 let loadedSave=null;if(journeyMode&&!replayMode){try{loadedSave=JSON.parse(localStorage.getItem(SAVE_KEY)||"null")}catch(e){loadedSave=null}}
 let ameliaMet=false, introLorePlayed=false, gearLore=[false,false,false], finalLorePlayed=false,bossUnlocked=false,bossActive=false,bossDefeated=false;const puzzles={sinos:false,janelas:false,sombras:false};let towerMechanism=false;
 const arenaPlats=[{x:7580,y:-480,w:250,h:24},{x:7860,y:-565,w:250,h:24},{x:7200,y:-650,w:1700,h:60}];
-const boss={x:8360,y:-770,hp:10,maxHp:10,dir:-1,t:0,shot:1.25,invuln:0,spawn:0,cast:0,animT:0};
+const boss={x:8360,y:-770,hp:10,maxHp:10,dir:-1,t:0,shot:1.55,invuln:0,spawn:0,cast:0,animT:0};
 const bossShots=[];let playerLife=3,playerHit=0;
 const ameliaShadowAssets={dialogue:[],transform:[],boss:[],effects:[],map:[]};
 const shadowCutscene={active:false,t:0,cue:0};
@@ -39,7 +39,9 @@ let checkpointArt={off:null,on:null};
 let activeCheckpoint=localStorage.getItem(CHECKPOINT_KEY)||"";
 const PHASE2_CHECKPOINTS=Object.freeze([
   {id:"village",rank:1,name:"Relógio Congelado",x:5315,groundY:590,respawnX:5135,respawnY:504,renderH:300},
-  {id:"tower",rank:2,name:"Lanterna da Torre",x:7355,groundY:590,respawnX:7205,respawnY:504,renderH:300}
+  {id:"tower",rank:2,name:"Lanterna da Torre",x:7355,groundY:590,respawnX:7205,respawnY:504,renderH:300},
+  // Equivalente à Última Lanterna da Fase 1: fica no topo, imediatamente antes do chefe.
+  {id:"preboss",rank:3,name:"Última Lanterna das 4:13",x:7825,groundY:-395,respawnX:7740,respawnY:-481,renderH:210}
 ]);
 function checkpointRank(id){const cp=PHASE2_CHECKPOINTS.find(z=>z.id===id);return cp?cp.rank:0}
 function checkpointIsLit(cp){return checkpointRank(activeCheckpoint)>=cp.rank}
@@ -124,7 +126,7 @@ function syncPhase2Music(options={}){
   phaseAudio.switchTrack(next,{fadeOut:options.fadeOut??900,fadeIn:options.fadeIn??1050});
 }
 function activateShadowBoss(){
-  shadowCutscene.active=false;bossUnlocked=true;bossActive=true;bossDefeated=false;boss.hp=boss.maxHp;boss.t=0;boss.shot=1.25;boss.spawn=1.05;boss.cast=0;boss.animT=0;playerLife=3;bossShots.length=0;
+  shadowCutscene.active=false;bossUnlocked=true;bossActive=true;bossDefeated=false;boss.hp=boss.maxHp;boss.t=0;boss.shot=1.55;boss.spawn=1.25;boss.cast=0;boss.animT=0;playerLife=3;playerHit=0;bossShots.length=0;
   phase2MusicState="boss";
   phaseAudio.switchTrack("boss",{fadeOut:650,fadeIn:750});
   banner("SOMBRA DE AMÉLIA — O ÚLTIMO MINUTO");say("A dor das 4:13 tomou forma. Use a LUZ para libertá-la.");
@@ -312,29 +314,43 @@ if(bossActive&&!bossDefeated){
 
   if(boss.spawn<=0){
     boss.shot-=dt;
-    const preparing=boss.shot<=.62;
-    // Durante a preparação e a magia o corpo para: nada de "patinar" enquanto ataca.
+    const preparing=boss.shot<=.72;
+    // O Último Minuto continua ameaçador, mas agora anuncia melhor cada ataque.
+    // A velocidade cresce devagar para a dificuldade vir da leitura, não de projéteis injustos.
     if(!preparing&&boss.cast<=0){
-      boss.x+=boss.dir*(72+Math.min(38,boss.t*1.15))*dt;
+      boss.x+=boss.dir*(64+Math.min(30,boss.t*.75))*dt;
       if(boss.x<7600){boss.x=7600;boss.dir=1;boss.animT=0}
       if(boss.x>8560){boss.x=8560;boss.dir=-1;boss.animT=0}
     }
     if(boss.shot<=0&&boss.cast<=0){
-      boss.cast=.30;
-      boss.shot=Math.max(.82,1.55-boss.t*.010);
-      const tx=p.x+p.w/2,ty=p.y+p.h/2,dx=tx-boss.x,dy=ty-boss.y,len=Math.hypot(dx,dy)||1,speed=255+Math.min(90,boss.t*2);
+      boss.cast=.34;
+      boss.shot=Math.max(1.02,1.68-boss.t*.006);
+      const tx=p.x+p.w/2,ty=p.y+p.h/2,dx=tx-boss.x,dy=ty-boss.y,len=Math.hypot(dx,dy)||1,speed=235+Math.min(70,boss.t*1.35);
       const muzzleX=boss.x+boss.dir*62,muzzleY=boss.y-12;
-      bossShots.push({x:muzzleX,y:muzzleY,vx:dx/len*speed,vy:dy/len*speed,r:13,life:5});
+      bossShots.push({x:muzzleX,y:muzzleY,vx:dx/len*speed,vy:dy/len*speed,r:12,life:5});
     }
   }
   for(let i=bossShots.length-1;i>=0;i--){
     const s=bossShots[i];s.x+=s.vx*dt;s.y+=s.vy*dt;s.life-=dt;
     if(s.life<=0){bossShots.splice(i,1);continue}
     if(playerHit<=0&&Math.abs(s.x-(p.x+p.w/2))<s.r+p.w*.42&&Math.abs(s.y-(p.y+p.h/2))<s.r+p.h*.42){
-      bossShots.splice(i,1);playerLife--;playerHit=.9;
-      if(playerLife<=0){playerLife=3;boss.hp=boss.maxHp;boss.t=0;boss.shot=1.25;boss.spawn=.75;boss.cast=0;boss.animT=0;bossShots.length=0;say("O tempo venceu esta tentativa — a arena reiniciou.");}
-      else say("O tempo atingiu Jack — "+playerLife+"/3 luzes restantes.");
-      p.x=7350;p.y=-736;p.vx=0;p.vy=0;
+      bossShots.splice(i,1);
+      playerLife--;
+      playerHit=1.15;
+      if(playerLife<=0){
+        // Igual à Fase 1: a tentativa termina e Jack reaparece na última lanterna acesa.
+        playerLife=3;
+        boss.hp=boss.maxHp;boss.t=0;boss.shot=1.55;boss.spawn=1.25;boss.cast=0;boss.animT=0;boss.invuln=0;
+        bossShots.length=0;
+        respawnAtCheckpoint("A Última Lanterna reacendeu Jack. O Último Minuto recuperou toda a força.");
+        playerHit=1.15;
+        saveJourney();
+      }else{
+        // Um acerto comum só causa recuo e invulnerabilidade curta — não teleporta Jack.
+        p.vx=p.x<boss.x?-220:220;
+        p.vy=-255;
+        say("O tempo atingiu Jack — "+playerLife+"/3 luzes restantes.");
+      }
     }
   }
 }else if(bossShots.length)bossShots.length=0;
@@ -611,9 +627,9 @@ if(bossActive&&!bossDefeated){
   if(boss.spawn>0)bi=8;
   else if(boss.invuln>0)bi=7;
   else if(boss.cast>0)bi=6;
-  else if(boss.shot<=.62){
-    const wind=Math.max(0,Math.min(.619,.62-boss.shot));
-    bi=3+Math.min(2,Math.floor(wind/.207));
+  else if(boss.shot<=.72){
+    const wind=Math.max(0,Math.min(.719,.72-boss.shot));
+    bi=3+Math.min(2,Math.floor(wind/.24));
   }else{
     const walkCycle=Math.floor(boss.animT/0.15)%4;
     bi=[0,1,0,2][walkCycle];
@@ -633,8 +649,8 @@ if(bossActive&&!bossDefeated){
     x.restore();
 
     // Telegraph de ataque: a luz cresce antes do projétil sair, sincronizada aos 3 frames.
-    if(boss.spawn<=0&&boss.invuln<=0&&boss.shot<=.62&&boss.cast<=0){
-      const charge=Math.max(0,Math.min(1,(.62-boss.shot)/.62));
+    if(boss.spawn<=0&&boss.invuln<=0&&boss.shot<=.72&&boss.cast<=0){
+      const charge=Math.max(0,Math.min(1,(.72-boss.shot)/.72));
       const orbX=boss.x+boss.dir*68,orbY=boss.y-10;
       x.save();x.globalAlpha=.18+charge*.52;x.fillStyle="#ff5b9d";x.beginPath();x.arc(orbX,orbY,10+charge*24,0,Math.PI*2);x.fill();
       x.globalAlpha=.55+charge*.45;x.fillStyle="#ffd978";x.beginPath();x.arc(orbX,orbY,5+charge*9,0,Math.PI*2);x.fill();x.restore();
