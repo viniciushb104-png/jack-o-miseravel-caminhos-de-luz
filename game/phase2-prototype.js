@@ -26,6 +26,10 @@ phaseAudio.bindDialogue(dialogueRoot);
 phaseAudio.bindNowPlaying(document.getElementById("musicBanner"));
 let phase2MusicState="village";
 const interactPrompt=document.getElementById("interactPrompt");
+const shadowVideoRoot=document.getElementById("phase2ShadowCutscene");
+const shadowVideo=document.getElementById("phase2ShadowVideo");
+const shadowVideoSkip=document.getElementById("phase2ShadowSkip");
+const shadowVideoPlay=document.getElementById("phase2ShadowPlay");
 const clockCutsceneRoot=document.getElementById("phase2ClockCutscene");
 const clockCutsceneVideo=document.getElementById("phase2ClockVideo");
 const clockCutsceneSkip=document.getElementById("phase2ClockSkip");
@@ -250,13 +254,21 @@ phase2NextBtn?.addEventListener("click",()=>{
   location.href="../index.html#fases";
 });
 phase2MenuBtn?.addEventListener("click",()=>{ location.href="../index.html"; });
+shadowVideo?.addEventListener("ended",finishShadowVideo);
+shadowVideo?.addEventListener("error",finishShadowVideo);
+shadowVideoSkip?.addEventListener("click",finishShadowVideo);
+shadowVideoPlay?.addEventListener("click",()=>{
+  if(shadowVideoPlay)shadowVideoPlay.hidden=true;
+  const attempt=shadowVideo?.play();
+  if(attempt&&typeof attempt.catch==="function")attempt.catch(()=>finishShadowVideo());
+});
 clockCutscenePlay?.addEventListener("click",()=>{
   if(clockCutscenePlay)clockCutscenePlay.hidden=true;
   const attempt=clockCutsceneVideo?.play();
   if(attempt&&typeof attempt.catch==="function")attempt.catch(()=>finishClockCutscene());
 });
 function desiredPhase2Track(){
-  if(bossActive&&!bossDefeated)return "boss";
+  if((bossActive&&!bossDefeated)||shadowCutscene.active)return "boss";
   if(p.x>7150||bossUnlocked||shadowCutscene.active)return "tower";
   return "village";
 }
@@ -280,9 +292,29 @@ function activateShadowBoss(){
   phaseAudio.switchTrack("boss",{fadeOut:650,fadeIn:750});
   banner("SOMBRA DE AMÉLIA — O ÚLTIMO MINUTO");say("A dor das 4:13 tomou forma. Use a LUZ para libertá-la.");
 }
+function finishShadowVideo(){
+  if(!shadowCutscene.active)return;
+  shadowCutscene.active=false;
+  if(shadowVideo){shadowVideo.pause();shadowVideo.currentTime=0}
+  if(shadowVideoRoot)shadowVideoRoot.hidden=true;
+  if(shadowVideoPlay)shadowVideoPlay.hidden=true;
+  openDialogue(lore.shadowBorn,activateShadowBoss);
+}
 function startShadowCutscene(){
   finalLorePlayed=true;bossUnlocked=true;bossActive=false;bossDefeated=false;shadowCutscene.active=true;shadowCutscene.t=0;shadowCutscene.cue=0;
-  input.left=input.right=input.down=false;p.vx=0;p.vy=0;banner("A SOMBRA DAS 4:13");
+  input.left=input.right=input.down=false;p.vx=0;p.vy=0;
+  banner("A SOMBRA DAS 4:13");
+  // A trilha do chefe começa já na transformação. O MP4 fica mudo para não disputar com a música do jogo.
+  if(phaseAudio.started){
+    phase2MusicState="boss";
+    phaseAudio.switchTrack("boss",{fadeOut:500,fadeIn:700});
+  }
+  if(!shadowVideoRoot||!shadowVideo){finishShadowVideo();return}
+  shadowVideoRoot.hidden=false;
+  shadowVideo.currentTime=0;
+  if(shadowVideoPlay)shadowVideoPlay.hidden=true;
+  const attempt=shadowVideo.play();
+  if(attempt&&typeof attempt.catch==="function")attempt.catch(()=>{if(shadowVideoPlay)shadowVideoPlay.hidden=false;});
 }
 function nearAmelia(){
   const ameliaX=2638,ameliaGround=430;
@@ -718,12 +750,8 @@ addEventListener("keyup",e=>{if(["ArrowLeft","a","A"].includes(e.key))input.left
 const startGameBtn=document.getElementById("startGame");if(loadedSave&&journeyMode&&!replayMode){startGameBtn.textContent="✦ CONTINUAR JORNADA";const introCopy=ui.intro.querySelector("span");if(introCopy)introCopy.textContent="A lanterna guardou seu caminho pela Vila sem Amanhecer."}startGameBtn.onclick=()=>{if(journeyMode&&!replayMode)journey?.advanceTo(2);phase2MusicState=desiredPhase2Track();phaseAudio.start(phase2MusicState);ui.intro.hidden=true;running=true;last=performance.now();requestAnimationFrame(loop);setTimeout(()=>{if(bossDefeated&&!clockCutsceneSeen){startClockEnding();return}if(!introLorePlayed){introLorePlayed=true;openDialogue(lore.arrival)}},450)};
 function update(dt){syncHealthHud();syncPhase2Music();if(endingSequenceActive&&!dialogue.active){p.vx=0;p.vy=0;p.anim+=dt;interactPrompt.hidden=true;return}if(dialogue.active){p.vx*=.7;cam+=(Math.max(0,Math.min(WORLD-W,p.x-W*.36))-cam)*Math.min(1,dt*5);camY+=((p.x>7150?Math.min(0,p.y-390):0)-camY)*Math.min(1,dt*4);p.anim+=dt;interactPrompt.hidden=true;return}
 if(shadowCutscene.active){
-  shadowCutscene.t+=dt;p.vx=0;p.vy=0;p.anim+=dt;interactPrompt.hidden=true;
-  cam+=(Math.max(0,Math.min(WORLD-W,8050-W*.52))-cam)*Math.min(1,dt*3.2);
-  camY+=(-890-camY)*Math.min(1,dt*3.2);
-  if(shadowCutscene.t>=2.55&&shadowCutscene.cue<1){shadowCutscene.cue=1;say("AMÉLIA: AAAAAH!")}
-  if(shadowCutscene.t>=5.55&&shadowCutscene.cue<2){shadowCutscene.cue=2;banner("A SOMBRA SE DESPRENDE DE AMÉLIA")}
-  if(shadowCutscene.t>=7.15){shadowCutscene.active=false;openDialogue(lore.shadowBorn,activateShadowBoss)}
+  // A transformação agora é uma cutscene em vídeo; a gameplay permanece congelada até o vídeo terminar ou ser pulado.
+  p.vx=0;p.vy=0;p.anim+=dt;interactPrompt.hidden=true;
   return
 }
 cool=Math.max(0,cool-dt);light=Math.max(0,light-dt);p.attack=Math.max(0,p.attack-dt);bellAnim.t=Math.max(0,bellAnim.t-dt);bellAnim.wrongT=Math.max(0,bellAnim.wrongT-dt);if(bellAnim.t<=0)bellAnim.ringing=-1;if(bellAnim.wrongT<=0)bellAnim.wrong=-1;reveal.forEach(q=>q.t=Math.max(0,q.t-dt));p.coyote=p.on?.12:Math.max(0,p.coyote-dt);if(input.jump){p.buffer=.14;input.jump=false}else p.buffer=Math.max(0,p.buffer-dt);
