@@ -328,7 +328,15 @@ if(loadedSave){
 }
 // Recuperação de progresso: evita soft-lock em saves feitos durante diálogos/cutscenes
 // e corrige flags antigas quando os próprios elementos da fase já estão concluídos.
-if(bellStep>=4||bells.every(z=>z.on)){bellStep=4;puzzles.sinos=true}
+// Normaliza o puzzle dos sinos após reload/save antigo: somente as memórias
+// anteriores ao passo atual podem permanecer acesas.
+bellStep=Math.max(0,Math.min(4,Number(bellStep)||0));
+if(bellStep>=4||bells.every(z=>z.on)){
+  bellStep=4;puzzles.sinos=true;bells.forEach(z=>z.on=true);
+}else{
+  puzzles.sinos=false;
+  bells.forEach(z=>z.on=z.id<bellStep);
+}
 if(windowStep>=3||windows.every(z=>z.on)){windowStep=3;puzzles.janelas=true}
 if(shadowStep>=3||shadowSeals.every(z=>z.on)){shadowStep=3;puzzles.sombras=true}
 if(towerStep>=2||towerSeals.every(z=>z.on)){towerStep=2;towerMechanism=true}
@@ -337,7 +345,7 @@ if(finalLorePlayed&&!bossActive&&!bossDefeated){
   finalLorePlayed=false;
   bossUnlocked=false;
 }
-function img(src){return new Promise((r,j)=>{const i=new Image;i.onload=()=>r(i);i.onerror=j;i.src=src+"?v=p2jackfix1"})}
+function img(src){return new Promise((r,j)=>{const i=new Image;i.onload=()=>r(i);i.onerror=j;i.src=src+(src.includes("?")?"&":"?")+"v=p2jackfix2"})}
 function buildCleanJackFrame(img,frame,eraseRects=[]){
   const cfg=window.JACK_ANIMATIONS,cell=cfg?.cell||320,cols=cfg?.cols||8;
   const canvas=document.createElement("canvas");canvas.width=cell;canvas.height=cell;
@@ -386,7 +394,7 @@ img("../assets/game/phase2/checkpoints/checkpoint-phase2-off.png").then(i=>check
 img("../assets/game/phase2/checkpoints/checkpoint-phase2-on.png").then(i=>checkpointArt.on=i).catch(()=>{});
 [
   ["bases",["base-sino-01.png","base-sino-02.png","base-sino-03.png","base-sino-04.png"]],
-  ["animated",["sino-01-amelia-crianca.png?v=2","sino-02-amelia-aprendiz.png?v=2","sino-03-amelia-relojoeira.png?v=3","sino-04-amelia-torre.png?v=3"]]
+  ["animated",["sino-01-amelia-crianca.png?v=4","sino-02-amelia-aprendiz.png?v=4","sino-03-amelia-relojoeira.png?v=4","sino-04-amelia-torre.png?v=4"]]
 ].forEach(([folder,files])=>{
   Promise.allSettled(files.map(file=>img("../assets/game/phase2/puzzles/bells/"+folder+"/"+file)))
     .then(rs=>bellAssets[folder]=rs.map(r=>r.status==="fulfilled"?r.value:null));
@@ -467,8 +475,13 @@ if(!puzzles.sinos){
     bellAnim.ringing=b.id;bellAnim.t=.58;playBellSfx();
     if(b.id===bellStep){
       b.on=true;bellStep++;
-      say(bellLore[b.id]+"  Sino "+bellStep+"/4");
-      if(bellStep===4){puzzles.sinos=true;banner("MEMÓRIA RECONSTRUÍDA — OS SINOS");say("Antes daquela noite, Amélia também contava as horas para o amanhã.");}
+      if(bellStep===4){
+        puzzles.sinos=true;
+        banner("MEMÓRIA RECONSTRUÍDA — OS SINOS");
+        say(bellLore[b.id]+"  Memória 4/4 — Antes daquela noite, Amélia também contava as horas para o amanhã.");
+      }else{
+        say(bellLore[b.id]+"  Memória "+bellStep+"/4");
+      }
     }else{
       bellAnim.wrong=b.id;bellAnim.wrongT=.72;
       bells.forEach(z=>z.on=false);bellStep=0;
@@ -1085,7 +1098,7 @@ for(const b of bells){
   const localBellH=bellH;
   if(b.on){
     const pulse=.82+Math.sin(p.anim*4.2+b.id)*.12;
-    const glow=x.createRadialGradient(bellX,pivotY+55,8,b.x,pivotY+55,88);
+    const glow=x.createRadialGradient(bellX,pivotY+55,8,bellX,pivotY+55,88);
     glow.addColorStop(0,"rgba(255,230,135,"+(.5*pulse)+")");
     glow.addColorStop(.5,"rgba(255,174,58,"+(.22*pulse)+")");
     glow.addColorStop(1,"rgba(255,128,25,0)");
