@@ -551,8 +551,8 @@ function currentJackFrame(){
 function drawJack(){
   const py=p.y-camY;
   if(p.on){
-    x.save();x.globalAlpha=.22;x.fillStyle="#05030a";
-    x.beginPath();x.ellipse(p.x-cam+p.w/2,py+p.h+2,22,5,0,0,Math.PI*2);x.fill();x.restore();
+    x.save();x.globalAlpha=.18;x.fillStyle="#05030a";
+    x.beginPath();x.ellipse(p.x-cam+p.w/2,py+p.h+1,18,3.2,0,0,Math.PI*2);x.fill();x.restore();
   }
   if(!jack){x.fillStyle="#eee";x.fillRect(p.x-cam,py,p.w,p.h);return}
   const cfg=window.JACK_ANIMATIONS||{},idx=currentJackFrame();
@@ -796,28 +796,54 @@ function platformSpriteMeta(image){
   }catch(_){}
   platformSpriteMetaCache.set(image,meta);return meta;
 }
-function drawPlatformSprite(image,q,targetH,extraW=18){
+function platformUnderlay(q,tower=false){
+  // A física continua sendo o retângulo q. O underlay existe somente para que
+  // nenhuma margem transparente do PNG revele céu entre os pés de Jack e a plataforma.
+  const base=tower?"#241b22":(q.h>=100?"#292126":"#352b2c");
+  const edge=tower?"#8e6136":"#685442";
+  x.save();
+  x.fillStyle=base;x.fillRect(q.x,q.y,q.w,Math.max(q.h,18));
+  x.globalAlpha=.78;x.fillStyle=edge;x.fillRect(q.x,q.y,q.w,5);
+  if(q.h>42){
+    const shade=x.createLinearGradient(0,q.y+22,0,q.y+Math.max(50,q.h));
+    shade.addColorStop(0,"rgba(0,0,0,0)");
+    shade.addColorStop(1,"rgba(0,0,0,.42)");
+    x.fillStyle=shade;x.fillRect(q.x,q.y+20,q.w,Math.max(0,q.h-20));
+  }
+  x.restore();
+}
+function drawPlatformSprite(image,q,targetH,extraW=18,tower=false){
+  platformUnderlay(q,tower);
   if(!image)return false;
   const m=platformSpriteMeta(image),drawW=q.w+extraW,ratio=m.sh/m.sw;
   const drawH=Math.max(targetH*.72,Math.min(targetH*1.32,drawW*ratio));
   const dx=q.x-extraW/2;
-  // +2 coloca os pés visualmente dentro da borda, evitando um filete de ar.
-  const dy=q.y-m.surfaceRatio*drawH+2;
-  x.save();x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";
-  x.drawImage(image,m.sx,m.sy,m.sw,m.sh,dx,dy,drawW,drawH);x.restore();
+  // O desenho pode ter folhas/correntes acima do piso. Mantemos essa decoração,
+  // mas a linha física q.y recebe sempre a massa da plataforma por baixo.
+  const dy=q.y-m.surfaceRatio*drawH-3;
+  x.save();
+  x.beginPath();
+  x.rect(q.x-extraW,q.y-36,q.w+extraW*2,Math.max(q.h+52,drawH+48));
+  x.clip();
+  x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";
+  x.drawImage(image,m.sx,m.sy,m.sw,m.sh,dx,dy,drawW,drawH);
+  x.restore();
   return true;
 }
-function drawTiledGround(image,q,targetH){
+function drawTiledGround(image,q,targetH,tower=false){
+  platformUnderlay(q,tower);
   if(!image)return false;
   const m=platformSpriteMeta(image);
   const tileW=Math.max(245,targetH*(m.sw/m.sh)),overlap=20,step=tileW-overlap;
-  const dy=q.y-m.surfaceRatio*targetH+2;
-  x.save();x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";
+  const dy=q.y-m.surfaceRatio*targetH-3;
+  x.save();
+  x.beginPath();
+  x.rect(q.x-10,q.y-38,q.w+20,Math.max(q.h+56,targetH+50));
+  x.clip();
+  x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";
   for(let px=q.x-8;px<q.x+q.w+8;px+=step){
     const w=Math.min(tileW,q.x+q.w+14-px);
     if(w<35)break;
-    // O recorte opaco remove as margens transparentes que deixavam buracos
-    // entre a hitbox da plataforma e a pintura.
     const sourceW=m.sw*(w/tileW);
     x.drawImage(image,m.sx,m.sy,sourceW,m.sh,px,dy,w,targetH);
   }
@@ -844,20 +870,20 @@ function drawPhasePlatform(q,index){
   if(tower){
     const sprite=towerSpriteFor(q,index);
     if(q.h>=100){
-      if(!drawTiledGround(sprite,q,108))drawFallbackPlatform(q,true);
-    }else if(!drawPlatformSprite(sprite,q,105,24))drawFallbackPlatform(q,true);
+      if(!drawTiledGround(sprite,q,108,true))drawFallbackPlatform(q,true);
+    }else if(!drawPlatformSprite(sprite,q,105,24,true))drawFallbackPlatform(q,true);
     return;
   }
   const sprite=villageSpriteFor(q,index);
   if(q.h>=100){
-    if(!drawTiledGround(sprite,q,96))drawFallbackPlatform(q,false);
-  }else if(!drawPlatformSprite(sprite,q,92,22))drawFallbackPlatform(q,false);
+    if(!drawTiledGround(sprite,q,96,false))drawFallbackPlatform(q,false);
+  }else if(!drawPlatformSprite(sprite,q,92,22,false))drawFallbackPlatform(q,false);
 }
 function drawArenaPlatform(q,index){
   const sprite=towerSpriteFor(q,index+2);
   if(q.w>650){
-    if(!drawTiledGround(sprite,q,112))drawFallbackPlatform(q,true);
-  }else if(!drawPlatformSprite(sprite,q,108,24))drawFallbackPlatform(q,true);
+    if(!drawTiledGround(sprite,q,112,true))drawFallbackPlatform(q,true);
+  }else if(!drawPlatformSprite(sprite,q,108,24,true))drawFallbackPlatform(q,true);
 }
 function drawClockPreludeVisual(){
   if(!clockPreludeVisualActive||!dialogue.active||!clockDialogueSprite)return;
@@ -908,7 +934,15 @@ if(bossUnlocked||bossActive||bossDefeated){
   arenaPlats.forEach((q,i)=>drawArenaPlatform(q,i));
   for(let gx=7290;gx<8840;gx+=150)drawClockGear(gx,-624,24,.58);
 }
-for(const q of reveal){if(q.t>0){x.globalAlpha=Math.min(1,q.t*2);x.fillStyle="#b7eaff";x.fillRect(q.x,q.y,q.w,q.h);x.globalAlpha=1}}
+for(let ri=0;ri<reveal.length;ri++){
+  const q=reveal[ri];if(q.t<=0)continue;
+  x.save();
+  const alpha=Math.min(1,q.t*2);
+  x.globalAlpha=alpha;
+  x.shadowColor="#9beaff";x.shadowBlur=16;
+  drawPhasePlatform(q,ri+97);
+  x.restore();
+}
 // Marcadores dos enigmas obrigatórios.
 for(const z of windows){x.fillStyle=z.on?"#ffe7a1":"#402d45";x.fillRect(z.x,z.y,44,58);x.strokeStyle="#c88b35";x.strokeRect(z.x,z.y,44,58)}
 for(const z of shadowSeals){x.fillStyle=z.on?"#b9eaff":"#171b2c";x.beginPath();x.arc(z.x,z.y,20,0,Math.PI*2);x.fill();x.strokeStyle="#78a5bb";x.stroke()}
