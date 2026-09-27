@@ -1,7 +1,7 @@
 (()=>{"use strict";
 const c=document.getElementById("game"),x=c.getContext("2d"),W=1280,H=720,WORLD=9200,G=1500;
 const ui={obj:document.querySelector("#objective strong"),gear:document.getElementById("gearValue"),banner:document.getElementById("sectionBanner"),msg:document.getElementById("message"),intro:document.getElementById("intro")};
-const input={left:false,right:false,run:false,jump:false,down:false};let running=false,last=performance.now(),cam=0,camY=0,jack=null,ameliaMap={},light=0,cool=0,section=-1;
+const input={left:false,right:false,run:false,jump:false,down:false};let running=false,last=performance.now(),cam=0,camY=0,jack=null,jackFrameOverrides={},ameliaMap={},light=0,cool=0,section=-1;
 const dialogueRoot=document.getElementById("dialogue");
 const dialogue=new window.DialogueSystem(dialogueRoot);
 const phaseAudio=new window.GameAudio({
@@ -267,8 +267,25 @@ if(finalLorePlayed&&!bossActive&&!bossDefeated){
   finalLorePlayed=false;
   bossUnlocked=false;
 }
-function img(src){return new Promise((r,j)=>{const i=new Image;i.onload=()=>r(i);i.onerror=j;i.src=src+"?v=p2shadowv2"})}
-img("../assets/game/phase1/sprites-hd/jack-atlas-hd.png").then(i=>jack=i).catch(()=>{});
+function img(src){return new Promise((r,j)=>{const i=new Image;i.onload=()=>r(i);i.onerror=j;i.src=src+"?v=p2jackfix1"})}
+function buildCleanJackFrame(img,frame,eraseRects=[]){
+  const cfg=window.JACK_ANIMATIONS,cell=cfg?.cell||320,cols=cfg?.cols||8;
+  const canvas=document.createElement("canvas");canvas.width=cell;canvas.height=cell;
+  const cx=canvas.getContext("2d"),col=frame%cols,row=Math.floor(frame/cols);
+  cx.clearRect(0,0,cell,cell);
+  cx.drawImage(img,col*cell,row*cell,cell,cell,0,0,cell,cell);
+  eraseRects.forEach(([rx,ry,rw,rh])=>cx.clearRect(rx,ry,rw,rh));
+  return canvas;
+}
+function buildJackFrameOverrides(img){
+  // O atlas mestre tem invasões entre as células 25/26.
+  // A mesma limpeza usada na Fase 1 remove o resíduo e o "pé na cabeça".
+  return {
+    25:buildCleanJackFrame(img,25,[[260,0,60,320]]),
+    26:buildCleanJackFrame(img,26,[[126,0,76,82],[126,82,54,30],[202,0,28,32]])
+  };
+}
+img("../assets/game/phase1/sprites-hd/jack-atlas-hd.png").then(i=>{jack=i;jackFrameOverrides=buildJackFrameOverrides(i)}).catch(()=>{});
 const phase2Backgrounds={village1:null,village2:null,village3:null,tower:null};
 [
   ["village1","phase2-bg-01-estrada-vila.png"],
@@ -371,7 +388,7 @@ if(shadowCutscene.active){
 }
 cool=Math.max(0,cool-dt);light=Math.max(0,light-dt);p.attack=Math.max(0,p.attack-dt);reveal.forEach(q=>q.t=Math.max(0,q.t-dt));p.coyote=p.on?.12:Math.max(0,p.coyote-dt);if(input.jump){p.buffer=.14;input.jump=false}else p.buffer=Math.max(0,p.buffer-dt);
 const speed=input.down?95:(input.run?335:235),dir=(input.right?1:0)-(input.left?1:0);p.vx+=((dir*speed)-p.vx)*Math.min(1,dt*12);if(dir)p.dir=dir;
-if(p.buffer>0&&p.coyote>0){p.vy=-575;p.on=false;p.coyote=0;p.buffer=0}p.vy+=G*dt;const oldY=p.y;p.x=Math.max(0,Math.min(WORLD-p.w,p.x+p.vx*dt));p.y+=p.vy*dt;p.on=false;
+if(p.buffer>0&&p.coyote>0&&!input.down){p.vy=-575;p.on=false;p.coyote=0;p.buffer=0}p.vy+=G*dt;const oldY=p.y;p.x=Math.max(0,Math.min(WORLD-p.w,p.x+p.vx*dt));p.y+=p.vy*dt;p.on=false;
 const solids=plats.concat((bossUnlocked||bossActive||bossDefeated)?arenaPlats:[],reveal.filter(q=>q.t>0));for(const q of solids){if(p.x+p.w>q.x&&p.x<q.x+q.w&&oldY+p.h<=q.y+8&&p.y+p.h>=q.y&&p.vy>=0){p.y=q.y-p.h;p.vy=0;p.on=true}}
 updateCheckpoints();
 if(p.y>760){respawnAtCheckpoint(activeCheckpoint?"A abóbora reacende o caminho de Jack.":"Jack retorna ao início da Vila sem Amanhecer.");}
@@ -434,7 +451,58 @@ else if(!gears.every(g=>g.got)||solvedCount()<3)ui.obj.textContent="Engrenagens 
 else if(!towerMechanism)ui.obj.textContent="Os 3 enigmas foram resolvidos. Suba a Torre e ative os 2 selos temporais com a Luz.";
 else ui.obj.textContent="Tudo foi resolvido. Aproxime-se do selo no topo da Torre e pressione E / AÇÃO para chamar Amélia.";
 cam+=(Math.max(0,Math.min(WORLD-W,p.x-W*.36))-cam)*Math.min(1,dt*5);camY+=((p.x>7150?Math.min(0,p.y-390):0)-camY)*Math.min(1,dt*4);p.anim+=dt;saveClock+=dt;if(saveClock>=.75){saveClock=0;saveJourney()}}
-function drawJack(){const py=p.y-camY;if(!jack){x.fillStyle="#eee";x.fillRect(p.x-cam,py,p.w,p.h);return}const A=window.JACK_ANIMATIONS,arr=p.attack>0?A.animations.attack:(!p.on?(p.vy<-80?A.animations.jumpRise:A.animations.jumpFall):(Math.abs(p.vx)>35?(input.run?A.animations.run:A.animations.walk):A.animations.idle));const fps=input.run?12:9,idx=arr[Math.floor(p.anim*fps)%arr.length],sx=(idx%8)*320,sy=Math.floor(idx/8)*320,rw=190,rh=190,dx=p.x-cam+p.w/2-rw/2,dy=py+p.h/2-132;if(p.dir<0){x.save();x.translate(dx+rw,0);x.scale(-1,1);x.drawImage(jack,sx,sy,320,320,0,dy,rw,rh);x.restore()}else x.drawImage(jack,sx,sy,320,320,dx,dy,rw,rh)}
+function jackSequenceFrame(sequence,fps){
+  if(!sequence?.length)return 0;
+  return sequence[Math.floor(p.anim*fps)%sequence.length];
+}
+function currentJackFrame(){
+  const cfg=window.JACK_ANIMATIONS,anims=cfg?.animations;
+  if(!anims)return 0;
+  if(p.attack>0){
+    const duration=cfg.timing?.attackDuration||.48;
+    const progress=Math.max(0,Math.min(.999,(duration-p.attack)/duration));
+    const seq=anims.attack;
+    return seq[Math.min(seq.length-1,Math.floor(progress*seq.length))];
+  }
+  if(playerHit>.72&&anims.hurt?.length)return anims.hurt[0];
+  if(!p.on){
+    if(p.vy<-360)return anims.jumpStart[0];
+    if(p.vy<-90)return anims.jumpRise[0];
+    if(p.vy<120)return anims.jumpApex[0];
+    return anims.jumpFall[0];
+  }
+  if(input.down){
+    if(Math.abs(p.vx)>18&&anims.crouchMove?.length)return jackSequenceFrame(anims.crouchMove,5);
+    return anims.crouch[0];
+  }
+  const speed=Math.abs(p.vx);
+  if(speed>=18){
+    if(input.run&&speed>170)return jackSequenceFrame(anims.run,cfg.timing?.runFps||12);
+    return jackSequenceFrame(anims.walk,cfg.timing?.walkFps||9);
+  }
+  return jackSequenceFrame(anims.idle,cfg.timing?.idleFps||2.4);
+}
+function drawJack(){
+  const py=p.y-camY;
+  if(!jack){x.fillStyle="#eee";x.fillRect(p.x-cam,py,p.w,p.h);return}
+  const cfg=window.JACK_ANIMATIONS||{},idx=currentJackFrame();
+  const cell=cfg.cell||320,cols=cfg.cols||8;
+  const sx=(idx%cols)*cell,sy=Math.floor(idx/cols)*cell;
+  const rw=cfg.render?.width||190,rh=cfg.render?.height||190;
+  const dx=p.x-cam+p.w/2-rw/2,dy=py+p.h/2+(cfg.render?.offsetY??-132);
+  const cleanFrame=jackFrameOverrides[idx];
+  x.save();
+  x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";
+  if(p.dir<0){
+    x.translate(dx+rw,0);x.scale(-1,1);
+    if(cleanFrame)x.drawImage(cleanFrame,0,0,cleanFrame.width,cleanFrame.height,0,dy,rw,rh);
+    else x.drawImage(jack,sx,sy,cell,cell,0,dy,rw,rh);
+  }else{
+    if(cleanFrame)x.drawImage(cleanFrame,0,0,cleanFrame.width,cleanFrame.height,dx,dy,rw,rh);
+    else x.drawImage(jack,sx,sy,cell,cell,dx,dy,rw,rh);
+  }
+  x.restore();
+}
 
 function ameliaMapMood(){
   if(bossDefeated)return "feliz";
