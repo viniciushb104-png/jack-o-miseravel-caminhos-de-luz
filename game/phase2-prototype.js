@@ -25,11 +25,15 @@ phaseAudio.bindDialogue(dialogueRoot);
 phaseAudio.bindNowPlaying(document.getElementById("musicBanner"));
 let phase2MusicState="village";
 const interactPrompt=document.getElementById("interactPrompt");
+const clockCutsceneRoot=document.getElementById("phase2ClockCutscene");
+const clockCutsceneVideo=document.getElementById("phase2ClockVideo");
+const clockCutsceneSkip=document.getElementById("phase2ClockSkip");
+const clockCutscenePlay=document.getElementById("phase2ClockPlay");
 const urlParams=new URLSearchParams(location.search),journey=window.JackJourney||null,journeyMode=urlParams.get("journey")==="1",replayMode=urlParams.get("replay")==="1",forceNewRun=urlParams.get("new")==="1",SAVE_KEY="jack-phase2-save",CHECKPOINT_KEY="jack-phase2-checkpoint";
 if(replayMode)journey?.beginReplay(2,[SAVE_KEY,CHECKPOINT_KEY]);
 if(forceNewRun){localStorage.removeItem(SAVE_KEY);localStorage.removeItem(CHECKPOINT_KEY);const keptMode=journeyMode?"?journey=1":(replayMode?"?replay=1":"");history.replaceState(null,"",location.pathname+keptMode)}
 let loadedSave=null;if(journeyMode&&!replayMode){try{loadedSave=JSON.parse(localStorage.getItem(SAVE_KEY)||"null")}catch(e){loadedSave=null}}
-let ameliaMet=false, introLorePlayed=false, gearLore=[false,false,false], finalLorePlayed=false,bossUnlocked=false,bossActive=false,bossDefeated=false;const puzzles={sinos:false,janelas:false,sombras:false};let towerMechanism=false;
+let ameliaMet=false, introLorePlayed=false, gearLore=[false,false,false], finalLorePlayed=false,bossUnlocked=false,bossActive=false,bossDefeated=false,clockCutsceneSeen=false,endingSequenceActive=false;const puzzles={sinos:false,janelas:false,sombras:false};let towerMechanism=false;
 const arenaPlats=[{x:7580,y:-480,w:250,h:24},{x:7860,y:-565,w:250,h:24},{x:7200,y:-650,w:1700,h:60}];
 const boss={x:8360,y:-770,hp:10,maxHp:10,dir:-1,t:0,shot:1.55,invuln:0,spawn:0,cast:0,animT:0};
 const bossShots=[];let playerLife=3,playerHit=0;
@@ -111,8 +115,68 @@ shadowBorn:[
 {speaker:"AMÉLIA VESPER",portrait:"ameliaReveal",expression:6,text:"Não escute. Isso é tudo o que eu não consegui deixar ir."},
 {speaker:"JACK",portrait:"jack",expression:4,text:"Então eu não vou lutar contra você."},
 {speaker:"JACK",portrait:"jack",expression:5,text:"Vou lutar contra o minuto que te prendeu."}
+],
+clockPrelude:[
+{speaker:"AMÉLIA VESPER",portrait:"ameliaReveal",expression:6,text:"Jack... ele ainda está parado."},
+{speaker:"JACK",portrait:"jack",expression:1,text:"Então talvez esteja esperando você deixá-lo continuar."}
 ]};
 function openDialogue(lines,onComplete){input.left=input.right=input.down=false;p.vx=0;dialogue.open(lines,onComplete)}
+function finishClockCutscene(){
+  if(!clockCutsceneRoot||clockCutsceneRoot.hidden)return;
+  clockCutsceneVideo?.pause();
+  clockCutsceneRoot.classList.remove("is-playing");
+  clockCutsceneRoot.hidden=true;
+  if(clockCutscenePlay)clockCutscenePlay.hidden=true;
+  clockCutsceneSeen=true;
+  endingSequenceActive=false;
+  phase2MusicState="tower";
+  phaseAudio.switchTrack("tower",{fadeOut:0,fadeIn:1300});
+  banner("4:14 — O PRÓXIMO MINUTO");
+  say("O relógio voltou a andar. A vila ainda espera pelo amanhecer.");
+  saveJourney();
+}
+function playClockCutscene(){
+  endingSequenceActive=true;
+  input.left=input.right=input.down=false;
+  p.vx=0;p.vy=0;
+  phaseAudio.fadeOut(650);
+  if(!clockCutsceneRoot||!clockCutsceneVideo){
+    clockCutsceneSeen=true;endingSequenceActive=false;saveJourney();return;
+  }
+  clockCutsceneRoot.hidden=false;
+  clockCutsceneRoot.classList.add("is-playing");
+  if(clockCutscenePlay)clockCutscenePlay.hidden=true;
+  try{clockCutsceneVideo.currentTime=0}catch(_){}
+  const attempt=clockCutsceneVideo.play();
+  if(attempt&&typeof attempt.catch==="function"){
+    attempt.catch(()=>{
+      if(clockCutscenePlay)clockCutscenePlay.hidden=false;
+    });
+  }
+}
+function startClockEnding(){
+  if(clockCutsceneSeen)return;
+  endingSequenceActive=true;
+  input.left=input.right=input.down=false;
+  p.vx=0;p.vy=0;
+  phase2MusicState="tower";
+  phaseAudio.switchTrack("tower",{fadeOut:900,fadeIn:900});
+  banner("O ÚLTIMO MINUTO FOI DISSIPADO");
+  openDialogue(lore.clockPrelude,playClockCutscene);
+}
+clockCutsceneVideo?.addEventListener("ended",finishClockCutscene);
+clockCutsceneVideo?.addEventListener("error",()=>{
+  if(clockCutsceneRoot&&!clockCutsceneRoot.hidden&&clockCutscenePlay){
+    clockCutscenePlay.hidden=false;
+    clockCutscenePlay.textContent="CONTINUAR SEM A CUTSCENE";
+  }
+});
+clockCutsceneSkip?.addEventListener("click",finishClockCutscene);
+clockCutscenePlay?.addEventListener("click",()=>{
+  if(clockCutscenePlay)clockCutscenePlay.hidden=true;
+  const attempt=clockCutsceneVideo?.play();
+  if(attempt&&typeof attempt.catch==="function")attempt.catch(()=>finishClockCutscene());
+});
 function desiredPhase2Track(){
   if(bossActive&&!bossDefeated)return "boss";
   if(p.x>7150||bossUnlocked||shadowCutscene.active)return "tower";
@@ -180,7 +244,7 @@ const sections=[{x:0,n:"ESTRADA DAS LANTERNAS MORTAS"},{x:1100,n:"VILA BAIXA"},{
 if(loadedSave){
   if(typeof loadedSave.activeCheckpoint==="string"&&PHASE2_CHECKPOINTS.some(z=>z.id===loadedSave.activeCheckpoint)){activeCheckpoint=loadedSave.activeCheckpoint;localStorage.setItem(CHECKPOINT_KEY,activeCheckpoint)}
   p.x=Number.isFinite(loadedSave.x)?loadedSave.x:p.x;p.y=Number.isFinite(loadedSave.y)?loadedSave.y:p.y;p.dir=loadedSave.dir===-1?-1:1;
-  ameliaMet=!!loadedSave.ameliaMet;introLorePlayed=!!loadedSave.introLorePlayed;finalLorePlayed=!!loadedSave.finalLorePlayed;bossUnlocked=!!loadedSave.bossUnlocked;bossActive=!!loadedSave.bossActive;bossDefeated=!!loadedSave.bossDefeated;towerMechanism=!!loadedSave.towerMechanism;
+  ameliaMet=!!loadedSave.ameliaMet;introLorePlayed=!!loadedSave.introLorePlayed;finalLorePlayed=!!loadedSave.finalLorePlayed;bossUnlocked=!!loadedSave.bossUnlocked;bossActive=!!loadedSave.bossActive;bossDefeated=!!loadedSave.bossDefeated;clockCutsceneSeen=!!loadedSave.clockCutsceneSeen;towerMechanism=!!loadedSave.towerMechanism;
   playerLife=Math.max(1,Math.min(3,Number(loadedSave.playerLife)||3));boss.hp=Math.max(0,Math.min(boss.maxHp,Number.isFinite(Number(loadedSave.bossHp))?Number(loadedSave.bossHp):boss.maxHp));
   if(Array.isArray(loadedSave.gears))gears.forEach((g,i)=>g.got=!!loadedSave.gears[i]);
   if(loadedSave.puzzles)Object.keys(puzzles).forEach(k=>puzzles[k]=!!loadedSave.puzzles[k]);
@@ -267,7 +331,7 @@ let saveClock=0;
 function saveJourney(){
   if(!journeyMode||replayMode||!journey?.isActive()||journey.currentPhase()!==2)return;
   localStorage.setItem(SAVE_KEY,JSON.stringify({
-    x:p.x,y:p.y,dir:p.dir,activeCheckpoint,ameliaMet,introLorePlayed,gearLore,finalLorePlayed,bossUnlocked,bossActive,bossDefeated,towerMechanism,playerLife,bossHp:boss.hp,
+    x:p.x,y:p.y,dir:p.dir,activeCheckpoint,ameliaMet,introLorePlayed,gearLore,finalLorePlayed,bossUnlocked,bossActive,bossDefeated,clockCutsceneSeen,towerMechanism,playerLife,bossHp:boss.hp,
     gears:gears.map(g=>!!g.got),puzzles:{...puzzles},bells:bells.map(z=>!!z.on),windows:windows.map(z=>!!z.on),
     shadows:shadowSeals.map(z=>!!z.on),towerSeals:towerSeals.map(z=>!!z.on),enemies:enemies.map(e=>!!e.dead),
     bellStep,windowStep,shadowStep,towerStep,savedAt:Date.now()
@@ -276,7 +340,13 @@ function saveJourney(){
 function lightUse(){if(cool>0)return;cool=.55;light=.48;p.attack=.48;
 if(bossActive&&!bossDefeated&&boss.invuln<=0&&Math.hypot(boss.x-(p.x+p.w/2),boss.y-(p.y+30))<315){
   boss.hp=Math.max(0,boss.hp-1);boss.invuln=.32;boss.dir*=-1;say("A LUZ rompe o tempo: "+boss.hp+"/"+boss.maxHp);
-  if(boss.hp<=0){bossDefeated=true;bossActive=false;bossShots.length=0;localStorage.setItem("jack-phase2-complete","yes");phase2MusicState="tower";phaseAudio.switchTrack("tower",{fadeOut:1200,fadeIn:1200});banner("O ÚLTIMO MINUTO FOI DISSIPADO");say("Halloween II concluído — novas faixas foram acesas no Fonógrafo da Lanterna.");}
+  if(boss.hp<=0){
+    bossDefeated=true;bossActive=false;bossShots.length=0;
+    // A vitória sobre o boss não conclui Halloween II: primeiro vem o encerramento narrativo.
+    // O desbloqueio definitivo ficará para depois da futura cutscene da vila + diálogo final.
+    saveJourney();
+    setTimeout(startClockEnding,420);
+  }
 }
 reveal.forEach(q=>{if(Math.abs((q.x+q.w/2)-(p.x+p.w/2))<310)q.t=3});bells.forEach(b=>{if(Math.abs(b.x-p.x)<120){const order=[1,0,2];if(b.id===order[bellStep]){b.on=true;bellStep++;say("Sino correto: "+bellStep+"/3");if(bellStep===3){puzzles.sinos=true;say("ENIGMA DOS SINOS CONCLUÍDO") }}else{bells.forEach(z=>z.on=false);bellStep=0;say("A sequência se perdeu no silêncio...")}}});
 const touchSeq=(arr,stepName,order,finish)=>{for(const z of arr){if(Math.abs(z.x-p.x)<125&&Math.abs(z.y-p.y)<145&&!z.on){let step=stepName==="window"?windowStep:stepName==="shadow"?shadowStep:towerStep;if(z===arr[order[step]]){z.on=true;if(stepName==="window")windowStep++;else if(stepName==="shadow")shadowStep++;else towerStep++;const ns=step+1;if(ns===order.length)finish();else say("Selo correto: "+ns+"/"+order.length)}else{arr.forEach(a=>a.on=false);if(stepName==="window")windowStep=0;else if(stepName==="shadow")shadowStep=0;else towerStep=0;say("A ordem se desfez...")}}}};
@@ -286,10 +356,10 @@ touchSeq(towerSeals,"tower",[0,1],()=>{towerMechanism=true;say("MECANISMO DA TOR
 enemies.forEach(e=>{if(Math.abs(e.x-p.x)<180)e.dead=true})}
 function bind(id,key){const b=document.getElementById(id);["pointerdown","pointerup","pointercancel","pointerleave"].forEach(ev=>b.addEventListener(ev,()=>input[key]=ev==="pointerdown"))}
 bind("leftBtn","left");bind("rightBtn","right");bind("downBtn","down");document.getElementById("jumpBtn").addEventListener("pointerdown",()=>input.jump=true);document.getElementById("lightBtn").addEventListener("pointerdown",lightUse);document.getElementById("interactBtn").addEventListener("pointerdown",interact);interactPrompt.addEventListener("click",interact);
-addEventListener("keydown",e=>{if(["ArrowLeft","a","A"].includes(e.key))input.left=true;if(["ArrowRight","d","D"].includes(e.key))input.right=true;if(["ArrowDown","s","S"].includes(e.key))input.down=true;if(e.key==="Shift")input.run=true;if(e.code==="Space"){input.jump=true;e.preventDefault()}if(["f","F"].includes(e.key))lightUse();if(["e","E"].includes(e.key))interact()});
+addEventListener("keydown",e=>{if(endingSequenceActive&&!dialogue.active)return;if(["ArrowLeft","a","A"].includes(e.key))input.left=true;if(["ArrowRight","d","D"].includes(e.key))input.right=true;if(["ArrowDown","s","S"].includes(e.key))input.down=true;if(e.key==="Shift")input.run=true;if(e.code==="Space"){input.jump=true;e.preventDefault()}if(["f","F"].includes(e.key))lightUse();if(["e","E"].includes(e.key))interact()});
 addEventListener("keyup",e=>{if(["ArrowLeft","a","A"].includes(e.key))input.left=false;if(["ArrowRight","d","D"].includes(e.key))input.right=false;if(["ArrowDown","s","S"].includes(e.key))input.down=false;if(e.key==="Shift")input.run=false});
-const startGameBtn=document.getElementById("startGame");if(loadedSave&&journeyMode&&!replayMode){startGameBtn.textContent="✦ CONTINUAR JORNADA";const introCopy=ui.intro.querySelector("span");if(introCopy)introCopy.textContent="A lanterna guardou seu caminho pela Vila sem Amanhecer."}startGameBtn.onclick=()=>{if(journeyMode&&!replayMode)journey?.advanceTo(2);phase2MusicState=desiredPhase2Track();phaseAudio.start(phase2MusicState);ui.intro.hidden=true;running=true;last=performance.now();requestAnimationFrame(loop);setTimeout(()=>{if(!introLorePlayed){introLorePlayed=true;openDialogue(lore.arrival)}},450)};
-function update(dt){syncPhase2Music();if(dialogue.active){p.vx*=.7;cam+=(Math.max(0,Math.min(WORLD-W,p.x-W*.36))-cam)*Math.min(1,dt*5);camY+=((p.x>7150?Math.min(0,p.y-390):0)-camY)*Math.min(1,dt*4);p.anim+=dt;interactPrompt.hidden=true;return}
+const startGameBtn=document.getElementById("startGame");if(loadedSave&&journeyMode&&!replayMode){startGameBtn.textContent="✦ CONTINUAR JORNADA";const introCopy=ui.intro.querySelector("span");if(introCopy)introCopy.textContent="A lanterna guardou seu caminho pela Vila sem Amanhecer."}startGameBtn.onclick=()=>{if(journeyMode&&!replayMode)journey?.advanceTo(2);phase2MusicState=desiredPhase2Track();phaseAudio.start(phase2MusicState);ui.intro.hidden=true;running=true;last=performance.now();requestAnimationFrame(loop);setTimeout(()=>{if(bossDefeated&&!clockCutsceneSeen){startClockEnding();return}if(!introLorePlayed){introLorePlayed=true;openDialogue(lore.arrival)}},450)};
+function update(dt){syncPhase2Music();if(endingSequenceActive&&!dialogue.active){p.vx=0;p.vy=0;p.anim+=dt;interactPrompt.hidden=true;return}if(dialogue.active){p.vx*=.7;cam+=(Math.max(0,Math.min(WORLD-W,p.x-W*.36))-cam)*Math.min(1,dt*5);camY+=((p.x>7150?Math.min(0,p.y-390):0)-camY)*Math.min(1,dt*4);p.anim+=dt;interactPrompt.hidden=true;return}
 if(shadowCutscene.active){
   shadowCutscene.t+=dt;p.vx=0;p.vy=0;p.anim+=dt;interactPrompt.hidden=true;
   cam+=(Math.max(0,Math.min(WORLD-W,8050-W*.52))-cam)*Math.min(1,dt*3.2);
@@ -357,7 +427,7 @@ if(bossActive&&!bossDefeated){
 gears.forEach((g,gi)=>{if(!g.got&&Math.abs(g.x-p.x)<70&&Math.abs(g.y-p.y)<120){g.got=true;say(g.n+" RECUPERADA");ui.gear.textContent=gears.filter(z=>z.got).length+"/3";if(!gearLore[gi]){gearLore[gi]=true;setTimeout(()=>openDialogue(lore.gears[gi]),250)}}});
 interactPrompt.hidden=!(nearAmelia()||(nearTopSeal()&&!bossActive&&!bossDefeated&&!shadowCutscene.active));
 let si=0;for(let i=0;i<sections.length;i++)if(p.x>=sections[i].x)si=i;if(si!==section){section=si;banner(sections[si].n)}
-if(bossDefeated)ui.obj.textContent="PROTÓTIPO CONCLUÍDO — O Último Minuto foi dissipado. A arena final está pronta para refinarmos.";
+if(bossDefeated)ui.obj.textContent=clockCutsceneSeen?"4:14 — O relógio voltou a andar. A vila ainda espera pelo amanhecer.":"O Último Minuto foi dissipado. O relógio ainda espera pelo próximo minuto.";
 else if(bossActive)ui.obj.textContent="BOSS: SOMBRA DE AMÉLIA — O ÚLTIMO MINUTO. Desvie e use F / LUZ para romper a prisão das 4:13.";
 else if(!ameliaMet&&p.x<3150)ui.obj.textContent="Encontre a relojoeira da praça e descubra por que tudo parou às 4:13.";
 else if(!gears.every(g=>g.got)||solvedCount()<3)ui.obj.textContent="Engrenagens "+gears.filter(z=>z.got).length+"/3 · Enigmas "+solvedCount()+"/3 — use a Luz e observe as pistas.";
