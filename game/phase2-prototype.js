@@ -294,7 +294,7 @@ const bells=[
   {x:3865,y:600,id:3,on:false,title:"AMÉLIA E A TORRE"},
   {x:4165,y:600,id:1,on:false,title:"AMÉLIA APRENDIZ"}
 ];let bellStep=0;
-const bellAssets={shrines:[],idle:[],swing:[],lit:[],wrong:[]};
+const bellAssets={bases:[],animated:[]};
 const bellAnim={ringing:-1,t:0,wrong:-1,wrongT:0};
 const bellLore=[
   "Uma infância antes das 4:13.",
@@ -382,11 +382,8 @@ img("../assets/game/phase2/environment-sprites/torre/decoracao/clock-413-dialogu
 img("../assets/game/phase2/checkpoints/checkpoint-phase2-off.png").then(i=>checkpointArt.off=i).catch(()=>{});
 img("../assets/game/phase2/checkpoints/checkpoint-phase2-on.png").then(i=>checkpointArt.on=i).catch(()=>{});
 [
-  ["shrines",["bell-01-amelia-crianca.png","bell-02-amelia-aprendiz.png","bell-03-amelia-reloeira.png","bell-04-amelia-torre.png"]],
-  ["idle",["bell-idle-01.png","bell-idle-02.png","bell-idle-03.png","bell-idle-04.png"]],
-  ["swing",["bell-swing-01.png","bell-swing-02.png","bell-swing-03.png","bell-swing-04.png","bell-swing-05.png"]],
-  ["lit",["bell-lit-01.png","bell-lit-02.png","bell-lit-03.png","bell-lit-04.png"]],
-  ["wrong",["bell-wrong-01.png","bell-wrong-02.png","bell-wrong-03.png","bell-wrong-04.png"]]
+  ["bases",["base-sino-01.png","base-sino-02.png","base-sino-03.png","base-sino-04.png"]],
+  ["animated",["sino-01-amelia-crianca.png","sino-02-amelia-aprendiz.png","sino-03-amelia-relojoeira.png","sino-04-amelia-torre.png"]]
 ].forEach(([folder,files])=>{
   Promise.allSettled(files.map(file=>img("../assets/game/phase2/puzzles/bells/"+folder+"/"+file)))
     .then(rs=>bellAssets[folder]=rs.map(r=>r.status==="fulfilled"?r.value:null));
@@ -1057,34 +1054,40 @@ for(const e of enemies){if(e.dead)continue;x.fillStyle="#d56a20";x.beginPath();x
 for(const b of bells){
   const ringing=bellAnim.ringing===b.id&&bellAnim.t>0;
   const wrong=bellAnim.wrong===b.id&&bellAnim.wrongT>0;
-  const targetH=246;
-  let sprite=wrong?(bellAssets.wrong[b.id]||bellAssets.shrines[b.id])
-    :b.on?(bellAssets.lit[b.id]||bellAssets.shrines[b.id])
-    :bellAssets.shrines[b.id];
+  // A base acompanha a posição física embaralhada; o sino acompanha a memória (id).
+  const physicalIndex=bells.indexOf(b);
+  const base=bellAssets.bases[physicalIndex];
+  const bell=bellAssets.animated[b.id];
+  const baseH=252,bellH=116;
+  if(base)drawAssetBottom(base,b.x,b.y,baseH,wrong?.72:1);
 
-  // O brilho pertence à memória correta e permanece depois da badalada.
+  // Ponto de suspensão dentro do vão do arco.
+  const pivotY=b.y-184;
   if(b.on){
-    const pulse=.82+Math.sin(p.anim*4.6+b.id)*.12;
-    const glow=x.createRadialGradient(b.x,b.y-132,10,b.x,b.y-132,126);
-    glow.addColorStop(0,"rgba(255,224,125,"+(.44*pulse)+")");
-    glow.addColorStop(.48,"rgba(255,171,55,"+(.18*pulse)+")");
-    glow.addColorStop(1,"rgba(255,130,25,0)");
-    x.fillStyle=glow;x.beginPath();x.arc(b.x,b.y-132,126,0,Math.PI*2);x.fill();
+    const pulse=.82+Math.sin(p.anim*4.2+b.id)*.12;
+    const glow=x.createRadialGradient(b.x,pivotY+55,8,b.x,pivotY+55,88);
+    glow.addColorStop(0,"rgba(255,230,135,"+(.5*pulse)+")");
+    glow.addColorStop(.5,"rgba(255,174,58,"+(.22*pulse)+")");
+    glow.addColorStop(1,"rgba(255,128,25,0)");
+    x.fillStyle=glow;x.beginPath();x.arc(b.x,pivotY+55,88,0,Math.PI*2);x.fill();
   }
-
-  if(sprite){
+  if(bell){
+    const iw=bell.naturalWidth||bell.width||1,ih=bell.naturalHeight||bell.height||1;
+    const bw=bellH*(iw/ih);
+    let angle=0;
     if(ringing){
-      // Balanço amortecido curto. O pivô fica na base para o santuário continuar rente ao piso.
       const elapsed=.58-bellAnim.t;
-      const swing=Math.sin(elapsed*29)*Math.exp(-elapsed*3.6)*.028;
-      const iw=sprite.naturalWidth||sprite.width||1,ih=sprite.naturalHeight||sprite.height||1;
-      const w=targetH*(iw/ih);
-      x.save();x.translate(b.x,b.y);x.rotate(swing);
-      x.drawImage(sprite,-w/2,-targetH,w,targetH);
-      x.restore();
-    }else drawAssetBottom(sprite,b.x,b.y,targetH,wrong?.7:1);
-  }else{
-    x.fillStyle=b.on?"#ffe099":"#8d693d";x.beginPath();x.moveTo(b.x,b.y-45);x.lineTo(b.x-22,b.y);x.lineTo(b.x+22,b.y);x.closePath();x.fill();
+      // Uma única badalada: sai do centro, vai a um lado, cruza ao outro e volta ao repouso.
+      const u=Math.max(0,Math.min(1,elapsed/.58));
+      angle=Math.sin(u*Math.PI*2)*Math.sin(u*Math.PI)*.19;
+    }
+    x.save();
+    x.translate(b.x,pivotY);
+    x.rotate(angle);
+    x.globalAlpha=wrong?.72:1;
+    // O topo do PNG fica no pivô; apenas o sino gira, nunca a base.
+    x.drawImage(bell,-bw/2,0,bw,bellH);
+    x.restore();
   }
 }
 for(const g of gears){if(g.got)continue;x.save();x.translate(g.x,g.y);x.rotate(p.anim);x.strokeStyle="#ffd36b";x.lineWidth=8;x.beginPath();x.arc(0,0,24,0,Math.PI*2);x.stroke();for(let i=0;i<8;i++){x.rotate(Math.PI/4);x.fillStyle="#ffd36b";x.fillRect(20,-5,13,10)}x.restore()}
