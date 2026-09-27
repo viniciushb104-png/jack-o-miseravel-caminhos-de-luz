@@ -386,7 +386,7 @@ img("../assets/game/phase2/checkpoints/checkpoint-phase2-off.png").then(i=>check
 img("../assets/game/phase2/checkpoints/checkpoint-phase2-on.png").then(i=>checkpointArt.on=i).catch(()=>{});
 [
   ["bases",["base-sino-01.png","base-sino-02.png","base-sino-03.png","base-sino-04.png"]],
-  ["animated",["sino-01-amelia-crianca.png","sino-02-amelia-aprendiz.png","sino-03-amelia-relojoeira.png","sino-04-amelia-torre.png"]]
+  ["animated",["sino-01-amelia-crianca.png?v=2","sino-02-amelia-aprendiz.png?v=2","sino-03-amelia-relojoeira.png?v=3","sino-04-amelia-torre.png?v=3"]]
 ].forEach(([folder,files])=>{
   Promise.allSettled(files.map(file=>img("../assets/game/phase2/puzzles/bells/"+folder+"/"+file)))
     .then(rs=>bellAssets[folder]=rs.map(r=>r.status==="fulfilled"?r.value:null));
@@ -1059,7 +1059,7 @@ for(const b of bells){
   const wrong=bellAnim.wrong===b.id&&bellAnim.wrongT>0;
   // A base acompanha a posição física embaralhada; o sino acompanha a memória (id).
   const physicalIndex=bells.indexOf(b);
-  const base=bellAssets.bases[physicalIndex];
+  const base=bellAssets.bases[b.id];
   const bell=bellAssets.animated[b.id];
   const baseH=252,bellH=116;
   if(base)drawAssetBottom(base,b.x,b.y,baseH,wrong?.72:1);
@@ -1077,7 +1077,7 @@ for(const b of bells){
     {dx:-6,dy:0},
     {dx:20,dy:-15},
     {dx:7,dy:-13}
-  ][physicalIndex];
+  ][b.id];
   const bellX=b.x+baseHook.dx;
   const pivotY=b.y-184+baseHook.dy;
   const localBellH=bellH;
