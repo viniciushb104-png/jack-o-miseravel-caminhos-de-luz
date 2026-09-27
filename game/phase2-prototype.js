@@ -297,7 +297,7 @@ const bells=[
 const bellAssets={bases:[],animated:[]};
 const bellAnim={ringing:-1,t:0,wrong:-1,wrongT:0};
 const bellSfx=new Audio("../assets/game/phase2/audio/sfx/soundreality-bell-fx-410608.mp3");
-bellSfx.preload="auto";bellSfx.volume=.72;
+bellSfx.preload="auto";bellSfx.volume=1;
 function playBellSfx(){try{bellSfx.pause();bellSfx.currentTime=0;const q=bellSfx.play();if(q&&q.catch)q.catch(()=>{});}catch(e){}}
 const bellLore=[
   "Uma infância antes das 4:13.",
@@ -1067,21 +1067,24 @@ for(const b of bells){
   // Ponto de suspensão dentro do vão do arco.
   // As bases físicas 3 e 4 têm elementos cenográficos mais altos; nelas o sino sobe
   // e fica um pouco menor para não invadir as estátuas/decorações.
+  // Ajuste fino por memória: compensa diferenças de recorte dos PNGs para que
+  // o aro superior de todos os sinos fique preso no mesmo gancho visual da base.
   const bellLayout=[
-    {dy:0,scale:1},
-    {dy:0,scale:1},
-    {dy:0,scale:1},
-    {dy:0,scale:1}
-  ][physicalIndex];
+    {dx:0,dy:0,scale:1},
+    {dx:0,dy:2,scale:1},
+    {dx:0,dy:1,scale:1},
+    {dx:0,dy:1,scale:1}
+  ][b.id];
+  const bellX=b.x+bellLayout.dx;
   const pivotY=b.y-184+bellLayout.dy;
   const localBellH=bellH*bellLayout.scale;
   if(b.on){
     const pulse=.82+Math.sin(p.anim*4.2+b.id)*.12;
-    const glow=x.createRadialGradient(b.x,pivotY+55,8,b.x,pivotY+55,88);
+    const glow=x.createRadialGradient(bellX,pivotY+55,8,b.x,pivotY+55,88);
     glow.addColorStop(0,"rgba(255,230,135,"+(.5*pulse)+")");
     glow.addColorStop(.5,"rgba(255,174,58,"+(.22*pulse)+")");
     glow.addColorStop(1,"rgba(255,128,25,0)");
-    x.fillStyle=glow;x.beginPath();x.arc(b.x,pivotY+55,88,0,Math.PI*2);x.fill();
+    x.fillStyle=glow;x.beginPath();x.arc(bellX,pivotY+55,88,0,Math.PI*2);x.fill();
   }
   if(bell){
     const iw=bell.naturalWidth||bell.width||1,ih=bell.naturalHeight||bell.height||1;
@@ -1094,7 +1097,7 @@ for(const b of bells){
       angle=Math.sin(u*Math.PI*2)*Math.sin(u*Math.PI)*.19;
     }
     x.save();
-    x.translate(b.x,pivotY);
+    x.translate(bellX,pivotY);
     x.rotate(angle);
     x.globalAlpha=wrong?.72:1;
     // O topo do PNG fica no pivô; apenas o sino gira, nunca a base.
