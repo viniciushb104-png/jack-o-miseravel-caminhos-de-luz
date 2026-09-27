@@ -41,6 +41,7 @@ const ameliaShadowAssets={dialogue:[],transform:[],boss:[],effects:[],map:[]};
 const shadowCutscene={active:false,t:0,cue:0};
 let checkpointArt={off:null,on:null};
 let activeCheckpoint=localStorage.getItem(CHECKPOINT_KEY)||"";
+let checkpointProgressSnapshot=null;
 const PHASE2_CHECKPOINTS=Object.freeze([
   {id:"village",rank:1,name:"Relógio Congelado",x:5315,groundY:590,respawnX:5135,respawnY:504,renderH:300},
   {id:"tower",rank:2,name:"Lanterna da Torre",x:7355,groundY:590,respawnX:7205,respawnY:504,renderH:300},
@@ -54,9 +55,37 @@ function currentCheckpointRespawn(){
   return cp?{x:cp.respawnX,y:cp.respawnY}:{x:120,y:470};
 }
 function respawnAtCheckpoint(message){
+  restoreCheckpointProgress();
   const r=currentCheckpointRespawn();
   p.x=r.x;p.y=r.y;p.vx=0;p.vy=0;p.on=false;playerHit=.45;
+  saveJourney();
   if(message)say(message);
+}
+function captureCheckpointProgress(){
+  checkpointProgressSnapshot={
+    ameliaMet:!!ameliaMet,introLorePlayed:!!introLorePlayed,
+    gearLore:gearLore.map(Boolean),gears:gears.map(g=>!!g.got),
+    puzzles:{...puzzles},bells:bells.map(z=>!!z.on),
+    windows:windows.map(z=>!!z.on),shadows:shadowSeals.map(z=>!!z.on),
+    towerSeals:towerSeals.map(z=>!!z.on),enemies:enemies.map(e=>!!e.dead),
+    bellStep,windowStep,shadowStep,towerStep,towerMechanism:!!towerMechanism
+  };
+}
+function restoreCheckpointProgress(){
+  const s=checkpointProgressSnapshot;if(!s)return;
+  ameliaMet=!!s.ameliaMet;introLorePlayed=!!s.introLorePlayed;
+  if(Array.isArray(s.gearLore))gearLore=s.gearLore.map(Boolean).slice(0,3);
+  if(Array.isArray(s.gears))gears.forEach((g,i)=>g.got=!!s.gears[i]);
+  if(s.puzzles)Object.keys(puzzles).forEach(k=>puzzles[k]=!!s.puzzles[k]);
+  if(Array.isArray(s.bells))bells.forEach((z,i)=>z.on=!!s.bells[i]);
+  if(Array.isArray(s.windows))windows.forEach((z,i)=>z.on=!!s.windows[i]);
+  if(Array.isArray(s.shadows))shadowSeals.forEach((z,i)=>z.on=!!s.shadows[i]);
+  if(Array.isArray(s.towerSeals))towerSeals.forEach((z,i)=>z.on=!!s.towerSeals[i]);
+  if(Array.isArray(s.enemies))enemies.forEach((e,i)=>e.dead=!!s.enemies[i]);
+  bellStep=Number(s.bellStep)||0;windowStep=Number(s.windowStep)||0;
+  shadowStep=Number(s.shadowStep)||0;towerStep=Number(s.towerStep)||0;
+  towerMechanism=!!s.towerMechanism;
+  ui.gear.textContent=gears.filter(z=>z.got).length+"/3";
 }
 function updateCheckpoints(){
   const px=p.x+p.w/2,feet=p.y+p.h;
@@ -65,6 +94,7 @@ function updateCheckpoints(){
     if(Math.abs(px-cp.x)<175&&Math.abs(feet-cp.groundY)<135){
       activeCheckpoint=cp.id;
       localStorage.setItem(CHECKPOINT_KEY,activeCheckpoint);
+      captureCheckpointProgress();
       playerLife=3;
       banner("LUZ ANCORADA — CHECKPOINT ATIVADO");
       say(cp.name+" aceso. A abóbora guardará seu retorno.");
@@ -201,6 +231,7 @@ function activateShadowBoss(){
   if(checkpointRank(activeCheckpoint)<checkpointRank("preboss")){
     activeCheckpoint="preboss";
     localStorage.setItem(CHECKPOINT_KEY,activeCheckpoint);
+    captureCheckpointProgress();
   }
   saveJourney();
   phase2MusicState="boss";
@@ -281,6 +312,7 @@ if(loadedSave){
   if(Array.isArray(loadedSave.enemies))enemies.forEach((e,i)=>e.dead=!!loadedSave.enemies[i]);
   if(Array.isArray(loadedSave.gearLore))gearLore=loadedSave.gearLore.map(Boolean).slice(0,3);
   bellStep=Number(loadedSave.bellStep)||0;windowStep=Number(loadedSave.windowStep)||0;shadowStep=Number(loadedSave.shadowStep)||0;towerStep=Number(loadedSave.towerStep)||0;
+  if(loadedSave.checkpointProgressSnapshot&&typeof loadedSave.checkpointProgressSnapshot==="object")checkpointProgressSnapshot=loadedSave.checkpointProgressSnapshot;
   ui.gear.textContent=gears.filter(z=>z.got).length+"/3";
 }
 // Recuperação de progresso: evita soft-lock em saves feitos durante diálogos/cutscenes
@@ -289,6 +321,7 @@ if(bellStep>=4||bells.every(z=>z.on)){bellStep=4;puzzles.sinos=true}
 if(windowStep>=3||windows.every(z=>z.on)){windowStep=3;puzzles.janelas=true}
 if(shadowStep>=3||shadowSeals.every(z=>z.on)){shadowStep=3;puzzles.sombras=true}
 if(towerStep>=2||towerSeals.every(z=>z.on)){towerStep=2;towerMechanism=true}
+if(activeCheckpoint&&!checkpointProgressSnapshot)captureCheckpointProgress();
 if(finalLorePlayed&&!bossActive&&!bossDefeated){
   finalLorePlayed=false;
   bossUnlocked=false;
@@ -390,7 +423,7 @@ function saveJourney(){
     x:p.x,y:p.y,dir:p.dir,activeCheckpoint,ameliaMet,introLorePlayed,gearLore,finalLorePlayed,bossUnlocked,bossActive,bossDefeated,clockCutsceneSeen,towerMechanism,playerLife,bossHp:boss.hp,
     gears:gears.map(g=>!!g.got),puzzles:{...puzzles},bells:bells.map(z=>!!z.on),windows:windows.map(z=>!!z.on),
     shadows:shadowSeals.map(z=>!!z.on),towerSeals:towerSeals.map(z=>!!z.on),enemies:enemies.map(e=>!!e.dead),
-    bellStep,windowStep,shadowStep,towerStep,savedAt:Date.now()
+    bellStep,windowStep,shadowStep,towerStep,checkpointProgressSnapshot,savedAt:Date.now()
   }));
 }
 function resetBossAttempt(){
@@ -801,23 +834,10 @@ function platformSpriteMeta(image){
   platformSpriteMetaCache.set(image,meta);return meta;
 }
 function platformUnderlay(q,tower=false){
-  // A física continua sendo o retângulo q. O underlay existe somente para que
-  // nenhuma margem transparente do PNG revele céu entre os pés de Jack e a plataforma.
-  const base=tower?"#241b22":(q.h>=100?"#292126":"#352b2c");
-  const edge=tower?"#8e6136":"#685442";
-  x.save();
-  x.fillStyle=base;x.fillRect(q.x,q.y,q.w,Math.max(q.h,18));
-  x.globalAlpha=.78;x.fillStyle=edge;x.fillRect(q.x,q.y,q.w,5);
-  if(q.h>42){
-    const shade=x.createLinearGradient(0,q.y+22,0,q.y+Math.max(50,q.h));
-    shade.addColorStop(0,"rgba(0,0,0,0)");
-    shade.addColorStop(1,"rgba(0,0,0,.42)");
-    x.fillStyle=shade;x.fillRect(q.x,q.y+20,q.w,Math.max(0,q.h-20));
-  }
-  x.restore();
+  // A caixa de colisão existe só na física. Visualmente ela é 100% invisível:
+  // Jack parece caminhar diretamente sobre os sprites do cenário.
 }
 function drawPlatformSprite(image,q,targetH,extraW=18,tower=false){
-  platformUnderlay(q,tower);
   if(!image)return false;
   const m=platformSpriteMeta(image),drawW=q.w+extraW,ratio=m.sh/m.sw;
   const drawH=Math.max(targetH*.72,Math.min(targetH*1.32,drawW*ratio));
@@ -835,7 +855,6 @@ function drawPlatformSprite(image,q,targetH,extraW=18,tower=false){
   return true;
 }
 function drawTiledGround(image,q,targetH,tower=false){
-  platformUnderlay(q,tower);
   if(!image)return false;
   const m=platformSpriteMeta(image);
   const tileW=Math.max(245,targetH*(m.sw/m.sh)),overlap=20,step=tileW-overlap;
@@ -912,7 +931,6 @@ function drawPhasePlatform(q,index){
   // Cabana do Caminho da Torre: corpo inteiro + telhado como máscara da plataforma.
   // Não deixar a rotina genérica substituir a construção pelo recorte do telhado.
   if(q.x===6200&&q.y===420){
-    platformUnderlay(q,false);
     if(!drawTowerPathCabinRoofMask(q))drawFallbackPlatform(q,false);
     return;
   }
