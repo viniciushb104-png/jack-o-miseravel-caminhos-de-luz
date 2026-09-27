@@ -676,3 +676,52 @@
     background-position:center bottom!important;
   }
 }
+
+
+/* v21 — padrão único de diálogos da Fase 2.
+   Consolida os microajustes antigos e mantém todo retrato dentro do painel,
+   acima da abóbora, inclusive os novos retratos finais transparentes de Amélia. */
+.dialogue-shell .dialogue-portrait,
+.dialogue-shell .dialogue-portrait.is-hd-portrait,
+.dialogue.amelia-boss-dialogue .dialogue-portrait,
+.dialogue.amelia-boss-dialogue .dialogue-portrait.is-hd-portrait{
+  position:absolute!important;
+  left:7.25%!important;
+  top:23.5%!important;
+  bottom:30.5%!important;
+  width:18.25%!important;
+  height:auto!important;
+  margin:0!important;
+  overflow:visible!important;
+  background-position:center bottom!important;
+  background-size:contain!important;
+  background-repeat:no-repeat!important;
+  filter:none!important;
+}
+.dialogue .dialogue-name{
+  font-family:"Cinzel","Copperplate","Copperplate Gothic Light","Palatino Linotype",Georgia,serif!important;
+  font-weight:700!important;
+  font-variant:small-caps;
+  letter-spacing:.18em!important;
+  color:#ffe09a!important;
+  text-shadow:0 2px 2px #000,0 0 10px rgba(238,157,55,.34)!important;
+}
+.dialogue .dialogue-text{
+  font-family:"Palatino Linotype","Book Antiqua",Palatino,Georgia,serif!important;
+  font-style:italic!important;
+  letter-spacing:.018em!important;
+  line-height:1.52!important;
+  color:#fff0c9!important;
+  text-shadow:0 2px 3px #000,0 0 8px rgba(255,190,94,.16)!important;
+}
+@media(max-width:700px){
+  .dialogue-shell .dialogue-portrait,
+  .dialogue-shell .dialogue-portrait.is-hd-portrait,
+  .dialogue.amelia-boss-dialogue .dialogue-portrait,
+  .dialogue.amelia-boss-dialogue .dialogue-portrait.is-hd-portrait{
+    left:7.15%!important;
+    top:23.5%!important;
+    bottom:30.5%!important;
+    width:18.35%!important;
+  }
+}
