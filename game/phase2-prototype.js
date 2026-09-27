@@ -296,6 +296,9 @@ const bells=[
 ];let bellStep=0;
 const bellAssets={bases:[],animated:[]};
 const bellAnim={ringing:-1,t:0,wrong:-1,wrongT:0};
+const bellSfx=new Audio("../assets/game/phase2/audio/sfx/soundreality-bell-fx-410608.mp3");
+bellSfx.preload="auto";bellSfx.volume=.72;
+function playBellSfx(){try{bellSfx.pause();bellSfx.currentTime=0;const q=bellSfx.play();if(q&&q.catch)q.catch(()=>{});}catch(e){}}
 const bellLore=[
   "Uma infância antes das 4:13.",
   "O tempo virou ofício.",
@@ -461,7 +464,7 @@ if(!puzzles.sinos){
   const pc=p.x+p.w/2;
   const b=bells.find(z=>Math.abs(z.x-pc)<125);
   if(b&&bellAnim.ringing<0&&bellAnim.wrongT<=0){
-    bellAnim.ringing=b.id;bellAnim.t=.58;
+    bellAnim.ringing=b.id;bellAnim.t=.58;playBellSfx();
     if(b.id===bellStep){
       b.on=true;bellStep++;
       say(bellLore[b.id]+"  Sino "+bellStep+"/4");
