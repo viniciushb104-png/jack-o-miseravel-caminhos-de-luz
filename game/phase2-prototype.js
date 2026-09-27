@@ -141,7 +141,7 @@ shadowReveal:[
 {speaker:"AMÉLIA VESPER",portrait:"ameliaFinal",expression:5,text:"Eu não sei se consigo."}
 ],
 shadowBorn:[
-{speaker:"SOMBRA DE AMÉLIA",text:"Cinco minutos... só mais cinco minutos..."},
+{speaker:"SOMBRA DE AMÉLIA",portrait:"ameliaShadow",expression:0,text:"Cinco minutos... só mais cinco minutos..."},
 {speaker:"AMÉLIA VESPER",portrait:"ameliaFinal",expression:4,text:"Não escute. Isso é tudo o que eu não consegui deixar ir."},
 {speaker:"JACK",portrait:"jack",expression:4,text:"Então eu não vou lutar contra você."},
 {speaker:"JACK",portrait:"jack",expression:5,text:"Vou lutar contra o minuto que te prendeu."}
@@ -162,7 +162,7 @@ final414:[
 ]};
 function openDialogue(lines,onComplete){
   input.left=input.right=input.down=false;p.vx=0;
-  const bossPortrait=Array.isArray(lines)&&lines.some(line=>line?.portrait==="ameliaReveal"||line?.portrait==="ameliaFinal");
+  const bossPortrait=Array.isArray(lines)&&lines.some(line=>line?.portrait==="ameliaReveal"||line?.portrait==="ameliaFinal"||line?.portrait==="ameliaShadow");
   dialogueRoot.classList.toggle("amelia-boss-dialogue",bossPortrait);
   dialogue.open(lines,()=>{
     dialogueRoot.classList.remove("amelia-boss-dialogue");
@@ -509,6 +509,7 @@ Promise.allSettled(ameliaMapFiles.map(n=>img("../assets/game/phase2/amelia-sprit
   .then(rs=>rs.forEach((r,i)=>{if(r.status==="fulfilled")ameliaMap[ameliaMapFiles[i]]=r.value}));
 const revealDialogueFiles=["amelia-dialogue-00-neutra.png","amelia-dialogue-01-feliz.png","amelia-dialogue-02-triste.png","amelia-dialogue-03-irritada.png","amelia-dialogue-04-surpresa.png","amelia-dialogue-05-assustada.png","amelia-dialogue-06-determinada.png","amelia-dialogue-07-chorando.png"];
 const ameliaFinalPortraitFiles=["amelia-final-01-preocupada.png","amelia-final-02-dor-conflito.png","amelia-final-03-surpresa-realizacao.png","amelia-final-04-determinada.png","amelia-final-05-sombria.png","amelia-final-06-fragil-arrependida.png","amelia-final-07-esperanca-414.png","amelia-final-08-alivio.png","amelia-final-09-reflexiva.png","amelia-final-10-serena-final.png"];
+const shadowDialoguePortraitFile="amelia-shadow-dialogue.png";
 const transformFiles=["amelia-transform-00-surpresa.png","amelia-transform-01-recua.png","amelia-transform-02-perde-equilibrio.png","amelia-transform-03-cai-joelhos.png","amelia-transform-04-no-chao-inicio.png","amelia-transform-05-no-chao-dor-1.png","amelia-transform-06-no-chao-dor-2.png","amelia-transform-07-grito.png","amelia-transform-08-lanterna-cai.png","amelia-transform-09-primeiras-sombras.png","amelia-transform-10-sombras-envolvem.png","amelia-transform-11-transformacao-1.png","amelia-transform-12-transformacao-2.png"];
 const shadowBossFiles=["amelia-shadow-boss-00-idle.png","amelia-shadow-boss-01-walk-1.png","amelia-shadow-boss-02-walk-2.png","amelia-shadow-boss-03-ataque-1.png","amelia-shadow-boss-04-ataque-2.png","amelia-shadow-boss-05-ataque-3.png","amelia-shadow-boss-06-magia.png","amelia-shadow-boss-07-dano.png","amelia-shadow-boss-08-transicao.png"];
 const shadowEffectFiles=["effect-00-lanterna-caida.png","effect-01-sombra-1.png","effect-02-sombra-2.png","effect-03-sombra-3.png","effect-04-circulo-magico.png","effect-05-engrenagens.png","effect-06-petalas.png","effect-07-relogio.png","effect-08-brilhos.png"];
@@ -527,15 +528,17 @@ Promise.all([
   Promise.allSettled(jackPortraitFiles.map(f=>img("../assets/game/phase1/portraits-hd/"+f))),
   Promise.allSettled(ameliaPortraitFiles.map(f=>img("../assets/game/phase2/portraits-hd/"+f))),
   Promise.allSettled(revealDialogueFiles.map(f=>img("../assets/game/phase2/amelia-shadow-v2/dialogue/"+f))),
-  Promise.allSettled(ameliaFinalPortraitFiles.map(f=>img("../assets/game/phase2/amelia-sprites/final-dialogue/"+f)))
-]).then(([jackRs,ameliaRs,revealRs,finalRs])=>{
+  Promise.allSettled(ameliaFinalPortraitFiles.map(f=>img("../assets/game/phase2/amelia-sprites/final-dialogue/"+f))),
+  Promise.allSettled([shadowDialoguePortraitFile].map(f=>img("../assets/game/phase2/amelia-shadow-v2/dialogue/"+f)))
+]).then(([jackRs,ameliaRs,revealRs,finalRs,shadowDialogueRs])=>{
   const normalAmelia=ameliaRs.map(r=>r.status==="fulfilled"?r.value:null);
   ameliaShadowAssets.dialogue=revealRs.map(r=>r.status==="fulfilled"?r.value:null);
   dialogue.setAssets({
     jack:{frames:jackRs.map(r=>r.status==="fulfilled"?r.value:null)},
     amelia:{frames:normalAmelia},
     ameliaReveal:{frames:ameliaShadowAssets.dialogue.some(Boolean)?ameliaShadowAssets.dialogue:normalAmelia},
-    ameliaFinal:{frames:finalRs.map(r=>r.status==="fulfilled"?r.value:null)}
+    ameliaFinal:{frames:finalRs.map(r=>r.status==="fulfilled"?r.value:null)},
+    ameliaShadow:{frames:shadowDialogueRs.map(r=>r.status==="fulfilled"?r.value:null)}
   });
 });
 function say(s){ui.msg.textContent=s;ui.msg.classList.add("show");clearTimeout(say.t);say.t=setTimeout(()=>ui.msg.classList.remove("show"),1800)}
