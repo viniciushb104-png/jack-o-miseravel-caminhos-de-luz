@@ -123,6 +123,7 @@ clockPrelude:[
 function openDialogue(lines,onComplete){input.left=input.right=input.down=false;p.vx=0;dialogue.open(lines,onComplete)}
 function finishClockCutscene(){
   clockPreludeVisualActive=false;
+  dialogueRoot.classList.remove("clock-prelude");
   if(!clockCutsceneRoot||clockCutsceneRoot.hidden)return;
   clockCutsceneVideo?.pause();
   clockCutsceneRoot.classList.remove("is-playing");
@@ -138,6 +139,7 @@ function finishClockCutscene(){
 }
 function playClockCutscene(){
   clockPreludeVisualActive=false;
+  dialogueRoot.classList.remove("clock-prelude");
   endingSequenceActive=true;
   input.left=input.right=input.down=false;
   p.vx=0;p.vy=0;
@@ -159,6 +161,7 @@ function playClockCutscene(){
 function startClockEnding(){
   if(clockCutsceneSeen)return;
   clockPreludeVisualActive=true;
+  dialogueRoot.classList.add("clock-prelude");
   endingSequenceActive=true;
   input.left=input.right=input.down=false;
   p.vx=0;p.vy=0;
@@ -887,35 +890,25 @@ function drawArenaPlatform(q,index){
 }
 function drawClockPreludeVisual(){
   if(!clockPreludeVisualActive||!dialogue.active||!clockDialogueSprite)return;
+  // O mostrador protótipo da arena já está em (8050,-860).
+  // O novo PNG entra por cima dele no MESMO lugar, preservando o cenário da fase.
   const iw=clockDialogueSprite.naturalWidth||clockDialogueSprite.width||1;
   const ih=clockDialogueSprite.naturalHeight||clockDialogueSprite.height||1;
-  const maxH=Math.min(H*.68,510);
-  const maxW=Math.min(W*.58,650);
-  const scale=Math.min(maxW/iw,maxH/ih);
+  const targetH=505;
+  const scale=targetH/ih;
   const dw=iw*scale,dh=ih*scale;
-  const cx=W*.5,top=Math.max(26,H*.055);
-  const pulse=.92+Math.sin(p.anim*2.1)*.035;
+  const cx=8050,cy=-860;
+  const pulse=.96+Math.sin(p.anim*1.85)*.025;
 
   x.save();
-  x.fillStyle="rgba(4,3,12,.66)";
-  x.fillRect(0,0,W,H);
-
-  const glow=x.createRadialGradient(cx,top+dh*.48,20,cx,top+dh*.48,Math.max(dw,dh)*.58);
-  glow.addColorStop(0,"rgba(255,190,82,"+(.18*pulse)+")");
-  glow.addColorStop(.58,"rgba(190,102,35,"+(.07*pulse)+")");
-  glow.addColorStop(1,"rgba(20,8,28,0)");
-  x.fillStyle=glow;
-  x.beginPath();x.arc(cx,top+dh*.48,Math.max(dw,dh)*.58,0,Math.PI*2);x.fill();
-
-  x.globalAlpha=.97;
-  x.drawImage(clockDialogueSprite,cx-dw/2,top,dw,dh);
-  x.globalAlpha=1;
-
-  x.fillStyle="rgba(255,226,153,"+(.48*pulse)+")";
-  x.font="bold 13px Georgia";
-  x.textAlign="center";
-  x.fillText("4:13",cx,Math.min(H-150,top+dh+18));
-  x.textAlign="left";
+  x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";
+  const glow=x.createRadialGradient(cx,cy,40,cx,cy,310);
+  glow.addColorStop(0,"rgba(255,190,82,"+(.15*pulse)+")");
+  glow.addColorStop(.58,"rgba(188,94,31,"+(.055*pulse)+")");
+  glow.addColorStop(1,"rgba(18,7,26,0)");
+  x.fillStyle=glow;x.beginPath();x.arc(cx,cy,310,0,Math.PI*2);x.fill();
+  x.globalAlpha=.99;
+  x.drawImage(clockDialogueSprite,cx-dw/2,cy-dh/2,dw,dh);
   x.restore();
 }
 function draw(){drawPhase2Backdrop();x.fillStyle="#e7d4b0";x.globalAlpha=.22;for(let i=0;i<18;i++){const px=((i*431-cam*.12)%1500+1500)%1500;x.fillRect(px,80+(i*71)%220,2,2)}x.globalAlpha=1;
@@ -1030,7 +1023,7 @@ for(const b of bells){
   }
 }
 for(const g of gears){if(g.got)continue;x.save();x.translate(g.x,g.y);x.rotate(p.anim);x.strokeStyle="#ffd36b";x.lineWidth=8;x.beginPath();x.arc(0,0,24,0,Math.PI*2);x.stroke();for(let i=0;i<8;i++){x.rotate(Math.PI/4);x.fillStyle="#ffd36b";x.fillRect(20,-5,13,10)}x.restore()}
-x.restore();drawJack();drawClockPreludeVisual();if(light>0){x.globalAlpha=Math.min(1,light*4);const rg=x.createRadialGradient(p.x-cam+p.w/2,p.y-camY+25,10,p.x-cam+p.w/2,p.y-camY+25,220);rg.addColorStop(0,"#fff6b8aa");rg.addColorStop(1,"#9beaff00");x.fillStyle=rg;x.beginPath();x.arc(p.x-cam+p.w/2,p.y-camY+25,220,0,Math.PI*2);x.fill();x.globalAlpha=1}
+drawClockPreludeVisual();x.restore();drawJack();if(light>0){x.globalAlpha=Math.min(1,light*4);const rg=x.createRadialGradient(p.x-cam+p.w/2,p.y-camY+25,10,p.x-cam+p.w/2,p.y-camY+25,220);rg.addColorStop(0,"#fff6b8aa");rg.addColorStop(1,"#9beaff00");x.fillStyle=rg;x.beginPath();x.arc(p.x-cam+p.w/2,p.y-camY+25,220,0,Math.PI*2);x.fill();x.globalAlpha=1}
 if(bossActive&&!bossDefeated){
   x.fillStyle="#120b17dd";x.fillRect(W/2-285,92,570,54);x.strokeStyle="#d3923b";x.lineWidth=3;x.strokeRect(W/2-285,92,570,54);
   x.fillStyle="#f3d184";x.font="bold 15px Georgia";x.textAlign="center";x.fillText("SOMBRA DE AMÉLIA — O ÚLTIMO MINUTO",W/2,111);x.textAlign="left";
