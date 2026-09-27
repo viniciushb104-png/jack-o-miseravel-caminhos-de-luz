@@ -122,6 +122,7 @@ clockPrelude:[
 ]};
 function openDialogue(lines,onComplete){input.left=input.right=input.down=false;p.vx=0;dialogue.open(lines,onComplete)}
 function finishClockCutscene(){
+  clockPreludeVisualActive=false;
   if(!clockCutsceneRoot||clockCutsceneRoot.hidden)return;
   clockCutsceneVideo?.pause();
   clockCutsceneRoot.classList.remove("is-playing");
@@ -136,6 +137,7 @@ function finishClockCutscene(){
   saveJourney();
 }
 function playClockCutscene(){
+  clockPreludeVisualActive=false;
   endingSequenceActive=true;
   input.left=input.right=input.down=false;
   p.vx=0;p.vy=0;
@@ -156,6 +158,7 @@ function playClockCutscene(){
 }
 function startClockEnding(){
   if(clockCutsceneSeen)return;
+  clockPreludeVisualActive=true;
   endingSequenceActive=true;
   input.left=input.right=input.down=false;
   p.vx=0;p.vy=0;
@@ -316,6 +319,7 @@ const phase2Backgrounds={village1:null,village2:null,village3:null,tower:null};
   img("../assets/game/phase2/backgrounds-hd/"+file).then(i=>phase2Backgrounds[key]=i).catch(()=>{});
 });
 const environmentSprites={village:{},tower:{}};
+let clockDialogueSprite=null,clockPreludeVisualActive=false;
 const villagePlatformFiles=[
   "vila-plataforma-longa-baixa.png","vila-plataforma-longa-folhas.png","vila-plataforma-longa-ruinas.png",
   "vila-plataforma-media-folhas.png","vila-plataforma-media-vinhas.png","vila-plataforma-curta-a.png",
@@ -329,6 +333,7 @@ Promise.allSettled(villagePlatformFiles.map(f=>img("../assets/game/phase2/enviro
   .then(rs=>rs.forEach((r,i)=>{if(r.status==="fulfilled")environmentSprites.village[villagePlatformFiles[i]]=r.value}));
 Promise.allSettled(towerPlatformFiles.map(f=>img("../assets/game/phase2/environment-sprites/torre/plataformas/"+f)))
   .then(rs=>rs.forEach((r,i)=>{if(r.status==="fulfilled")environmentSprites.tower[towerPlatformFiles[i]]=r.value}));
+img("../assets/game/phase2/environment-sprites/torre/decoracao/clock-413-dialogue.png").then(i=>clockDialogueSprite=i).catch(()=>{});
 img("../assets/game/phase2/checkpoints/checkpoint-phase2-off.png").then(i=>checkpointArt.off=i).catch(()=>{});
 img("../assets/game/phase2/checkpoints/checkpoint-phase2-on.png").then(i=>checkpointArt.on=i).catch(()=>{});
 [
@@ -799,6 +804,39 @@ function drawArenaPlatform(q,index){
     if(!drawTiledGround(sprite,q,112))drawFallbackPlatform(q,true);
   }else if(!drawPlatformSprite(sprite,q,108,24))drawFallbackPlatform(q,true);
 }
+function drawClockPreludeVisual(){
+  if(!clockPreludeVisualActive||!dialogue.active||!clockDialogueSprite)return;
+  const iw=clockDialogueSprite.naturalWidth||clockDialogueSprite.width||1;
+  const ih=clockDialogueSprite.naturalHeight||clockDialogueSprite.height||1;
+  const maxH=Math.min(H*.68,510);
+  const maxW=Math.min(W*.58,650);
+  const scale=Math.min(maxW/iw,maxH/ih);
+  const dw=iw*scale,dh=ih*scale;
+  const cx=W*.5,top=Math.max(26,H*.055);
+  const pulse=.92+Math.sin(p.anim*2.1)*.035;
+
+  x.save();
+  x.fillStyle="rgba(4,3,12,.66)";
+  x.fillRect(0,0,W,H);
+
+  const glow=x.createRadialGradient(cx,top+dh*.48,20,cx,top+dh*.48,Math.max(dw,dh)*.58);
+  glow.addColorStop(0,"rgba(255,190,82,"+(.18*pulse)+")");
+  glow.addColorStop(.58,"rgba(190,102,35,"+(.07*pulse)+")");
+  glow.addColorStop(1,"rgba(20,8,28,0)");
+  x.fillStyle=glow;
+  x.beginPath();x.arc(cx,top+dh*.48,Math.max(dw,dh)*.58,0,Math.PI*2);x.fill();
+
+  x.globalAlpha=.97;
+  x.drawImage(clockDialogueSprite,cx-dw/2,top,dw,dh);
+  x.globalAlpha=1;
+
+  x.fillStyle="rgba(255,226,153,"+(.48*pulse)+")";
+  x.font="bold 13px Georgia";
+  x.textAlign="center";
+  x.fillText("4:13",cx,Math.min(H-150,top+dh+18));
+  x.textAlign="left";
+  x.restore();
+}
 function draw(){drawPhase2Backdrop();x.fillStyle="#e7d4b0";x.globalAlpha=.22;for(let i=0;i<18;i++){const px=((i*431-cam*.12)%1500+1500)%1500;x.fillRect(px,80+(i*71)%220,2,2)}x.globalAlpha=1;
 x.save();x.translate(-cam,-camY);
 // O interior da Torre é um plano do próprio mundo: fica à frente do fundo da fase
@@ -903,7 +941,7 @@ for(const b of bells){
   }
 }
 for(const g of gears){if(g.got)continue;x.save();x.translate(g.x,g.y);x.rotate(p.anim);x.strokeStyle="#ffd36b";x.lineWidth=8;x.beginPath();x.arc(0,0,24,0,Math.PI*2);x.stroke();for(let i=0;i<8;i++){x.rotate(Math.PI/4);x.fillStyle="#ffd36b";x.fillRect(20,-5,13,10)}x.restore()}
-x.restore();drawJack();if(light>0){x.globalAlpha=Math.min(1,light*4);const rg=x.createRadialGradient(p.x-cam+p.w/2,p.y-camY+25,10,p.x-cam+p.w/2,p.y-camY+25,220);rg.addColorStop(0,"#fff6b8aa");rg.addColorStop(1,"#9beaff00");x.fillStyle=rg;x.beginPath();x.arc(p.x-cam+p.w/2,p.y-camY+25,220,0,Math.PI*2);x.fill();x.globalAlpha=1}
+x.restore();drawJack();drawClockPreludeVisual();if(light>0){x.globalAlpha=Math.min(1,light*4);const rg=x.createRadialGradient(p.x-cam+p.w/2,p.y-camY+25,10,p.x-cam+p.w/2,p.y-camY+25,220);rg.addColorStop(0,"#fff6b8aa");rg.addColorStop(1,"#9beaff00");x.fillStyle=rg;x.beginPath();x.arc(p.x-cam+p.w/2,p.y-camY+25,220,0,Math.PI*2);x.fill();x.globalAlpha=1}
 if(bossActive&&!bossDefeated){
   x.fillStyle="#120b17dd";x.fillRect(W/2-285,92,570,54);x.strokeStyle="#d3923b";x.lineWidth=3;x.strokeRect(W/2-285,92,570,54);
   x.fillStyle="#f3d184";x.font="bold 15px Georgia";x.textAlign="center";x.fillText("SOMBRA DE AMÉLIA — O ÚLTIMO MINUTO",W/2,111);x.textAlign="left";
