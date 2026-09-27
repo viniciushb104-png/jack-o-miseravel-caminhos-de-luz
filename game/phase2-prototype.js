@@ -853,16 +853,39 @@ function drawTiledGround(image,q,targetH,tower=false){
   }
   x.restore();return true;
 }
+function drawTowerPathCabinRoofMask(q){
+  if(q.x!==6200||q.y!==420)return false;
+  const a=environmentSprites.village;
+  const cabin=a["vila-barraca-plataforma.png"];
+  const roof=a["vila-plataforma-telhado.png"];
+
+  // 1) preserva/desenha a cabana inteira.
+  if(cabin){
+    const iw=cabin.naturalWidth||cabin.width||1,ih=cabin.naturalHeight||cabin.height||1;
+    const targetW=390,targetH=targetW*(ih/iw);
+    x.save();x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";
+    x.drawImage(cabin,q.x+q.w/2-targetW/2,q.y-targetH+46,targetW,targetH);
+    x.restore();
+  }
+
+  // 2) o telhado é desenhado POR CIMA, alinhado à linha de colisão.
+  // Assim Jack pisa no telhado sem substituir/apagar o corpo da cabana.
+  if(roof){
+    const m=platformSpriteMeta(roof);
+    const drawW=330,drawH=Math.max(92,drawW*(m.sh/m.sw));
+    const dx=q.x+q.w/2-drawW/2;
+    const dy=q.y-m.surfaceRatio*drawH-3;
+    x.save();
+    x.beginPath();x.rect(q.x-48,q.y-80,q.w+96,150);x.clip();
+    x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";
+    x.drawImage(roof,m.sx,m.sy,m.sw,m.sh,dx,dy,drawW,drawH);
+    x.restore();
+  }
+  return !!(cabin||roof);
+}
 function villageSpriteFor(q,index){
   const a=environmentSprites.village;
   if(q.h>=100)return a["vila-plataforma-longa-baixa.png"]||a["vila-plataforma-longa-folhas.png"];
-
-  // Caminho da Torre: esta plataforma cruza o telhado da cabana do cenário.
-  // O telhado passa a ser a própria máscara visual da colisão, para Jack pisar nele
-  // em vez de parecer flutuar sobre uma plataforma genérica.
-  if(q.x===6200&&q.y===420){
-    return a["vila-plataforma-telhado.png"]||a["vila-barraca-plataforma.png"]||a["vila-plataforma-media-folhas.png"];
-  }
 
   const names=[
     "vila-plataforma-media-folhas.png","vila-plataforma-media-vinhas.png",
@@ -884,6 +907,13 @@ function drawPhasePlatform(q,index){
     if(q.h>=100){
       if(!drawTiledGround(sprite,q,108,true))drawFallbackPlatform(q,true);
     }else if(!drawPlatformSprite(sprite,q,105,24,true))drawFallbackPlatform(q,true);
+    return;
+  }
+  // Cabana do Caminho da Torre: corpo inteiro + telhado como máscara da plataforma.
+  // Não deixar a rotina genérica substituir a construção pelo recorte do telhado.
+  if(q.x===6200&&q.y===420){
+    platformUnderlay(q,false);
+    if(!drawTowerPathCabinRoofMask(q))drawFallbackPlatform(q,false);
     return;
   }
   const sprite=villageSpriteFor(q,index);
