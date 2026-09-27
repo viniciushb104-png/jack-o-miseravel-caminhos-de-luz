@@ -673,8 +673,23 @@ if(p.buffer>0&&p.coyote>0&&!input.down){p.vy=-575;p.on=false;p.coyote=0;p.buffer
 const solids=plats.concat((bossUnlocked||bossActive||bossDefeated)?arenaPlats:[],reveal.filter(q=>q.t>0));for(const q of solids){if(p.x+p.w>q.x&&p.x<q.x+q.w&&oldY+p.h<=q.y+8&&p.y+p.h>=q.y&&p.vy>=0){p.y=q.y-p.h;p.vy=0;p.on=true}}
 updateCheckpoints();
 if(p.y>760){
-  if(bossActive&&!bossDefeated)resetBossAttempt();
-  else respawnAtCheckpoint(activeCheckpoint?"A abóbora reacende o caminho de Jack.":"Jack retorna ao início da Vila sem Amanhecer.");
+  // Buracos agora custam 1 coração, como os demais perigos da jornada.
+  playerLife=Math.max(0,playerLife-1);
+  syncHealthHud();
+  if(playerLife<=0){
+    if(bossActive&&!bossDefeated)resetBossAttempt();
+    else{
+      playerLife=3;
+      respawnAtCheckpoint(activeCheckpoint?"A queda apagou a última luz. A abóbora reacendeu o caminho de Jack.":"A queda apagou a última luz. Jack retorna ao início da Vila sem Amanhecer.");
+    }
+  }else{
+    // A queda não reinicia o chefe nem devolve os corações: apenas retorna ao checkpoint.
+    const r=currentCheckpointRespawn();
+    p.x=r.x;p.y=r.y;p.vx=0;p.vy=0;p.on=false;playerHit=1.15;
+    bossShots.length=0;
+    saveJourney();
+    say("Jack caiu no vazio — "+playerLife+"/3 corações restantes.");
+  }
 }
 updateEnemies(dt);
 boss.invuln=Math.max(0,boss.invuln-dt);playerHit=Math.max(0,playerHit-dt);
