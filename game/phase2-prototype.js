@@ -411,21 +411,34 @@ const ENEMY_ANIMS={
   sentinel:{move:[0,1,2,3],attack:[4,5,6,5],hit:[8],fps:4}
 };
 function enemyFrameIndex(e){
-  const def=ENEMY_ANIMS[e.type]||ENEMY_ANIMS.raven,dist=Math.abs((p.x+p.w/2)-e.x);
-  const seq=e.hitT>0?def.hit:(dist<215?def.attack:def.move);
-  return seq[Math.floor((p.anim+(e.phase||0))*def.fps)%seq.length]||0;
+  // As pranchas geradas têm poses ilustrativas com proporções diferentes.
+  // Usamos a pose-base limpa e damos vida a ela por movimento procedural,
+  // evitando o efeito de "teletransporte" entre desenhos incompatíveis.
+  return 0;
 }
 function drawEnemy(e){
   if(e.dead)return;
-  const cfg=ENEMY_SPRITES[e.type],sprite=(enemyFrames[e.type]||[])[enemyFrameIndex(e)];
-  const bob=e.type==="raven"?Math.sin(p.anim*5.2+(e.phase||0))*8:e.type==="specter"?Math.sin(p.anim*3.1+(e.phase||0))*6:0;
-  if(!sprite){x.save();x.fillStyle="#26172e";x.strokeStyle="#d69b43";x.lineWidth=3;x.beginPath();x.arc(e.x,e.y-35+bob,28,0,Math.PI*2);x.fill();x.stroke();x.restore();return}
-  const ratio=sprite.width/Math.max(1,sprite.height),dh=cfg.scale,dw=dh*ratio,dy=e.y-dh+cfg.anchorY+bob;
+  const cfg=ENEMY_SPRITES[e.type],sprite=(enemyFrames[e.type]||[])[0];
+  const t=p.anim+(e.phase||0),near=Math.abs((p.x+p.w/2)-e.x)<240;
+  const floatY=e.type==="raven"?Math.sin(t*4.4)*7:e.type==="specter"?Math.sin(t*2.8)*6:Math.sin(t*2.1)*1.4;
+  const sway=e.type==="raven"?Math.sin(t*3.6)*.045:e.type==="specter"?Math.sin(t*2.1)*.025:e.type==="watcher"?Math.sin(t*3.2)*.018:Math.sin(t*1.8)*.009;
+  const breathe=1+(e.type==="specter"?Math.sin(t*2.4)*.018:Math.sin(t*2.8)*.009);
+  if(!sprite){x.save();x.fillStyle="#26172e";x.strokeStyle="#d69b43";x.lineWidth=3;x.beginPath();x.arc(e.x,e.y-35+floatY,28,0,Math.PI*2);x.fill();x.stroke();x.restore();return}
+  const ratio=sprite.width/Math.max(1,sprite.height),dh=cfg.scale,dw=dh*ratio;
+  const baseY=e.y-dh+cfg.anchorY+floatY;
   x.save();x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";
-  if(e.hitT>0){x.globalAlpha=.74+Math.sin(p.anim*28)*.16;x.shadowColor="#ffe18a";x.shadowBlur=16}
-  if(e.d<0){x.translate(e.x,0);x.scale(-1,1);x.drawImage(sprite,-dw/2,dy,dw,dh)}
-  else x.drawImage(sprite,e.x-dw/2,dy,dw,dh);
+  x.translate(e.x,baseY+dh);
+  if(e.d<0)x.scale(-1,1);
+  x.rotate(sway);
+  x.scale(breathe,1/breathe);
+  if(near&&e.type==="watcher")x.scale(1.035,.975);
+  if(e.hitT>0){x.globalAlpha=.78+Math.sin(t*30)*.12;x.shadowColor="#ffe18a";x.shadowBlur=18;x.translate(Math.sin(t*45)*3,0)}
+  x.drawImage(sprite,-dw/2,-dh,dw,dh);
   x.restore();
+  // Sombra suave prende os inimigos terrestres ao cenário sem caixas visíveis.
+  if(e.type!=="raven"&&e.type!=="specter"){
+    x.save();x.globalAlpha=.18;x.fillStyle="#000";x.beginPath();x.ellipse(e.x,e.y+cfg.anchorY-2,Math.min(36,dw*.25),6,0,0,Math.PI*2);x.fill();x.restore();
+  }
 }
 function hurtJackFromEnemy(e){
   if(playerHit>0||bossActive||bossDefeated)return;
