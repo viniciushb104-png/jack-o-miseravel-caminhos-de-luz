@@ -1198,3 +1198,22 @@ button:focus-visible{outline:3px solid #fff3b0;outline-offset:4px}
   background:
     linear-gradient(180deg,rgba(45,22,7,.30),rgba(7,9,14,.94));
 }
+
+
+/* Arte final desbloqueável — Halloween II */
+.memory-trophy--phase2.is-unlocked .memory-trophy-art{
+  background:#070b17;
+  box-shadow:inset 0 0 30px rgba(255,169,55,.15),inset 0 0 55px rgba(52,82,151,.12);
+}
+.memory-trophy--phase2 .memory-trophy-art img{
+  object-position:center 50%;
+  filter:saturate(.98) contrast(1.04) brightness(.94);
+}
+.memory-trophy--phase2.is-unlocked .memory-trophy-art::before,
+.memory-trophy--phase2.is-unlocked .memory-trophy-art::after{
+  color:#ffd06b;
+  text-shadow:0 0 12px rgba(255,154,39,.76);
+}
+.memory-trophy--phase2.is-unlocked .memory-trophy-copy{
+  background:linear-gradient(180deg,rgba(24,35,68,.32),rgba(27,15,8,.24),rgba(7,9,14,.95));
+}
