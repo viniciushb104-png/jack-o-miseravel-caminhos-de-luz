@@ -242,11 +242,12 @@ const plats=[
 const reveal=[{x:1010,y:505,w:150,h:28,t:0},{x:3030,y:475,w:120,h:28,t:0},{x:4260,y:455,w:120,h:28,t:0},{x:8290,y:-65,w:150,h:28,t:0},{x:7560,y:-300,w:150,h:28,t:0}];
 const enemies=[{x:780,y:548,a:620,b:970,d:1},{x:2320,y:548,a:2070,b:2850,d:1},{x:4680,y:548,a:4480,b:5300,d:1},{x:6100,y:548,a:5750,b:6500,d:1}];
 const gears=[{x:1870,y:385,n:"ENGRENAGEM DAS HORAS",got:false},{x:4240,y:450,n:"ENGRENAGEM DOS MINUTOS",got:false},{x:6750,y:450,n:"ENGRENAGEM DO AMANHECER",got:false}];
+// A ordem física é propositalmente embaralhada. A solução narrativa continua 0→1→2→3.
 const bells=[
-  {x:3260,y:590,id:0,on:false,title:"AMÉLIA CRIANÇA"},
-  {x:3560,y:590,id:1,on:false,title:"AMÉLIA APRENDIZ"},
-  {x:3860,y:590,id:2,on:false,title:"AMÉLIA RELOJOEIRA"},
-  {x:4160,y:590,id:3,on:false,title:"AMÉLIA E A TORRE"}
+  {x:3265,y:600,id:2,on:false,title:"AMÉLIA RELOJOEIRA"},
+  {x:3565,y:600,id:0,on:false,title:"AMÉLIA CRIANÇA"},
+  {x:3865,y:600,id:3,on:false,title:"AMÉLIA E A TORRE"},
+  {x:4165,y:600,id:1,on:false,title:"AMÉLIA APRENDIZ"}
 ];let bellStep=0;
 const bellAssets={shrines:[],idle:[],swing:[],lit:[],wrong:[]};
 const bellAnim={ringing:-1,t:0,wrong:-1,wrongT:0};
@@ -871,25 +872,35 @@ for(const e of enemies){if(e.dead)continue;x.fillStyle="#d56a20";x.beginPath();x
 for(const b of bells){
   const ringing=bellAnim.ringing===b.id&&bellAnim.t>0;
   const wrong=bellAnim.wrong===b.id&&bellAnim.wrongT>0;
-  let sprite=null,targetH=238;
-  if(ringing){
-    sprite=bellAssets.shrines[b.id];
-  }else if(wrong){
-    sprite=bellAssets.wrong[b.id]||bellAssets.shrines[b.id];
-  }else if(b.on){
-    sprite=bellAssets.shrines[b.id]||bellAssets.lit[b.id];
-  }else{
-    sprite=bellAssets.shrines[b.id];
-  }
+  const targetH=246;
+  let sprite=wrong?(bellAssets.wrong[b.id]||bellAssets.shrines[b.id])
+    :b.on?(bellAssets.lit[b.id]||bellAssets.shrines[b.id])
+    :bellAssets.shrines[b.id];
+
+  // O brilho pertence à memória correta e permanece depois da badalada.
   if(b.on){
-    const pulse=.78+Math.sin(p.anim*5+b.id)*.12;
-    const glow=x.createRadialGradient(b.x,b.y-125,12,b.x,b.y-125,118);
-    glow.addColorStop(0,"rgba(255,218,110,"+(.34*pulse)+")");glow.addColorStop(1,"rgba(255,150,40,0)");
-    x.fillStyle=glow;x.beginPath();x.arc(b.x,b.y-125,118,0,Math.PI*2);x.fill();
+    const pulse=.82+Math.sin(p.anim*4.6+b.id)*.12;
+    const glow=x.createRadialGradient(b.x,b.y-132,10,b.x,b.y-132,126);
+    glow.addColorStop(0,"rgba(255,224,125,"+(.44*pulse)+")");
+    glow.addColorStop(.48,"rgba(255,171,55,"+(.18*pulse)+")");
+    glow.addColorStop(1,"rgba(255,130,25,0)");
+    x.fillStyle=glow;x.beginPath();x.arc(b.x,b.y-132,126,0,Math.PI*2);x.fill();
   }
-  if(sprite)drawAssetBottom(sprite,b.x,b.y,targetH,wrong?.62:1);
-  else{x.fillStyle=b.on?"#ffe099":"#8d693d";x.beginPath();x.moveTo(b.x,b.y-45);x.lineTo(b.x-22,b.y);x.lineTo(b.x+22,b.y);x.closePath();x.fill()}
-  x.save();x.fillStyle=b.on?"#ffe7a1":"#c9a66b";x.font="bold 11px Georgia";x.textAlign="center";x.fillText((b.id+1)+" · "+b.title,b.x,b.y+18);x.restore();
+
+  if(sprite){
+    if(ringing){
+      // Balanço amortecido curto. O pivô fica na base para o santuário continuar rente ao piso.
+      const elapsed=.58-bellAnim.t;
+      const swing=Math.sin(elapsed*29)*Math.exp(-elapsed*3.6)*.028;
+      const iw=sprite.naturalWidth||sprite.width||1,ih=sprite.naturalHeight||sprite.height||1;
+      const w=targetH*(iw/ih);
+      x.save();x.translate(b.x,b.y);x.rotate(swing);
+      x.drawImage(sprite,-w/2,-targetH,w,targetH);
+      x.restore();
+    }else drawAssetBottom(sprite,b.x,b.y,targetH,wrong?.7:1);
+  }else{
+    x.fillStyle=b.on?"#ffe099":"#8d693d";x.beginPath();x.moveTo(b.x,b.y-45);x.lineTo(b.x-22,b.y);x.lineTo(b.x+22,b.y);x.closePath();x.fill();
+  }
 }
 for(const g of gears){if(g.got)continue;x.save();x.translate(g.x,g.y);x.rotate(p.anim);x.strokeStyle="#ffd36b";x.lineWidth=8;x.beginPath();x.arc(0,0,24,0,Math.PI*2);x.stroke();for(let i=0;i<8;i++){x.rotate(Math.PI/4);x.fillStyle="#ffd36b";x.fillRect(20,-5,13,10)}x.restore()}
 x.restore();drawJack();if(light>0){x.globalAlpha=Math.min(1,light*4);const rg=x.createRadialGradient(p.x-cam+p.w/2,p.y-camY+25,10,p.x-cam+p.w/2,p.y-camY+25,220);rg.addColorStop(0,"#fff6b8aa");rg.addColorStop(1,"#9beaff00");x.fillStyle=rg;x.beginPath();x.arc(p.x-cam+p.w/2,p.y-camY+25,220,0,Math.PI*2);x.fill();x.globalAlpha=1}
