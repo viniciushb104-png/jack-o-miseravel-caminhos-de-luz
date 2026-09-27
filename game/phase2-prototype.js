@@ -242,7 +242,20 @@ const plats=[
 const reveal=[{x:1010,y:505,w:150,h:28,t:0},{x:3030,y:475,w:120,h:28,t:0},{x:4260,y:455,w:120,h:28,t:0},{x:8290,y:-65,w:150,h:28,t:0},{x:7560,y:-300,w:150,h:28,t:0}];
 const enemies=[{x:780,y:548,a:620,b:970,d:1},{x:2320,y:548,a:2070,b:2850,d:1},{x:4680,y:548,a:4480,b:5300,d:1},{x:6100,y:548,a:5750,b:6500,d:1}];
 const gears=[{x:1870,y:385,n:"ENGRENAGEM DAS HORAS",got:false},{x:4240,y:450,n:"ENGRENAGEM DOS MINUTOS",got:false},{x:6750,y:450,n:"ENGRENAGEM DO AMANHECER",got:false}];
-const bells=[{x:3320,y:545,id:0,on:false},{x:3650,y:545,id:1,on:false},{x:4020,y:545,id:2,on:false}];let bellStep=0;
+const bells=[
+  {x:3260,y:590,id:0,on:false,title:"AMÉLIA CRIANÇA"},
+  {x:3560,y:590,id:1,on:false,title:"AMÉLIA APRENDIZ"},
+  {x:3860,y:590,id:2,on:false,title:"AMÉLIA RELOJOEIRA"},
+  {x:4160,y:590,id:3,on:false,title:"AMÉLIA E A TORRE"}
+];let bellStep=0;
+const bellAssets={shrines:[],idle:[],swing:[],lit:[],wrong:[]};
+const bellAnim={ringing:-1,t:0,wrong:-1,wrongT:0};
+const bellLore=[
+  "Uma infância antes das 4:13.",
+  "O tempo virou ofício.",
+  "A aprendiz tornou-se relojoeira.",
+  "E então veio a Torre."
+];
 const windows=[{x:4620,y:390,on:false},{x:4910,y:320,on:false},{x:5200,y:390,on:false}];let windowStep=0;
 const shadowSeals=[{x:5850,y:455,on:false},{x:6250,y:375,on:false},{x:6640,y:455,on:false}];let shadowStep=0;
 const towerSeals=[{x:7850,y:55,on:false},{x:8350,y:-185,on:false}];let towerStep=0;
@@ -265,7 +278,7 @@ if(loadedSave){
 }
 // Recuperação de progresso: evita soft-lock em saves feitos durante diálogos/cutscenes
 // e corrige flags antigas quando os próprios elementos da fase já estão concluídos.
-if(bellStep>=3||bells.every(z=>z.on)){bellStep=3;puzzles.sinos=true}
+if(bellStep>=4||bells.every(z=>z.on)){bellStep=4;puzzles.sinos=true}
 if(windowStep>=3||windows.every(z=>z.on)){windowStep=3;puzzles.janelas=true}
 if(shadowStep>=3||shadowSeals.every(z=>z.on)){shadowStep=3;puzzles.sombras=true}
 if(towerStep>=2||towerSeals.every(z=>z.on)){towerStep=2;towerMechanism=true}
@@ -317,6 +330,16 @@ Promise.allSettled(towerPlatformFiles.map(f=>img("../assets/game/phase2/environm
   .then(rs=>rs.forEach((r,i)=>{if(r.status==="fulfilled")environmentSprites.tower[towerPlatformFiles[i]]=r.value}));
 img("../assets/game/phase2/checkpoints/checkpoint-phase2-off.png").then(i=>checkpointArt.off=i).catch(()=>{});
 img("../assets/game/phase2/checkpoints/checkpoint-phase2-on.png").then(i=>checkpointArt.on=i).catch(()=>{});
+[
+  ["shrines",["bell-01-amelia-crianca.png","bell-02-amelia-aprendiz.png","bell-03-amelia-reloeira.png","bell-04-amelia-torre.png"]],
+  ["idle",["bell-idle-01.png","bell-idle-02.png","bell-idle-03.png","bell-idle-04.png"]],
+  ["swing",["bell-swing-01.png","bell-swing-02.png","bell-swing-03.png","bell-swing-04.png","bell-swing-05.png"]],
+  ["lit",["bell-lit-01.png","bell-lit-02.png","bell-lit-03.png","bell-lit-04.png"]],
+  ["wrong",["bell-wrong-01.png","bell-wrong-02.png","bell-wrong-03.png","bell-wrong-04.png"]]
+].forEach(([folder,files])=>{
+  Promise.allSettled(files.map(file=>img("../assets/game/phase2/puzzles/bells/"+folder+"/"+file)))
+    .then(rs=>bellAssets[folder]=rs.map(r=>r.status==="fulfilled"?r.value:null));
+});
 const ameliaMapFiles=["neutral","feliz","triste","surpresa","irritada","cansada","assustada"];
 Promise.allSettled(ameliaMapFiles.map(n=>img("../assets/game/phase2/amelia-sprites/amelia-map-"+n+".png")))
   .then(rs=>rs.forEach((r,i)=>{if(r.status==="fulfilled")ameliaMap[ameliaMapFiles[i]]=r.value}));
@@ -385,7 +408,24 @@ if(bossActive&&!bossDefeated&&boss.invuln<=0&&Math.hypot(boss.x-(p.x+p.w/2),boss
     setTimeout(startClockEnding,420);
   }
 }
-reveal.forEach(q=>{if(Math.abs((q.x+q.w/2)-(p.x+p.w/2))<310)q.t=3});bells.forEach(b=>{if(Math.abs(b.x-p.x)<120){const order=[1,0,2];if(b.id===order[bellStep]){b.on=true;bellStep++;say("Sino correto: "+bellStep+"/3");if(bellStep===3){puzzles.sinos=true;say("ENIGMA DOS SINOS CONCLUÍDO") }}else{bells.forEach(z=>z.on=false);bellStep=0;say("A sequência se perdeu no silêncio...")}}});
+reveal.forEach(q=>{if(Math.abs((q.x+q.w/2)-(p.x+p.w/2))<310)q.t=3});
+if(!puzzles.sinos){
+  const pc=p.x+p.w/2;
+  const b=bells.find(z=>Math.abs(z.x-pc)<125);
+  if(b&&bellAnim.ringing<0&&bellAnim.wrongT<=0){
+    bellAnim.ringing=b.id;bellAnim.t=.58;
+    if(b.id===bellStep){
+      b.on=true;bellStep++;
+      say(bellLore[b.id]+"  Sino "+bellStep+"/4");
+      if(bellStep===4){puzzles.sinos=true;banner("MEMÓRIA RECONSTRUÍDA — OS SINOS");say("Antes daquela noite, Amélia também contava as horas para o amanhã.");}
+    }else{
+      bellAnim.wrong=b.id;bellAnim.wrongT=.72;
+      bells.forEach(z=>z.on=false);bellStep=0;
+      say("A memória se perdeu no silêncio... recomece pela infância.");
+    }
+    saveJourney();
+  }
+}
 const touchSeq=(arr,stepName,order,finish)=>{for(const z of arr){if(Math.abs(z.x-p.x)<125&&Math.abs(z.y-p.y)<145&&!z.on){let step=stepName==="window"?windowStep:stepName==="shadow"?shadowStep:towerStep;if(z===arr[order[step]]){z.on=true;if(stepName==="window")windowStep++;else if(stepName==="shadow")shadowStep++;else towerStep++;const ns=step+1;if(ns===order.length)finish();else say("Selo correto: "+ns+"/"+order.length)}else{arr.forEach(a=>a.on=false);if(stepName==="window")windowStep=0;else if(stepName==="shadow")shadowStep=0;else towerStep=0;say("A ordem se desfez...")}}}};
 touchSeq(windows,"window",[0,2,1],()=>{puzzles.janelas=true;say("ENIGMA DAS JANELAS CONCLUÍDO")});
 touchSeq(shadowSeals,"shadow",[1,0,2],()=>{puzzles.sombras=true;say("ENIGMA DAS SOMBRAS CONCLUÍDO")});
@@ -406,7 +446,7 @@ if(shadowCutscene.active){
   if(shadowCutscene.t>=7.15){shadowCutscene.active=false;openDialogue(lore.shadowBorn,activateShadowBoss)}
   return
 }
-cool=Math.max(0,cool-dt);light=Math.max(0,light-dt);p.attack=Math.max(0,p.attack-dt);reveal.forEach(q=>q.t=Math.max(0,q.t-dt));p.coyote=p.on?.12:Math.max(0,p.coyote-dt);if(input.jump){p.buffer=.14;input.jump=false}else p.buffer=Math.max(0,p.buffer-dt);
+cool=Math.max(0,cool-dt);light=Math.max(0,light-dt);p.attack=Math.max(0,p.attack-dt);bellAnim.t=Math.max(0,bellAnim.t-dt);bellAnim.wrongT=Math.max(0,bellAnim.wrongT-dt);if(bellAnim.t<=0)bellAnim.ringing=-1;if(bellAnim.wrongT<=0)bellAnim.wrong=-1;reveal.forEach(q=>q.t=Math.max(0,q.t-dt));p.coyote=p.on?.12:Math.max(0,p.coyote-dt);if(input.jump){p.buffer=.14;input.jump=false}else p.buffer=Math.max(0,p.buffer-dt);
 const speed=input.down?95:(input.run?335:235),dir=(input.right?1:0)-(input.left?1:0);p.vx+=((dir*speed)-p.vx)*Math.min(1,dt*12);if(dir)p.dir=dir;
 if(p.buffer>0&&p.coyote>0&&!input.down){p.vy=-575;p.on=false;p.coyote=0;p.buffer=0}p.vy+=G*dt;const oldY=p.y;p.x=Math.max(0,Math.min(WORLD-p.w,p.x+p.vx*dt));p.y+=p.vy*dt;p.on=false;
 const solids=plats.concat((bossUnlocked||bossActive||bossDefeated)?arenaPlats:[],reveal.filter(q=>q.t>0));for(const q of solids){if(p.x+p.w>q.x&&p.x<q.x+q.w&&oldY+p.h<=q.y+8&&p.y+p.h>=q.y&&p.vy>=0){p.y=q.y-p.h;p.vy=0;p.on=true}}
@@ -828,7 +868,31 @@ for(const s of bossShots){x.globalAlpha=.22;x.fillStyle="#c95b9a";x.beginPath();
 // Amélia Vesper oficial e sua revelação no topo da torre.
 drawAmelia();drawShadowCutscene();drawTowerAmelia();
 for(const e of enemies){if(e.dead)continue;x.fillStyle="#d56a20";x.beginPath();x.arc(e.x,e.y,24,0,Math.PI*2);x.fill();x.fillStyle="#ffe099";x.fillRect(e.x-11,e.y-5,6,6);x.fillRect(e.x+5,e.y-5,6,6)}
-for(const b of bells){x.fillStyle=b.on?"#ffe099":"#8d693d";x.beginPath();x.moveTo(b.x,b.y-45);x.lineTo(b.x-22,b.y);x.lineTo(b.x+22,b.y);x.closePath();x.fill()}
+for(const b of bells){
+  const ringing=bellAnim.ringing===b.id&&bellAnim.t>0;
+  const wrong=bellAnim.wrong===b.id&&bellAnim.wrongT>0;
+  let sprite=null,targetH=238;
+  if(ringing&&bellAssets.swing.length){
+    const progress=1-Math.max(0,Math.min(1,bellAnim.t/.58));
+    const fi=Math.min(bellAssets.swing.length-1,Math.floor(progress*bellAssets.swing.length));
+    sprite=bellAssets.swing[fi];targetH=150;
+  }else if(wrong){
+    sprite=bellAssets.wrong[b.id]||bellAssets.shrines[b.id];
+  }else if(b.on){
+    sprite=bellAssets.shrines[b.id]||bellAssets.lit[b.id];
+  }else{
+    sprite=bellAssets.shrines[b.id];
+  }
+  if(b.on){
+    const pulse=.78+Math.sin(p.anim*5+b.id)*.12;
+    const glow=x.createRadialGradient(b.x,b.y-125,12,b.x,b.y-125,118);
+    glow.addColorStop(0,"rgba(255,218,110,"+(.34*pulse)+")");glow.addColorStop(1,"rgba(255,150,40,0)");
+    x.fillStyle=glow;x.beginPath();x.arc(b.x,b.y-125,118,0,Math.PI*2);x.fill();
+  }
+  if(sprite)drawAssetBottom(sprite,b.x,b.y,targetH,wrong?.62:1);
+  else{x.fillStyle=b.on?"#ffe099":"#8d693d";x.beginPath();x.moveTo(b.x,b.y-45);x.lineTo(b.x-22,b.y);x.lineTo(b.x+22,b.y);x.closePath();x.fill()}
+  x.save();x.fillStyle=b.on?"#ffe7a1":"#c9a66b";x.font="bold 11px Georgia";x.textAlign="center";x.fillText((b.id+1)+" · "+b.title,b.x,b.y+18);x.restore();
+}
 for(const g of gears){if(g.got)continue;x.save();x.translate(g.x,g.y);x.rotate(p.anim);x.strokeStyle="#ffd36b";x.lineWidth=8;x.beginPath();x.arc(0,0,24,0,Math.PI*2);x.stroke();for(let i=0;i<8;i++){x.rotate(Math.PI/4);x.fillStyle="#ffd36b";x.fillRect(20,-5,13,10)}x.restore()}
 x.restore();drawJack();if(light>0){x.globalAlpha=Math.min(1,light*4);const rg=x.createRadialGradient(p.x-cam+p.w/2,p.y-camY+25,10,p.x-cam+p.w/2,p.y-camY+25,220);rg.addColorStop(0,"#fff6b8aa");rg.addColorStop(1,"#9beaff00");x.fillStyle=rg;x.beginPath();x.arc(p.x-cam+p.w/2,p.y-camY+25,220,0,Math.PI*2);x.fill();x.globalAlpha=1}
 if(bossActive&&!bossDefeated){
