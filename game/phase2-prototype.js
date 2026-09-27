@@ -300,11 +300,11 @@ const plats=[
 const reveal=[{x:1010,y:505,w:150,h:28,t:0},{x:3030,y:475,w:120,h:28,t:0},{x:4260,y:455,w:120,h:28,t:0},{x:8290,y:-65,w:150,h:28,t:0},{x:7560,y:-300,w:150,h:28,t:0}];
 const enemyAssets={};
 const ENEMY_SPRITES={
-  raven:{src:"../assets/game/phase2/enemies/raven/raven-dead-minute.png",cols:12,rows:4,scale:118,anchorY:22},
-  specter:{src:"../assets/game/phase2/enemies/specter/specter-413.png",cols:12,rows:4,scale:148,anchorY:34},
-  bell:{src:"../assets/game/phase2/enemies/bell-ringer/bell-ringer.png",cols:12,rows:4,scale:152,anchorY:8},
-  watcher:{src:"../assets/game/phase2/enemies/window-watcher/window-watcher.png",cols:12,rows:4,scale:126,anchorY:8},
-  sentinel:{src:"../assets/game/phase2/enemies/clock-sentinel/clock-sentinel.png",cols:13,rows:4,scale:166,anchorY:6}
+  raven:{src:"../assets/game/phase2/enemies/raven/raven-dead-minute.png",cols:4,rows:3,scale:112,anchorY:10},
+  specter:{src:"../assets/game/phase2/enemies/specter/specter-413.png",cols:4,rows:3,scale:138,anchorY:12},
+  bell:{src:"../assets/game/phase2/enemies/bell-ringer/bell-ringer.png",cols:4,rows:3,scale:150,anchorY:4},
+  watcher:{src:"../assets/game/phase2/enemies/window-watcher/window-watcher.png",cols:4,rows:3,scale:118,anchorY:5},
+  sentinel:{src:"../assets/game/phase2/enemies/clock-sentinel/clock-sentinel.png",cols:4,rows:3,scale:164,anchorY:4}
 };
 const enemies=[
   {type:"raven",x:760,y:430,a:610,b:1020,d:1,hp:1,maxHp:1,speed:92,phase:0},
@@ -380,34 +380,51 @@ if(finalLorePlayed&&!bossActive&&!bossDefeated){
   bossUnlocked=false;
 }
 function img(src){return new Promise((r,j)=>{const i=new Image;i.onload=()=>r(i);i.onerror=j;i.src=src+(src.includes("?")?"&":"?")+"v=p2jackfix2"})}
+const enemyFrames={};
+function cropEnemyCell(image,cfg,col,row){
+  const sw=Math.floor(image.naturalWidth/cfg.cols),sh=Math.floor(image.naturalHeight/cfg.rows);
+  const sx=col*sw,sy=row*sh;
+  const cell=document.createElement("canvas");cell.width=sw;cell.height=sh;
+  const cc=cell.getContext("2d",{willReadFrequently:true});cc.drawImage(image,sx,sy,sw,sh,0,0,sw,sh);
+  let data;try{data=cc.getImageData(0,0,sw,sh).data}catch(_){return cell}
+  let minX=sw,minY=sh,maxX=-1,maxY=-1;
+  for(let yy=0;yy<sh;yy+=2)for(let xx=0;xx<sw;xx+=2){
+    if(data[(yy*sw+xx)*4+3]>20){minX=Math.min(minX,xx);maxX=Math.max(maxX,xx);minY=Math.min(minY,yy);maxY=Math.max(maxY,yy)}
+  }
+  if(maxX<0)return cell;
+  const pad=8;minX=Math.max(0,minX-pad);minY=Math.max(0,minY-pad);maxX=Math.min(sw-1,maxX+pad);maxY=Math.min(sh-1,maxY+pad);
+  const out=document.createElement("canvas");out.width=maxX-minX+1;out.height=maxY-minY+1;
+  out.getContext("2d").drawImage(cell,minX,minY,out.width,out.height,0,0,out.width,out.height);
+  return out;
+}
 Object.entries(ENEMY_SPRITES).forEach(([key,cfg])=>{
-  img(cfg.src).then(image=>enemyAssets[key]=image).catch(()=>{enemyAssets[key]=null});
+  img(cfg.src).then(image=>{
+    enemyAssets[key]=image;enemyFrames[key]=[];
+    for(let row=0;row<cfg.rows;row++)for(let col=0;col<cfg.cols;col++)enemyFrames[key].push(cropEnemyCell(image,cfg,col,row));
+  }).catch(()=>{enemyAssets[key]=null;enemyFrames[key]=[]});
 });
-function enemyFrame(e){
-  const age=p.anim+(e.phase||0);
-  if(e.hitT>0)return {row:2,col:Math.min(10,Math.floor((.34-e.hitT)*18)+7)};
-  const near=Math.abs((p.x+p.w/2)-e.x)<250;
-  if(e.type==="raven")return near?{row:1,col:Math.floor(age*9)%7}:{row:0,col:Math.floor(age*8)%10};
-  if(e.type==="specter")return near?{row:1,col:Math.floor(age*6)%6}:{row:0,col:Math.floor(age*5)%10};
-  if(e.type==="bell")return near?{row:1,col:Math.floor(age*5)%5}:{row:0,col:Math.floor(age*4)%9};
-  if(e.type==="watcher")return near?{row:1,col:Math.floor(age*9)%7}:{row:0,col:Math.floor(age*6)%10};
-  return near?{row:1,col:Math.floor(age*5)%7}:{row:0,col:Math.floor(age*4)%11};
+const ENEMY_ANIMS={
+  raven:{move:[0,1,2,3,2,1],attack:[4,5,6,5],hit:[8],fps:7},
+  specter:{move:[0,1,2,3],attack:[4,5,6,5],hit:[8],fps:5},
+  bell:{move:[0,1,2,3],attack:[4,5,6,5],hit:[8],fps:4},
+  watcher:{move:[0,1,2,3,2,1],attack:[4,5,6,5],hit:[8],fps:7},
+  sentinel:{move:[0,1,2,3],attack:[4,5,6,5],hit:[8],fps:4}
+};
+function enemyFrameIndex(e){
+  const def=ENEMY_ANIMS[e.type]||ENEMY_ANIMS.raven,dist=Math.abs((p.x+p.w/2)-e.x);
+  const seq=e.hitT>0?def.hit:(dist<215?def.attack:def.move);
+  return seq[Math.floor((p.anim+(e.phase||0))*def.fps)%seq.length]||0;
 }
 function drawEnemy(e){
   if(e.dead)return;
-  const cfg=ENEMY_SPRITES[e.type],image=enemyAssets[e.type];
-  const bob=e.type==="raven"?Math.sin(p.anim*5+(e.phase||0))*14:e.type==="specter"?Math.sin(p.anim*3+(e.phase||0))*10:0;
-  if(!image){
-    x.save();x.fillStyle="#26172e";x.strokeStyle="#d69b43";x.lineWidth=3;x.beginPath();x.arc(e.x,e.y-35+bob,28,0,Math.PI*2);x.fill();x.stroke();x.restore();return;
-  }
-  const fr=enemyFrame(e),sw=image.naturalWidth/cfg.cols,sh=image.naturalHeight/cfg.rows;
-  const col=Math.max(0,Math.min(cfg.cols-1,fr.col)),row=Math.max(0,Math.min(cfg.rows-1,fr.row));
-  const ratio=sw/sh,dw=cfg.scale*ratio,dh=cfg.scale;
-  const dx=e.x-dw/2,dy=e.y-dh+cfg.anchorY+bob;
+  const cfg=ENEMY_SPRITES[e.type],sprite=(enemyFrames[e.type]||[])[enemyFrameIndex(e)];
+  const bob=e.type==="raven"?Math.sin(p.anim*5.2+(e.phase||0))*8:e.type==="specter"?Math.sin(p.anim*3.1+(e.phase||0))*6:0;
+  if(!sprite){x.save();x.fillStyle="#26172e";x.strokeStyle="#d69b43";x.lineWidth=3;x.beginPath();x.arc(e.x,e.y-35+bob,28,0,Math.PI*2);x.fill();x.stroke();x.restore();return}
+  const ratio=sprite.width/Math.max(1,sprite.height),dh=cfg.scale,dw=dh*ratio,dy=e.y-dh+cfg.anchorY+bob;
   x.save();x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";
-  if(e.hitT>0){x.globalAlpha=.68+Math.sin(p.anim*28)*.24;x.shadowColor="#ffe18a";x.shadowBlur=20}
-  if(e.d<0){x.translate(e.x,0);x.scale(-1,1);x.drawImage(image,col*sw,row*sh,sw,sh,-dw/2,dy,dw,dh)}
-  else x.drawImage(image,col*sw,row*sh,sw,sh,dx,dy,dw,dh);
+  if(e.hitT>0){x.globalAlpha=.74+Math.sin(p.anim*28)*.16;x.shadowColor="#ffe18a";x.shadowBlur=16}
+  if(e.d<0){x.translate(e.x,0);x.scale(-1,1);x.drawImage(sprite,-dw/2,dy,dw,dh)}
+  else x.drawImage(sprite,e.x-dw/2,dy,dw,dh);
   x.restore();
 }
 function hurtJackFromEnemy(e){
