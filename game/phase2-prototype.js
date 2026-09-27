@@ -872,10 +872,8 @@ for(const b of bells){
   const ringing=bellAnim.ringing===b.id&&bellAnim.t>0;
   const wrong=bellAnim.wrong===b.id&&bellAnim.wrongT>0;
   let sprite=null,targetH=238;
-  if(ringing&&bellAssets.swing.length){
-    const progress=1-Math.max(0,Math.min(1,bellAnim.t/.58));
-    const fi=Math.min(bellAssets.swing.length-1,Math.floor(progress*bellAssets.swing.length));
-    sprite=bellAssets.swing[fi];targetH=150;
+  if(ringing){
+    sprite=bellAssets.shrines[b.id];
   }else if(wrong){
     sprite=bellAssets.wrong[b.id]||bellAssets.shrines[b.id];
   }else if(b.on){
