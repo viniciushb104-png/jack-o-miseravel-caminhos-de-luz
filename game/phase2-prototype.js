@@ -182,7 +182,12 @@ function finishClockCutscene(){
   phaseAudio.switchTrack("tower",{fadeOut:0,fadeIn:1300});
   banner("4:14 — O PRÓXIMO MINUTO");
   saveJourney();
+  // Mantém o relógio ilustrado sobre o mecanismo durante todo o epílogo 4:14.
+  clockPreludeVisualActive=true;
+  dialogueRoot.classList.add("clock-prelude");
   openDialogue(lore.final414,()=>{
+    clockPreludeVisualActive=false;
+    dialogueRoot.classList.remove("clock-prelude");
     endingSequenceActive=false;
     say("4:14. Pela primeira vez, a vila tem um minuto depois.");
     saveJourney();
