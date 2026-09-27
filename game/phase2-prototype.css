@@ -561,3 +561,29 @@
     background-position:center bottom!important;
   }
 }
+
+
+/* v17 — ajuste global fino dos retratos: ligeiramente à esquerda e abaixo.
+   Mantém escala/contain e aplica o mesmo padrão ao diálogo pré-chefe. */
+.dialogue-shell .dialogue-portrait,
+.dialogue-shell .dialogue-portrait.is-hd-portrait,
+.dialogue.amelia-boss-dialogue .dialogue-portrait,
+.dialogue.amelia-boss-dialogue .dialogue-portrait.is-hd-portrait{
+  left:3.55%!important;
+  top:19.2%!important;
+  bottom:20.5%!important;
+  background-position:center bottom!important;
+  background-size:contain!important;
+}
+@media(max-width:700px){
+  .dialogue-shell .dialogue-portrait,
+  .dialogue-shell .dialogue-portrait.is-hd-portrait,
+  .dialogue.amelia-boss-dialogue .dialogue-portrait,
+  .dialogue.amelia-boss-dialogue .dialogue-portrait.is-hd-portrait{
+    left:3.55%!important;
+    top:19.2%!important;
+    bottom:20.5%!important;
+    background-position:center bottom!important;
+    background-size:contain!important;
+  }
+}
