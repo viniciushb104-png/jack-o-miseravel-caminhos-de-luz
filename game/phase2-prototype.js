@@ -133,26 +133,36 @@ tower:[
 {speaker:"JACK",portrait:"jack",expression:1,text:"Mas uma lanterna não serve para apagar o que aconteceu. Serve para enxergar o caminho depois."}
 ],
 shadowReveal:[
-{speaker:"AMÉLIA VESPER",portrait:"ameliaReveal",expression:4,text:"Jack... afaste-se. Eu consigo sentir as 4:13 outra vez."},
+{speaker:"AMÉLIA VESPER",portrait:"ameliaFinal",expression:0,text:"Jack... afaste-se. Eu consigo sentir as 4:13 outra vez."},
 {speaker:"JACK",portrait:"jack",expression:3,text:"Amélia? O que está acontecendo com a sua sombra?"},
-{speaker:"AMÉLIA VESPER",portrait:"ameliaReveal",expression:6,text:"Não é o relógio que está preso naquela noite. Sou eu."},
-{speaker:"AMÉLIA VESPER",portrait:"ameliaReveal",expression:6,text:"Eu segurei aquele instante com tanta força... que ele aprendeu a me segurar também."},
+{speaker:"AMÉLIA VESPER",portrait:"ameliaFinal",expression:1,text:"Não é o relógio que está preso naquela noite. Sou eu."},
+{speaker:"AMÉLIA VESPER",portrait:"ameliaFinal",expression:1,text:"Eu segurei aquele instante com tanta força... que ele aprendeu a me segurar também."},
 {speaker:"JACK",portrait:"jack",expression:4,text:"Então solte."},
-{speaker:"AMÉLIA VESPER",portrait:"ameliaReveal",expression:7,text:"Eu não sei se consigo."}
+{speaker:"AMÉLIA VESPER",portrait:"ameliaFinal",expression:5,text:"Eu não sei se consigo."}
 ],
 shadowBorn:[
 {speaker:"SOMBRA DE AMÉLIA",text:"Cinco minutos... só mais cinco minutos..."},
-{speaker:"AMÉLIA VESPER",portrait:"ameliaReveal",expression:6,text:"Não escute. Isso é tudo o que eu não consegui deixar ir."},
+{speaker:"AMÉLIA VESPER",portrait:"ameliaFinal",expression:4,text:"Não escute. Isso é tudo o que eu não consegui deixar ir."},
 {speaker:"JACK",portrait:"jack",expression:4,text:"Então eu não vou lutar contra você."},
 {speaker:"JACK",portrait:"jack",expression:5,text:"Vou lutar contra o minuto que te prendeu."}
 ],
 clockPrelude:[
-{speaker:"AMÉLIA VESPER",portrait:"ameliaReveal",expression:6,text:"Jack... ele ainda está parado."},
+{speaker:"AMÉLIA VESPER",portrait:"ameliaFinal",expression:0,text:"Jack... ele ainda está parado."},
 {speaker:"JACK",portrait:"jack",expression:1,text:"Então talvez esteja esperando você deixá-lo continuar."}
+],
+final414:[
+{speaker:"AMÉLIA VESPER",portrait:"ameliaFinal",expression:2,text:"Então... era só deixar o minuto passar."},
+{speaker:"JACK",portrait:"jack",expression:5,text:"Não. Era aceitar que ele já tinha passado."},
+{speaker:"AMÉLIA VESPER",portrait:"ameliaFinal",expression:6,text:"Quatro e quatorze..."},
+{speaker:"AMÉLIA VESPER",portrait:"ameliaFinal",expression:8,text:"Eu tinha esquecido que existia um minuto depois."},
+{speaker:"JACK",portrait:"jack",expression:5,text:"Sempre existe."},
+{speaker:"AMÉLIA VESPER",portrait:"ameliaFinal",expression:7,text:"E agora?"},
+{speaker:"JACK",portrait:"jack",expression:5,text:"Agora você vive nele."},
+{speaker:"AMÉLIA VESPER",portrait:"ameliaFinal",expression:9,text:"... Então eu vou tentar."}
 ]};
 function openDialogue(lines,onComplete){
   input.left=input.right=input.down=false;p.vx=0;
-  const bossPortrait=Array.isArray(lines)&&lines.some(line=>line?.portrait==="ameliaReveal");
+  const bossPortrait=Array.isArray(lines)&&lines.some(line=>line?.portrait==="ameliaReveal"||line?.portrait==="ameliaFinal");
   dialogueRoot.classList.toggle("amelia-boss-dialogue",bossPortrait);
   dialogue.open(lines,()=>{
     dialogueRoot.classList.remove("amelia-boss-dialogue");
@@ -168,12 +178,15 @@ function finishClockCutscene(){
   clockCutsceneRoot.hidden=true;
   if(clockCutscenePlay)clockCutscenePlay.hidden=true;
   clockCutsceneSeen=true;
-  endingSequenceActive=false;
   phase2MusicState="tower";
   phaseAudio.switchTrack("tower",{fadeOut:0,fadeIn:1300});
   banner("4:14 — O PRÓXIMO MINUTO");
-  say("O relógio voltou a andar. A vila ainda espera pelo amanhecer.");
   saveJourney();
+  openDialogue(lore.final414,()=>{
+    endingSequenceActive=false;
+    say("4:14. Pela primeira vez, a vila tem um minuto depois.");
+    saveJourney();
+  });
 }
 function playClockCutscene(){
   clockPreludeVisualActive=false;
@@ -478,6 +491,7 @@ const ameliaMapFiles=["neutral","feliz","triste","surpresa","irritada","cansada"
 Promise.allSettled(ameliaMapFiles.map(n=>img("../assets/game/phase2/amelia-sprites/amelia-map-"+n+".png")))
   .then(rs=>rs.forEach((r,i)=>{if(r.status==="fulfilled")ameliaMap[ameliaMapFiles[i]]=r.value}));
 const revealDialogueFiles=["amelia-dialogue-00-neutra.png","amelia-dialogue-01-feliz.png","amelia-dialogue-02-triste.png","amelia-dialogue-03-irritada.png","amelia-dialogue-04-surpresa.png","amelia-dialogue-05-assustada.png","amelia-dialogue-06-determinada.png","amelia-dialogue-07-chorando.png"];
+const ameliaFinalPortraitFiles=["amelia-final-01-preocupada.png","amelia-final-02-dor-conflito.png","amelia-final-03-surpresa-realizacao.png","amelia-final-04-determinada.png","amelia-final-05-sombria.png","amelia-final-06-fragil-arrependida.png","amelia-final-07-esperanca-414.png","amelia-final-08-alivio.png","amelia-final-09-reflexiva.png","amelia-final-10-serena-final.png"];
 const transformFiles=["amelia-transform-00-surpresa.png","amelia-transform-01-recua.png","amelia-transform-02-perde-equilibrio.png","amelia-transform-03-cai-joelhos.png","amelia-transform-04-no-chao-inicio.png","amelia-transform-05-no-chao-dor-1.png","amelia-transform-06-no-chao-dor-2.png","amelia-transform-07-grito.png","amelia-transform-08-lanterna-cai.png","amelia-transform-09-primeiras-sombras.png","amelia-transform-10-sombras-envolvem.png","amelia-transform-11-transformacao-1.png","amelia-transform-12-transformacao-2.png"];
 const shadowBossFiles=["amelia-shadow-boss-00-idle.png","amelia-shadow-boss-01-walk-1.png","amelia-shadow-boss-02-walk-2.png","amelia-shadow-boss-03-ataque-1.png","amelia-shadow-boss-04-ataque-2.png","amelia-shadow-boss-05-ataque-3.png","amelia-shadow-boss-06-magia.png","amelia-shadow-boss-07-dano.png","amelia-shadow-boss-08-transicao.png"];
 const shadowEffectFiles=["effect-00-lanterna-caida.png","effect-01-sombra-1.png","effect-02-sombra-2.png","effect-03-sombra-3.png","effect-04-circulo-magico.png","effect-05-engrenagens.png","effect-06-petalas.png","effect-07-relogio.png","effect-08-brilhos.png"];
@@ -495,14 +509,16 @@ const ameliaPortraitFiles=["amelia-00-neutral.png","amelia-01-cansada.png","amel
 Promise.all([
   Promise.allSettled(jackPortraitFiles.map(f=>img("../assets/game/phase1/portraits-hd/"+f))),
   Promise.allSettled(ameliaPortraitFiles.map(f=>img("../assets/game/phase2/portraits-hd/"+f))),
-  Promise.allSettled(revealDialogueFiles.map(f=>img("../assets/game/phase2/amelia-shadow-v2/dialogue/"+f)))
-]).then(([jackRs,ameliaRs,revealRs])=>{
+  Promise.allSettled(revealDialogueFiles.map(f=>img("../assets/game/phase2/amelia-shadow-v2/dialogue/"+f))),
+  Promise.allSettled(ameliaFinalPortraitFiles.map(f=>img("../assets/game/phase2/amelia-sprites/final-dialogue/"+f)))
+]).then(([jackRs,ameliaRs,revealRs,finalRs])=>{
   const normalAmelia=ameliaRs.map(r=>r.status==="fulfilled"?r.value:null);
   ameliaShadowAssets.dialogue=revealRs.map(r=>r.status==="fulfilled"?r.value:null);
   dialogue.setAssets({
     jack:{frames:jackRs.map(r=>r.status==="fulfilled"?r.value:null)},
     amelia:{frames:normalAmelia},
-    ameliaReveal:{frames:ameliaShadowAssets.dialogue.some(Boolean)?ameliaShadowAssets.dialogue:normalAmelia}
+    ameliaReveal:{frames:ameliaShadowAssets.dialogue.some(Boolean)?ameliaShadowAssets.dialogue:normalAmelia},
+    ameliaFinal:{frames:finalRs.map(r=>r.status==="fulfilled"?r.value:null)}
   });
 });
 function say(s){ui.msg.textContent=s;ui.msg.classList.add("show");clearTimeout(say.t);say.t=setTimeout(()=>ui.msg.classList.remove("show"),1800)}
