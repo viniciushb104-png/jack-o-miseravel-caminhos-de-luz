@@ -1067,8 +1067,8 @@ for(const b of bells){
   const bellLayout=[
     {dy:0,scale:1},
     {dy:0,scale:1},
-    {dy:-18,scale:.82},
-    {dy:-20,scale:.80}
+    {dy:0,scale:1},
+    {dy:0,scale:1}
   ][physicalIndex];
   const pivotY=b.y-184+bellLayout.dy;
   const localBellH=bellH*bellLayout.scale;
