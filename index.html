@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#07101f">
   <meta name="description" content="Jack o Miserável — Caminhos de Luz. Uma aventura narrativa de Halloween em estética 16-bit.">
   <title>Jack o Miserável — Caminhos de Luz</title>
-  <link rel="stylesheet" href="styles.css?v=18">
+  <link rel="stylesheet" href="styles.css?v=10">
 </head>
 <body>
   <div class="scanlines" aria-hidden="true"></div>
@@ -365,6 +365,10 @@
           <p class="eyebrow">GALERIA DE TROFÉUS</p>
           <h2>Memórias da Jornada</h2>
           <p class="memories-intro">Cada Halloween concluído deixa uma lembrança acesa no arquivo de Jack.</p>
+          <button id="memoriesMusicToggle" class="memories-music-toggle" type="button" aria-pressed="false">
+            <span aria-hidden="true">♪</span>
+            <span><strong>TEMA DAS MEMÓRIAS</strong><small>tocar música</small></span>
+          </button>
         </div>
         <div class="trophy-progress" aria-label="Progresso de fases concluídas">
           <span>TROFÉUS</span>
@@ -446,6 +450,6 @@
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <script src="game/engine/journey.js?v=1"></script>
-  <script src="script.js?v=11"></script>
+  <script src="script.js?v=12"></script>
 </body>
 </html>
