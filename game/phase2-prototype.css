@@ -739,3 +739,6 @@
 .phase-complete-actions button:hover,.phase-complete-actions button:focus-visible{background:#241426;border-color:#ffd579;outline:none}
 .phase-complete-card>span{display:block;margin-top:14px;color:#9e927c;font:italic .72rem Georgia,serif}
 @media(max-width:600px){.phase-complete-card{padding:26px 16px}.phase-complete-actions{display:grid}.phase-complete-actions button{width:100%;min-width:0}}
+
+/* v23 — VIDA no HUD, espelhando a barra de corações de Halloween I */
+#healthValue{color:#ff9a7d!important;text-shadow:0 0 9px rgba(255,94,73,.28);letter-spacing:.06em}
