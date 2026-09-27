@@ -1062,7 +1062,16 @@ for(const b of bells){
   if(base)drawAssetBottom(base,b.x,b.y,baseH,wrong?.72:1);
 
   // Ponto de suspensão dentro do vão do arco.
-  const pivotY=b.y-184;
+  // As bases físicas 3 e 4 têm elementos cenográficos mais altos; nelas o sino sobe
+  // e fica um pouco menor para não invadir as estátuas/decorações.
+  const bellLayout=[
+    {dy:0,scale:1},
+    {dy:0,scale:1},
+    {dy:-18,scale:.82},
+    {dy:-20,scale:.80}
+  ][physicalIndex];
+  const pivotY=b.y-184+bellLayout.dy;
+  const localBellH=bellH*bellLayout.scale;
   if(b.on){
     const pulse=.82+Math.sin(p.anim*4.2+b.id)*.12;
     const glow=x.createRadialGradient(b.x,pivotY+55,8,b.x,pivotY+55,88);
@@ -1073,7 +1082,7 @@ for(const b of bells){
   }
   if(bell){
     const iw=bell.naturalWidth||bell.width||1,ih=bell.naturalHeight||bell.height||1;
-    const bw=bellH*(iw/ih);
+    const bw=localBellH*(iw/ih);
     let angle=0;
     if(ringing){
       const elapsed=.58-bellAnim.t;
@@ -1086,7 +1095,7 @@ for(const b of bells){
     x.rotate(angle);
     x.globalAlpha=wrong?.72:1;
     // O topo do PNG fica no pivô; apenas o sino gira, nunca a base.
-    x.drawImage(bell,-bw/2,0,bw,bellH);
+    x.drawImage(bell,-bw/2,0,bw,localBellH);
     x.restore();
   }
 }
