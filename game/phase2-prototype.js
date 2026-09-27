@@ -1,5 +1,6 @@
 (()=>{"use strict";
 const c=document.getElementById("game"),x=c.getContext("2d"),W=1280,H=720,WORLD=9200,G=1500;
+const phase2CompleteRoot=document.getElementById("phase2Complete"),phase2ReplayBtn=document.getElementById("phase2Replay"),phase2NextBtn=document.getElementById("phase2Next"),phase2NextNote=document.getElementById("phase2NextNote");
 const ui={obj:document.querySelector("#objective strong"),gear:document.getElementById("gearValue"),banner:document.getElementById("sectionBanner"),msg:document.getElementById("message"),intro:document.getElementById("intro")};
 const input={left:false,right:false,run:false,jump:false,down:false};let running=false,last=performance.now(),cam=0,camY=0,jack=null,jackFrameOverrides={},ameliaMap={},light=0,cool=0,section=-1;
 const dialogueRoot=document.getElementById("dialogue");
@@ -191,6 +192,7 @@ function finishClockCutscene(){
     endingSequenceActive=false;
     say("4:14. Pela primeira vez, a vila tem um minuto depois.");
     saveJourney();
+    setTimeout(()=>{if(phase2CompleteRoot)phase2CompleteRoot.hidden=false;},700);
   });
 }
 function playClockCutscene(){
@@ -234,6 +236,19 @@ clockCutsceneVideo?.addEventListener("error",()=>{
   }
 });
 clockCutsceneSkip?.addEventListener("click",finishClockCutscene);
+phase2ReplayBtn?.addEventListener("click",()=>{
+  // Recomeça Halloween II sem apagar conquistas gerais de outras fases.
+  try{
+    localStorage.removeItem(SAVE_KEY);
+    localStorage.removeItem(CHECKPOINT_KEY);
+  }catch(_){}
+  location.href="phase2-prototype.html?replay=1";
+});
+phase2NextBtn?.addEventListener("click",()=>{
+  // Botão já preparado para Halloween III. Enquanto a fase não existir,
+  // volta ao mapa de fases em vez de enviar o jogador para uma página quebrada.
+  location.href="../index.html#fases";
+});
 clockCutscenePlay?.addEventListener("click",()=>{
   if(clockCutscenePlay)clockCutscenePlay.hidden=true;
   const attempt=clockCutsceneVideo?.play();
