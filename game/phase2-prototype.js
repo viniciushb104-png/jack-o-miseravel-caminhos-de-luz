@@ -1254,49 +1254,8 @@ function platformSpriteMeta(image){
   platformSpriteMetaCache.set(image,meta);return meta;
 }
 function platformUnderlay(q,tower=false){
-  // Camada de sustentação visual: a colisão continua exatamente em q.y,
-  // mas nunca deixamos um trecho transparente do PNG criar a impressão
-  // de que Jack está pisando no ar.
-  const ground=q.h>=80;
-  const cabin=q.x===6200&&q.y===420;
-  const top=q.y-(ground?2:3);
-  const depth=ground?q.h+4:(cabin?12:Math.min(q.h+4,26));
-  const edge=tower?"rgba(173,126,69,.72)":"rgba(139,91,52,.72)";
-  const mid=tower?"rgba(42,32,45,.96)":"rgba(48,31,29,.96)";
-  const deep=tower?"rgba(17,15,27,.98)":"rgba(25,18,22,.98)";
-
-  x.save();
-  x.beginPath();
-  x.rect(q.x-2,top,q.w+4,depth+4);
-  x.clip();
-
-  const body=x.createLinearGradient(0,top,0,top+Math.max(18,depth));
-  body.addColorStop(0,mid);
-  body.addColorStop(.32,tower?"rgba(31,25,38,.97)":"rgba(38,25,27,.97)");
-  body.addColorStop(1,deep);
-  x.fillStyle=body;
-  x.fillRect(q.x-1,top,q.w+2,depth+3);
-
-  // Uma borda estreita coincide com a linha física onde os pés de Jack param.
-  // O sprite ilustrado vem por cima e esconde quase toda esta faixa.
-  x.fillStyle=edge;
-  x.fillRect(q.x,top,q.w,3);
-
-  // Nas plataformas suspensas, quebra a silhueta retangular do suporte.
-  if(!ground&&!cabin){
-    x.globalAlpha=.42;
-    x.fillStyle=deep;
-    for(let px=q.x+14,n=0;px<q.x+q.w-8;px+=34,n++){
-      const h=5+(n%3)*3;
-      x.beginPath();
-      x.moveTo(px,q.y+depth-4);
-      x.lineTo(px+9,q.y+depth-4+h);
-      x.lineTo(px+18,q.y+depth-4);
-      x.closePath();
-      x.fill();
-    }
-  }
-  x.restore();
+  // A caixa de colisão existe só na física. Visualmente ela é 100% invisível:
+  // Jack parece caminhar diretamente sobre os sprites do cenário.
 }
 function drawPlatformSprite(image,q,targetH,extraW=18,tower=false){
   if(!image)return false;
@@ -1383,7 +1342,6 @@ function towerSpriteFor(q,index){
 function drawPhasePlatform(q,index){
   const tower=q.x>=7200;
   if(tower){
-    platformUnderlay(q,true);
     const sprite=towerSpriteFor(q,index);
     if(q.h>=100){
       if(!drawTiledGround(sprite,q,108,true))drawFallbackPlatform(q,true);
@@ -1391,20 +1349,17 @@ function drawPhasePlatform(q,index){
     return;
   }
   // Cabana do Caminho da Torre: corpo inteiro + telhado como máscara da plataforma.
-  // O suporte aqui é mínimo: só garante contato visual entre o telhado e os pés.
+  // Não deixar a rotina genérica substituir a construção pelo recorte do telhado.
   if(q.x===6200&&q.y===420){
-    platformUnderlay(q,false);
     if(!drawTowerPathCabinRoofMask(q))drawFallbackPlatform(q,false);
     return;
   }
-  platformUnderlay(q,false);
   const sprite=villageSpriteFor(q,index);
   if(q.h>=100){
     if(!drawTiledGround(sprite,q,96,false))drawFallbackPlatform(q,false);
   }else if(!drawPlatformSprite(sprite,q,92,22,false))drawFallbackPlatform(q,false);
 }
 function drawArenaPlatform(q,index){
-  platformUnderlay(q,true);
   const sprite=towerSpriteFor(q,index+2);
   if(q.w>650){
     if(!drawTiledGround(sprite,q,112,true))drawFallbackPlatform(q,true);
