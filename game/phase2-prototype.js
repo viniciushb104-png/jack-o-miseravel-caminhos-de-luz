@@ -191,6 +191,12 @@ function syncPhase2Music(options={}){
 }
 function activateShadowBoss(){
   shadowCutscene.active=false;bossUnlocked=true;bossActive=true;bossDefeated=false;boss.hp=boss.maxHp;boss.t=0;boss.shot=1.55;boss.spawn=1.25;boss.cast=0;boss.animT=0;playerLife=3;playerHit=0;bossShots.length=0;
+  // Entrar na luta sempre ancora a Última Lanterna. Assim a morte nunca manda Jack de volta pela fase inteira.
+  if(checkpointRank(activeCheckpoint)<checkpointRank("preboss")){
+    activeCheckpoint="preboss";
+    localStorage.setItem(CHECKPOINT_KEY,activeCheckpoint);
+  }
+  saveJourney();
   phase2MusicState="boss";
   phaseAudio.switchTrack("boss",{fadeOut:650,fadeIn:750});
   banner("SOMBRA DE AMÉLIA — O ÚLTIMO MINUTO");say("A dor das 4:13 tomou forma. Use a LUZ para libertá-la.");
@@ -354,6 +360,20 @@ function saveJourney(){
     bellStep,windowStep,shadowStep,towerStep,savedAt:Date.now()
   }));
 }
+function resetBossAttempt(){
+  playerLife=3;
+  boss.hp=boss.maxHp;
+  boss.x=8360;boss.y=-770;boss.dir=-1;boss.t=0;boss.shot=1.55;boss.spawn=2.15;boss.cast=0;boss.animT=0;boss.invuln=0;
+  bossShots.length=0;
+  input.left=input.right=input.down=input.run=false;
+  p.attack=0;p.buffer=0;
+  respawnAtCheckpoint("A Última Lanterna reacendeu Jack. O Último Minuto recuperou toda a força.");
+  playerHit=1.65;
+  cam=Math.max(0,Math.min(WORLD-W,p.x-W*.36));
+  camY=p.x>7150?Math.min(0,p.y-390):0;
+  phase2MusicState="boss";
+  saveJourney();
+}
 function lightUse(){if(cool>0)return;cool=.55;light=.48;p.attack=.48;
 if(bossActive&&!bossDefeated&&boss.invuln<=0&&Math.hypot(boss.x-(p.x+p.w/2),boss.y-(p.y+30))<315){
   boss.hp=Math.max(0,boss.hp-1);boss.invuln=.32;boss.dir*=-1;say("A LUZ rompe o tempo: "+boss.hp+"/"+boss.maxHp);
@@ -391,7 +411,10 @@ const speed=input.down?95:(input.run?335:235),dir=(input.right?1:0)-(input.left?
 if(p.buffer>0&&p.coyote>0&&!input.down){p.vy=-575;p.on=false;p.coyote=0;p.buffer=0}p.vy+=G*dt;const oldY=p.y;p.x=Math.max(0,Math.min(WORLD-p.w,p.x+p.vx*dt));p.y+=p.vy*dt;p.on=false;
 const solids=plats.concat((bossUnlocked||bossActive||bossDefeated)?arenaPlats:[],reveal.filter(q=>q.t>0));for(const q of solids){if(p.x+p.w>q.x&&p.x<q.x+q.w&&oldY+p.h<=q.y+8&&p.y+p.h>=q.y&&p.vy>=0){p.y=q.y-p.h;p.vy=0;p.on=true}}
 updateCheckpoints();
-if(p.y>760){respawnAtCheckpoint(activeCheckpoint?"A abóbora reacende o caminho de Jack.":"Jack retorna ao início da Vila sem Amanhecer.");}
+if(p.y>760){
+  if(bossActive&&!bossDefeated)resetBossAttempt();
+  else respawnAtCheckpoint(activeCheckpoint?"A abóbora reacende o caminho de Jack.":"Jack retorna ao início da Vila sem Amanhecer.");
+}
 enemies.forEach(e=>{if(e.dead)return;e.x+=e.d*70*dt;if(e.x<e.a||e.x>e.b)e.d*=-1});
 boss.invuln=Math.max(0,boss.invuln-dt);playerHit=Math.max(0,playerHit-dt);
 if(bossActive&&!bossDefeated){
@@ -425,13 +448,10 @@ if(bossActive&&!bossDefeated){
       playerLife--;
       playerHit=1.15;
       if(playerLife<=0){
-        // Igual à Fase 1: a tentativa termina e Jack reaparece na última lanterna acesa.
-        playerLife=3;
-        boss.hp=boss.maxHp;boss.t=0;boss.shot=1.55;boss.spawn=1.25;boss.cast=0;boss.animT=0;boss.invuln=0;
-        bossShots.length=0;
-        respawnAtCheckpoint("A Última Lanterna reacendeu Jack. O Último Minuto recuperou toda a força.");
-        playerHit=1.15;
-        saveJourney();
+        // IMPORTANTE: zerar bossShots dentro deste for e continuar iterando causava
+        // acesso a um projétil já apagado no frame seguinte, lançando erro e congelando o jogo.
+        resetBossAttempt();
+        break;
       }else{
         // Um acerto comum só causa recuo e invulnerabilidade curta — não teleporta Jack.
         p.vx=p.x<boss.x?-220:220;
