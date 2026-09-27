@@ -326,7 +326,8 @@ let clockDialogueSprite=null,clockPreludeVisualActive=false;
 const villagePlatformFiles=[
   "vila-plataforma-longa-baixa.png","vila-plataforma-longa-folhas.png","vila-plataforma-longa-ruinas.png",
   "vila-plataforma-media-folhas.png","vila-plataforma-media-vinhas.png","vila-plataforma-curta-a.png",
-  "vila-plataforma-curta-b.png","vila-plataforma-curta-vinhas.png","vila-plataforma-ruina-grande.png"
+  "vila-plataforma-curta-b.png","vila-plataforma-curta-vinhas.png","vila-plataforma-ruina-grande.png",
+  "vila-barraca-plataforma.png","vila-plataforma-telhado.png"
 ];
 const towerPlatformFiles=[
   "torre-plataforma-correntes.png","torre-plataforma-larga-engrenagem.png",
@@ -855,6 +856,14 @@ function drawTiledGround(image,q,targetH,tower=false){
 function villageSpriteFor(q,index){
   const a=environmentSprites.village;
   if(q.h>=100)return a["vila-plataforma-longa-baixa.png"]||a["vila-plataforma-longa-folhas.png"];
+
+  // Caminho da Torre: esta plataforma cruza o telhado da cabana do cenário.
+  // O telhado passa a ser a própria máscara visual da colisão, para Jack pisar nele
+  // em vez de parecer flutuar sobre uma plataforma genérica.
+  if(q.x===6200&&q.y===420){
+    return a["vila-plataforma-telhado.png"]||a["vila-barraca-plataforma.png"]||a["vila-plataforma-media-folhas.png"];
+  }
+
   const names=[
     "vila-plataforma-media-folhas.png","vila-plataforma-media-vinhas.png",
     "vila-plataforma-longa-ruinas.png","vila-plataforma-curta-vinhas.png",
