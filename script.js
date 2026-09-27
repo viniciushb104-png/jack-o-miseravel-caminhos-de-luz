@@ -19,8 +19,28 @@
   memoriesThemeAudio.loop = true;
   memoriesThemeAudio.preload = 'auto';
   memoriesThemeAudio.volume = 0;
-  const MEMORIES_THEME_VOLUME = .38;
+  const MEMORIES_THEME_VOLUME = .42;
   let memoriesThemeFadeToken = 0;
+  let memoriesMusicEnabled = localStorage.getItem('jack-memories-music-muted') !== '1';
+  const memoriesMusicButton = document.getElementById('memoriesMusicToggle');
+
+  function updateMemoriesMusicButton(state = '') {
+    if (!memoriesMusicButton) return;
+    const strong = memoriesMusicButton.querySelector('strong');
+    const small = memoriesMusicButton.querySelector('small');
+    const playing = !memoriesThemeAudio.paused && memoriesThemeAudio.volume > .02;
+    memoriesMusicButton.classList.toggle('is-playing', playing);
+    memoriesMusicButton.classList.toggle('is-blocked', state === 'blocked');
+    memoriesMusicButton.setAttribute('aria-pressed', playing ? 'true' : 'false');
+    if (strong) strong.textContent = 'TEMA DAS MEMÓRIAS';
+    if (small) {
+      small.textContent = playing
+        ? 'Memórias que Ainda Brilham · tocando'
+        : (state === 'blocked'
+          ? 'clique para ativar a música'
+          : (memoriesMusicEnabled ? 'tocar música' : 'música desligada'));
+    }
+  }
 
   function animateMemoriesThemeVolume(target, duration = 700, pauseAtEnd = false) {
     const token = ++memoriesThemeFadeToken;
@@ -44,24 +64,53 @@
 
   function playMemoriesTheme() {
     const screen = document.getElementById('memorias');
-    if (!menuMusicEnabled || !screen?.classList.contains('active-screen')) return;
+    if (!memoriesMusicEnabled || !screen?.classList.contains('active-screen')) {
+      updateMemoriesMusicButton();
+      return;
+    }
     ++memoriesThemeFadeToken;
-    memoriesThemeAudio.volume = Math.min(memoriesThemeAudio.volume, .03);
+    memoriesThemeAudio.volume = Math.min(memoriesThemeAudio.volume || 0, .03);
     memoriesThemeAudio.play().then(() => {
       animateMemoriesThemeVolume(MEMORIES_THEME_VOLUME, 1000, false);
+      updateMemoriesMusicButton();
     }).catch(() => {
       memoriesThemeAudio.pause();
       memoriesThemeAudio.volume = 0;
+      updateMemoriesMusicButton('blocked');
     });
   }
 
   function fadeOutMemoriesTheme(duration = 420) {
     if (memoriesThemeAudio.paused) {
       memoriesThemeAudio.volume = 0;
+      updateMemoriesMusicButton();
       return;
     }
     animateMemoriesThemeVolume(0, duration, true);
+    setTimeout(updateMemoriesMusicButton, duration + 40);
   }
+
+  memoriesMusicButton?.addEventListener('click', () => {
+    if (!memoriesThemeAudio.paused && memoriesThemeAudio.volume > .02) {
+      memoriesMusicEnabled = false;
+      localStorage.setItem('jack-memories-music-muted', '1');
+      fadeOutMemoriesTheme(280);
+    } else {
+      memoriesMusicEnabled = true;
+      localStorage.setItem('jack-memories-music-muted', '0');
+      playMemoriesTheme();
+    }
+    updateMemoriesMusicButton();
+  });
+
+  // Se o navegador bloquear autoplay ao abrir #memorias diretamente,
+  // a primeira interação dentro da galeria tenta iniciar o tema novamente.
+  document.getElementById('memorias')?.addEventListener('pointerdown', event => {
+    if (event.target.closest('#memoriesMusicToggle')) return;
+    if (memoriesMusicEnabled && memoriesThemeAudio.paused) playMemoriesTheme();
+  }, { passive:true });
+
+  updateMemoriesMusicButton();
 
   function showToast(message) {
     if (!toast) return;
@@ -616,7 +665,7 @@
       fadeOutMemoriesTheme(180);
     } else if (hero.style.display !== 'none' && menuMusicEnabled) {
       playMainTheme();
-    } else if (document.getElementById('memorias')?.classList.contains('active-screen') && menuMusicEnabled) {
+    } else if (document.getElementById('memorias')?.classList.contains('active-screen') && memoriesMusicEnabled) {
       playMemoriesTheme();
     }
   });
