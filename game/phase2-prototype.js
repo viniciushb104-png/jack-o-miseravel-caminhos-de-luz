@@ -369,11 +369,21 @@ const ravenAssets={fly:[],dive:[],hit:[],dissolve:[]};
 Object.entries(RAVEN_FILES).forEach(([state,files])=>files.forEach((file,i)=>{
   img("../assets/game/phase2/enemies/raven/"+file).then(image=>ravenAssets[state][i]=image).catch(()=>{});
 }));
+const SPECTER_FILES={
+  float:["specter-float-01.png","specter-float-02.png","specter-float-03.png","specter-float-04.png"],
+  cast:["specter-cast-01.png","specter-cast-02.png","specter-cast-03.png"],
+  hit:["specter-hit-01.png","specter-hit-02.png"],
+  dissolve:["specter-dissolve-01.png","specter-dissolve-02.png","specter-dissolve-03.png","specter-dissolve-04.png","specter-dissolve-05.png"]
+};
+const specterAssets={float:[],cast:[],hit:[],dissolve:[]};
+Object.entries(SPECTER_FILES).forEach(([state,files])=>files.forEach((file,i)=>{
+  img("../assets/game/phase2/enemies/specter/"+file).then(image=>specterAssets[state][i]=image).catch(()=>{});
+}));
 const enemies=[
   {type:"raven",x:760,y:430,a:610,b:1020,d:1,hp:1,maxHp:1,speed:92,phase:0,state:"fly",stateT:0,diveCd:1.1,dead:false},
   {type:"raven",x:1510,y:355,a:1280,b:1810,d:-1,hp:1,maxHp:1,speed:105,phase:1.7,state:"fly",stateT:0,diveCd:1.8,dead:false},
-  {type:"specter",x:2280,y:500,a:2050,b:2470,d:1,hp:2,maxHp:2,speed:54,phase:.8},
-  {type:"specter",x:2920,y:455,a:2700,b:3070,d:-1,hp:2,maxHp:2,speed:58,phase:2.4},
+  {type:"specter",x:2280,y:500,a:2050,b:2470,d:1,hp:2,maxHp:2,speed:54,phase:.8,state:"float",stateT:0,castCd:1.4,dead:false},
+  {type:"specter",x:2920,y:455,a:2700,b:3070,d:-1,hp:2,maxHp:2,speed:58,phase:2.4,state:"float",stateT:0,castCd:2.1,dead:false},
   {type:"bell",x:3440,y:548,a:3240,b:3650,d:1,hp:2,maxHp:2,speed:42,phase:.3},
   {type:"bell",x:4040,y:548,a:3890,b:4230,d:-1,hp:2,maxHp:2,speed:44,phase:1.1},
   {type:"watcher",x:4700,y:548,a:4470,b:4970,d:1,hp:1,maxHp:1,speed:118,phase:2.1},
@@ -503,10 +513,52 @@ function drawRaven(e){
   x.drawImage(sprite,-w/2,-h/2,w,h);
   x.restore();return true;
 }
+function specterSequence(e){
+  const state=e.state||"float";
+  if(state==="dissolve")return {arr:specterAssets.dissolve,fps:6.5,loop:false};
+  if(e.hitT>0||state==="hit")return {arr:specterAssets.hit,fps:8,loop:false};
+  if(state==="cast")return {arr:specterAssets.cast,fps:5.5,loop:false};
+  return {arr:specterAssets.float,fps:5.5,loop:true};
+}
+function drawSpecter(e){
+  const seq=specterSequence(e),arr=seq.arr.filter(Boolean);if(!arr.length)return false;
+  const t=e.state==="dissolve"?(e.dissolveT||0):(e.stateT||0)+(e.phase||0)*.09;
+  let idx=Math.floor(t*seq.fps);idx=seq.loop?idx%arr.length:Math.min(arr.length-1,idx);
+  const sprite=arr[idx];if(!sprite)return false;
+  const h=e.state==="dissolve"?154:e.state==="cast"?150:142;
+  const w=h*(sprite.naturalWidth/Math.max(1,sprite.naturalHeight));
+  const bob=e.state==="float"?Math.sin(p.anim*2.5+(e.phase||0))*6:0;
+  x.save();x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";
+  x.translate(e.x,e.y-h+20+bob+h/2);if(e.d<0)x.scale(-1,1);
+  if(e.hitT>0){x.shadowColor="#b8e8ff";x.shadowBlur=22;x.translate(Math.sin(p.anim*42)*2.4,0)}
+  if(e.state==="cast"){x.shadowColor="#8c63ff";x.shadowBlur=15}
+  if(e.state==="dissolve")x.globalAlpha=Math.max(0,1-(e.dissolveT||0)/.82*.58);
+  x.drawImage(sprite,-w/2,-h/2,w,h);x.restore();return true;
+}
+function drawEnemyProjectiles(){
+  for(const s of enemyProjectiles){
+    x.save();x.globalAlpha=.24;x.fillStyle="#713dff";x.beginPath();x.arc(s.x,s.y,s.r*2.2,0,Math.PI*2);x.fill();
+    x.globalAlpha=.95;x.fillStyle="#c7e9ff";x.shadowColor="#754cff";x.shadowBlur=16;x.beginPath();x.arc(s.x,s.y,s.r,0,Math.PI*2);x.fill();
+    x.strokeStyle="#d8a5ff";x.lineWidth=2;x.beginPath();x.arc(s.x,s.y,s.r+5,0,Math.PI*2);x.stroke();x.restore();
+  }
+}
+function updateEnemyProjectiles(dt){
+  for(let i=enemyProjectiles.length-1;i>=0;i--){
+    const s=enemyProjectiles[i];s.x+=s.vx*dt;s.y+=s.vy*dt;s.life-=dt;
+    if(s.life<=0){enemyProjectiles.splice(i,1);continue}
+    if(playerHit<=0&&Math.abs(s.x-(p.x+p.w/2))<s.r+p.w*.4&&Math.abs(s.y-(p.y+p.h/2))<s.r+p.h*.42){
+      enemyProjectiles.splice(i,1);hurtJackFromEnemy({x:s.x});continue;
+    }
+  }
+}
 function drawEnemy(e){
   if(e.type==="raven"){
     if(e.dead&&e.state!=="dissolve")return;
     if(drawRaven(e))return;
+  }
+  if(e.type==="specter"){
+    if(e.dead&&e.state!=="dissolve")return;
+    if(drawSpecter(e))return;
   }
   if(e.dead)return;
   const cfg=ENEMY_SPRITES[e.type],sprite=(enemyFrames[e.type]||[])[0];
@@ -561,6 +613,29 @@ function updateEnemies(dt){
       if(e.x<e.a){e.x=e.a;e.d=1}else if(e.x>e.b){e.x=e.b;e.d=-1}
       if(Math.abs(dist)<50&&Math.abs(dy)<118)hurtJackFromEnemy(e);
       continue;
+    }
+    if(e.type==="specter"){
+      if(e.state==="dissolve"){
+        e.dissolveT=(e.dissolveT||0)+dt;e.stateT=(e.stateT||0)+dt;
+        if(e.dissolveT>=.82){e.dead=true;e.state="gone"}continue;
+      }
+      if(e.dead)continue;
+      e.hitT=Math.max(0,(e.hitT||0)-dt);e.stateT=(e.stateT||0)+dt;e.castCd=Math.max(0,(e.castCd||0)-dt);
+      const pc=p.x+p.w/2,py=p.y+p.h/2,dist=pc-e.x,dy=py-(e.y-48);
+      if(e.hitT>0)e.state="hit";else if(e.state==="hit"){e.state="float";e.stateT=0}
+      if(e.state==="float"&&e.castCd<=0&&Math.abs(dist)<390&&Math.abs(dy)<210){e.state="cast";e.stateT=0;e.d=Math.sign(dist)||e.d}
+      if(e.state==="cast"){
+        if(e.stateT>=.48&&!e.castFired){
+          e.castFired=true;
+          const dx=pc-e.x,ddy=py-(e.y-55),len=Math.hypot(dx,ddy)||1,sp=205;
+          enemyProjectiles.push({x:e.x+e.d*58,y:e.y-62,vx:dx/len*sp,vy:ddy/len*sp,r:10,life:3.2});
+        }
+        if(e.stateT>=.68){e.state="float";e.stateT=0;e.castCd=1.8;e.castFired=false}
+      }else{
+        let speed=(e.speed||56)*.42;if(Math.abs(dist)<350)e.d=Math.sign(dist)||e.d;
+        e.x+=e.d*speed*dt;if(e.x<e.a){e.x=e.a;e.d=1}else if(e.x>e.b){e.x=e.b;e.d=-1}
+      }
+      if(Math.abs(dist)<44&&Math.abs(dy)<105)hurtJackFromEnemy(e);continue;
     }
     if(e.dead)continue;
     e.hitT=Math.max(0,(e.hitT||0)-dt);
@@ -735,7 +810,7 @@ for(const e of enemies){
   if(dist<225){
     e.hp=Math.max(0,(e.hp??e.maxHp??1)-1);e.hitT=.34;e.d=p.x<e.x?1:-1;
     if(e.hp<=0){
-      if(e.type==="raven"){e.state="dissolve";e.stateT=0;e.dissolveT=0;e.hitT=0;e.dead=false}
+      if(e.type==="raven"||e.type==="specter"){e.state="dissolve";e.stateT=0;e.dissolveT=0;e.hitT=0;e.dead=false}
       else e.dead=true;
       say(({raven:"CORVO DO MINUTO MORTO",specter:"ESPECTRO DAS 4:13",bell:"SINEIRO SEM HORA",watcher:"VIGIA DAS JANELAS",sentinel:"SENTINELA DO RELÓGIO"}[e.type]||"DISTORÇÃO")+" DISSIPADO PELA LUZ");
     }
@@ -778,7 +853,7 @@ if(p.y>760){
     say("Jack caiu no vazio — "+playerLife+"/3 corações restantes.");
   }
 }
-updateEnemies(dt);
+updateEnemies(dt);updateEnemyProjectiles(dt);
 boss.invuln=Math.max(0,boss.invuln-dt);playerHit=Math.max(0,playerHit-dt);
 if(bossActive&&!bossDefeated){
   p.x=Math.max(7225,Math.min(8870-p.w,p.x));
@@ -1326,6 +1401,7 @@ for(const s of bossShots){x.globalAlpha=.22;x.fillStyle="#c95b9a";x.beginPath();
 // Amélia Vesper oficial e sua revelação no topo da torre.
 drawAmelia();drawShadowCutscene();drawTowerAmelia();
 for(const e of enemies)drawEnemy(e);
+drawEnemyProjectiles();
 for(const b of bells){
   const ringing=bellAnim.ringing===b.id&&bellAnim.t>0;
   const wrong=bellAnim.wrong===b.id&&bellAnim.wrongT>0;
