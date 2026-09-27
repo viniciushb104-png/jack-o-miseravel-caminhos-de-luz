@@ -1288,7 +1288,24 @@
       }
     }
 
-    if(player.y>850) resetPlayer();
+    if(player.y>850){
+      // Cair em um buraco custa 1 coração e devolve Jack ao último checkpoint.
+      // Só restaura a vida inteira quando a queda consome o último coração.
+      player.hp=Math.max(0,player.hp-1);
+      syncHud();
+      if(player.hp<=0){
+        resetPlayer();
+        showMessage("A queda apagou a última luz. A lanterna trouxe Jack de volta.");
+      }else{
+        const r=currentRespawn();
+        player.x=r.x;player.y=r.y;player.vx=0;player.vy=0;player.onGround=false;
+        player.inv=1.15;player.attackT=0;player.landT=0;
+        cameraX=Math.max(0,player.x-420);
+        projectiles.length=0;
+        showMessage("Jack caiu no vazio — "+player.hp+"/3 corações restantes.");
+        syncHud();
+      }
+    }
 
     player.inv=Math.max(0,player.inv-dt);
     lightCooldown=Math.max(0,lightCooldown-dt);
