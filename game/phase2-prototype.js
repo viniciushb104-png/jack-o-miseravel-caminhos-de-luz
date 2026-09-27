@@ -1067,17 +1067,18 @@ for(const b of bells){
   // Ponto de suspensão dentro do vão do arco.
   // As bases físicas 3 e 4 têm elementos cenográficos mais altos; nelas o sino sobe
   // e fica um pouco menor para não invadir as estátuas/decorações.
-  // Ajuste fino por memória: compensa diferenças de recorte dos PNGs para que
-  // o aro superior de todos os sinos fique preso no mesmo gancho visual da base.
-  const bellLayout=[
-    {dx:0,dy:0,scale:1},
-    {dx:0,dy:2,scale:1},
-    {dx:0,dy:1,scale:1},
-    {dx:0,dy:1,scale:1}
-  ][b.id];
-  const bellX=b.x+bellLayout.dx;
-  const pivotY=b.y-184+bellLayout.dy;
-  const localBellH=bellH*bellLayout.scale;
+  // O gancho não está exatamente no mesmo ponto dentro de cada arte-base.
+  // Estes offsets seguem a BASE FÍSICA (não o id narrativo do sino), para o aro
+  // superior realmente pender do gancho desenhado em cada arco.
+  const baseHook=[
+    {dx:4,dy:0},
+    {dx:0,dy:0},
+    {dx:4,dy:-12},
+    {dx:2,dy:-12}
+  ][physicalIndex];
+  const bellX=b.x+baseHook.dx;
+  const pivotY=b.y-184+baseHook.dy;
+  const localBellH=bellH;
   if(b.on){
     const pulse=.82+Math.sin(p.anim*4.2+b.id)*.12;
     const glow=x.createRadialGradient(bellX,pivotY+55,8,b.x,pivotY+55,88);
