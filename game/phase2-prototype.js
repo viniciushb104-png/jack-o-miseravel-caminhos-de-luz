@@ -1070,11 +1070,13 @@ for(const b of bells){
   // O gancho não está exatamente no mesmo ponto dentro de cada arte-base.
   // Estes offsets seguem a BASE FÍSICA (não o id narrativo do sino), para o aro
   // superior realmente pender do gancho desenhado em cada arco.
+  // Coordenadas medidas diretamente nos quatro PNGs das bases, levando em conta
+  // largura/altura e recortes transparentes diferentes de cada arquivo.
   const baseHook=[
-    {dx:4,dy:0},
-    {dx:0,dy:0},
-    {dx:4,dy:-12},
-    {dx:2,dy:-12}
+    {dx:19,dy:0},
+    {dx:-6,dy:0},
+    {dx:20,dy:-15},
+    {dx:7,dy:-13}
   ][physicalIndex];
   const bellX=b.x+baseHook.dx;
   const pivotY=b.y-184+baseHook.dy;
