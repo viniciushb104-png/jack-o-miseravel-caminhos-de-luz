@@ -1217,3 +1217,46 @@ button:focus-visible{outline:3px solid #fff3b0;outline-offset:4px}
 .memory-trophy--phase2.is-unlocked .memory-trophy-copy{
   background:linear-gradient(180deg,rgba(24,35,68,.32),rgba(27,15,8,.24),rgba(7,9,14,.95));
 }
+
+.memories-music-toggle{
+  margin-top:.75rem;
+  display:inline-flex;
+  align-items:center;
+  gap:.7rem;
+  min-height:44px;
+  padding:.48rem .72rem;
+  color:#d8c39a;
+  background:rgba(6,8,13,.76);
+  border:1px solid rgba(211,145,40,.52);
+  box-shadow:inset 0 0 0 2px rgba(25,13,5,.78),0 8px 22px rgba(0,0,0,.3);
+  cursor:pointer;
+}
+.memories-music-toggle>span:first-child{
+  display:grid;
+  place-items:center;
+  width:28px;height:28px;
+  border-radius:50%;
+  color:#ffd77f;
+  border:1px solid #9c6827;
+  background:#211307;
+}
+.memories-music-toggle span span,
+.memories-music-toggle strong,
+.memories-music-toggle small{display:block}
+.memories-music-toggle strong{font-size:.68rem;letter-spacing:.13em;color:#f0c979}
+.memories-music-toggle small{margin-top:.1rem;font-size:.68rem;color:#9f927c}
+.memories-music-toggle.is-playing{
+  border-color:#e6a43a;
+  box-shadow:inset 0 0 0 2px rgba(25,13,5,.78),0 0 18px rgba(233,137,29,.18),0 8px 22px rgba(0,0,0,.35);
+}
+.memories-music-toggle.is-playing>span:first-child{
+  animation:memories-note-pulse 1.5s ease-in-out infinite;
+}
+.memories-music-toggle.is-blocked small{color:#e2b765}
+@keyframes memories-note-pulse{
+  0%,100%{transform:scale(1)}
+  50%{transform:scale(1.09)}
+}
+@media (prefers-reduced-motion:reduce){
+  .memories-music-toggle.is-playing>span:first-child{animation:none}
+}
