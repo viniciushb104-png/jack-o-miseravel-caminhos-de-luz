@@ -150,7 +150,15 @@ clockPrelude:[
 {speaker:"AMÉLIA VESPER",portrait:"ameliaReveal",expression:6,text:"Jack... ele ainda está parado."},
 {speaker:"JACK",portrait:"jack",expression:1,text:"Então talvez esteja esperando você deixá-lo continuar."}
 ]};
-function openDialogue(lines,onComplete){input.left=input.right=input.down=false;p.vx=0;dialogue.open(lines,onComplete)}
+function openDialogue(lines,onComplete){
+  input.left=input.right=input.down=false;p.vx=0;
+  const bossPortrait=Array.isArray(lines)&&lines.some(line=>line?.portrait==="ameliaReveal");
+  dialogueRoot.classList.toggle("amelia-boss-dialogue",bossPortrait);
+  dialogue.open(lines,()=>{
+    dialogueRoot.classList.remove("amelia-boss-dialogue");
+    if(onComplete)onComplete();
+  });
+}
 function finishClockCutscene(){
   clockPreludeVisualActive=false;
   dialogueRoot.classList.remove("clock-prelude");
