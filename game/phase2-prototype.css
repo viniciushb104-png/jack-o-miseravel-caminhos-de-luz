@@ -484,3 +484,27 @@
   .story-cutscene-caption{bottom:72px}
   .story-cutscene-skip{font-size:.52rem;padding:7px 10px}
 }
+
+
+/* Diálogo final 4:13 — tipografia de epílogo gótico */
+.dialogue.clock-prelude .dialogue-name{
+  font-family:"Cinzel","Copperplate","Copperplate Gothic Light","Palatino Linotype",Georgia,serif;
+  font-weight:700;
+  font-variant:small-caps;
+  letter-spacing:.18em;
+  color:#ffe09a;
+  text-shadow:0 2px 2px #000,0 0 10px rgba(238,157,55,.34);
+}
+.dialogue.clock-prelude .dialogue-text{
+  font-family:"Palatino Linotype","Book Antiqua",Palatino,Georgia,serif;
+  font-size:clamp(.88rem,1.58vw,1.18rem);
+  font-style:italic;
+  letter-spacing:.018em;
+  line-height:1.52;
+  color:#fff0c9;
+  text-shadow:0 2px 3px #000,0 0 8px rgba(255,190,94,.16);
+}
+.dialogue.clock-prelude .dialogue-text::first-letter{
+  color:#ffd477;
+  font-size:1.13em;
+}
