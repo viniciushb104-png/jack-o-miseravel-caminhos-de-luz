@@ -1091,10 +1091,11 @@ for(const b of bells){
     {dx:20,dy:-15},
     {dx:7,dy:-13}
   ][b.id];
-  // Ajuste final apenas do último conjunto físico da fileira (x=4165).
-  const lastRowFine=b.x===4165?{dx:6,dy:-10}:{dx:0,dy:0};
-  const bellX=b.x+baseHook.dx+lastRowFine.dx;
-  const pivotY=b.y-184+baseHook.dy+lastRowFine.dy;
+  // Microajuste por POSIÇÃO FÍSICA: encaixa o aro do sino exatamente
+  // na corrente desenhada da base. Bases 1 e 3 permanecem intocadas.
+  const physicalHookFine=b.x===3565?{dx:7,dy:-8}:b.x===4165?{dx:6,dy:-10}:{dx:0,dy:0};
+  const bellX=b.x+baseHook.dx+physicalHookFine.dx;
+  const pivotY=b.y-184+baseHook.dy+physicalHookFine.dy;
   const localBellH=bellH;
   if(b.on){
     const pulse=.82+Math.sin(p.anim*4.2+b.id)*.12;
