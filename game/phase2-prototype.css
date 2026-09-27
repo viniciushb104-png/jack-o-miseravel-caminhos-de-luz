@@ -616,3 +616,33 @@
     background-position:left bottom!important;
   }
 }
+
+
+/* v19 — ajuste a partir da referência visual aprovada:
+   preserva o enquadramento original e só move o retrato levemente ao centro/baixo,
+   mantendo a abóbora inferior esquerda totalmente livre. */
+.dialogue-shell .dialogue-portrait,
+.dialogue-shell .dialogue-portrait.is-hd-portrait,
+.dialogue.amelia-boss-dialogue .dialogue-portrait,
+.dialogue.amelia-boss-dialogue .dialogue-portrait.is-hd-portrait{
+  left:4.75%!important;
+  top:18.4%!important;
+  bottom:21.3%!important;
+  width:21.7%!important;
+  height:auto!important;
+  margin:0!important;
+  background-position:center bottom!important;
+  background-size:contain!important;
+}
+@media(max-width:700px){
+  .dialogue-shell .dialogue-portrait,
+  .dialogue-shell .dialogue-portrait.is-hd-portrait,
+  .dialogue.amelia-boss-dialogue .dialogue-portrait,
+  .dialogue.amelia-boss-dialogue .dialogue-portrait.is-hd-portrait{
+    left:4.65%!important;
+    top:18.6%!important;
+    bottom:21%!important;
+    width:21.5%!important;
+    background-position:center bottom!important;
+  }
+}
