@@ -1,6 +1,6 @@
 (()=>{"use strict";
 const c=document.getElementById("game"),x=c.getContext("2d"),W=1280,H=720,WORLD=9200,G=1500;
-const phase2CompleteRoot=document.getElementById("phase2Complete"),phase2ReplayBtn=document.getElementById("phase2Replay"),phase2NextBtn=document.getElementById("phase2Next"),phase2NextNote=document.getElementById("phase2NextNote");
+const phase2CompleteRoot=document.getElementById("phase2Complete"),phase2ReplayBtn=document.getElementById("phase2Replay"),phase2NextBtn=document.getElementById("phase2Next"),phase2MenuBtn=document.getElementById("phase2Menu"),phase2NextNote=document.getElementById("phase2NextNote");
 const ui={obj:document.querySelector("#objective strong"),gear:document.getElementById("gearValue"),health:document.getElementById("healthValue"),banner:document.getElementById("sectionBanner"),msg:document.getElementById("message"),intro:document.getElementById("intro")};
 const input={left:false,right:false,run:false,jump:false,down:false};let running=false,last=performance.now(),cam=0,camY=0,jack=null,jackFrameOverrides={},ameliaMap={},light=0,cool=0,section=-1;
 const dialogueRoot=document.getElementById("dialogue");
@@ -249,6 +249,7 @@ phase2NextBtn?.addEventListener("click",()=>{
   // volta ao mapa de fases em vez de enviar o jogador para uma página quebrada.
   location.href="../index.html#fases";
 });
+phase2MenuBtn?.addEventListener("click",()=>{ location.href="../index.html"; });
 clockCutscenePlay?.addEventListener("click",()=>{
   if(clockCutscenePlay)clockCutscenePlay.hidden=true;
   const attempt=clockCutsceneVideo?.play();
