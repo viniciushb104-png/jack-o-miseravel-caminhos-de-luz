@@ -285,7 +285,28 @@ const plats=[
 {x:7420,y:505,w:260,h:30},{x:7760,y:430,w:250,h:30},{x:8110,y:350,w:245,h:30},{x:8460,y:270,w:240,h:30},{x:8120,y:190,w:240,h:30},{x:7770,y:110,w:240,h:30},{x:7420,y:30,w:250,h:30},
 {x:7760,y:-55,w:260,h:30},{x:8120,y:-140,w:260,h:30},{x:8460,y:-225,w:260,h:30},{x:8110,y:-310,w:280,h:30},{x:7700,y:-395,w:300,h:30}];
 const reveal=[{x:1010,y:505,w:150,h:28,t:0},{x:3030,y:475,w:120,h:28,t:0},{x:4260,y:455,w:120,h:28,t:0},{x:8290,y:-65,w:150,h:28,t:0},{x:7560,y:-300,w:150,h:28,t:0}];
-const enemies=[{x:780,y:548,a:620,b:970,d:1},{x:2320,y:548,a:2070,b:2850,d:1},{x:4680,y:548,a:4480,b:5300,d:1},{x:6100,y:548,a:5750,b:6500,d:1}];
+const enemyAssets={};
+const ENEMY_SPRITES={
+  raven:{src:"../assets/game/phase2/enemies/raven/raven-dead-minute.png",cols:12,rows:4,scale:118,anchorY:22},
+  specter:{src:"../assets/game/phase2/enemies/specter/specter-413.png",cols:12,rows:4,scale:148,anchorY:34},
+  bell:{src:"../assets/game/phase2/enemies/bell-ringer/bell-ringer.png",cols:12,rows:4,scale:152,anchorY:8},
+  watcher:{src:"../assets/game/phase2/enemies/window-watcher/window-watcher.png",cols:12,rows:4,scale:126,anchorY:8},
+  sentinel:{src:"../assets/game/phase2/enemies/clock-sentinel/clock-sentinel.png",cols:13,rows:4,scale:166,anchorY:6}
+};
+const enemies=[
+  {type:"raven",x:760,y:430,a:610,b:1020,d:1,hp:1,maxHp:1,speed:92,phase:0},
+  {type:"raven",x:1510,y:355,a:1280,b:1810,d:-1,hp:1,maxHp:1,speed:105,phase:1.7},
+  {type:"specter",x:2280,y:500,a:2050,b:2470,d:1,hp:2,maxHp:2,speed:54,phase:.8},
+  {type:"specter",x:2920,y:455,a:2700,b:3070,d:-1,hp:2,maxHp:2,speed:58,phase:2.4},
+  {type:"bell",x:3440,y:548,a:3240,b:3650,d:1,hp:2,maxHp:2,speed:42,phase:.3},
+  {type:"bell",x:4040,y:548,a:3890,b:4230,d:-1,hp:2,maxHp:2,speed:44,phase:1.1},
+  {type:"watcher",x:4700,y:548,a:4470,b:4970,d:1,hp:1,maxHp:1,speed:118,phase:2.1},
+  {type:"watcher",x:5260,y:548,a:5050,b:5480,d:-1,hp:1,maxHp:1,speed:126,phase:.6},
+  {type:"watcher",x:6030,y:548,a:5750,b:6370,d:1,hp:1,maxHp:1,speed:132,phase:1.4},
+  {type:"sentinel",x:6820,y:548,a:6530,b:7090,d:-1,hp:3,maxHp:3,speed:38,phase:.4},
+  {type:"sentinel",x:7480,y:463,a:7360,b:7660,d:1,hp:3,maxHp:3,speed:34,phase:2.8}
+];
+const enemyProjectiles=[];
 const gears=[{x:1870,y:385,n:"ENGRENAGEM DAS HORAS",got:false},{x:4240,y:450,n:"ENGRENAGEM DOS MINUTOS",got:false},{x:6750,y:450,n:"ENGRENAGEM DO AMANHECER",got:false}];
 // A ordem física é propositalmente embaralhada. A solução narrativa continua 0→1→2→3.
 const bells=[
@@ -346,6 +367,60 @@ if(finalLorePlayed&&!bossActive&&!bossDefeated){
   bossUnlocked=false;
 }
 function img(src){return new Promise((r,j)=>{const i=new Image;i.onload=()=>r(i);i.onerror=j;i.src=src+(src.includes("?")?"&":"?")+"v=p2jackfix2"})}
+Object.entries(ENEMY_SPRITES).forEach(([key,cfg])=>{
+  img(cfg.src).then(image=>enemyAssets[key]=image).catch(()=>{enemyAssets[key]=null});
+});
+function enemyFrame(e){
+  const age=p.anim+(e.phase||0);
+  if(e.hitT>0)return {row:2,col:Math.min(10,Math.floor((.34-e.hitT)*18)+7)};
+  const near=Math.abs((p.x+p.w/2)-e.x)<250;
+  if(e.type==="raven")return near?{row:1,col:Math.floor(age*9)%7}:{row:0,col:Math.floor(age*8)%10};
+  if(e.type==="specter")return near?{row:1,col:Math.floor(age*6)%6}:{row:0,col:Math.floor(age*5)%10};
+  if(e.type==="bell")return near?{row:1,col:Math.floor(age*5)%5}:{row:0,col:Math.floor(age*4)%9};
+  if(e.type==="watcher")return near?{row:1,col:Math.floor(age*9)%7}:{row:0,col:Math.floor(age*6)%10};
+  return near?{row:1,col:Math.floor(age*5)%7}:{row:0,col:Math.floor(age*4)%11};
+}
+function drawEnemy(e){
+  if(e.dead)return;
+  const cfg=ENEMY_SPRITES[e.type],image=enemyAssets[e.type];
+  const bob=e.type==="raven"?Math.sin(p.anim*5+(e.phase||0))*14:e.type==="specter"?Math.sin(p.anim*3+(e.phase||0))*10:0;
+  if(!image){
+    x.save();x.fillStyle="#26172e";x.strokeStyle="#d69b43";x.lineWidth=3;x.beginPath();x.arc(e.x,e.y-35+bob,28,0,Math.PI*2);x.fill();x.stroke();x.restore();return;
+  }
+  const fr=enemyFrame(e),sw=image.naturalWidth/cfg.cols,sh=image.naturalHeight/cfg.rows;
+  const col=Math.max(0,Math.min(cfg.cols-1,fr.col)),row=Math.max(0,Math.min(cfg.rows-1,fr.row));
+  const ratio=sw/sh,dw=cfg.scale*ratio,dh=cfg.scale;
+  const dx=e.x-dw/2,dy=e.y-dh+cfg.anchorY+bob;
+  x.save();x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";
+  if(e.hitT>0){x.globalAlpha=.68+Math.sin(p.anim*28)*.24;x.shadowColor="#ffe18a";x.shadowBlur=20}
+  if(e.d<0){x.translate(e.x,0);x.scale(-1,1);x.drawImage(image,col*sw,row*sh,sw,sh,-dw/2,dy,dw,dh)}
+  else x.drawImage(image,col*sw,row*sh,sw,sh,dx,dy,dw,dh);
+  x.restore();
+}
+function hurtJackFromEnemy(e){
+  if(playerHit>0||bossActive||bossDefeated)return;
+  playerLife=Math.max(0,playerLife-1);playerHit=1.15;
+  p.vx=p.x<e.x?-235:235;p.vy=-285;
+  if(playerLife<=0){
+    playerLife=3;
+    respawnAtCheckpoint("As 4:13 engoliram Jack por um instante. A lanterna reacendeu seu caminho.");
+  }else say("A distorção temporal atingiu Jack — "+playerLife+"/3 luzes.");
+}
+function updateEnemies(dt){
+  for(const e of enemies){
+    if(e.dead)continue;
+    e.hitT=Math.max(0,(e.hitT||0)-dt);
+    const pc=p.x+p.w/2,dist=pc-e.x;
+    let speed=e.speed||60;
+    if(e.type==="watcher"&&Math.abs(dist)<310){e.d=Math.sign(dist)||e.d;speed*=1.5}
+    else if(e.type==="specter"&&Math.abs(dist)<360){e.d=Math.sign(dist)||e.d;speed*=.72}
+    else if(e.type==="raven"&&Math.abs(dist)<300){e.d=Math.sign(dist)||e.d;speed*=1.28}
+    e.x+=e.d*speed*dt;
+    if(e.x<e.a){e.x=e.a;e.d=1}else if(e.x>e.b){e.x=e.b;e.d=-1}
+    const vertical=e.type==="raven"?120:e.type==="specter"?105:78;
+    if(Math.abs(dist)<46&&Math.abs((p.y+p.h/2)-(e.y-35))<vertical)hurtJackFromEnemy(e);
+  }
+}
 function buildCleanJackFrame(img,frame,eraseRects=[]){
   const cfg=window.JACK_ANIMATIONS,cell=cfg?.cell||320,cols=cfg?.cols||8;
   const canvas=document.createElement("canvas");canvas.width=cell;canvas.height=cell;
@@ -494,7 +569,19 @@ const touchSeq=(arr,stepName,order,finish)=>{for(const z of arr){if(Math.abs(z.x
 touchSeq(windows,"window",[0,2,1],()=>{puzzles.janelas=true;say("ENIGMA DAS JANELAS CONCLUÍDO")});
 touchSeq(shadowSeals,"shadow",[1,0,2],()=>{puzzles.sombras=true;say("ENIGMA DAS SOMBRAS CONCLUÍDO")});
 touchSeq(towerSeals,"tower",[0,1],()=>{towerMechanism=true;say("MECANISMO DA TORRE CONCLUÍDO")});
-enemies.forEach(e=>{if(Math.abs(e.x-p.x)<180)e.dead=true})}
+for(const e of enemies){
+  if(e.dead)continue;
+  const dist=Math.hypot(e.x-(p.x+p.w/2),(e.y-35)-(p.y+p.h/2));
+  if(dist<225){
+    e.hp=Math.max(0,(e.hp??e.maxHp??1)-1);e.hitT=.34;e.d=p.x<e.x?1:-1;
+    if(e.hp<=0){
+      e.dead=true;
+      say(({raven:"CORVO DO MINUTO MORTO",specter:"ESPECTRO DAS 4:13",bell:"SINEIRO SEM HORA",watcher:"VIGIA DAS JANELAS",sentinel:"SENTINELA DO RELÓGIO"}[e.type]||"DISTORÇÃO")+" DISSIPADO PELA LUZ");
+    }
+  }
+}
+saveJourney();
+}
 function bind(id,key){const b=document.getElementById(id);["pointerdown","pointerup","pointercancel","pointerleave"].forEach(ev=>b.addEventListener(ev,()=>input[key]=ev==="pointerdown"))}
 bind("leftBtn","left");bind("rightBtn","right");bind("downBtn","down");document.getElementById("jumpBtn").addEventListener("pointerdown",()=>input.jump=true);document.getElementById("lightBtn").addEventListener("pointerdown",lightUse);document.getElementById("interactBtn").addEventListener("pointerdown",interact);interactPrompt.addEventListener("click",interact);
 addEventListener("keydown",e=>{if(endingSequenceActive&&!dialogue.active)return;if(["ArrowLeft","a","A"].includes(e.key))input.left=true;if(["ArrowRight","d","D"].includes(e.key))input.right=true;if(["ArrowDown","s","S"].includes(e.key))input.down=true;if(e.key==="Shift")input.run=true;if(e.code==="Space"){input.jump=true;e.preventDefault()}if(["f","F"].includes(e.key))lightUse();if(["e","E"].includes(e.key))interact()});
@@ -519,7 +606,7 @@ if(p.y>760){
   if(bossActive&&!bossDefeated)resetBossAttempt();
   else respawnAtCheckpoint(activeCheckpoint?"A abóbora reacende o caminho de Jack.":"Jack retorna ao início da Vila sem Amanhecer.");
 }
-enemies.forEach(e=>{if(e.dead)return;e.x+=e.d*70*dt;if(e.x<e.a||e.x>e.b)e.d*=-1});
+updateEnemies(dt);
 boss.invuln=Math.max(0,boss.invuln-dt);playerHit=Math.max(0,playerHit-dt);
 if(bossActive&&!bossDefeated){
   p.x=Math.max(7225,Math.min(8870-p.w,p.x));
@@ -1066,7 +1153,7 @@ if(bossDefeated){x.fillStyle="#f3d98a";x.globalAlpha=.75;x.font="bold 18px Georg
 for(const s of bossShots){x.globalAlpha=.22;x.fillStyle="#c95b9a";x.beginPath();x.arc(s.x,s.y,s.r*2.1,0,Math.PI*2);x.fill();x.globalAlpha=1;x.fillStyle="#ffcf72";x.beginPath();x.arc(s.x,s.y,s.r,0,Math.PI*2);x.fill();x.strokeStyle="#7b315f";x.stroke()}
 // Amélia Vesper oficial e sua revelação no topo da torre.
 drawAmelia();drawShadowCutscene();drawTowerAmelia();
-for(const e of enemies){if(e.dead)continue;x.fillStyle="#d56a20";x.beginPath();x.arc(e.x,e.y,24,0,Math.PI*2);x.fill();x.fillStyle="#ffe099";x.fillRect(e.x-11,e.y-5,6,6);x.fillRect(e.x+5,e.y-5,6,6)}
+for(const e of enemies)drawEnemy(e);
 for(const b of bells){
   const ringing=bellAnim.ringing===b.id&&bellAnim.t>0;
   const wrong=bellAnim.wrong===b.id&&bellAnim.wrongT>0;
