@@ -394,7 +394,7 @@ img("../assets/game/phase2/checkpoints/checkpoint-phase2-off.png").then(i=>check
 img("../assets/game/phase2/checkpoints/checkpoint-phase2-on.png").then(i=>checkpointArt.on=i).catch(()=>{});
 [
   ["bases",["base-sino-01.png","base-sino-02.png","base-sino-03.png","base-sino-04.png"]],
-  ["animated",["sino-01-amelia-crianca.png?v=4","sino-02-amelia-aprendiz.png?v=4","sino-03-amelia-relojoeira.png?v=4","sino-04-amelia-torre.png?v=4"]]
+  ["animated",["sino-01-amelia-crianca.png?v=4","sino-02-amelia-aprendiz.png?v=5","sino-03-amelia-relojoeira.png?v=4","sino-04-amelia-torre.png?v=4"]]
 ].forEach(([folder,files])=>{
   Promise.allSettled(files.map(file=>img("../assets/game/phase2/puzzles/bells/"+folder+"/"+file)))
     .then(rs=>bellAssets[folder]=rs.map(r=>r.status==="fulfilled"?r.value:null));
