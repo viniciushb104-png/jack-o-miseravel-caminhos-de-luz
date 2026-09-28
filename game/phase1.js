@@ -2583,7 +2583,14 @@
   });
 
   syncHud();
-  loadAssets().then(()=>requestAnimationFrame(loop)).catch(err=>{
-    console.error(err);showMessage("Falha ao carregar o sprite do Jack.");requestAnimationFrame(loop);
+  const phaseAssetsReady = loadAssets();
+  window.__PHASE_ASSETS_READY = phaseAssetsReady;
+  phaseAssetsReady.then(()=>{
+    window.dispatchEvent(new CustomEvent("jack:phase-assets-ready",{detail:{phase:1}}));
+    requestAnimationFrame(loop);
+  }).catch(err=>{
+    console.error(err);showMessage("Falha ao carregar o sprite do Jack.");
+    window.dispatchEvent(new CustomEvent("jack:phase-assets-ready",{detail:{phase:1,degraded:true}}));
+    requestAnimationFrame(loop);
   });
 })();
