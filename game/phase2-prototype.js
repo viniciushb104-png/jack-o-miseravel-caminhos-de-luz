@@ -391,6 +391,16 @@ const bellEnemyAssets={idle:[],attack:[],hit:[],dissolve:[]};
 Object.entries(BELL_FILES).forEach(([state,files])=>files.forEach((file,i)=>{
   img("../assets/game/phase2/enemies/bell-ringer/"+file).then(image=>bellEnemyAssets[state][i]=image).catch(()=>{});
 }));
+const WATCHER_FILES={
+  idle:["watcher-idle-01.png","watcher-idle-02.png","watcher-idle-03.png","watcher-idle-04.png"],
+  dash:["watcher-dash-01.png","watcher-dash-02.png","watcher-dash-03.png"],
+  hit:["watcher-hit-01.png","watcher-hit-02.png"],
+  dissolve:["watcher-dissolve-01.png","watcher-dissolve-02.png","watcher-dissolve-03.png","watcher-dissolve-04.png","watcher-dissolve-05.png"]
+};
+const watcherAssets={idle:[],dash:[],hit:[],dissolve:[]};
+Object.entries(WATCHER_FILES).forEach(([state,files])=>files.forEach((file,i)=>{
+  img("../assets/game/phase2/enemies/window-watcher/"+file).then(image=>watcherAssets[state][i]=image).catch(()=>{});
+}));
 const enemies=[
   {type:"raven",x:760,y:430,a:610,b:1020,d:1,hp:1,maxHp:1,speed:92,phase:0,state:"fly",stateT:0,diveCd:1.1,dead:false},
   {type:"raven",x:1510,y:355,a:1280,b:1810,d:-1,hp:1,maxHp:1,speed:105,phase:1.7,state:"fly",stateT:0,diveCd:1.8,dead:false},
@@ -398,9 +408,9 @@ const enemies=[
   {type:"specter",x:2920,y:455,a:2700,b:3070,d:-1,hp:2,maxHp:2,speed:58,phase:2.4,state:"float",stateT:0,castCd:2.1,dead:false},
   {type:"bell",x:3440,y:548,a:3240,b:3650,d:1,hp:2,maxHp:2,speed:42,phase:.3,state:"idle",stateT:0,attackCd:1.15,dead:false},
   {type:"bell",x:4040,y:548,a:3890,b:4230,d:-1,hp:2,maxHp:2,speed:44,phase:1.1,state:"idle",stateT:0,attackCd:1.75,dead:false},
-  {type:"watcher",x:4700,y:548,a:4470,b:4970,d:1,hp:1,maxHp:1,speed:118,phase:2.1},
-  {type:"watcher",x:5260,y:548,a:5050,b:5480,d:-1,hp:1,maxHp:1,speed:126,phase:.6},
-  {type:"watcher",x:6030,y:548,a:5750,b:6370,d:1,hp:1,maxHp:1,speed:132,phase:1.4},
+  {type:"watcher",x:4700,y:548,a:4470,b:4970,d:1,hp:1,maxHp:1,speed:118,phase:2.1,state:"idle",stateT:0,dashCd:.55,pendingDissolve:false,dead:false},
+  {type:"watcher",x:5260,y:548,a:5050,b:5480,d:-1,hp:1,maxHp:1,speed:126,phase:.6,state:"idle",stateT:0,dashCd:1.05,pendingDissolve:false,dead:false},
+  {type:"watcher",x:6030,y:548,a:5750,b:6370,d:1,hp:1,maxHp:1,speed:132,phase:1.4,state:"idle",stateT:0,dashCd:1.4,pendingDissolve:false,dead:false},
   {type:"sentinel",x:6820,y:548,a:6530,b:7090,d:-1,hp:3,maxHp:3,speed:38,phase:.4},
   {type:"sentinel",x:7480,y:463,a:7360,b:7660,d:1,hp:3,maxHp:3,speed:34,phase:2.8}
 ];
@@ -576,6 +586,29 @@ function drawBellEnemy(e){
   if(e.state==="dissolve")x.globalAlpha=Math.max(0,1-(e.dissolveT||0)/.96*.55);
   x.drawImage(sprite,-w/2,-h/2,w,h);x.restore();return true;
 }
+function watcherSequence(e){
+  const state=e.state||"idle";
+  if(state==="dissolve")return {arr:watcherAssets.dissolve,fps:5.6,loop:false};
+  if(e.hitT>0||state==="hit")return {arr:watcherAssets.hit,fps:8.5,loop:false};
+  if(state==="dash")return {arr:watcherAssets.dash,fps:8.2,loop:false};
+  return {arr:watcherAssets.idle,fps:4.2,loop:true};
+}
+function drawWatcher(e){
+  const seq=watcherSequence(e),arr=seq.arr.filter(Boolean);if(!arr.length)return false;
+  const t=e.state==="dissolve"?(e.dissolveT||0):(e.stateT||0)+(e.phase||0)*.07;
+  let idx=Math.floor(t*seq.fps);idx=seq.loop?idx%arr.length:Math.min(arr.length-1,idx);
+  const sprite=arr[idx];if(!sprite)return false;
+  const h=e.state==="dissolve"?148:e.state==="hit"?142:e.state==="dash"?132:136;
+  const w=h*(sprite.naturalWidth/Math.max(1,sprite.naturalHeight));
+  const crouch=e.state==="dash"&&e.stateT<.11?5:0;
+  const breathe=e.state==="idle"?1+Math.sin(p.anim*3+(e.phase||0))*.012:1;
+  x.save();x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";
+  x.translate(e.x,e.y-h+8+crouch+h/2);if(e.d<0)x.scale(-1,1);x.scale(breathe,1/breathe);
+  if(e.hitT>0||e.state==="hit"){x.shadowColor="#ffd86b";x.shadowBlur=26;x.translate(Math.sin(p.anim*48)*3.5,0)}
+  if(e.state==="dash"){x.shadowColor="#8b42ff";x.shadowBlur=15}
+  if(e.state==="dissolve")x.globalAlpha=Math.max(0,1-(e.dissolveT||0)/.92*.5);
+  x.drawImage(sprite,-w/2,-h/2,w,h);x.restore();return true;
+}
 function drawBellWave(s){
   const age=s.age||0,fade=Math.max(0,1-age/(s.maxLife||.72));
   x.save();x.globalAlpha=.82*fade;x.strokeStyle="#d99cff";x.lineWidth=5;x.shadowColor="#7b39ff";x.shadowBlur=18;
@@ -611,6 +644,10 @@ function drawEnemy(e){
   if(e.type==="bell"){
     if(e.dead&&e.state!=="dissolve")return;
     if(drawBellEnemy(e))return;
+  }
+  if(e.type==="watcher"){
+    if(e.dead&&e.state!=="dissolve")return;
+    if(drawWatcher(e))return;
   }
   if(e.dead)return;
   const cfg=ENEMY_SPRITES[e.type],sprite=(enemyFrames[e.type]||[])[0];
@@ -711,12 +748,45 @@ function updateEnemies(dt){
       }
       if(Math.abs(dist)<52&&Math.abs(dy)<92)hurtJackFromEnemy(e);continue;
     }
+    if(e.type==="watcher"){
+      if(e.state==="dissolve"){
+        e.dissolveT=(e.dissolveT||0)+dt;e.stateT=(e.stateT||0)+dt;
+        if(e.dissolveT>=.92){e.dead=true;e.state="gone"}continue;
+      }
+      if(e.dead)continue;
+      e.hitT=Math.max(0,(e.hitT||0)-dt);e.stateT=(e.stateT||0)+dt;e.dashCd=Math.max(0,(e.dashCd||0)-dt);
+      const pc=p.x+p.w/2,py=p.y+p.h/2,dist=pc-e.x,dy=py-(e.y-38);
+      if(e.pendingDissolve){
+        e.state="hit";
+        if(e.stateT>=.22){e.pendingDissolve=false;e.state="dissolve";e.stateT=0;e.dissolveT=0;e.hitT=0}
+        continue;
+      }
+      if(e.state==="idle"&&e.dashCd<=0&&Math.abs(dist)<330&&Math.abs(dy)<105){
+        e.state="dash";e.stateT=0;e.d=Math.sign(dist)||e.d;
+      }
+      if(e.state==="dash"){
+        // First tenth of a second is the visible crouch/tell; then the cat launches.
+        if(e.stateT>=.11){
+          e.x+=e.d*(e.speed||122)*2.55*dt;
+        }
+        if(e.x<=e.a){e.x=e.a;e.d=1;e.state="idle";e.stateT=0;e.dashCd=.85}
+        else if(e.x>=e.b){e.x=e.b;e.d=-1;e.state="idle";e.stateT=0;e.dashCd=.85}
+        else if(e.stateT>=.48){e.state="idle";e.stateT=0;e.dashCd=.9}
+      }else{
+        // Slow stalking movement while it watches the windows and Jack.
+        if(Math.abs(dist)<245)e.d=Math.sign(dist)||e.d;
+        e.x+=e.d*(e.speed||122)*.34*dt;
+        if(e.x<e.a){e.x=e.a;e.d=1}else if(e.x>e.b){e.x=e.b;e.d=-1}
+      }
+      const hitRange=e.state==="dash"?58:43;
+      if(Math.abs((p.x+p.w/2)-e.x)<hitRange&&Math.abs(py-(e.y-38))<82)hurtJackFromEnemy(e);
+      continue;
+    }
     if(e.dead)continue;
     e.hitT=Math.max(0,(e.hitT||0)-dt);
     const pc=p.x+p.w/2,dist=pc-e.x;
     let speed=e.speed||60;
-    if(e.type==="watcher"&&Math.abs(dist)<310){e.d=Math.sign(dist)||e.d;speed*=1.5}
-    else if(e.type==="specter"&&Math.abs(dist)<360){e.d=Math.sign(dist)||e.d;speed*=.72}
+    if(e.type==="specter"&&Math.abs(dist)<360){e.d=Math.sign(dist)||e.d;speed*=.72}
     e.x+=e.d*speed*dt;
     if(e.x<e.a){e.x=e.a;e.d=1}else if(e.x>e.b){e.x=e.b;e.d=-1}
     const vertical=e.type==="specter"?105:78;
@@ -910,7 +980,8 @@ for(const e of enemies){
   if(dist<225){
     e.hp=Math.max(0,(e.hp??e.maxHp??1)-1);e.hitT=.34;e.d=p.x<e.x?1:-1;
     if(e.hp<=0){
-      if(e.type==="raven"||e.type==="specter"||e.type==="bell"){e.state="dissolve";e.stateT=0;e.dissolveT=0;e.hitT=0;e.dead=false}
+      if(e.type==="watcher"){e.state="hit";e.stateT=0;e.hitT=.24;e.pendingDissolve=true;e.dead=false}
+      else if(e.type==="raven"||e.type==="specter"||e.type==="bell"){e.state="dissolve";e.stateT=0;e.dissolveT=0;e.hitT=0;e.dead=false}
       else e.dead=true;
       say(({raven:"CORVO DO MINUTO MORTO",specter:"ESPECTRO DAS 4:13",bell:"SINEIRO SEM HORA",watcher:"VIGIA DAS JANELAS",sentinel:"SENTINELA DO RELÓGIO"}[e.type]||"DISTORÇÃO")+" DISSIPADO PELA LUZ");
     }
