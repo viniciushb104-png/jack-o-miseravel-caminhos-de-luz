@@ -1365,6 +1365,35 @@ function drawArenaPlatform(q,index){
     if(!drawTiledGround(sprite,q,112,true))drawFallbackPlatform(q,true);
   }else if(!drawPlatformSprite(sprite,q,108,24,true))drawFallbackPlatform(q,true);
 }
+function drawBossArenaClock(){
+  const cx=8050,cy=-860;
+  if(clockDialogueSprite){
+    // O mesmo relógio oficial usado no diálogo pós-chefe agora também domina a arena.
+    // Ele fica no plano de fundo, atrás do boss e de Jack.
+    const iw=clockDialogueSprite.naturalWidth||clockDialogueSprite.width||1;
+    const ih=clockDialogueSprite.naturalHeight||clockDialogueSprite.height||1;
+    const targetH=505;
+    const scale=targetH/ih;
+    const dw=iw*scale,dh=ih*scale;
+    x.save();
+    x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";
+    const glow=x.createRadialGradient(cx,cy,45,cx,cy,300);
+    glow.addColorStop(0,"rgba(255,190,82,.12)");
+    glow.addColorStop(.58,"rgba(188,94,31,.045)");
+    glow.addColorStop(1,"rgba(18,7,26,0)");
+    x.fillStyle=glow;x.beginPath();x.arc(cx,cy,300,0,Math.PI*2);x.fill();
+    x.globalAlpha=.99;
+    x.drawImage(clockDialogueSprite,cx-dw/2,cy-dh/2,dw,dh);
+    x.restore();
+    return;
+  }
+
+  // Fallback temporário somente enquanto o PNG ainda não terminou de carregar.
+  x.save();x.globalAlpha=.24;x.fillStyle="#9a3b25";x.beginPath();x.arc(cx,cy,255,0,Math.PI*2);x.fill();x.globalAlpha=1;
+  x.strokeStyle="#d18b35";x.lineWidth=10;x.beginPath();x.arc(cx,cy,210,0,Math.PI*2);x.stroke();
+  for(let i=0;i<12;i++){const a=i*Math.PI/6;x.beginPath();x.moveTo(cx+Math.cos(a)*175,cy+Math.sin(a)*175);x.lineTo(cx+Math.cos(a)*205,cy+Math.sin(a)*205);x.stroke()}
+  x.strokeStyle="#f0c264";x.lineWidth=8;x.beginPath();x.moveTo(cx,cy);x.lineTo(cx-70,cy-80);x.moveTo(cx,cy);x.lineTo(cx+95,cy+25);x.stroke();x.restore();
+}
 function drawClockPreludeVisual(){
   if(!clockPreludeVisualActive||!dialogue.active||!clockDialogueSprite)return;
   // O mostrador protótipo da arena já está em (8050,-860).
@@ -1396,11 +1425,8 @@ drawTowerInterior();
 plats.forEach((q,i)=>drawPhasePlatform(q,i));
 drawPhase2Checkpoints();
 if(bossUnlocked||bossActive||bossDefeated){
-  // Arena protótipo no topo: um grande mostrador quebrado sustentado por engrenagens.
-  x.save();x.globalAlpha=.24;x.fillStyle="#9a3b25";x.beginPath();x.arc(8050,-860,255,0,Math.PI*2);x.fill();x.globalAlpha=1;
-  x.strokeStyle="#d18b35";x.lineWidth=10;x.beginPath();x.arc(8050,-860,210,0,Math.PI*2);x.stroke();
-  for(let i=0;i<12;i++){const a=i*Math.PI/6;x.beginPath();x.moveTo(8050+Math.cos(a)*175,-860+Math.sin(a)*175);x.lineTo(8050+Math.cos(a)*205,-860+Math.sin(a)*205);x.stroke()}
-  x.strokeStyle="#f0c264";x.lineWidth=8;x.beginPath();x.moveTo(8050,-860);x.lineTo(7980,-940);x.moveTo(8050,-860);x.lineTo(8145,-835);x.stroke();x.restore();
+  // O relógio oficial das 4:13 substitui visualmente o mostrador provisório da arena.
+  drawBossArenaClock();
   arenaPlats.forEach((q,i)=>drawArenaPlatform(q,i));
   for(let gx=7290;gx<8840;gx+=150)drawClockGear(gx,-624,24,.58);
 }
