@@ -155,13 +155,42 @@
     }
   }
 
+  function openJourneyWithLight(href, message = 'PREPARANDO A JORNADA...') {
+    const loader = document.getElementById('journeyTransitionLoader');
+    if (!loader) { location.href = href; return; }
+    const copy = loader.querySelector('[data-loader-message]');
+    const jack = loader.querySelector('.loader-jack');
+    const fill = loader.querySelector('.loader-fill');
+    const flash = loader.querySelector('.loader-flash');
+    if (copy) copy.textContent = message;
+    if (fill) fill.style.width = '78%';
+    loader.classList.add('is-active');
+    fadeOutMainTheme(420);
+    fadeOutMemoriesTheme(320);
+    requestAnimationFrame(() => { if (fill) fill.style.width = '100%'; });
+    setTimeout(() => {
+      jack?.classList.remove('run');
+      jack?.classList.add('lift');
+      if (copy) copy.textContent = 'CAMINHO ILUMINADO';
+    }, 430);
+    setTimeout(() => flash?.classList.add('go'), 820);
+    setTimeout(() => { location.href = href; }, 1080);
+  }
+
   startJourneyButton?.addEventListener('click', () => {
     if (journey?.isActive()) {
       const restart = window.confirm('Iniciar uma nova jornada? O ponto atual da Jornada será reiniciado. Fases, troféus, memórias e músicas já conquistados continuarão salvos.');
       if (!restart) return;
     }
     journey?.startNew();
-    location.href = './game/phase1.html?journey=1&new=1';
+    openJourneyWithLight('./game/phase1.html?journey=1&new=1', 'INICIANDO UMA NOVA JORNADA...');
+  });
+
+  continueJourneyButton?.addEventListener('click', event => {
+    event.preventDefault();
+    const href = continueJourneyButton.href;
+    if (!href) return;
+    openJourneyWithLight(href, 'RETOMANDO SEU CAMINHO...');
   });
 
   chapterTwo?.addEventListener('click', event => {
