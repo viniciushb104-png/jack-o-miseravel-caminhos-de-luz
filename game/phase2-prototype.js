@@ -464,14 +464,12 @@ if(finalLorePlayed&&!bossActive&&!bossDefeated){
   finalLorePlayed=false;
   bossUnlocked=false;
 }
-let phaseAssetPending=0,phaseAssetStarted=0,phaseAssetSettled=0;
 function img(src){
-  phaseAssetPending++;phaseAssetStarted++;
   return new Promise((r,j)=>{
     const i=new Image();
-    const settle=(ok)=>{phaseAssetPending--;phaseAssetSettled++;ok?r(i):j(new Error("Falha ao carregar "+src))};
-    i.onload=()=>settle(true);i.onerror=()=>settle(false);
-    i.src=src+(src.includes("?")?"&":"?")+"v=p2jackfix2";
+    i.onload=()=>r(i);
+    i.onerror=()=>j(new Error("Falha ao carregar "+src));
+    i.src=src+(src.includes("?")?"&":"?")+"v=p2jackfix3";
   });
 }
 const enemyFrames={};
@@ -924,23 +922,18 @@ function bind(id,key){const b=document.getElementById(id);["pointerdown","pointe
 bind("leftBtn","left");bind("rightBtn","right");bind("downBtn","down");document.getElementById("jumpBtn").addEventListener("pointerdown",()=>input.jump=true);document.getElementById("lightBtn").addEventListener("pointerdown",lightUse);document.getElementById("interactBtn").addEventListener("pointerdown",interact);interactPrompt.addEventListener("click",interact);
 addEventListener("keydown",e=>{if(endingSequenceActive&&!dialogue.active)return;if(["ArrowLeft","a","A"].includes(e.key))input.left=true;if(["ArrowRight","d","D"].includes(e.key))input.right=true;if(["ArrowDown","s","S"].includes(e.key))input.down=true;if(e.key==="Shift")input.run=true;if(e.code==="Space"){input.jump=true;e.preventDefault()}if(["f","F"].includes(e.key))lightUse();if(["e","E"].includes(e.key))interact()});
 addEventListener("keyup",e=>{if(["ArrowLeft","a","A"].includes(e.key))input.left=false;if(["ArrowRight","d","D"].includes(e.key))input.right=false;if(["ArrowDown","s","S"].includes(e.key))input.down=false;if(e.key==="Shift")input.run=false});
-window.__PHASE_ASSETS_READY=new Promise(resolve=>{
-  const startedAt=performance.now();
-  const check=()=>{
-    if(phaseAssetPending===0&&phaseAssetStarted>0){
-      window.dispatchEvent(new CustomEvent("jack:phase-assets-ready",{detail:{phase:2,total:phaseAssetStarted,settled:phaseAssetSettled}}));
-      resolve();
-      return;
-    }
-    if(performance.now()-startedAt>30000){
-      console.warn("[Fase 2] limite de espera do preload atingido.",{pending:phaseAssetPending,total:phaseAssetStarted});
-      window.dispatchEvent(new CustomEvent("jack:phase-assets-ready",{detail:{phase:2,degraded:true,pending:phaseAssetPending}}));
-      resolve();
-      return;
-    }
-    setTimeout(check,60);
-  };
-  setTimeout(check,0);
+// O loader de entrada espera apenas o conjunto necessário para o primeiro quadro jogável.
+const phase2EntryCritical=[
+  "../assets/game/phase1/sprites-hd/jack-atlas-hd.png",
+  "../assets/game/phase2/backgrounds-hd/phase2-bg-01-estrada-vila.png",
+  "../assets/game/phase2/backgrounds-hd/phase2-bg-02-praca-vila.png",
+  "../assets/game/phase2/backgrounds-hd/phase2-bg-03-caminho-torre.png",
+  "../assets/game/phase2/checkpoints/checkpoint-phase2-off.png",
+  "../assets/game/phase2/checkpoints/checkpoint-phase2-on.png"
+];
+window.__PHASE_ASSETS_READY=Promise.allSettled(phase2EntryCritical.map(img)).then(results=>{
+  const failed=results.filter(r=>r.status==="rejected").length;
+  window.dispatchEvent(new CustomEvent("jack:phase-assets-ready",{detail:{phase:2,total:results.length,failed,degraded:failed>0}}));
 });
 const startGameBtn=document.getElementById("startGame");if(loadedSave&&journeyMode&&!replayMode){startGameBtn.textContent="✦ CONTINUAR JORNADA";const introCopy=ui.intro.querySelector("span");if(introCopy)introCopy.textContent="A lanterna guardou seu caminho pela Vila sem Amanhecer."}startGameBtn.onclick=()=>{if(journeyMode&&!replayMode)journey?.advanceTo(2);phase2MusicState=desiredPhase2Track();phaseAudio.start(phase2MusicState);ui.intro.hidden=true;running=true;last=performance.now();requestAnimationFrame(loop);setTimeout(()=>{if(bossDefeated&&!clockCutsceneSeen){startClockEnding();return}if(!introLorePlayed){introLorePlayed=true;openDialogue(lore.arrival)}},450)};
 function update(dt){syncHealthHud();syncPhase2Music();if(endingSequenceActive&&!dialogue.active){p.vx=0;p.vy=0;p.anim+=dt;interactPrompt.hidden=true;return}if(dialogue.active){p.vx*=.7;cam+=(Math.max(0,Math.min(WORLD-W,p.x-W*.36))-cam)*Math.min(1,dt*5);camY+=((p.x>7150?Math.min(0,p.y-390):0)-camY)*Math.min(1,dt*4);p.anim+=dt;interactPrompt.hidden=true;return}
