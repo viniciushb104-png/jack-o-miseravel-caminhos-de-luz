@@ -2,6 +2,8 @@
 const c=document.getElementById("game"),x=c.getContext("2d"),W=1280,H=720,WORLD=9200,G=1500;
 const phase2CompleteRoot=document.getElementById("phase2Complete"),phase2ReplayBtn=document.getElementById("phase2Replay"),phase2NextBtn=document.getElementById("phase2Next"),phase2MenuBtn=document.getElementById("phase2Menu"),phase2NextNote=document.getElementById("phase2NextNote");
 const ui={obj:document.querySelector("#objective strong"),gear:document.getElementById("gearValue"),health:document.getElementById("healthValue"),banner:document.getElementById("sectionBanner"),msg:document.getElementById("message"),intro:document.getElementById("intro")};
+const achievementRoot=document.getElementById("achievementToast"),achievementEyebrow=document.getElementById("achievementEyebrow"),achievementTitle=document.getElementById("achievementTitle"),achievementDetail=document.getElementById("achievementDetail");
+let achievementTimer=0;
 const input={left:false,right:false,run:false,jump:false,down:false};let running=false,last=performance.now(),cam=0,camY=0,jack=null,jackFrameOverrides={},ameliaMap={},light=0,cool=0,section=-1;
 const dialogueRoot=document.getElementById("dialogue");
 const dialogue=new window.DialogueSystem(dialogueRoot);
@@ -807,6 +809,31 @@ Promise.all([
 function syncHealthHud(){if(ui.health)ui.health.textContent="♥ ".repeat(Math.max(0,playerLife)).trim()||"—"}
 function say(s){ui.msg.textContent=s;ui.msg.classList.add("show");clearTimeout(say.t);say.t=setTimeout(()=>ui.msg.classList.remove("show"),1800)}
 function banner(s){ui.banner.textContent=s;ui.banner.classList.add("show");clearTimeout(banner.t);banner.t=setTimeout(()=>ui.banner.classList.remove("show"),1500)}
+function showPhase2Achievement({firstClear=true,duration=5600}={}){
+  if(!achievementRoot)return;
+  clearTimeout(achievementTimer);
+  if(achievementEyebrow)achievementEyebrow.textContent=firstClear?"CONQUISTA DESBLOQUEADA":"MEMÓRIA REVIVIDA";
+  if(achievementTitle)achievementTitle.textContent=firstClear?"O Primeiro Minuto":"A Vila sem Amanhecer";
+  if(achievementDetail)achievementDetail.textContent=firstClear
+    ?"Halloween II concluído · Troféu de Amélia adicionado às Memórias"
+    :"Halloween II vencido novamente · Troféu já está nas Memórias";
+  achievementRoot.hidden=false;
+  achievementRoot.classList.remove("show");
+  void achievementRoot.offsetWidth;
+  achievementRoot.classList.add("show");
+  achievementTimer=setTimeout(()=>{
+    achievementRoot.classList.remove("show");
+    setTimeout(()=>{achievementRoot.hidden=true},420);
+  },duration);
+}
+function unlockPhase2Trophy(){
+  const firstClear=localStorage.getItem("jack-phase2-complete")!=="yes";
+  localStorage.setItem("jack-phase2-complete","yes");
+  if(firstClear){
+    localStorage.setItem("jack-phase2-clear-count",String(Number(localStorage.getItem("jack-phase2-clear-count")||0)+1));
+  }
+  showPhase2Achievement({firstClear});
+}
 let saveClock=0;
 function saveJourney(){syncHealthHud();
   if(!journeyMode||replayMode||!journey?.isActive()||journey.currentPhase()!==2)return;
@@ -836,8 +863,9 @@ if(bossActive&&!bossDefeated&&boss.invuln<=0&&Math.hypot(boss.x-(p.x+p.w/2),boss
   boss.hp=Math.max(0,boss.hp-1);boss.invuln=.32;boss.dir*=-1;say("A LUZ rompe o tempo: "+boss.hp+"/"+boss.maxHp);
   if(boss.hp<=0){
     bossDefeated=true;bossActive=false;bossShots.length=0;
-    // A vitória sobre o boss não conclui Halloween II: primeiro vem o encerramento narrativo.
-    // O desbloqueio definitivo ficará para depois da futura cutscene da vila + diálogo final.
+    // Derrotar O Último Minuto já registra a conquista e libera imediatamente
+    // o troféu de Halloween II na página Memórias. O epílogo continua normalmente.
+    unlockPhase2Trophy();
     saveJourney();
     setTimeout(startClockEnding,420);
   }
