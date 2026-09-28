@@ -925,11 +925,7 @@ addEventListener("keyup",e=>{if(["ArrowLeft","a","A"].includes(e.key))input.left
 // O loader de entrada espera apenas o conjunto necessário para o primeiro quadro jogável.
 const phase2EntryCritical=[
   "../assets/game/phase1/sprites-hd/jack-atlas-hd.png",
-  "../assets/game/phase2/backgrounds-hd/phase2-bg-01-estrada-vila.png",
-  "../assets/game/phase2/backgrounds-hd/phase2-bg-02-praca-vila.png",
-  "../assets/game/phase2/backgrounds-hd/phase2-bg-03-caminho-torre.png",
-  "../assets/game/phase2/checkpoints/checkpoint-phase2-off.png",
-  "../assets/game/phase2/checkpoints/checkpoint-phase2-on.png"
+  "../assets/game/phase2/backgrounds-hd/phase2-bg-01-estrada-vila.png"
 ];
 window.__PHASE_ASSETS_READY=Promise.allSettled(phase2EntryCritical.map(img)).then(results=>{
   const failed=results.filter(r=>r.status==="rejected").length;
