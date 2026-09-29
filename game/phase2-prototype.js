@@ -51,7 +51,7 @@ let activeCheckpoint=localStorage.getItem(CHECKPOINT_KEY)||"";
 let checkpointProgressSnapshot=null;
 const PHASE2_CHECKPOINTS=Object.freeze([
   {id:"village",rank:1,name:"Relógio Congelado",x:5315,groundY:590,respawnX:5135,respawnY:504,renderH:300},
-  {id:"tower",rank:2,name:"Lanterna da Torre",x:7465,groundY:590,respawnX:7315,respawnY:504,renderH:300},
+  {id:"tower",rank:2,name:"Lanterna da Torre",x:7060,groundY:590,respawnX:6910,respawnY:504,renderH:300},
   // Equivalente à Última Lanterna da Fase 1: fica no topo, imediatamente antes do chefe.
   {id:"preboss",rank:3,name:"Última Lanterna das 4:13",x:7825,groundY:-395,respawnX:7740,respawnY:-481,renderH:210}
 ]);
