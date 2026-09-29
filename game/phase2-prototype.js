@@ -472,7 +472,15 @@ const windows=[
 ];let windowStep=0;
 const windowPuzzleAssets={houses:[null,null,null],off:[null,null,null],on:[null,null,null],fx:[null,null,null]};
 const windowFx={active:-1,t:0,duration:.88,errorT:0};
-const shadowSeals=[{x:5850,y:455,on:false},{x:6250,y:375,on:false},{x:6640,y:455,on:false}];let shadowStep=0;
+// Sombras do Minuto Perdido: CENTRO → ESQUERDA → DIREITA.
+const SHADOW_PUZZLE_ORDER=Object.freeze([1,0,2]);
+const shadowSeals=[
+  {x:5850,groundY:500,on:false,art:0,label:"Pedestal da Esquerda"},
+  {x:6250,groundY:420,on:false,art:1,label:"Pedestal Central"},
+  {x:6640,groundY:500,on:false,art:2,label:"Pedestal da Direita"}
+];let shadowStep=0;
+const shadowPuzzleAssets={off:[null,null,null],on:[null,null,null],clue:[null,null,null],fx:[null,null,null]};
+const shadowFx={active:-1,t:0,duration:.9,errorT:0};
 const towerSeals=[{x:7850,y:55,on:false},{x:8350,y:-185,on:false}];let towerStep=0;
 const sections=[{x:0,n:"ESTRADA DAS LANTERNAS MORTAS"},{x:1100,n:"VILA BAIXA"},{x:1980,n:"PRAÇA DAS 4:13"},{x:3150,n:"DISTRITO DOS SINOS"},{x:4380,n:"JANELAS APAGADAS"},{x:5600,n:"CAMINHO DA TORRE"},{x:7200,n:"A TORRE DAS 4:13"}];
 if(loadedSave){
@@ -511,7 +519,14 @@ if(windowStep>=3||windows.every(z=>z.on)){
   const solvedPhysical=new Set(WINDOW_PUZZLE_ORDER.slice(0,windowStep));
   windows.forEach((z,i)=>z.on=solvedPhysical.has(i));
 }
-if(shadowStep>=3||shadowSeals.every(z=>z.on)){shadowStep=3;puzzles.sombras=true}
+shadowStep=Math.max(0,Math.min(3,Number(shadowStep)||0));
+if(shadowStep>=3||shadowSeals.every(z=>z.on)){
+  shadowStep=3;puzzles.sombras=true;shadowSeals.forEach(z=>z.on=true);
+}else{
+  puzzles.sombras=false;
+  const solvedShadowPhysical=new Set(SHADOW_PUZZLE_ORDER.slice(0,shadowStep));
+  shadowSeals.forEach((z,i)=>z.on=solvedShadowPhysical.has(i));
+}
 if(towerStep>=2||towerSeals.every(z=>z.on)){towerStep=2;towerMechanism=true}
 if(activeCheckpoint&&!checkpointProgressSnapshot)captureCheckpointProgress();
 if(finalLorePlayed&&!bossActive&&!bossDefeated){
@@ -978,6 +993,17 @@ windowPuzzleFiles.forEach((set,i)=>{
   img("../assets/game/phase2/puzzles/windows/windows/"+set.on).then(v=>windowPuzzleAssets.on[i]=v).catch(()=>{});
   img("../assets/game/phase2/puzzles/windows/fx/"+set.fx).then(v=>windowPuzzleAssets.fx[i]=v).catch(()=>{});
 });
+const shadowPuzzleFiles=[
+  {off:"shadow-pedestal-left-off.png",on:"shadow-pedestal-left-on.png",clue:"shadow-clue-left-to-right.png",fx:"shadow-fx-left.png"},
+  {off:"shadow-pedestal-center-off.png",on:"shadow-pedestal-center-on.png",clue:"shadow-clue-center-to-left.png",fx:"shadow-fx-center.png"},
+  {off:"shadow-pedestal-right-off.png",on:"shadow-pedestal-right-on.png",clue:"shadow-clue-right-to-tower.png",fx:"shadow-fx-right.png"}
+];
+shadowPuzzleFiles.forEach((set,i)=>{
+  img("../assets/game/phase2/puzzles/shadows/bases/"+set.off).then(v=>shadowPuzzleAssets.off[i]=v).catch(()=>{});
+  img("../assets/game/phase2/puzzles/shadows/active/"+set.on).then(v=>shadowPuzzleAssets.on[i]=v).catch(()=>{});
+  img("../assets/game/phase2/puzzles/shadows/shadows/"+set.clue).then(v=>shadowPuzzleAssets.clue[i]=v).catch(()=>{});
+  img("../assets/game/phase2/puzzles/shadows/fx/"+set.fx).then(v=>shadowPuzzleAssets.fx[i]=v).catch(()=>{});
+});
 [
   ["bases",["base-sino-01.png","base-sino-02.png","base-sino-03.png","base-sino-04.png"]],
   ["animated",["sino-01-amelia-crianca.png?v=4","sino-02-amelia-aprendiz.png?v=5","sino-03-amelia-relojoeira.png?v=4","sino-04-amelia-torre.png?v=4"]]
@@ -1147,9 +1173,33 @@ if(!puzzles.janelas&&windowFx.errorT<=0){
     }
   }
 }
-const touchSeq=(arr,stepName,order,finish)=>{for(const z of arr){if(Math.abs(z.x-p.x)<125&&Math.abs(z.y-p.y)<145&&!z.on){let step=stepName==="shadow"?shadowStep:towerStep;if(z===arr[order[step]]){z.on=true;if(stepName==="shadow")shadowStep++;else towerStep++;const ns=step+1;if(ns===order.length)finish();else say("Selo correto: "+ns+"/"+order.length)}else{arr.forEach(a=>a.on=false);if(stepName==="shadow")shadowStep=0;else towerStep=0;say("A ordem se desfez...")}}}};
-touchSeq(shadowSeals,"shadow",[1,0,2],()=>{puzzles.sombras=true;say("ENIGMA DAS SOMBRAS CONCLUÍDO")});
-touchSeq(towerSeals,"tower",[0,1],()=>{towerMechanism=true;say("MECANISMO DA TORRE CONCLUÍDO")});
+if(!puzzles.sombras&&shadowFx.errorT<=0){
+  const pc=p.x+p.w/2,feet=p.y+p.h;
+  const si=shadowSeals.findIndex(z=>Math.abs(z.x-pc)<150&&Math.abs(z.groundY-feet)<155&&!z.on);
+  if(si>=0){
+    const expected=SHADOW_PUZZLE_ORDER[shadowStep];
+    if(si===expected){
+      shadowSeals[si].on=true;
+      shadowFx.active=si;shadowFx.t=shadowFx.duration;
+      shadowStep++;
+      if(shadowStep>=SHADOW_PUZZLE_ORDER.length){
+        shadowStep=SHADOW_PUZZLE_ORDER.length;puzzles.sombras=true;
+        banner("AS SOMBRAS ENCONTRARAM O CAMINHO");
+        say("A última sombra aponta para a Torre. O minuto perdido deixou uma trilha.");
+      }else if(shadowStep===1){
+        say("A sombra central se moveu. Seu rastro aponta para a esquerda.");
+      }else{
+        say("A segunda sombra respondeu. Agora o rastro atravessa para a direita.");
+      }
+    }else{
+      shadowSeals.forEach(z=>z.on=false);shadowStep=0;
+      shadowFx.active=-1;shadowFx.t=0;shadowFx.errorT=.62;
+      say("As sombras se dispersaram. Observe qual delas oferece o primeiro caminho...");
+    }
+  }
+}
+const touchSeq=(arr,order,finish)=>{for(const z of arr){if(Math.abs(z.x-p.x)<125&&Math.abs(z.y-p.y)<145&&!z.on){if(z===arr[order[towerStep]]){z.on=true;towerStep++;if(towerStep===order.length)finish();else say("Selo correto: "+towerStep+"/"+order.length)}else{arr.forEach(a=>a.on=false);towerStep=0;say("A ordem se desfez...")}}}};
+touchSeq(towerSeals,[0,1],()=>{towerMechanism=true;say("MECANISMO DA TORRE CONCLUÍDO")});
 for(const e of enemies){
   if(e.dead)continue;
   const dist=Math.hypot(e.x-(p.x+p.w/2),(e.y-35)-(p.y+p.h/2));
@@ -1191,7 +1241,7 @@ if(shadowCutscene.active){
   p.vx=0;p.vy=0;p.anim+=dt;interactPrompt.hidden=true;
   return
 }
-cool=Math.max(0,cool-dt);light=Math.max(0,light-dt);p.attack=Math.max(0,p.attack-dt);bellAnim.t=Math.max(0,bellAnim.t-dt);bellAnim.wrongT=Math.max(0,bellAnim.wrongT-dt);windowFx.t=Math.max(0,windowFx.t-dt);windowFx.errorT=Math.max(0,windowFx.errorT-dt);if(windowFx.t<=0)windowFx.active=-1;if(bellAnim.t<=0)bellAnim.ringing=-1;if(bellAnim.wrongT<=0)bellAnim.wrong=-1;reveal.forEach(q=>q.t=Math.max(0,q.t-dt));p.coyote=p.on?.12:Math.max(0,p.coyote-dt);if(input.jump){p.buffer=.14;input.jump=false}else p.buffer=Math.max(0,p.buffer-dt);
+cool=Math.max(0,cool-dt);light=Math.max(0,light-dt);p.attack=Math.max(0,p.attack-dt);bellAnim.t=Math.max(0,bellAnim.t-dt);bellAnim.wrongT=Math.max(0,bellAnim.wrongT-dt);windowFx.t=Math.max(0,windowFx.t-dt);windowFx.errorT=Math.max(0,windowFx.errorT-dt);shadowFx.t=Math.max(0,shadowFx.t-dt);shadowFx.errorT=Math.max(0,shadowFx.errorT-dt);if(windowFx.t<=0)windowFx.active=-1;if(shadowFx.t<=0)shadowFx.active=-1;if(bellAnim.t<=0)bellAnim.ringing=-1;if(bellAnim.wrongT<=0)bellAnim.wrong=-1;reveal.forEach(q=>q.t=Math.max(0,q.t-dt));p.coyote=p.on?.12:Math.max(0,p.coyote-dt);if(input.jump){p.buffer=.14;input.jump=false}else p.buffer=Math.max(0,p.buffer-dt);
 const speed=input.down?95:(input.run?335:235),dir=(input.right?1:0)-(input.left?1:0);p.vx+=((dir*speed)-p.vx)*Math.min(1,dt*12);if(dir)p.dir=dir;
 if(p.buffer>0&&p.coyote>0&&!input.down){p.vy=-575;p.on=false;p.coyote=0;p.buffer=0}p.vy+=G*dt;const oldY=p.y;p.x=Math.max(0,Math.min(WORLD-p.w,p.x+p.vx*dt));p.y+=p.vy*dt;p.on=false;
 const solids=plats.concat((bossUnlocked||bossActive||bossDefeated)?arenaPlats:[],reveal.filter(q=>q.t>0));for(const q of solids){if(p.x+p.w>q.x&&p.x<q.x+q.w&&oldY+p.h<=q.y+8&&p.y+p.h>=q.y&&p.vy>=0){p.y=q.y-p.h;p.vy=0;p.on=true}}
@@ -1502,6 +1552,69 @@ function drawWindowPuzzle(){
       }
     }
 
+    x.restore();
+  }
+}
+function drawShadowPuzzle(){
+  const pedestalH=[245,265,250];
+  // A pista seguinte é o coração do enigma: centro → esquerda → direita → Torre.
+  const clueIndex=shadowStep<SHADOW_PUZZLE_ORDER.length?SHADOW_PUZZLE_ORDER[shadowStep]:2;
+
+  for(let i=0;i<shadowSeals.length;i++){
+    const z=shadowSeals[i],art=z.art;
+    if(z.x<cam-400||z.x>cam+W+400)continue;
+
+    const h=pedestalH[art]||250;
+    const shake=shadowFx.errorT>0
+      ?Math.sin((.62-shadowFx.errorT)*54+i*1.7)*7*(shadowFx.errorT/.62)
+      :0;
+    const sprite=z.on?shadowPuzzleAssets.on[art]:shadowPuzzleAssets.off[art];
+
+    x.save();
+    x.translate(shake,0);
+
+    if(z.on){
+      const pulse=.88+Math.sin(p.anim*4.1+i)*.1;
+      const glow=x.createRadialGradient(z.x,z.groundY-h*.52,18,z.x,z.groundY-h*.52,125);
+      glow.addColorStop(0,"rgba(151,102,255,"+(.27*pulse)+")");
+      glow.addColorStop(.55,"rgba(86,58,180,"+(.12*pulse)+")");
+      glow.addColorStop(1,"rgba(45,20,90,0)");
+      x.fillStyle=glow;x.beginPath();x.arc(z.x,z.groundY-h*.52,125,0,Math.PI*2);x.fill();
+    }
+
+    if(sprite)drawAssetBottom(sprite,z.x,z.groundY,h,shadowFx.errorT>0?.82:1);
+    else{
+      x.fillStyle=z.on?"#6047a7":"#20172d";
+      x.fillRect(z.x-75,z.groundY-150,150,150);
+    }
+
+    // Só o próximo pedestal mostra sua sombra-pista com força total.
+    // Os já resolvidos mantêm uma lembrança muito discreta para a cadeia continuar legível.
+    const clue=shadowPuzzleAssets.clue[art];
+    const clueVisible=(i===clueIndex&&!puzzles.sombras)||(puzzles.sombras&&i===2);
+    if(clue&&clueVisible){
+      const ch=i===2?145:135;
+      const cw=ch*((clue.naturalWidth||clue.width||1)/(clue.naturalHeight||clue.height||1));
+      const bob=Math.sin(p.anim*2.6+i)*3;
+      x.save();
+      x.globalAlpha=.72+Math.sin(p.anim*3.2+i)*.08;
+      x.globalCompositeOperation="screen";
+      x.drawImage(clue,z.x-cw/2,z.groundY-h*.73-ch/2+bob,cw,ch);
+      x.restore();
+    }
+
+    if(shadowFx.active===i&&shadowFx.t>0){
+      const fx=shadowPuzzleAssets.fx[art];
+      if(fx){
+        const u=1-shadowFx.t/shadowFx.duration;
+        const alpha=Math.sin(Math.min(1,u)*Math.PI);
+        const fh=150+u*35;
+        const fw=fh*((fx.naturalWidth||fx.width||1)/(fx.naturalHeight||fx.height||1));
+        x.save();x.globalAlpha=Math.max(0,alpha);x.globalCompositeOperation="screen";
+        x.drawImage(fx,z.x-fw/2,z.groundY-h*.55-fh/2,fw,fh);
+        x.restore();
+      }
+    }
     x.restore();
   }
 }
@@ -1881,7 +1994,8 @@ for(let ri=0;ri<reveal.length;ri++){
 drawWindowPuzzle();
 // Checkpoints são elementos de gameplay: ficam acima das fachadas para nunca desaparecerem atrás delas.
 drawPhase2Checkpoints();
-for(const z of shadowSeals){x.fillStyle=z.on?"#b9eaff":"#171b2c";x.beginPath();x.arc(z.x,z.y,20,0,Math.PI*2);x.fill();x.strokeStyle="#78a5bb";x.stroke()}
+// Enigma das Sombras — pedestais reais, estados OFF/ON, pistas direcionais e FX.
+drawShadowPuzzle();
 for(const z of towerSeals){x.fillStyle=z.on?"#fff0a8":"#512c65";x.beginPath();x.arc(z.x,z.y,22,0,Math.PI*2);x.fill();x.strokeStyle="#d0a65b";x.stroke()}
 x.fillStyle=allRequired()?"#e9c35e":"#4d344d";x.fillRect(7725,-480,300,70);x.strokeStyle="#d0a65b";x.lineWidth=4;x.strokeRect(7725,-480,300,70);x.fillStyle="#fff0b0";x.font="bold 14px Georgia";x.fillText(allRequired()?"SELO ABERTO — AÇÃO":"SELO FECHADO — "+solvedCount()+"/3 · TORRE "+(towerMechanism?"✓":"○"),7780,-438);
 if(bossActive&&!bossDefeated){
