@@ -1394,66 +1394,114 @@ function drawAssetBottom(img,cx,ground,targetH,alpha=1){
   x.save();x.globalAlpha=alpha;x.drawImage(img,cx-w/2,ground-targetH,w,targetH);x.restore();return true;
 }
 function drawWindowPuzzle(){
-  // Medidas extraídas dos próprios PNGs das casas: cada janela usa o centro real
-  // do vão transparente, evitando posicionamento "no olho".
-  const houseH=[305,310,315];
-  const houseGroundOffset=[0,6,4]; // corrige margens transparentes inferiores dos PNGs 2 e 3.
-  const opening=[
-    {cx:704/1254,cy:677.5/1254,w:210/1254,h:239/1254},
-    {cx:706.5/1254,cy:691.5/1254,w:201/1254,h:261/1254},
-    {cx:636.5/1254,cy:568/1254,w:183/1254,h:268/1254}
+  // Configuração manual e precisa de cada casa.
+  // Os valores abaixo foram medidos diretamente nos PNGs para a janela
+  // encaixar no vão real de cada fachada e parecer parte da arquitetura.
+  const houseSpec=[
+    {
+      houseH:305,
+      groundOffset:4,
+      winCx:0.5614,
+      winCy:0.5391,
+      winW:0.150,
+      winH:0.170
+    },
+    {
+      houseH:310,
+      groundOffset:8,
+      winCx:0.5630,
+      winCy:0.5510,
+      winW:0.145,
+      winH:0.192
+    },
+    {
+      houseH:315,
+      groundOffset:12,
+      winCx:0.5068,
+      winCy:0.4518,
+      winW:0.132,
+      winH:0.198
+    }
   ];
+
   for(let wi=0;wi<windows.length;wi++){
-    const z=windows[wi],art=z.art;
+    const z=windows[wi];
+    const art=z.art;
+    const spec=houseSpec[art];
+    if(!spec)continue;
     if(z.x<cam-420||z.x>cam+W+420)continue;
-    const h=houseH[art]||310;
-    const ground=z.y+(houseGroundOffset[art]||0);
+
+    const h=spec.houseH;
+    const ground=z.y+spec.groundOffset;
     const top=ground-h;
-    const data=opening[art]||opening[0];
-    const houseW=h; // os três PNGs-base são quadrados.
-    const centerX=z.x+(data.cx-.5)*houseW;
-    const centerY=top+data.cy*h;
-    const shake=windowFx.errorT>0?Math.sin((.58-windowFx.errorT)*55+wi)*7*(windowFx.errorT/.58):0;
-    const windowSprite=(z.on?windowPuzzleAssets.on[art]:windowPuzzleAssets.off[art]);
+    const houseW=h; // os PNGs-base são quadrados no render atual.
+
+    const centerX=z.x+(spec.winCx-.5)*houseW;
+    const centerY=top+spec.winCy*h;
+
+    const shake=windowFx.errorT>0
+      ?Math.sin((.58-windowFx.errorT)*55+wi)*7*(windowFx.errorT/.58)
+      :0;
+
+    const house=windowPuzzleAssets.houses[art];
+    const windowSprite=z.on
+      ?windowPuzzleAssets.on[art]
+      :windowPuzzleAssets.off[art];
 
     x.save();
     x.translate(shake,0);
 
-    // Primeiro a casa, alinhada pelo pé real da arte com a plataforma.
-    const house=windowPuzzleAssets.houses[art];
-    if(house)drawAssetBottom(house,z.x,ground,h,windowFx.errorT>0?.88:1);
-    else{
-      x.fillStyle="#2b2230";x.fillRect(z.x-115,z.y-220,230,220);
+    // 1) CASA — ancorada pelo pé da arte na plataforma.
+    if(house){
+      drawAssetBottom(house,z.x,ground,h,windowFx.errorT>0?.88:1);
+    }else{
+      x.fillStyle="#2b2230";
+      x.fillRect(z.x-115,z.y-220,230,220);
     }
 
-    // Depois a janela: fica na frente da fachada e cobre o vão como uma peça arquitetônica.
+    // 2) BRILHO — fica atrás da janela acesa.
     if(z.on){
       const pulse=.86+Math.sin(p.anim*4.4+wi)*.1;
       const glow=x.createRadialGradient(centerX,centerY,10,centerX,centerY,92);
       glow.addColorStop(0,"rgba(255,213,105,"+(.32*pulse)+")");
       glow.addColorStop(.58,"rgba(255,145,45,"+(.13*pulse)+")");
       glow.addColorStop(1,"rgba(255,110,20,0)");
-      x.fillStyle=glow;x.beginPath();x.arc(centerX,centerY,92,0,Math.PI*2);x.fill();
-    }
-    if(windowSprite){
-      const margin=1.16;
-      const ww=data.w*h*margin;
-      const wh=data.h*h*margin;
-      x.drawImage(windowSprite,centerX-ww/2,centerY-wh/2,ww,wh);
+      x.fillStyle=glow;
+      x.beginPath();
+      x.arc(centerX,centerY,92,0,Math.PI*2);
+      x.fill();
     }
 
+    // 3) JANELA — cada casa usa o próprio art/âncora, nunca o índice físico.
+    // Assim nenhuma fachada perde a janela quando a ordem do enigma é embaralhada.
+    if(windowSprite){
+      const ww=spec.winW*h;
+      const wh=spec.winH*h;
+      x.drawImage(
+        windowSprite,
+        centerX-ww/2,
+        centerY-wh/2,
+        ww,
+        wh
+      );
+    }
+
+    // 4) FX — usa o mesmo art da casa: abóbora, relógios ou despertar.
     if(windowFx.active===wi&&windowFx.t>0){
       const fx=windowPuzzleAssets.fx[art];
       if(fx){
         const u=1-windowFx.t/windowFx.duration;
         const alpha=Math.sin(Math.min(1,u)*Math.PI);
-        const fh=(105+u*24),fw=fh*((fx.naturalWidth||fx.width||1)/(fx.naturalHeight||fx.height||1));
-        x.save();x.globalAlpha=Math.max(0,alpha);
+        const fh=105+u*24;
+        const fw=fh*((fx.naturalWidth||fx.width||1)/(fx.naturalHeight||fx.height||1));
+        x.save();
+        x.globalAlpha=Math.max(0,alpha);
         x.globalCompositeOperation="screen";
         x.drawImage(fx,centerX-fw/2,centerY-fh/2,fw,fh);
         x.restore();
       }
     }
+
     x.restore();
   }
 }
