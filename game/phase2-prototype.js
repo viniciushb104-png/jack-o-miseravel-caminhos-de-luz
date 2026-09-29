@@ -42,9 +42,9 @@ if(forceNewRun){localStorage.removeItem(SAVE_KEY);localStorage.removeItem(CHECKP
 let loadedSave=null;if(journeyMode&&!replayMode){try{loadedSave=JSON.parse(localStorage.getItem(SAVE_KEY)||"null")}catch(e){loadedSave=null}}
 let ameliaMet=false, introLorePlayed=false, gearLore=[false,false,false], finalLorePlayed=false,bossUnlocked=false,bossActive=false,bossDefeated=false,clockCutsceneSeen=false,endingSequenceActive=false;const puzzles={sinos:false,janelas:false,sombras:false};let towerMechanism=false;
 const arenaPlats=[{x:7580,y:-480,w:250,h:24},{x:7860,y:-565,w:250,h:24},{x:7200,y:-650,w:1700,h:60}];
-const boss={x:8360,y:-770,hp:10,maxHp:10,dir:-1,t:0,shot:1.55,invuln:0,spawn:0,cast:0,animT:0};
+const boss={x:8360,y:-770,hp:10,maxHp:10,dir:-1,t:0,shot:1.55,invuln:0,spawn:0,cast:0,animT:0,special:0,specialCooldown:7.5,dying:false,deathT:0};
 const bossShots=[];let playerLife=3,playerHit=0;
-const ameliaShadowAssets={dialogue:[],transform:[],boss:[],effects:[],map:[]};
+const ameliaShadowAssets={dialogue:[],transform:[],boss:[],bossV2:{idle:[],move:[],cast:[],hit:[],special:[],dissolve:[]},effects:[],map:[]};
 const shadowCutscene={active:false,t:0,cue:0};
 let checkpointArt={off:null,on:null};
 let activeCheckpoint=localStorage.getItem(CHECKPOINT_KEY)||"";
@@ -282,7 +282,7 @@ function syncPhase2Music(options={}){
   phaseAudio.switchTrack(next,{fadeOut:options.fadeOut??900,fadeIn:options.fadeIn??1050});
 }
 function activateShadowBoss(){
-  shadowCutscene.active=false;bossUnlocked=true;bossActive=true;bossDefeated=false;boss.hp=boss.maxHp;boss.t=0;boss.shot=1.55;boss.spawn=1.25;boss.cast=0;boss.animT=0;playerLife=3;playerHit=0;bossShots.length=0;
+  shadowCutscene.active=false;bossUnlocked=true;bossActive=true;bossDefeated=false;boss.hp=boss.maxHp;boss.t=0;boss.shot=1.55;boss.spawn=1.25;boss.cast=0;boss.animT=0;boss.special=0;boss.specialCooldown=7.5;boss.dying=false;boss.deathT=0;playerLife=3;playerHit=0;bossShots.length=0;
   // Entrar na luta sempre ancora a Última Lanterna. Assim a morte nunca manda Jack de volta pela fase inteira.
   if(checkpointRank(activeCheckpoint)<checkpointRank("preboss")){
     activeCheckpoint="preboss";
@@ -876,12 +876,24 @@ const ameliaFinalPortraitFiles=["amelia-final-01-preocupada.png","amelia-final-0
 const shadowDialoguePortraitFile="amelia-shadow-dialogue.png";
 const transformFiles=["amelia-transform-00-surpresa.png","amelia-transform-01-recua.png","amelia-transform-02-perde-equilibrio.png","amelia-transform-03-cai-joelhos.png","amelia-transform-04-no-chao-inicio.png","amelia-transform-05-no-chao-dor-1.png","amelia-transform-06-no-chao-dor-2.png","amelia-transform-07-grito.png","amelia-transform-08-lanterna-cai.png","amelia-transform-09-primeiras-sombras.png","amelia-transform-10-sombras-envolvem.png","amelia-transform-11-transformacao-1.png","amelia-transform-12-transformacao-2.png"];
 const shadowBossFiles=["amelia-shadow-boss-00-idle.png","amelia-shadow-boss-01-walk-1.png","amelia-shadow-boss-02-walk-2.png","amelia-shadow-boss-03-ataque-1.png","amelia-shadow-boss-04-ataque-2.png","amelia-shadow-boss-05-ataque-3.png","amelia-shadow-boss-06-magia.png","amelia-shadow-boss-07-dano.png","amelia-shadow-boss-08-transicao.png"];
+const lastMinuteFiles={
+  idle:Array.from({length:6},(_,i)=>`last-minute-idle-${String(i+1).padStart(2,"0")}.png`),
+  move:Array.from({length:6},(_,i)=>`last-minute-move-${String(i+1).padStart(2,"0")}.png`),
+  cast:Array.from({length:6},(_,i)=>`last-minute-cast-${String(i+1).padStart(2,"0")}.png`),
+  hit:Array.from({length:4},(_,i)=>`last-minute-hit-${String(i+1).padStart(2,"0")}.png`),
+  special:Array.from({length:6},(_,i)=>`last-minute-special-${String(i+1).padStart(2,"0")}.png`),
+  dissolve:Array.from({length:8},(_,i)=>`last-minute-dissolve-${String(i+1).padStart(2,"0")}.png`)
+};
 const shadowEffectFiles=["effect-00-lanterna-caida.png","effect-01-sombra-1.png","effect-02-sombra-2.png","effect-03-sombra-3.png","effect-04-circulo-magico.png","effect-05-engrenagens.png","effect-06-petalas.png","effect-07-relogio.png","effect-08-brilhos.png"];
 const shadowMapFiles=["amelia-map-00-idle.png","amelia-map-01-walk-left-1.png","amelia-map-02-walk-left-2.png","amelia-map-03-walk-right-1.png","amelia-map-04-walk-right-2.png"];
 Promise.allSettled(transformFiles.map(f=>img("../assets/game/phase2/amelia-shadow-v2/transformation/"+f)))
   .then(rs=>ameliaShadowAssets.transform=rs.map(r=>r.status==="fulfilled"?r.value:null));
 Promise.allSettled(shadowBossFiles.map(f=>img("../assets/game/phase2/amelia-shadow-v2/boss/"+f)))
   .then(rs=>ameliaShadowAssets.boss=rs.map(r=>r.status==="fulfilled"?r.value:null));
+Object.entries(lastMinuteFiles).forEach(([state,files])=>{
+  Promise.allSettled(files.map(f=>img("../assets/game/phase2/amelia-shadow-v2/boss/"+f+"?v=1")))
+    .then(rs=>ameliaShadowAssets.bossV2[state]=rs.map(r=>r.status==="fulfilled"?r.value:null));
+});
 Promise.allSettled(shadowEffectFiles.map(f=>img("../assets/game/phase2/amelia-shadow-v2/effects/"+f)))
   .then(rs=>ameliaShadowAssets.effects=rs.map(r=>r.status==="fulfilled"?r.value:null));
 Promise.allSettled(shadowMapFiles.map(f=>img("../assets/game/phase2/amelia-shadow-v2/map/"+f)))
@@ -946,7 +958,7 @@ function saveJourney(){syncHealthHud();
 function resetBossAttempt(){
   playerLife=3;
   boss.hp=boss.maxHp;
-  boss.x=8360;boss.y=-770;boss.dir=-1;boss.t=0;boss.shot=1.55;boss.spawn=2.15;boss.cast=0;boss.animT=0;boss.invuln=0;
+  boss.x=8360;boss.y=-770;boss.dir=-1;boss.t=0;boss.shot=1.55;boss.spawn=2.15;boss.cast=0;boss.animT=0;boss.invuln=0;boss.special=0;boss.specialCooldown=7.5;boss.dying=false;boss.deathT=0;
   bossShots.length=0;
   input.left=input.right=input.down=input.run=false;
   p.attack=0;p.buffer=0;
@@ -961,12 +973,11 @@ function lightUse(){if(cool>0)return;cool=.55;light=.48;p.attack=.48;
 if(bossActive&&!bossDefeated&&boss.invuln<=0&&Math.hypot(boss.x-(p.x+p.w/2),boss.y-(p.y+30))<315){
   boss.hp=Math.max(0,boss.hp-1);boss.invuln=.32;boss.dir*=-1;say("A LUZ rompe o tempo: "+boss.hp+"/"+boss.maxHp);
   if(boss.hp<=0){
-    bossDefeated=true;bossActive=false;bossShots.length=0;
-    // Derrotar O Último Minuto já registra a conquista e libera imediatamente
-    // o troféu de Halloween II na página Memórias. O epílogo continua normalmente.
-    unlockPhase2Trophy();
+    boss.hp=0;boss.dying=true;boss.deathT=0;boss.invuln=0;boss.cast=0;boss.special=0;bossShots.length=0;
+    input.left=input.right=input.down=input.run=false;
+    p.vx=0;
+    banner("O ÚLTIMO MINUTO ESTÁ SE DESFAZENDO");
     saveJourney();
-    setTimeout(startClockEnding,420);
   }
 }
 reveal.forEach(q=>{if(Math.abs((q.x+q.w/2)-(p.x+p.w/2))<310)q.t=3});
@@ -1063,10 +1074,39 @@ updateEnemies(dt);updateEnemyProjectiles(dt);
 boss.invuln=Math.max(0,boss.invuln-dt);playerHit=Math.max(0,playerHit-dt);
 if(bossActive&&!bossDefeated){
   p.x=Math.max(7225,Math.min(8870-p.w,p.x));
-  boss.t+=dt;boss.animT+=dt;boss.spawn=Math.max(0,boss.spawn-dt);boss.cast=Math.max(0,boss.cast-dt);
+  boss.t+=dt;boss.animT+=dt;boss.spawn=Math.max(0,boss.spawn-dt);boss.cast=Math.max(0,boss.cast-dt);boss.special=Math.max(0,boss.special-dt);
   boss.y=-770+Math.sin(boss.t*1.7)*8;
 
-  if(boss.spawn<=0){
+  if(boss.dying){
+    boss.deathT+=dt;
+    p.vx=0;p.vy=0;
+    bossShots.length=0;
+    if(boss.deathT>=1.55){
+      boss.dying=false;bossDefeated=true;bossActive=false;
+      unlockPhase2Trophy();
+      saveJourney();
+      setTimeout(startClockEnding,260);
+    }
+  }else if(boss.spawn<=0){
+    boss.specialCooldown=Math.max(0,boss.specialCooldown-dt);
+    if(boss.special<=0&&boss.cast<=0&&boss.specialCooldown<=0){
+      boss.special=1.05;
+      boss.specialCooldown=boss.hp<=5?6.4:8.2;
+      boss.animT=0;
+      boss.shot=Math.max(boss.shot,.95);
+    }
+    if(boss.special>0){
+      // Ataque especial simples e legível: seis quadros de carga e um leque de projéteis ao final.
+      const before=boss.special;
+      boss.special=Math.max(0,boss.special-dt);
+      if(before>.28&&boss.special<=.28){
+        const base=Math.atan2((p.y+p.h/2)-boss.y,(p.x+p.w/2)-boss.x);
+        [-.42,-.21,0,.21,.42].forEach(a=>{
+          const ang=base+a,speed=205;
+          bossShots.push({x:boss.x+Math.cos(ang)*54,y:boss.y+Math.sin(ang)*30,vx:Math.cos(ang)*speed,vy:Math.sin(ang)*speed,r:11,life:5});
+        });
+      }
+    }else{
     boss.shot-=dt;
     const preparing=boss.shot<=.72;
     // O Último Minuto continua ameaçador, mas agora anuncia melhor cada ataque.
@@ -1083,8 +1123,9 @@ if(bossActive&&!bossDefeated){
       const muzzleX=boss.x+boss.dir*62,muzzleY=boss.y-12;
       bossShots.push({x:muzzleX,y:muzzleY,vx:dx/len*speed,vy:dy/len*speed,r:12,life:5});
     }
+    }
   }
-  for(let i=bossShots.length-1;i>=0;i--){
+  for(let i=bossShots.length-1;i>=0&&!boss.dying;i--){
     const s=bossShots[i];s.x+=s.vx*dt;s.y+=s.vy*dt;s.life-=dt;
     if(s.life<=0){bossShots.splice(i,1);continue}
     if(playerHit<=0&&Math.abs(s.x-(p.x+p.w/2))<s.r+p.w*.42&&Math.abs(s.y-(p.y+p.h/2))<s.r+p.h*.42){
@@ -1586,23 +1627,29 @@ for(const z of shadowSeals){x.fillStyle=z.on?"#b9eaff":"#171b2c";x.beginPath();x
 for(const z of towerSeals){x.fillStyle=z.on?"#fff0a8":"#512c65";x.beginPath();x.arc(z.x,z.y,22,0,Math.PI*2);x.fill();x.strokeStyle="#d0a65b";x.stroke()}
 x.fillStyle=allRequired()?"#e9c35e":"#4d344d";x.fillRect(7725,-480,300,70);x.strokeStyle="#d0a65b";x.lineWidth=4;x.strokeRect(7725,-480,300,70);x.fillStyle="#fff0b0";x.font="bold 14px Georgia";x.fillText(allRequired()?"SELO ABERTO — AÇÃO":"SELO FECHADO — "+solvedCount()+"/3 · TORRE "+(towerMechanism?"✓":"○"),7780,-438);
 if(bossActive&&!bossDefeated){
-  let bi=0;
-  if(boss.spawn>0)bi=8;
-  else if(boss.invuln>0)bi=7;
-  else if(boss.cast>0)bi=6;
-  else if(boss.shot<=.72){
-    const wind=Math.max(0,Math.min(.719,.72-boss.shot));
-    bi=3+Math.min(2,Math.floor(wind/.24));
+  const v2=ameliaShadowAssets.bossV2;
+  let state="idle",frames=v2.idle,frameIndex=0;
+  if(boss.dying){
+    state="dissolve";frames=v2.dissolve;frameIndex=Math.min(7,Math.floor((boss.deathT/1.55)*8));
+  }else if(boss.invuln>0){
+    state="hit";frames=v2.hit;frameIndex=Math.min(3,Math.floor(((.32-boss.invuln)/.32)*4));
+  }else if(boss.special>0){
+    state="special";frames=v2.special;frameIndex=Math.min(5,Math.floor(((1.05-boss.special)/1.05)*6));
+  }else if(boss.cast>0||boss.shot<=.72){
+    state="cast";frames=v2.cast;
+    const charge=boss.cast>0?1-Math.min(1,boss.cast/.34):Math.max(0,Math.min(1,(.72-boss.shot)/.72));
+    frameIndex=Math.min(5,Math.floor(charge*6));
+  }else if(boss.spawn<=0){
+    state="move";frames=v2.move;frameIndex=Math.floor(boss.animT/.12)%6;
   }else{
-    const walkCycle=Math.floor(boss.animT/0.15)%4;
-    bi=[0,1,0,2][walkCycle];
+    state="idle";frames=v2.idle;frameIndex=Math.floor(boss.animT/.18)%6;
   }
-  const bs=ameliaShadowAssets.boss[bi]||ameliaShadowAssets.boss[0];
+  const bs=(frames&&frames[frameIndex])||(v2.idle&&v2.idle[0])||ameliaShadowAssets.boss[0];
   if(bs){
     // Âncora fixa no chão visual: todos os quadros mantêm o mesmo centro e escala.
     // O único movimento vertical é uma respiração mínima; sem pulos entre frames.
-    const size=344;
-    const breathe=(boss.spawn>0||boss.cast>0||boss.invuln>0)?0:Math.sin(boss.t*2.2)*2;
+    const size=390;
+    const breathe=(boss.spawn>0||boss.cast>0||boss.invuln>0||boss.special>0||boss.dying)?0:Math.sin(boss.t*2.2)*2;
     const drawY=boss.y-size/2+breathe;
     x.save();
     x.globalAlpha=boss.invuln>0?.62:1;
@@ -1612,7 +1659,7 @@ if(bossActive&&!bossDefeated){
     x.restore();
 
     // Telegraph de ataque: a luz cresce antes do projétil sair, sincronizada aos 3 frames.
-    if(boss.spawn<=0&&boss.invuln<=0&&boss.shot<=.72&&boss.cast<=0){
+    if(!boss.dying&&boss.special<=0&&boss.spawn<=0&&boss.invuln<=0&&boss.shot<=.72&&boss.cast<=0){
       const charge=Math.max(0,Math.min(1,(.72-boss.shot)/.72));
       const orbX=boss.x+boss.dir*68,orbY=boss.y-10;
       x.save();x.globalAlpha=.18+charge*.52;x.fillStyle="#ff5b9d";x.beginPath();x.arc(orbX,orbY,10+charge*24,0,Math.PI*2);x.fill();
