@@ -50,7 +50,8 @@ let checkpointArt={off:null,on:null};
 let activeCheckpoint=localStorage.getItem(CHECKPOINT_KEY)||"";
 let checkpointProgressSnapshot=null;
 const PHASE2_CHECKPOINTS=Object.freeze([
-  {id:"village",rank:1,name:"Relógio Congelado",x:5315,groundY:590,respawnX:5135,respawnY:504,renderH:300},
+  // O checkpoint da vila fica depois das três casas, totalmente visível e fora da fachada do último lar.
+  {id:"village",rank:1,name:"Relógio Congelado",x:5485,groundY:590,respawnX:5510,respawnY:504,renderH:300},
   {id:"tower",rank:2,name:"Lanterna da Torre",x:7060,groundY:590,respawnX:6910,respawnY:504,renderH:300},
   // Equivalente à Última Lanterna da Fase 1: fica no topo, imediatamente antes do chefe.
   {id:"preboss",rank:3,name:"Última Lanterna das 4:13",x:7825,groundY:-395,respawnX:7740,respawnY:-481,renderH:210}
@@ -347,7 +348,7 @@ const plats=[
 {x:0,y:590,w:1100,h:130},{x:1160,y:590,w:760,h:130},{x:1350,y:505,w:260,h:32},{x:1660,y:440,w:230,h:32},
 {x:1980,y:590,w:1100,h:130},{x:2160,y:500,w:260,h:32},{x:2520,y:430,w:260,h:32},{x:2860,y:500,w:220,h:32},
 {x:3150,y:590,w:1150,h:130},{x:3340,y:500,w:220,h:32},{x:3700,y:430,w:240,h:32},{x:4070,y:500,w:220,h:32},
-{x:4380,y:590,w:1150,h:130},{x:4550,y:500,w:220,h:32},{x:4890,y:430,w:230,h:32},{x:5250,y:500,w:250,h:32},
+{x:4380,y:590,w:1220,h:130},{x:4550,y:500,w:220,h:32},{x:4890,y:430,w:230,h:32},{x:5250,y:500,w:250,h:32},
 {x:5600,y:590,w:1600,h:130},{x:5820,y:500,w:260,h:32},{x:6200,y:420,w:260,h:32},{x:6580,y:500,w:260,h:32},
 {x:7200,y:590,w:2000,h:130},
 {x:7420,y:505,w:260,h:30},{x:7760,y:430,w:250,h:30},{x:8110,y:350,w:245,h:30},{x:8460,y:270,w:240,h:30},{x:8120,y:190,w:240,h:30},{x:7770,y:110,w:240,h:30},{x:7420,y:30,w:250,h:30},
@@ -1393,47 +1394,63 @@ function drawAssetBottom(img,cx,ground,targetH,alpha=1){
   x.save();x.globalAlpha=alpha;x.drawImage(img,cx-w/2,ground-targetH,w,targetH);x.restore();return true;
 }
 function drawWindowPuzzle(){
+  // Medidas extraídas dos próprios PNGs das casas: cada janela usa o centro real
+  // do vão transparente, evitando posicionamento "no olho".
   const houseH=[305,310,315];
-  const windowH=[88,90,92];
-  const openingRatioY=[.50,.51,.45];
+  const houseGroundOffset=[0,6,4]; // corrige margens transparentes inferiores dos PNGs 2 e 3.
+  const opening=[
+    {cx:704/1254,cy:677.5/1254,w:210/1254,h:239/1254},
+    {cx:706.5/1254,cy:691.5/1254,w:201/1254,h:261/1254},
+    {cx:636.5/1254,cy:568/1254,w:183/1254,h:268/1254}
+  ];
   for(let wi=0;wi<windows.length;wi++){
     const z=windows[wi],art=z.art;
     if(z.x<cam-420||z.x>cam+W+420)continue;
     const h=houseH[art]||310;
-    const top=z.y-h;
+    const ground=z.y+(houseGroundOffset[art]||0);
+    const top=ground-h;
+    const data=opening[art]||opening[0];
+    const houseW=h; // os três PNGs-base são quadrados.
+    const centerX=z.x+(data.cx-.5)*houseW;
+    const centerY=top+data.cy*h;
     const shake=windowFx.errorT>0?Math.sin((.58-windowFx.errorT)*55+wi)*7*(windowFx.errorT/.58):0;
     const windowSprite=(z.on?windowPuzzleAssets.on[art]:windowPuzzleAssets.off[art]);
-    const wh=windowH[art]||90;
-    const centerY=top+h*(openingRatioY[art]||.5);
+
     x.save();
     x.translate(shake,0);
-    if(z.on){
-      const pulse=.86+Math.sin(p.anim*4.4+wi)*.1;
-      const glow=x.createRadialGradient(z.x,centerY,12,z.x,centerY,105);
-      glow.addColorStop(0,"rgba(255,213,105,"+(.34*pulse)+")");
-      glow.addColorStop(.55,"rgba(255,145,45,"+(.14*pulse)+")");
-      glow.addColorStop(1,"rgba(255,110,20,0)");
-      x.fillStyle=glow;x.beginPath();x.arc(z.x,centerY,105,0,Math.PI*2);x.fill();
-    }
-    if(windowSprite){
-      const iw=windowSprite.naturalWidth||windowSprite.width||1,ih=windowSprite.naturalHeight||windowSprite.height||1;
-      const ww=wh*(iw/ih);
-      x.drawImage(windowSprite,z.x-ww/2,centerY-wh/2,ww,wh);
-    }
+
+    // Primeiro a casa, alinhada pelo pé real da arte com a plataforma.
     const house=windowPuzzleAssets.houses[art];
-    if(house)drawAssetBottom(house,z.x,z.y,h,windowFx.errorT>0?.88:1);
+    if(house)drawAssetBottom(house,z.x,ground,h,windowFx.errorT>0?.88:1);
     else{
       x.fillStyle="#2b2230";x.fillRect(z.x-115,z.y-220,230,220);
     }
+
+    // Depois a janela: fica na frente da fachada e cobre o vão como uma peça arquitetônica.
+    if(z.on){
+      const pulse=.86+Math.sin(p.anim*4.4+wi)*.1;
+      const glow=x.createRadialGradient(centerX,centerY,10,centerX,centerY,92);
+      glow.addColorStop(0,"rgba(255,213,105,"+(.32*pulse)+")");
+      glow.addColorStop(.58,"rgba(255,145,45,"+(.13*pulse)+")");
+      glow.addColorStop(1,"rgba(255,110,20,0)");
+      x.fillStyle=glow;x.beginPath();x.arc(centerX,centerY,92,0,Math.PI*2);x.fill();
+    }
+    if(windowSprite){
+      const margin=1.16;
+      const ww=data.w*h*margin;
+      const wh=data.h*h*margin;
+      x.drawImage(windowSprite,centerX-ww/2,centerY-wh/2,ww,wh);
+    }
+
     if(windowFx.active===wi&&windowFx.t>0){
       const fx=windowPuzzleAssets.fx[art];
       if(fx){
         const u=1-windowFx.t/windowFx.duration;
         const alpha=Math.sin(Math.min(1,u)*Math.PI);
-        const fh=(120+u*28),fw=fh*((fx.naturalWidth||fx.width||1)/(fx.naturalHeight||fx.height||1));
+        const fh=(105+u*24),fw=fh*((fx.naturalWidth||fx.width||1)/(fx.naturalHeight||fx.height||1));
         x.save();x.globalAlpha=Math.max(0,alpha);
         x.globalCompositeOperation="screen";
-        x.drawImage(fx,z.x-fw/2,centerY-fh/2,fw,fh);
+        x.drawImage(fx,centerX-fw/2,centerY-fh/2,fw,fh);
         x.restore();
       }
     }
@@ -1797,7 +1814,6 @@ x.save();x.translate(-cam,-camY);
 // e recebe exatamente o mesmo deslocamento vertical das plataformas durante a subida.
 drawTowerInterior();
 plats.forEach((q,i)=>drawPhasePlatform(q,i));
-drawPhase2Checkpoints();
 if(bossUnlocked||bossActive||bossDefeated){
   // O relógio oficial das 4:13 substitui visualmente o mostrador provisório da arena.
   drawBossArenaClock();
@@ -1815,6 +1831,8 @@ for(let ri=0;ri<reveal.length;ri++){
 }
 // Enigma das Janelas Apagadas — casas reais, janela OFF/ON e FX de ativação.
 drawWindowPuzzle();
+// Checkpoints são elementos de gameplay: ficam acima das fachadas para nunca desaparecerem atrás delas.
+drawPhase2Checkpoints();
 for(const z of shadowSeals){x.fillStyle=z.on?"#b9eaff":"#171b2c";x.beginPath();x.arc(z.x,z.y,20,0,Math.PI*2);x.fill();x.strokeStyle="#78a5bb";x.stroke()}
 for(const z of towerSeals){x.fillStyle=z.on?"#fff0a8":"#512c65";x.beginPath();x.arc(z.x,z.y,22,0,Math.PI*2);x.fill();x.strokeStyle="#d0a65b";x.stroke()}
 x.fillStyle=allRequired()?"#e9c35e":"#4d344d";x.fillRect(7725,-480,300,70);x.strokeStyle="#d0a65b";x.lineWidth=4;x.strokeRect(7725,-480,300,70);x.fillStyle="#fff0b0";x.font="bold 14px Georgia";x.fillText(allRequired()?"SELO ABERTO — AÇÃO":"SELO FECHADO — "+solvedCount()+"/3 · TORRE "+(towerMechanism?"✓":"○"),7780,-438);
