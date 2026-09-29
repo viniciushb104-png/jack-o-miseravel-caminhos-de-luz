@@ -408,9 +408,9 @@ const enemies=[
   {type:"specter",x:2920,y:455,a:2700,b:3070,d:-1,hp:2,maxHp:2,speed:58,phase:2.4,state:"float",stateT:0,castCd:2.1,dead:false},
   {type:"bell",x:3440,y:548,a:3240,b:3650,d:1,hp:2,maxHp:2,speed:42,phase:.3,state:"idle",stateT:0,attackCd:1.15,dead:false},
   {type:"bell",x:4040,y:548,a:3890,b:4230,d:-1,hp:2,maxHp:2,speed:44,phase:1.1,state:"idle",stateT:0,attackCd:1.75,dead:false},
-  {type:"watcher",x:4700,y:548,a:4470,b:4970,d:1,hp:1,maxHp:1,speed:118,phase:2.1,state:"idle",stateT:0,dashCd:.55,pendingDissolve:false,dead:false},
-  {type:"watcher",x:5260,y:548,a:5050,b:5480,d:-1,hp:1,maxHp:1,speed:126,phase:.6,state:"idle",stateT:0,dashCd:1.05,pendingDissolve:false,dead:false},
-  {type:"watcher",x:6030,y:548,a:5750,b:6370,d:1,hp:1,maxHp:1,speed:132,phase:1.4,state:"idle",stateT:0,dashCd:1.4,pendingDissolve:false,dead:false},
+  {type:"watcher",x:4700,y:566,a:4470,b:4970,d:1,hp:1,maxHp:1,speed:118,phase:2.1,state:"idle",stateT:0,dashCd:.55,pendingDissolve:false,dead:false},
+  {type:"watcher",x:5260,y:566,a:5050,b:5480,d:-1,hp:1,maxHp:1,speed:126,phase:.6,state:"idle",stateT:0,dashCd:1.05,pendingDissolve:false,dead:false},
+  {type:"watcher",x:6030,y:566,a:5750,b:6370,d:1,hp:1,maxHp:1,speed:132,phase:1.4,state:"idle",stateT:0,dashCd:1.4,pendingDissolve:false,dead:false},
   {type:"sentinel",x:6820,y:548,a:6530,b:7090,d:-1,hp:3,maxHp:3,speed:38,phase:.4},
   {type:"sentinel",x:7480,y:463,a:7360,b:7660,d:1,hp:3,maxHp:3,speed:34,phase:2.8}
 ];
@@ -603,7 +603,7 @@ function drawWatcher(e){
   const crouch=e.state==="dash"&&e.stateT<.11?5:0;
   const breathe=e.state==="idle"?1+Math.sin(p.anim*3+(e.phase||0))*.012:1;
   x.save();x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";
-  x.translate(e.x,e.y-h+8+crouch+h/2);if(e.d<0)x.scale(-1,1);x.scale(breathe,1/breathe);
+  x.translate(e.x,e.y-h+20+crouch+h/2);if(e.d<0)x.scale(-1,1);x.scale(breathe,1/breathe);
   if(e.hitT>0||e.state==="hit"){x.shadowColor="#ffd86b";x.shadowBlur=26;x.translate(Math.sin(p.anim*48)*3.5,0)}
   if(e.state==="dash"){x.shadowColor="#8b42ff";x.shadowBlur=15}
   if(e.state==="dissolve")x.globalAlpha=Math.max(0,1-(e.dissolveT||0)/.92*.5);
