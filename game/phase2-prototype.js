@@ -1403,24 +1403,24 @@ function drawWindowPuzzle(){
       groundOffset:4,
       winCx:0.5614,
       winCy:0.5391,
-      winW:0.150,
-      winH:0.170
+      winW:0.275,
+      winH:0.315
     },
     {
       houseH:310,
       groundOffset:8,
       winCx:0.5630,
       winCy:0.5510,
-      winW:0.145,
-      winH:0.192
+      winW:0.255,
+      winH:0.345
     },
     {
       houseH:315,
       groundOffset:12,
       winCx:0.5068,
       winCy:0.4518,
-      winW:0.132,
-      winH:0.198
+      winW:0.235,
+      winH:0.355
     }
   ];
 
