@@ -437,7 +437,7 @@ const enemies=[
   {type:"watcher",x:4700,y:566,a:4470,b:4970,d:1,hp:1,maxHp:1,speed:118,phase:2.1,state:"idle",stateT:0,dashCd:.55,pendingDissolve:false,dead:false},
   {type:"watcher",x:5260,y:566,a:5050,b:5480,d:-1,hp:1,maxHp:1,speed:126,phase:.6,state:"idle",stateT:0,dashCd:1.05,pendingDissolve:false,dead:false},
   {type:"watcher",x:6030,y:566,a:5750,b:6370,d:1,hp:1,maxHp:1,speed:132,phase:1.4,state:"idle",stateT:0,dashCd:1.4,pendingDissolve:false,dead:false},
-  {type:"sentinel",x:6820,y:548,a:6530,b:7090,d:-1,hp:3,maxHp:3,speed:38,phase:.4,state:"idle",stateT:0,attackCd:.7,attackHit:false,pendingDissolve:false,groundOffset:42,dead:false},
+  {type:"sentinel",x:6720,y:458,a:6600,b:6820,d:-1,hp:3,maxHp:3,speed:38,phase:.4,state:"idle",stateT:0,attackCd:.7,attackHit:false,pendingDissolve:false,groundOffset:42,dead:false},
   {type:"sentinel",x:7480,y:463,a:7360,b:7660,d:1,hp:3,maxHp:3,speed:34,phase:2.8,state:"idle",stateT:0,attackCd:1.15,attackHit:false,pendingDissolve:false,groundOffset:42,dead:false}
 ];
 const enemyProjectiles=[];
@@ -1740,7 +1740,10 @@ if(bossActive&&!bossDefeated){
     // O único movimento vertical é uma respiração mínima; sem pulos entre frames.
     const size=390;
     const breathe=(boss.spawn>0||boss.cast>0||boss.invuln>0||boss.special>0||boss.dying)?0:Math.sin(boss.t*2.2)*2;
-    const drawY=boss.y-size/2+breathe;
+    // A plataforma principal da arena começa em y=-650. O boss é desenhado
+    // pela base, não pelo centro lógico usado no combate, evitando atravessar o piso.
+    const bossVisualGroundY=-656;
+    const drawY=bossVisualGroundY-size+breathe;
     x.save();
     x.globalAlpha=boss.invuln>0?.62:1;
     if(boss.dir<0){
@@ -1757,7 +1760,7 @@ if(bossActive&&!bossDefeated){
     }
   }else{
     // Fallback até os sprites da sombra serem enviados.
-    x.save();x.translate(boss.x,boss.y);const pulse=1+Math.sin(boss.t*5)*.05;x.scale(pulse,pulse);
+    x.save();x.translate(boss.x,-736);const pulse=1+Math.sin(boss.t*5)*.05;x.scale(pulse,pulse);
     x.globalAlpha=boss.invuln>0?.48:.22;x.fillStyle="#a9477c";x.beginPath();x.arc(0,0,92,0,Math.PI*2);x.fill();x.globalAlpha=1;
     x.fillStyle="#17101d";x.strokeStyle="#e3a34a";x.lineWidth=9;x.beginPath();x.arc(0,0,66,0,Math.PI*2);x.fill();x.stroke();
     x.strokeStyle="#f2cf79";x.lineWidth=4;for(let i=0;i<12;i++){const a=i*Math.PI/6;x.beginPath();x.moveTo(Math.cos(a)*48,Math.sin(a)*48);x.lineTo(Math.cos(a)*59,Math.sin(a)*59);x.stroke()}
