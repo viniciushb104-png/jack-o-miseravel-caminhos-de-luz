@@ -417,6 +417,16 @@ const watcherAssets={idle:[],dash:[],hit:[],dissolve:[]};
 Object.entries(WATCHER_FILES).forEach(([state,files])=>files.forEach((file,i)=>{
   img("../assets/game/phase2/enemies/window-watcher/"+file).then(image=>watcherAssets[state][i]=trimTransparentSprite(image,2)).catch(()=>{});
 }));
+const SENTINEL_FILES={
+  idle:["sentinel-idle-01.png","sentinel-idle-02.png","sentinel-idle-03.png","sentinel-idle-04.png"],
+  attack:["sentinel-attack-01.png","sentinel-attack-02.png","sentinel-attack-03.png","sentinel-attack-04.png"],
+  hit:["sentinel-hit-01.png","sentinel-hit-02.png"],
+  dissolve:["sentinel-dissolve-01.png","sentinel-dissolve-02.png","sentinel-dissolve-03.png","sentinel-dissolve-04.png","sentinel-dissolve-05.png"]
+};
+const sentinelAssets={idle:[],attack:[],hit:[],dissolve:[]};
+Object.entries(SENTINEL_FILES).forEach(([state,files])=>files.forEach((file,i)=>{
+  img("../assets/game/phase2/enemies/clock-sentinel/"+file).then(image=>sentinelAssets[state][i]=trimTransparentSprite(image,2)).catch(()=>{});
+}));
 const enemies=[
   {type:"raven",x:760,y:430,a:610,b:1020,d:1,hp:1,maxHp:1,speed:92,phase:0,state:"fly",stateT:0,diveCd:1.1,dead:false},
   {type:"raven",x:1510,y:355,a:1280,b:1810,d:-1,hp:1,maxHp:1,speed:105,phase:1.7,state:"fly",stateT:0,diveCd:1.8,dead:false},
@@ -427,8 +437,8 @@ const enemies=[
   {type:"watcher",x:4700,y:566,a:4470,b:4970,d:1,hp:1,maxHp:1,speed:118,phase:2.1,state:"idle",stateT:0,dashCd:.55,pendingDissolve:false,dead:false},
   {type:"watcher",x:5260,y:566,a:5050,b:5480,d:-1,hp:1,maxHp:1,speed:126,phase:.6,state:"idle",stateT:0,dashCd:1.05,pendingDissolve:false,dead:false},
   {type:"watcher",x:6030,y:566,a:5750,b:6370,d:1,hp:1,maxHp:1,speed:132,phase:1.4,state:"idle",stateT:0,dashCd:1.4,pendingDissolve:false,dead:false},
-  {type:"sentinel",x:6820,y:548,a:6530,b:7090,d:-1,hp:3,maxHp:3,speed:38,phase:.4},
-  {type:"sentinel",x:7480,y:463,a:7360,b:7660,d:1,hp:3,maxHp:3,speed:34,phase:2.8}
+  {type:"sentinel",x:6820,y:548,a:6530,b:7090,d:-1,hp:3,maxHp:3,speed:38,phase:.4,state:"idle",stateT:0,attackCd:.7,attackHit:false,pendingDissolve:false,groundOffset:42,dead:false},
+  {type:"sentinel",x:7480,y:463,a:7360,b:7660,d:1,hp:3,maxHp:3,speed:34,phase:2.8,state:"idle",stateT:0,attackCd:1.15,attackHit:false,pendingDissolve:false,groundOffset:42,dead:false}
 ];
 const enemyProjectiles=[];
 const gears=[{x:1870,y:385,n:"ENGRENAGEM DAS HORAS",got:false},{x:4240,y:450,n:"ENGRENAGEM DOS MINUTOS",got:false},{x:6750,y:450,n:"ENGRENAGEM DO AMANHECER",got:false}];
@@ -631,6 +641,40 @@ function drawWatcher(e){
   if(e.state==="dissolve")x.globalAlpha=Math.max(0,1-(e.dissolveT||0)/.92*.5);
   x.drawImage(sprite,-w/2,-h/2,w,h);x.restore();return true;
 }
+function sentinelSequence(e){
+  const state=e.state||"idle";
+  if(state==="dissolve")return {arr:sentinelAssets.dissolve,fps:5.2,loop:false};
+  if(e.hitT>0||state==="hit")return {arr:sentinelAssets.hit,fps:7.2,loop:false};
+  if(state==="attack")return {arr:sentinelAssets.attack,fps:6.2,loop:false};
+  return {arr:sentinelAssets.idle,fps:3.6,loop:true};
+}
+function sentinelAnchorX(state,idx){
+  if(state==="attack")return [.39,.37,.33,.39][idx]??.38;
+  if(state==="hit")return [.42,.42][idx]??.42;
+  if(state==="dissolve")return [.43,.45,.47,.5,.5][idx]??.48;
+  return .5;
+}
+function drawSentinel(e){
+  const seq=sentinelSequence(e),arr=seq.arr.filter(Boolean);if(!arr.length)return false;
+  const state=e.state||"idle";
+  const t=state==="dissolve"?(e.dissolveT||0):(e.stateT||0)+(e.phase||0)*.06;
+  let idx=Math.floor(t*seq.fps);idx=seq.loop?idx%arr.length:Math.min(arr.length-1,idx);
+  const sprite=arr[idx];if(!sprite)return false;
+  const h=state==="dissolve"?190:state==="hit"?182:state==="attack"?180:178;
+  const sw=sprite.naturalWidth||sprite.width||1,sh=sprite.naturalHeight||sprite.height||1;
+  const w=h*(sw/Math.max(1,sh)),anchorX=sentinelAnchorX(state,idx);
+  const groundY=e.y+(e.groundOffset||42);
+  const breathe=state==="idle"?1+Math.sin(p.anim*1.9+(e.phase||0))*.006:1;
+  if(state!=="dissolve"){
+    x.save();x.globalAlpha=.2;x.fillStyle="#000";x.beginPath();x.ellipse(e.x,groundY-2,38,6,0,0,Math.PI*2);x.fill();x.restore();
+  }
+  x.save();x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";
+  x.translate(e.x,groundY-h/2);if(e.d<0)x.scale(-1,1);x.scale(breathe,1/breathe);
+  if(e.hitT>0||state==="hit"){x.shadowColor="#ffe091";x.shadowBlur=26;x.translate(Math.sin(p.anim*43)*2.6,0)}
+  if(state==="attack"&&e.stateT>=.28&&e.stateT<=.56){x.shadowColor="#ffb52f";x.shadowBlur=22}
+  if(state==="dissolve")x.globalAlpha=Math.max(0,1-(e.dissolveT||0)/1.05*.52);
+  x.drawImage(sprite,-w*anchorX,-h/2,w,h);x.restore();return true;
+}
 function drawBellWave(s){
   const age=s.age||0,fade=Math.max(0,1-age/(s.maxLife||.72));
   x.save();x.globalAlpha=.82*fade;x.strokeStyle="#d99cff";x.lineWidth=5;x.shadowColor="#7b39ff";x.shadowBlur=18;
@@ -670,6 +714,10 @@ function drawEnemy(e){
   if(e.type==="watcher"){
     if(e.dead&&e.state!=="dissolve")return;
     if(drawWatcher(e))return;
+  }
+  if(e.type==="sentinel"){
+    if(e.dead&&e.state!=="dissolve")return;
+    if(drawSentinel(e))return;
   }
   if(e.dead)return;
   const cfg=ENEMY_SPRITES[e.type],sprite=(enemyFrames[e.type]||[])[0];
@@ -802,6 +850,46 @@ function updateEnemies(dt){
       }
       const hitRange=e.state==="dash"?58:43;
       if(Math.abs((p.x+p.w/2)-e.x)<hitRange&&Math.abs(py-(e.y-38))<82)hurtJackFromEnemy(e);
+      continue;
+    }
+    if(e.type==="sentinel"){
+      if(e.state==="dissolve"){
+        e.dissolveT=(e.dissolveT||0)+dt;e.stateT=(e.stateT||0)+dt;
+        if(e.dissolveT>=1.05){e.dead=true;e.state="gone"}continue;
+      }
+      if(e.dead)continue;
+      e.hitT=Math.max(0,(e.hitT||0)-dt);e.stateT=(e.stateT||0)+dt;e.attackCd=Math.max(0,(e.attackCd||0)-dt);
+      const pc=p.x+p.w/2,py=p.y+p.h/2,groundY=e.y+(e.groundOffset||42);
+      const dist=pc-e.x,dy=py-(groundY-80);
+      if(e.pendingDissolve){
+        e.state="hit";
+        if(e.stateT>=.26){e.pendingDissolve=false;e.state="dissolve";e.stateT=0;e.dissolveT=0;e.hitT=0}
+        continue;
+      }
+      if(e.hitT>0){
+        if(e.state!=="hit"){e.state="hit";e.stateT=0;e.attackHit=false}
+        continue;
+      }else if(e.state==="hit"){
+        e.state="idle";e.stateT=0;e.attackCd=.55;
+      }
+      if(e.state==="idle"&&e.attackCd<=0&&Math.abs(dist)<265&&Math.abs(dy)<125){
+        e.state="attack";e.stateT=0;e.attackHit=false;e.d=Math.sign(dist)||e.d;
+      }
+      if(e.state==="attack"){
+        // Frame 3 is the bright strike: only this middle window is dangerous.
+        if(e.stateT>=.31&&e.stateT<=.55&&!e.attackHit){
+          const front=(pc-e.x)*(e.d||1);
+          if(front>18&&front<188&&Math.abs(dy)<112){
+            e.attackHit=true;hurtJackFromEnemy(e);
+          }
+        }
+        if(e.stateT>=.72){e.state="idle";e.stateT=0;e.attackCd=1.15;e.attackHit=false}
+      }else{
+        // Heavy tank: deliberately slow, but turns toward Jack when he gets close.
+        if(Math.abs(dist)<330)e.d=Math.sign(dist)||e.d;
+        e.x+=e.d*(e.speed||36)*.62*dt;
+        if(e.x<e.a){e.x=e.a;e.d=1}else if(e.x>e.b){e.x=e.b;e.d=-1}
+      }
       continue;
     }
     if(e.dead)continue;
@@ -1012,8 +1100,10 @@ for(const e of enemies){
   const dist=Math.hypot(e.x-(p.x+p.w/2),(e.y-35)-(p.y+p.h/2));
   if(dist<225){
     e.hp=Math.max(0,(e.hp??e.maxHp??1)-1);e.hitT=.34;e.d=p.x<e.x?1:-1;
+    if(e.type==="sentinel"){e.state="hit";e.stateT=0;e.attackHit=false;e.hitT=.3}
     if(e.hp<=0){
-      if(e.type==="watcher"){e.state="hit";e.stateT=0;e.hitT=.24;e.pendingDissolve=true;e.dead=false}
+      if(e.type==="sentinel"){e.pendingDissolve=true;e.dead=false}
+      else if(e.type==="watcher"){e.state="hit";e.stateT=0;e.hitT=.24;e.pendingDissolve=true;e.dead=false}
       else if(e.type==="raven"||e.type==="specter"||e.type==="bell"){e.state="dissolve";e.stateT=0;e.dissolveT=0;e.hitT=0;e.dead=false}
       else e.dead=true;
       say(({raven:"CORVO DO MINUTO MORTO",specter:"ESPECTRO DAS 4:13",bell:"SINEIRO SEM HORA",watcher:"VIGIA DAS JANELAS",sentinel:"SENTINELA DO RELÓGIO"}[e.type]||"DISTORÇÃO")+" DISSIPADO PELA LUZ");
