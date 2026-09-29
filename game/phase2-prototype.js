@@ -460,7 +460,17 @@ const bellLore=[
   "A aprendiz tornou-se relojoeira.",
   "E então veio a Torre."
 ];
-const windows=[{x:4620,y:390,on:false},{x:4910,y:320,on:false},{x:5200,y:390,on:false}];let windowStep=0;
+// Janelas Apagadas: a ordem narrativa é 1 abóbora → 2 relógios → 3 pessoas congeladas.
+// A disposição física é propositalmente embaralhada (esquerda → direita → centro),
+// então o jogador precisa ler as pistas do cenário em vez de apenas seguir a direção.
+const WINDOW_PUZZLE_ORDER=Object.freeze([0,2,1]);
+const windows=[
+  {x:4620,y:590,on:false,art:0,clue:1,label:"Lar da Abóbora"},
+  {x:4910,y:590,on:false,art:2,clue:3,label:"Lar Congelado"},
+  {x:5200,y:590,on:false,art:1,clue:2,label:"Casa dos Relógios"}
+];let windowStep=0;
+const windowPuzzleAssets={houses:[null,null,null],off:[null,null,null],on:[null,null,null],fx:[null,null,null]};
+const windowFx={active:-1,t:0,duration:.88,errorT:0};
 const shadowSeals=[{x:5850,y:455,on:false},{x:6250,y:375,on:false},{x:6640,y:455,on:false}];let shadowStep=0;
 const towerSeals=[{x:7850,y:55,on:false},{x:8350,y:-185,on:false}];let towerStep=0;
 const sections=[{x:0,n:"ESTRADA DAS LANTERNAS MORTAS"},{x:1100,n:"VILA BAIXA"},{x:1980,n:"PRAÇA DAS 4:13"},{x:3150,n:"DISTRITO DOS SINOS"},{x:4380,n:"JANELAS APAGADAS"},{x:5600,n:"CAMINHO DA TORRE"},{x:7200,n:"A TORRE DAS 4:13"}];
@@ -492,7 +502,14 @@ if(bellStep>=4||bells.every(z=>z.on)){
   puzzles.sinos=false;
   bells.forEach(z=>z.on=z.id<bellStep);
 }
-if(windowStep>=3||windows.every(z=>z.on)){windowStep=3;puzzles.janelas=true}
+windowStep=Math.max(0,Math.min(3,Number(windowStep)||0));
+if(windowStep>=3||windows.every(z=>z.on)){
+  windowStep=3;puzzles.janelas=true;windows.forEach(z=>z.on=true);
+}else{
+  puzzles.janelas=false;
+  const solvedPhysical=new Set(WINDOW_PUZZLE_ORDER.slice(0,windowStep));
+  windows.forEach((z,i)=>z.on=solvedPhysical.has(i));
+}
 if(shadowStep>=3||shadowSeals.every(z=>z.on)){shadowStep=3;puzzles.sombras=true}
 if(towerStep>=2||towerSeals.every(z=>z.on)){towerStep=2;towerMechanism=true}
 if(activeCheckpoint&&!checkpointProgressSnapshot)captureCheckpointProgress();
@@ -949,6 +966,17 @@ Promise.allSettled(towerPlatformFiles.map(f=>img("../assets/game/phase2/environm
 img("../assets/game/phase2/environment-sprites/torre/decoracao/clock-413-dialogue.png").then(i=>clockDialogueSprite=i).catch(()=>{});
 img("../assets/game/phase2/checkpoints/checkpoint-phase2-off.png").then(i=>checkpointArt.off=i).catch(()=>{});
 img("../assets/game/phase2/checkpoints/checkpoint-phase2-on.png").then(i=>checkpointArt.on=i).catch(()=>{});
+const windowPuzzleFiles=[
+  {house:"window-house-01-pumpkin.png",off:"window-01-off.png",on:"window-01-on.png",fx:"window-light-fx-01.png"},
+  {house:"window-house-02-clocks.png",off:"window-02-off.png",on:"window-02-on.png",fx:"window-light-fx-02.png"},
+  {house:"window-house-03-frozen-people.png",off:"window-03-off.png",on:"window-03-on.png",fx:"window-light-fx-03.png"}
+];
+windowPuzzleFiles.forEach((set,i)=>{
+  img("../assets/game/phase2/puzzles/windows/houses/"+set.house).then(v=>windowPuzzleAssets.houses[i]=v).catch(()=>{});
+  img("../assets/game/phase2/puzzles/windows/windows/"+set.off).then(v=>windowPuzzleAssets.off[i]=v).catch(()=>{});
+  img("../assets/game/phase2/puzzles/windows/windows/"+set.on).then(v=>windowPuzzleAssets.on[i]=v).catch(()=>{});
+  img("../assets/game/phase2/puzzles/windows/fx/"+set.fx).then(v=>windowPuzzleAssets.fx[i]=v).catch(()=>{});
+});
 [
   ["bases",["base-sino-01.png","base-sino-02.png","base-sino-03.png","base-sino-04.png"]],
   ["animated",["sino-01-amelia-crianca.png?v=4","sino-02-amelia-aprendiz.png?v=5","sino-03-amelia-relojoeira.png?v=4","sino-04-amelia-torre.png?v=4"]]
@@ -1091,8 +1119,34 @@ if(!puzzles.sinos){
     saveJourney();
   }
 }
-const touchSeq=(arr,stepName,order,finish)=>{for(const z of arr){if(Math.abs(z.x-p.x)<125&&Math.abs(z.y-p.y)<145&&!z.on){let step=stepName==="window"?windowStep:stepName==="shadow"?shadowStep:towerStep;if(z===arr[order[step]]){z.on=true;if(stepName==="window")windowStep++;else if(stepName==="shadow")shadowStep++;else towerStep++;const ns=step+1;if(ns===order.length)finish();else say("Selo correto: "+ns+"/"+order.length)}else{arr.forEach(a=>a.on=false);if(stepName==="window")windowStep=0;else if(stepName==="shadow")shadowStep=0;else towerStep=0;say("A ordem se desfez...")}}}};
-touchSeq(windows,"window",[0,2,1],()=>{puzzles.janelas=true;say("ENIGMA DAS JANELAS CONCLUÍDO")});
+if(!puzzles.janelas&&windowFx.errorT<=0){
+  const pc=p.x+p.w/2;
+  const wi=windows.findIndex(z=>Math.abs(z.x-pc)<135&&Math.abs(z.y-(p.y+p.h))<150&&!z.on);
+  if(wi>=0){
+    const expected=WINDOW_PUZZLE_ORDER[windowStep];
+    if(wi===expected){
+      windows[wi].on=true;
+      windowFx.active=wi;windowFx.t=windowFx.duration;
+      windowStep++;
+      if(windowStep>=WINDOW_PUZZLE_ORDER.length){
+        windowStep=WINDOW_PUZZLE_ORDER.length;puzzles.janelas=true;
+        banner("OS LARES VOLTARAM A BRILHAR");
+        say("Três lares reacenderam. A vila ainda se lembra de como era estar viva.");
+      }else{
+        const messages=[
+          "Uma chama respondeu à lanterna. O primeiro lar recordou seu calor.",
+          "Os relógios estremeceram. O segundo lar deixou as 4:13 respirarem."
+        ];
+        say(messages[windowStep-1]||("Janela correta: "+windowStep+"/3"));
+      }
+    }else{
+      windows.forEach(z=>z.on=false);windowStep=0;
+      windowFx.active=-1;windowFx.t=0;windowFx.errorT=.58;
+      say("A vila não respondeu. Talvez os sinais tenham uma ordem...");
+    }
+  }
+}
+const touchSeq=(arr,stepName,order,finish)=>{for(const z of arr){if(Math.abs(z.x-p.x)<125&&Math.abs(z.y-p.y)<145&&!z.on){let step=stepName==="shadow"?shadowStep:towerStep;if(z===arr[order[step]]){z.on=true;if(stepName==="shadow")shadowStep++;else towerStep++;const ns=step+1;if(ns===order.length)finish();else say("Selo correto: "+ns+"/"+order.length)}else{arr.forEach(a=>a.on=false);if(stepName==="shadow")shadowStep=0;else towerStep=0;say("A ordem se desfez...")}}}};
 touchSeq(shadowSeals,"shadow",[1,0,2],()=>{puzzles.sombras=true;say("ENIGMA DAS SOMBRAS CONCLUÍDO")});
 touchSeq(towerSeals,"tower",[0,1],()=>{towerMechanism=true;say("MECANISMO DA TORRE CONCLUÍDO")});
 for(const e of enemies){
@@ -1136,7 +1190,7 @@ if(shadowCutscene.active){
   p.vx=0;p.vy=0;p.anim+=dt;interactPrompt.hidden=true;
   return
 }
-cool=Math.max(0,cool-dt);light=Math.max(0,light-dt);p.attack=Math.max(0,p.attack-dt);bellAnim.t=Math.max(0,bellAnim.t-dt);bellAnim.wrongT=Math.max(0,bellAnim.wrongT-dt);if(bellAnim.t<=0)bellAnim.ringing=-1;if(bellAnim.wrongT<=0)bellAnim.wrong=-1;reveal.forEach(q=>q.t=Math.max(0,q.t-dt));p.coyote=p.on?.12:Math.max(0,p.coyote-dt);if(input.jump){p.buffer=.14;input.jump=false}else p.buffer=Math.max(0,p.buffer-dt);
+cool=Math.max(0,cool-dt);light=Math.max(0,light-dt);p.attack=Math.max(0,p.attack-dt);bellAnim.t=Math.max(0,bellAnim.t-dt);bellAnim.wrongT=Math.max(0,bellAnim.wrongT-dt);windowFx.t=Math.max(0,windowFx.t-dt);windowFx.errorT=Math.max(0,windowFx.errorT-dt);if(windowFx.t<=0)windowFx.active=-1;if(bellAnim.t<=0)bellAnim.ringing=-1;if(bellAnim.wrongT<=0)bellAnim.wrong=-1;reveal.forEach(q=>q.t=Math.max(0,q.t-dt));p.coyote=p.on?.12:Math.max(0,p.coyote-dt);if(input.jump){p.buffer=.14;input.jump=false}else p.buffer=Math.max(0,p.buffer-dt);
 const speed=input.down?95:(input.run?335:235),dir=(input.right?1:0)-(input.left?1:0);p.vx+=((dir*speed)-p.vx)*Math.min(1,dt*12);if(dir)p.dir=dir;
 if(p.buffer>0&&p.coyote>0&&!input.down){p.vy=-575;p.on=false;p.coyote=0;p.buffer=0}p.vy+=G*dt;const oldY=p.y;p.x=Math.max(0,Math.min(WORLD-p.w,p.x+p.vx*dt));p.y+=p.vy*dt;p.on=false;
 const solids=plats.concat((bossUnlocked||bossActive||bossDefeated)?arenaPlats:[],reveal.filter(q=>q.t>0));for(const q of solids){if(p.x+p.w>q.x&&p.x<q.x+q.w&&oldY+p.h<=q.y+8&&p.y+p.h>=q.y&&p.vy>=0){p.y=q.y-p.h;p.vy=0;p.on=true}}
@@ -1337,6 +1391,54 @@ function drawAssetBottom(img,cx,ground,targetH,alpha=1){
   if(!img)return false;
   const iw=img.naturalWidth||img.width||1,ih=img.naturalHeight||img.height||1,w=targetH*(iw/ih);
   x.save();x.globalAlpha=alpha;x.drawImage(img,cx-w/2,ground-targetH,w,targetH);x.restore();return true;
+}
+function drawWindowPuzzle(){
+  const houseH=[305,310,315];
+  const windowH=[88,90,92];
+  const openingRatioY=[.50,.51,.45];
+  for(let wi=0;wi<windows.length;wi++){
+    const z=windows[wi],art=z.art;
+    if(z.x<cam-420||z.x>cam+W+420)continue;
+    const h=houseH[art]||310;
+    const top=z.y-h;
+    const shake=windowFx.errorT>0?Math.sin((.58-windowFx.errorT)*55+wi)*7*(windowFx.errorT/.58):0;
+    const windowSprite=(z.on?windowPuzzleAssets.on[art]:windowPuzzleAssets.off[art]);
+    const wh=windowH[art]||90;
+    const centerY=top+h*(openingRatioY[art]||.5);
+    x.save();
+    x.translate(shake,0);
+    if(z.on){
+      const pulse=.86+Math.sin(p.anim*4.4+wi)*.1;
+      const glow=x.createRadialGradient(z.x,centerY,12,z.x,centerY,105);
+      glow.addColorStop(0,"rgba(255,213,105,"+(.34*pulse)+")");
+      glow.addColorStop(.55,"rgba(255,145,45,"+(.14*pulse)+")");
+      glow.addColorStop(1,"rgba(255,110,20,0)");
+      x.fillStyle=glow;x.beginPath();x.arc(z.x,centerY,105,0,Math.PI*2);x.fill();
+    }
+    if(windowSprite){
+      const iw=windowSprite.naturalWidth||windowSprite.width||1,ih=windowSprite.naturalHeight||windowSprite.height||1;
+      const ww=wh*(iw/ih);
+      x.drawImage(windowSprite,z.x-ww/2,centerY-wh/2,ww,wh);
+    }
+    const house=windowPuzzleAssets.houses[art];
+    if(house)drawAssetBottom(house,z.x,z.y,h,windowFx.errorT>0?.88:1);
+    else{
+      x.fillStyle="#2b2230";x.fillRect(z.x-115,z.y-220,230,220);
+    }
+    if(windowFx.active===wi&&windowFx.t>0){
+      const fx=windowPuzzleAssets.fx[art];
+      if(fx){
+        const u=1-windowFx.t/windowFx.duration;
+        const alpha=Math.sin(Math.min(1,u)*Math.PI);
+        const fh=(120+u*28),fw=fh*((fx.naturalWidth||fx.width||1)/(fx.naturalHeight||fx.height||1));
+        x.save();x.globalAlpha=Math.max(0,alpha);
+        x.globalCompositeOperation="screen";
+        x.drawImage(fx,z.x-fw/2,centerY-fh/2,fw,fh);
+        x.restore();
+      }
+    }
+    x.restore();
+  }
 }
 function drawPhase2Checkpoints(){
   for(const cp of PHASE2_CHECKPOINTS){
@@ -1711,8 +1813,8 @@ for(let ri=0;ri<reveal.length;ri++){
   drawPhasePlatform(q,ri+97);
   x.restore();
 }
-// Marcadores dos enigmas obrigatórios.
-for(const z of windows){x.fillStyle=z.on?"#ffe7a1":"#402d45";x.fillRect(z.x,z.y,44,58);x.strokeStyle="#c88b35";x.strokeRect(z.x,z.y,44,58)}
+// Enigma das Janelas Apagadas — casas reais, janela OFF/ON e FX de ativação.
+drawWindowPuzzle();
 for(const z of shadowSeals){x.fillStyle=z.on?"#b9eaff":"#171b2c";x.beginPath();x.arc(z.x,z.y,20,0,Math.PI*2);x.fill();x.strokeStyle="#78a5bb";x.stroke()}
 for(const z of towerSeals){x.fillStyle=z.on?"#fff0a8":"#512c65";x.beginPath();x.arc(z.x,z.y,22,0,Math.PI*2);x.fill();x.strokeStyle="#d0a65b";x.stroke()}
 x.fillStyle=allRequired()?"#e9c35e":"#4d344d";x.fillRect(7725,-480,300,70);x.strokeStyle="#d0a65b";x.lineWidth=4;x.strokeRect(7725,-480,300,70);x.fillStyle="#fff0b0";x.font="bold 14px Georgia";x.fillText(allRequired()?"SELO ABERTO — AÇÃO":"SELO FECHADO — "+solvedCount()+"/3 · TORRE "+(towerMechanism?"✓":"○"),7780,-438);
