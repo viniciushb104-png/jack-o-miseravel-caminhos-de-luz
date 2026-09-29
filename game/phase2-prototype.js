@@ -476,9 +476,9 @@ const windowFx={active:-1,t:0,duration:.88,errorT:0};
 const SHADOW_PUZZLE_ORDER=Object.freeze([1,0,2]);
 const shadowSeals=[
   // Centros exatos das plataformas 5820..6080, 6200..6460 e 6580..6840.
-  {x:5950,groundY:500,on:false,art:0,label:"Pedestal da Esquerda"},
-  {x:6330,groundY:420,on:false,art:1,label:"Pedestal Central"},
-  {x:6710,groundY:500,on:false,art:2,label:"Pedestal da Direita"}
+  {x:5950,groundY:512,on:false,art:0,label:"Pedestal da Esquerda"},
+  {x:6330,groundY:432,on:false,art:1,label:"Pedestal Central"},
+  {x:6710,groundY:512,on:false,art:2,label:"Pedestal da Direita"}
 ];let shadowStep=0;
 const shadowPuzzleAssets={off:[null,null,null],on:[null,null,null],clue:[null,null,null],fx:[null,null,null]};
 const shadowFx={active:-1,t:0,duration:.9,errorT:0};
@@ -1562,7 +1562,7 @@ function drawWindowPuzzle(){
 function drawShadowPuzzle(){
   // Escala pensada para as plataformas de 260 px: margem lateral limpa
   // e pedestal central discretamente maior para funcionar como ponto focal.
-  const pedestalH=[215,235,215];
+  const pedestalH=[232,252,232];
   // A pista seguinte é o coração do enigma: centro → esquerda → direita → Torre.
   const clueIndex=shadowStep<SHADOW_PUZZLE_ORDER.length?SHADOW_PUZZLE_ORDER[shadowStep]:2;
 
@@ -1599,13 +1599,13 @@ function drawShadowPuzzle(){
     const clue=shadowPuzzleAssets.clue[art];
     const clueVisible=(i===clueIndex&&!puzzles.sombras)||(puzzles.sombras&&i===2);
     if(clue&&clueVisible){
-      const ch=i===1?122:(i===2?116:112);
+      const ch=i===1?128:(i===2?122:118);
       const cw=ch*((clue.naturalWidth||clue.width||1)/(clue.naturalHeight||clue.height||1));
       const bob=Math.sin(p.anim*2.6+i)*3;
       x.save();
       x.globalAlpha=.72+Math.sin(p.anim*3.2+i)*.08;
       x.globalCompositeOperation="screen";
-      x.drawImage(clue,z.x-cw/2,z.groundY-h*.73-ch/2+bob,cw,ch);
+      x.drawImage(clue,z.x-cw/2,z.groundY-h*.69-ch/2+bob,cw,ch);
       x.restore();
     }
 
@@ -1614,7 +1614,7 @@ function drawShadowPuzzle(){
       if(fx){
         const u=1-shadowFx.t/shadowFx.duration;
         const alpha=Math.sin(Math.min(1,u)*Math.PI);
-        const fh=(i===1?140:132)+u*28;
+        const fh=(i===1?150:142)+u*30;
         const fw=fh*((fx.naturalWidth||fx.width||1)/(fx.naturalHeight||fx.height||1));
         x.save();x.globalAlpha=Math.max(0,alpha);x.globalCompositeOperation="screen";
         x.drawImage(fx,z.x-fw/2,z.groundY-h*.55-fh/2,fw,fh);
