@@ -475,9 +475,10 @@ const windowFx={active:-1,t:0,duration:.88,errorT:0};
 // Sombras do Minuto Perdido: CENTRO → ESQUERDA → DIREITA.
 const SHADOW_PUZZLE_ORDER=Object.freeze([1,0,2]);
 const shadowSeals=[
-  {x:5850,groundY:500,on:false,art:0,label:"Pedestal da Esquerda"},
-  {x:6250,groundY:420,on:false,art:1,label:"Pedestal Central"},
-  {x:6640,groundY:500,on:false,art:2,label:"Pedestal da Direita"}
+  // Centros exatos das plataformas 5820..6080, 6200..6460 e 6580..6840.
+  {x:5950,groundY:500,on:false,art:0,label:"Pedestal da Esquerda"},
+  {x:6330,groundY:420,on:false,art:1,label:"Pedestal Central"},
+  {x:6710,groundY:500,on:false,art:2,label:"Pedestal da Direita"}
 ];let shadowStep=0;
 const shadowPuzzleAssets={off:[null,null,null],on:[null,null,null],clue:[null,null,null],fx:[null,null,null]};
 const shadowFx={active:-1,t:0,duration:.9,errorT:0};
@@ -968,8 +969,7 @@ let clockDialogueSprite=null,clockPreludeVisualActive=false;
 const villagePlatformFiles=[
   "vila-plataforma-longa-baixa.png","vila-plataforma-longa-folhas.png","vila-plataforma-longa-ruinas.png",
   "vila-plataforma-media-folhas.png","vila-plataforma-media-vinhas.png","vila-plataforma-curta-a.png",
-  "vila-plataforma-curta-b.png","vila-plataforma-curta-vinhas.png","vila-plataforma-ruina-grande.png",
-  "vila-barraca-plataforma.png","vila-plataforma-telhado.png"
+  "vila-plataforma-curta-b.png","vila-plataforma-curta-vinhas.png","vila-plataforma-ruina-grande.png"
 ];
 const towerPlatformFiles=[
   "torre-plataforma-correntes.png","torre-plataforma-larga-engrenagem.png",
@@ -1091,6 +1091,10 @@ function unlockPhase2Trophy(){
 let saveClock=0;
 function saveJourney(){syncHealthHud();
   if(!journeyMode||replayMode||!journey?.isActive()||journey.currentPhase()!==2)return;
+  // Um checkpoint ativo guarda o progresso ATUAL da jornada, não apenas o instante
+  // em que foi aceso. Assim enigmas, engrenagens e inimigos concluídos depois dele
+  // continuam concluídos quando Jack retorna ao checkpoint.
+  if(activeCheckpoint)captureCheckpointProgress();
   localStorage.setItem(SAVE_KEY,JSON.stringify({
     x:p.x,y:p.y,dir:p.dir,activeCheckpoint,ameliaMet,introLorePlayed,gearLore,finalLorePlayed,bossUnlocked,bossActive,bossDefeated,clockCutsceneSeen,towerMechanism,playerLife,bossHp:boss.hp,
     gears:gears.map(g=>!!g.got),puzzles:{...puzzles},bells:bells.map(z=>!!z.on),windows:windows.map(z=>!!z.on),
@@ -1556,7 +1560,9 @@ function drawWindowPuzzle(){
   }
 }
 function drawShadowPuzzle(){
-  const pedestalH=[245,265,250];
+  // Escala pensada para as plataformas de 260 px: margem lateral limpa
+  // e pedestal central discretamente maior para funcionar como ponto focal.
+  const pedestalH=[215,235,215];
   // A pista seguinte é o coração do enigma: centro → esquerda → direita → Torre.
   const clueIndex=shadowStep<SHADOW_PUZZLE_ORDER.length?SHADOW_PUZZLE_ORDER[shadowStep]:2;
 
@@ -1593,7 +1599,7 @@ function drawShadowPuzzle(){
     const clue=shadowPuzzleAssets.clue[art];
     const clueVisible=(i===clueIndex&&!puzzles.sombras)||(puzzles.sombras&&i===2);
     if(clue&&clueVisible){
-      const ch=i===2?145:135;
+      const ch=i===1?122:(i===2?116:112);
       const cw=ch*((clue.naturalWidth||clue.width||1)/(clue.naturalHeight||clue.height||1));
       const bob=Math.sin(p.anim*2.6+i)*3;
       x.save();
@@ -1608,7 +1614,7 @@ function drawShadowPuzzle(){
       if(fx){
         const u=1-shadowFx.t/shadowFx.duration;
         const alpha=Math.sin(Math.min(1,u)*Math.PI);
-        const fh=150+u*35;
+        const fh=(i===1?140:132)+u*28;
         const fw=fh*((fx.naturalWidth||fx.width||1)/(fx.naturalHeight||fx.height||1));
         x.save();x.globalAlpha=Math.max(0,alpha);x.globalCompositeOperation="screen";
         x.drawImage(fx,z.x-fw/2,z.groundY-h*.55-fh/2,fw,fh);
@@ -1844,36 +1850,6 @@ function drawTiledGround(image,q,targetH,tower=false){
   }
   x.restore();return true;
 }
-function drawTowerPathCabinRoofMask(q){
-  if(q.x!==6200||q.y!==420)return false;
-  const a=environmentSprites.village;
-  const cabin=a["vila-barraca-plataforma.png"];
-  const roof=a["vila-plataforma-telhado.png"];
-
-  // 1) preserva/desenha a cabana inteira.
-  if(cabin){
-    const iw=cabin.naturalWidth||cabin.width||1,ih=cabin.naturalHeight||cabin.height||1;
-    const targetW=390,targetH=targetW*(ih/iw);
-    x.save();x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";
-    x.drawImage(cabin,q.x+q.w/2-targetW/2,q.y-targetH+46,targetW,targetH);
-    x.restore();
-  }
-
-  // 2) o telhado é desenhado POR CIMA, alinhado à linha de colisão.
-  // Assim Jack pisa no telhado sem substituir/apagar o corpo da cabana.
-  if(roof){
-    const m=platformSpriteMeta(roof);
-    const drawW=330,drawH=Math.max(92,drawW*(m.sh/m.sw));
-    const dx=q.x+q.w/2-drawW/2;
-    const dy=q.y-m.surfaceRatio*drawH-3;
-    x.save();
-    x.beginPath();x.rect(q.x-48,q.y-80,q.w+96,150);x.clip();
-    x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";
-    x.drawImage(roof,m.sx,m.sy,m.sw,m.sh,dx,dy,drawW,drawH);
-    x.restore();
-  }
-  return !!(cabin||roof);
-}
 function villageSpriteFor(q,index){
   const a=environmentSprites.village;
   if(q.h>=100)return a["vila-plataforma-longa-baixa.png"]||a["vila-plataforma-longa-folhas.png"];
@@ -1900,10 +1876,12 @@ function drawPhasePlatform(q,index){
     }else if(!drawPlatformSprite(sprite,q,105,24,true))drawFallbackPlatform(q,true);
     return;
   }
-  // Cabana do Caminho da Torre: corpo inteiro + telhado como máscara da plataforma.
-  // Não deixar a rotina genérica substituir a construção pelo recorte do telhado.
+  // Plataforma central do Enigma das Sombras: limpa, sem a antiga cabana,
+  // para o pedestal e sua pista visual serem o foco da composição.
   if(q.x===6200&&q.y===420){
-    if(!drawTowerPathCabinRoofMask(q))drawFallbackPlatform(q,false);
+    const puzzlePlatform=environmentSprites.village["vila-plataforma-media-vinhas.png"]
+      ||environmentSprites.village["vila-plataforma-media-folhas.png"];
+    if(!drawPlatformSprite(puzzlePlatform,q,92,22,false))drawFallbackPlatform(q,false);
     return;
   }
   const sprite=villageSpriteFor(q,index);
