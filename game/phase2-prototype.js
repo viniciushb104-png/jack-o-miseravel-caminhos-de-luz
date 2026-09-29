@@ -397,9 +397,25 @@ const WATCHER_FILES={
   hit:["watcher-hit-01.png","watcher-hit-02.png"],
   dissolve:["watcher-dissolve-01.png","watcher-dissolve-02.png","watcher-dissolve-03.png","watcher-dissolve-04.png","watcher-dissolve-05.png"]
 };
+function trimTransparentSprite(image,pad=2){
+  const iw=image.naturalWidth||image.width||1,ih=image.naturalHeight||image.height||1;
+  const src=document.createElement("canvas");src.width=iw;src.height=ih;
+  const sc=src.getContext("2d",{willReadFrequently:true});sc.clearRect(0,0,iw,ih);sc.drawImage(image,0,0);
+  try{
+    const data=sc.getImageData(0,0,iw,ih).data;
+    let minX=iw,minY=ih,maxX=-1,maxY=-1;
+    for(let y=0;y<ih;y++)for(let x0=0;x0<iw;x0++){
+      if(data[(y*iw+x0)*4+3]>8){if(x0<minX)minX=x0;if(x0>maxX)maxX=x0;if(y<minY)minY=y;if(y>maxY)maxY=y}
+    }
+    if(maxX<minX||maxY<minY)return image;
+    minX=Math.max(0,minX-pad);minY=Math.max(0,minY-pad);maxX=Math.min(iw-1,maxX+pad);maxY=Math.min(ih-1,maxY+pad);
+    const cw=maxX-minX+1,ch=maxY-minY+1,out=document.createElement("canvas");out.width=cw;out.height=ch;
+    out.getContext("2d").drawImage(src,minX,minY,cw,ch,0,0,cw,ch);return out;
+  }catch(err){return image}
+}
 const watcherAssets={idle:[],dash:[],hit:[],dissolve:[]};
 Object.entries(WATCHER_FILES).forEach(([state,files])=>files.forEach((file,i)=>{
-  img("../assets/game/phase2/enemies/window-watcher/"+file).then(image=>watcherAssets[state][i]=image).catch(()=>{});
+  img("../assets/game/phase2/enemies/window-watcher/"+file).then(image=>watcherAssets[state][i]=trimTransparentSprite(image,2)).catch(()=>{});
 }));
 const enemies=[
   {type:"raven",x:760,y:430,a:610,b:1020,d:1,hp:1,maxHp:1,speed:92,phase:0,state:"fly",stateT:0,diveCd:1.1,dead:false},
@@ -599,11 +615,17 @@ function drawWatcher(e){
   let idx=Math.floor(t*seq.fps);idx=seq.loop?idx%arr.length:Math.min(arr.length-1,idx);
   const sprite=arr[idx];if(!sprite)return false;
   const h=e.state==="dissolve"?148:e.state==="hit"?142:e.state==="dash"?132:136;
-  const w=h*(sprite.naturalWidth/Math.max(1,sprite.naturalHeight));
-  const crouch=e.state==="dash"&&e.stateT<.11?5:0;
+  const sw=sprite.naturalWidth||sprite.width||1,sh=sprite.naturalHeight||sprite.height||1;
+  const w=h*(sw/Math.max(1,sh));
+  const crouch=e.state==="dash"&&e.stateT<.11?3:0;
   const breathe=e.state==="idle"?1+Math.sin(p.anim*3+(e.phase||0))*.012:1;
+  // e.y=566 + 24 = 590: o limite inferior do sprite recortado toca exatamente o piso.
+  const groundY=e.y+24;
+  if(e.state!=="dissolve"){
+    x.save();x.globalAlpha=.17;x.fillStyle="#000";x.beginPath();x.ellipse(e.x,groundY-1,Math.min(34,w*.26),5.5,0,0,Math.PI*2);x.fill();x.restore();
+  }
   x.save();x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";
-  x.translate(e.x,e.y-h+20+crouch+h/2);if(e.d<0)x.scale(-1,1);x.scale(breathe,1/breathe);
+  x.translate(e.x,groundY-h/2+crouch);if(e.d<0)x.scale(-1,1);x.scale(breathe,1/breathe);
   if(e.hitT>0||e.state==="hit"){x.shadowColor="#ffd86b";x.shadowBlur=26;x.translate(Math.sin(p.anim*48)*3.5,0)}
   if(e.state==="dash"){x.shadowColor="#8b42ff";x.shadowBlur=15}
   if(e.state==="dissolve")x.globalAlpha=Math.max(0,1-(e.dissolveT||0)/.92*.5);
