@@ -179,8 +179,11 @@ function drawJack(){
    const im=waitSitImages[waitSitFrame];
    if(im){
      const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
-     const targetH=190,targetW=iw*(targetH/ih);
-     const dx=p.x-cam+p.w/2-targetW/2,dy=p.y+p.h-targetH;
+     // Individual assets share a transparent canvas. Calibrate their canvas to the
+     // gameplay Jack instead of treating the whole PNG as Jack's body height.
+     const targetH=164,targetW=iw*(targetH/ih);
+     const groundY=p.y+p.h+2;
+     const dx=p.x-cam+p.w/2-targetW/2,dy=groundY-targetH;
      x.save();x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";
      if(p.dir<0){x.translate(dx+targetW,0);x.scale(-1,1);x.drawImage(im,0,dy,targetW,targetH)}
      else x.drawImage(im,dx,dy,targetW,targetH);
