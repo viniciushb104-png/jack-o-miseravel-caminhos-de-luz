@@ -9,7 +9,7 @@ if(forceNewRun){localStorage.removeItem(SAVE_KEY);localStorage.removeItem(CHECKP
 let loadedSave=null;if(journeyMode&&!replayMode){try{loadedSave=JSON.parse(localStorage.getItem(SAVE_KEY)||"null")}catch(_){loadedSave=null}}
 
 const input={left:false,right:false,down:false,run:false,jump:false};
-let running=false,last=performance.now(),cam=0,jack=null,jackFrameOverrides={},introLorePlayed=!!loadedSave?.introLorePlayed,section=-1;
+let running=false,last=performance.now(),cam=0,jack=null,jackFrameOverrides={},introLorePlayed=!!loadedSave?.introLorePlayed,section=-1;\nlet idleTime=0,idleSpecialFrame=0,idleSpecialClock=0,idleSpecialImages=[];
 let memoryLight=0,memoryPulse=0,playerLife=Math.max(1,Math.min(3,Number(loadedSave?.playerLife)||3));
 let activeCheckpoint=loadedSave?.activeCheckpoint||localStorage.getItem(CHECKPOINT_KEY)||"";
 const p={x:Number.isFinite(loadedSave?.x)?loadedSave.x:120,y:Number.isFinite(loadedSave?.y)?loadedSave.y:470,w:46,h:86,vx:0,vy:0,dir:loadedSave?.dir===-1?-1:1,on:false,coyote:0,buffer:0,anim:0,attack:0};
@@ -104,7 +104,7 @@ function buildJackFrameOverrides(image){
    ])
  };
 }
-const jackStartupReady=img("../assets/game/phase1/sprites-hd/jack-atlas-hd.png").then(i=>{jack=i;jackFrameOverrides=buildJackFrameOverrides(i)}).catch(()=>{});
+const jackStartupReady=img("../assets/game/phase1/sprites-hd/jack-atlas-hd.png").then(i=>{jack=i;jackFrameOverrides=buildJackFrameOverrides(i)}).catch(()=>{});\nconst idleSpecialReady=Promise.allSettled(Array.from({length:7},(_,i)=>img("../assets/sprites/jack/idle-special/long-idle/jack-idle-long-idle-"+String(i+1).padStart(2,"0")+".png"))).then(rs=>{idleSpecialImages=rs.filter(r=>r.status==="fulfilled").map(r=>r.value)});
 
 // Reaproveita os seis retratos HD oficiais do Jack usados nos Halloweens anteriores.
 // A Fase 3 começa consistente visualmente e já fica pronta para receber Mara depois.
@@ -126,7 +126,7 @@ const jackDialogueReady=Promise.allSettled(
 });
 
 const phase3DialogueFrameReady=img("../assets/game/phase3/ui/phase3-dialogue-frame.png").catch(()=>null);
-window.__PHASE_ASSETS_READY=Promise.allSettled([jackStartupReady,jackDialogueReady,phase3DialogueFrameReady]).then(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
+window.__PHASE_ASSETS_READY=Promise.allSettled([jackStartupReady,jackDialogueReady,phase3DialogueFrameReady,idleSpecialReady]).then(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
 
 function jackSequenceFrame(seq,fps){return seq[Math.floor(p.anim*fps)%seq.length]}
 function currentJackFrame(){
