@@ -11,7 +11,8 @@
   const PHASE_FILES = Object.freeze({
     1: "phase1.html",
     2: "phase2-prototype.html",
-    3: "phase3.html"
+    3: "phase3.html",
+    4: "phase4.html"
   });
 
   function currentPhase() {
@@ -41,9 +42,11 @@
     localStorage.setItem("jack-journey-started-at", String(Date.now()));
     localStorage.removeItem("jack-phase2-save");
     localStorage.removeItem("jack-phase3-save");
+    localStorage.removeItem("jack-phase4-save");
     localStorage.removeItem("jack-journey-phase1-snapshot");
     localStorage.removeItem("jack-journey-phase2-snapshot");
     localStorage.removeItem("jack-journey-phase3-snapshot");
+    localStorage.removeItem("jack-journey-phase4-snapshot");
   }
 
   function advanceTo(phase) {
