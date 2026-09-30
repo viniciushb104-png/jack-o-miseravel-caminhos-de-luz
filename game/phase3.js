@@ -11,6 +11,7 @@ let loadedSave=null;if(journeyMode&&!replayMode){try{loadedSave=JSON.parse(local
 const input={left:false,right:false,down:false,run:false,jump:false};
 let running=false,last=performance.now(),cam=0,jack=null,jackFrameOverrides={},introLorePlayed=!!loadedSave?.introLorePlayed,section=-1;
 let idleTime=0,idleSpecialFrame=0,idleSpecialClock=0,idleSpecialMode="",idleSpecialImages={lantern:[],sit:[],soul:[],long:[]};
+let lastPlayerAction=performance.now();
 let memoryLight=0,memoryPulse=0,playerLife=Math.max(1,Math.min(3,Number(loadedSave?.playerLife)||3));
 let activeCheckpoint=loadedSave?.activeCheckpoint||localStorage.getItem(CHECKPOINT_KEY)||"";
 const p={x:Number.isFinite(loadedSave?.x)?loadedSave.x:120,y:Number.isFinite(loadedSave?.y)?loadedSave.y:470,w:46,h:86,vx:0,vy:0,dir:loadedSave?.dir===-1?-1:1,on:false,coyote:0,buffer:0,anim:0,attack:0};
@@ -153,7 +154,7 @@ function currentJackFrame(){
  return jackSequenceFrame(anims.idle,cfg.timing?.idleFps||2.4);
 }
 function drawJack(){
- if(idleSpecialMode&&p.on&&!dialogue.active){
+ if(idleSpecialMode&&!dialogue.active){
    const seq=idleSpecialImages[idleSpecialMode]||[],im=seq.length?seq[idleSpecialFrame%seq.length]:null;
    if(im){
      const rw=190,rh=190,dx=p.x-cam+p.w/2-rw/2,dy=p.y+p.h/2-132;
@@ -174,6 +175,7 @@ function drawJack(){
 }
 
 function useMemoryLight(){
+ lastPlayerAction=performance.now();idleTime=0;idleSpecialMode="";idleSpecialFrame=0;
  const duration=window.JACK_ANIMATIONS?.timing?.attackDuration||.48;
  p.attack=duration;
  memoryLight=3.25;memoryPulse=.65;
@@ -181,15 +183,15 @@ function useMemoryLight(){
 }
 
 function update(dt){
- if(dialogue.active){idleTime=0;idleSpecialMode="";p.vx*=.72;p.anim+=dt;return}
- const idleNow=p.on&&!input.left&&!input.right&&!input.down&&!input.jump&&!input.run&&p.attack<=0&&Math.abs(p.vx)<10;
+ if(dialogue.active){lastPlayerAction=performance.now();idleTime=0;idleSpecialMode="";p.vx*=.72;p.anim+=dt;return}
+ const idleNow=!input.left&&!input.right&&!input.down&&!input.jump&&!input.run&&p.attack<=0;
  if(idleNow){
-   idleTime+=dt;
+   idleTime=(performance.now()-lastPlayerAction)/1000;
    const nextMode=idleTime>=60?"long":idleTime>=40?"soul":idleTime>=25?"sit":idleTime>=8?"lantern":"";
    if(nextMode!==idleSpecialMode){idleSpecialMode=nextMode;idleSpecialFrame=0;idleSpecialClock=0}
    const seq=idleSpecialImages[idleSpecialMode]||[];
    if(idleSpecialMode&&seq.length){idleSpecialClock+=dt;if(idleSpecialClock>=.42){idleSpecialClock=0;idleSpecialFrame=(idleSpecialFrame+1)%seq.length}}
- }else{idleTime=0;idleSpecialClock=0;idleSpecialFrame=0;idleSpecialMode=""}
+ }else{lastPlayerAction=performance.now();idleTime=0;idleSpecialClock=0;idleSpecialFrame=0;idleSpecialMode=""}
  memoryLight=Math.max(0,memoryLight-dt);memoryPulse=Math.max(0,memoryPulse-dt);p.attack=Math.max(0,p.attack-dt);
  p.coyote=p.on?.12:Math.max(0,p.coyote-dt);
  if(input.jump){p.buffer=.14;input.jump=false}else p.buffer=Math.max(0,p.buffer-dt);
@@ -285,9 +287,9 @@ function draw(){
 
 function bindHold(id,key){const b=document.getElementById(id);["pointerdown","pointerup","pointercancel","pointerleave"].forEach(ev=>b.addEventListener(ev,()=>input[key]=ev==="pointerdown"))}
 bindHold("leftBtn","left");bindHold("rightBtn","right");bindHold("downBtn","down");
-document.getElementById("jumpBtn")?.addEventListener("pointerdown",()=>input.jump=true);
+document.getElementById("jumpBtn")?.addEventListener("pointerdown",()=>{lastPlayerAction=performance.now();idleTime=0;idleSpecialMode="";input.jump=true});
 document.getElementById("lightBtn")?.addEventListener("pointerdown",useMemoryLight);
-addEventListener("keydown",e=>{if(dialogue.active)return;if(["ArrowLeft","a","A"].includes(e.key))input.left=true;if(["ArrowRight","d","D"].includes(e.key))input.right=true;if(["ArrowDown","s","S"].includes(e.key))input.down=true;if(e.key==="Shift")input.run=true;if(e.code==="Space"){input.jump=true;e.preventDefault()}if(["f","F"].includes(e.key))useMemoryLight()});
+addEventListener("keydown",e=>{if(dialogue.active)return;lastPlayerAction=performance.now();idleTime=0;idleSpecialMode="";idleSpecialFrame=0;if(["ArrowLeft","a","A"].includes(e.key))input.left=true;if(["ArrowRight","d","D"].includes(e.key))input.right=true;if(["ArrowDown","s","S"].includes(e.key))input.down=true;if(e.key==="Shift")input.run=true;if(e.code==="Space"){input.jump=true;e.preventDefault()}if(["f","F"].includes(e.key))useMemoryLight()});
 addEventListener("keyup",e=>{if(["ArrowLeft","a","A"].includes(e.key))input.left=false;if(["ArrowRight","d","D"].includes(e.key))input.right=false;if(["ArrowDown","s","S"].includes(e.key))input.down=false;if(e.key==="Shift")input.run=false});
 
 document.getElementById("startGame").onclick=()=>{
