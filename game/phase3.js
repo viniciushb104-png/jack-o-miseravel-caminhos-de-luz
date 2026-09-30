@@ -289,11 +289,11 @@ function draw(){
  drawBackdrop();drawLeaves();drawWorld();drawJack();drawMemoryLight();
 }
 
-function bindHold(id,key){const b=document.getElementById(id);["pointerdown","pointerup","pointercancel","pointerleave"].forEach(ev=>b.addEventListener(ev,()=>{input[key]=ev==="pointerdown";if(ev==="pointerdown"){waitSince=performance.now();waitFrame=0;waitClock=0}}))}
+function bindHold(id,key){const b=document.getElementById(id);if(!b)return;["pointerdown","pointerup","pointercancel","pointerleave"].forEach(ev=>b.addEventListener(ev,()=>{input[key]=ev==="pointerdown";if(ev==="pointerdown"){waitSince=performance.now();waitMode="";waitFrame=0;waitClock=0}}))}
 bindHold("leftBtn","left");bindHold("rightBtn","right");bindHold("downBtn","down");
 document.getElementById("jumpBtn")?.addEventListener("pointerdown",()=>{waitSince=performance.now();waitMode="";waitFrame=0;waitClock=0;input.jump=true});
 document.getElementById("lightBtn")?.addEventListener("pointerdown",useMemoryLight);
-addEventListener("keydown",e=>{if(dialogue.active)return;waitSince=performance.now();waitFrame=0;waitClock=0;waitMode="";waitSince=performance.now();waitMode="";waitFrame=0;waitClock=0;if(["ArrowLeft","a","A"].includes(e.key))input.left=true;if(["ArrowRight","d","D"].includes(e.key))input.right=true;if(["ArrowDown","s","S"].includes(e.key))input.down=true;if(e.key==="Shift")input.run=true;if(e.code==="Space"){input.jump=true;e.preventDefault()}if(["f","F"].includes(e.key))useMemoryLight()});
+addEventListener("keydown",e=>{if(dialogue.active)return;waitSince=performance.now();waitMode="";waitFrame=0;waitClock=0;if(["ArrowLeft","a","A"].includes(e.key))input.left=true;if(["ArrowRight","d","D"].includes(e.key))input.right=true;if(["ArrowDown","s","S"].includes(e.key))input.down=true;if(e.key==="Shift")input.run=true;if(e.code==="Space"){input.jump=true;e.preventDefault()}if(["f","F"].includes(e.key))useMemoryLight()});
 addEventListener("keyup",e=>{if(["ArrowLeft","a","A"].includes(e.key))input.left=false;if(["ArrowRight","d","D"].includes(e.key))input.right=false;if(["ArrowDown","s","S"].includes(e.key))input.down=false;if(e.key==="Shift")input.run=false});
 
 document.getElementById("startGame").onclick=()=>{
