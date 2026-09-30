@@ -185,8 +185,10 @@ function drawJack(){
      // seated drawings occupy less of their transparent canvas, so compensate only
      // those frames instead of changing the good opening poses.
      const seated=waitSitFrame>=5;
-     const targetH=seated?202:164,targetW=iw*(targetH/ih);
-     const groundY=p.y+p.h+(seated?8:2);
+     // Frames 06–11 need a little more scale and a lower baseline because the
+     // character occupies less of their transparent source canvas.
+     const targetH=seated?222:164,targetW=iw*(targetH/ih);
+     const groundY=p.y+p.h+(seated?15:2);
      const dx=p.x-cam+p.w/2-targetW/2,dy=groundY-targetH;
      x.save();x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";
      if(p.dir<0){x.translate(dx+targetW,0);x.scale(-1,1);x.drawImage(im,0,dy,targetW,targetH)}
