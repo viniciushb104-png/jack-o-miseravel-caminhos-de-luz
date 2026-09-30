@@ -484,8 +484,8 @@ const shadowPuzzleAssets={off:[null,null,null],on:[null,null,null],clue:[null,nu
 const shadowFx={active:-1,t:0,duration:.9,errorT:0};
 // Selos temporais da Torre: inferior → superior.
 const towerSeals=[
-  {x:7890,groundY:110,on:false,art:0,label:"Selo Temporal Inferior"},
-  {x:8250,groundY:-140,on:false,art:1,label:"Selo Temporal Superior"}
+  {x:7890,groundY:132,on:false,art:0,label:"Selo Temporal Inferior"},
+  {x:8250,groundY:-118,on:false,art:1,label:"Selo Temporal Superior"}
 ];let towerStep=0;
 const towerPuzzleAssets={gears:[null,null,null],off:[null,null],on:[null,null],fx:[null,null],mechanism:null};
 const towerSealFx={active:-1,t:0,duration:1.05,errorT:0};
@@ -1693,7 +1693,8 @@ function drawCollectibleGears(){
   }
 }
 function drawTowerSeals(){
-  const sealH=[220,238];
+  // Os selos assentam visualmente sobre as plataformas, com uma escala um pouco mais nobre.
+  const sealH=[236,254];
   for(let i=0;i<towerSeals.length;i++){
     const z=towerSeals[i],h=sealH[i];
     if(z.x<cam-420||z.x>cam+W+420)continue;
@@ -1702,11 +1703,11 @@ function drawTowerSeals(){
     x.save();x.translate(shake,0);
     if(z.on){
       const pulse=.9+.1*Math.sin(p.anim*4+i);
-      const glow=x.createRadialGradient(z.x,z.groundY-h*.52,15,z.x,z.groundY-h*.52,125);
+      const glow=x.createRadialGradient(z.x,z.groundY-h*.48,15,z.x,z.groundY-h*.48,132);
       glow.addColorStop(0,"rgba(213,122,255,"+(.28*pulse)+")");
       glow.addColorStop(.55,"rgba(133,71,231,"+(.13*pulse)+")");
       glow.addColorStop(1,"rgba(90,40,180,0)");
-      x.fillStyle=glow;x.beginPath();x.arc(z.x,z.groundY-h*.52,125,0,Math.PI*2);x.fill();
+      x.fillStyle=glow;x.beginPath();x.arc(z.x,z.groundY-h*.48,132,0,Math.PI*2);x.fill();
     }
     if(sprite)drawAssetBottom(sprite,z.x,z.groundY,h,1);
     else{
@@ -1718,10 +1719,10 @@ function drawTowerSeals(){
       if(fx){
         const u=1-towerSealFx.t/towerSealFx.duration;
         const alpha=Math.sin(Math.min(1,u)*Math.PI);
-        const fh=(i===0?190:205)+u*48;
+        const fh=(i===0?200:216)+u*48;
         const fw=fh*((fx.naturalWidth||fx.width||1)/(fx.naturalHeight||fx.height||1));
         x.save();x.globalAlpha=Math.max(0,alpha);x.globalCompositeOperation="screen";
-        x.drawImage(fx,z.x-fw/2,z.groundY-h*.55-fh/2,fw,fh);
+        x.drawImage(fx,z.x-fw/2,z.groundY-h*.50-fh/2,fw,fh);
         x.restore();
       }
     }
