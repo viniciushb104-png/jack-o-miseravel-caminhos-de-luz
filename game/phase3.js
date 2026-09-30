@@ -16,7 +16,7 @@ let idleTime=0,waitSitFrame=0,waitSitClock=0,waitSitActive=false,waitSitImages=[
 let lastPlayerAction=performance.now();
 let memoryLight=0,memoryPulse=0,playerLife=Math.max(1,Math.min(3,Number(loadedSave?.playerLife)||3));
 let activeCheckpoint=loadedSave?.activeCheckpoint||localStorage.getItem(CHECKPOINT_KEY)||"";
-let maraSpriteSheet=null,maraRunSheet=null;
+let maraSpriteSheet=null,maraRunSheet=null,forestBackground=null,motherTreeBackground=null;
 let maraRun={active:false,x:2275,targetX:2275,groundY:590,onDone:null};
 let maraMet=!!loadedSave?.maraMet;
 let portraitsSolved=!!loadedSave?.portraitsSolved;
@@ -26,7 +26,8 @@ let voiceStep=Math.max(0,Math.min(3,Number(loadedSave?.voiceStep)||0));
 let jackEchoPlayed=!!loadedSave?.jackEchoPlayed;
 let motherTreeScene=!!loadedSave?.motherTreeScene;
 let archiveSolved=!!loadedSave?.archiveSolved;
-let archiveChoice=Math.max(0,Math.min(3,Number(loadedSave?.archiveChoice)||0));
+let archiveChoice=Math.max(0,Math.min(2,Number(loadedSave?.archiveChoice)||0));
+let archiveSeen=Array.isArray(loadedSave?.archiveSeen)?loadedSave.archiveSeen.slice(0,3).map(Boolean):[false,false,false];
 let bossPrelude=!!loadedSave?.bossPrelude;
 let bossActive=!!loadedSave?.bossActive,bossAct=Math.max(0,Math.min(3,Number(loadedSave?.bossAct)||0)),bossStep=Math.max(0,Number(loadedSave?.bossStep)||0),bossComplete=!!loadedSave?.bossComplete,finalePlayed=!!loadedSave?.finalePlayed;
 let bossCooldown=0,bossPulse=0;
@@ -94,7 +95,7 @@ function save(){
  localStorage.setItem(SAVE_KEY,JSON.stringify({
    x:p.x,y:p.y,dir:p.dir,playerLife,activeCheckpoint,introLorePlayed,
    maraMet,portraitsSolved,portraitChoices:[...portraitChoices],
-   voicesSolved,voiceStep,jackEchoPlayed,motherTreeScene,archiveSolved,archiveChoice,bossPrelude,bossActive,bossAct,bossStep,bossComplete,finalePlayed,savedAt:Date.now()
+   voicesSolved,voiceStep,jackEchoPlayed,motherTreeScene,archiveSolved,archiveChoice,archiveSeen:[...archiveSeen],bossPrelude,bossActive,bossAct,bossStep,bossComplete,finalePlayed,savedAt:Date.now()
  }));
 }
 function respawn(msg){
@@ -155,6 +156,8 @@ const jackPortraitReady=Promise.allSettled(
 const maraDialogueReady=img("../assets/game/phase3/mara/dialogue/mara-dialogue-sheet.png").catch(()=>null);
 const maraSpriteReady=img("../assets/game/phase3/mara/sprites/mara-sprite-sheet.png").then(im=>{maraSpriteSheet=im;return im}).catch(()=>null);
 const maraRunReady=img("../assets/game/phase3/mara/sprites/mara-run-sheet.png").then(im=>{maraRunSheet=im;return im}).catch(()=>null);
+const forestBackgroundReady=img("../assets/phase3/backgrounds/phase3-memory-forest-bg.png").then(im=>{forestBackground=im;return im}).catch(()=>null);
+const motherTreeBackgroundReady=img("../assets/phase3/backgrounds/phase3-mother-tree-area-bg.png").then(im=>{motherTreeBackground=im;return im}).catch(()=>null);
 
 const dialogueAssetsReady=Promise.all([jackPortraitReady,maraDialogueReady]).then(([jackFrames,maraSheet])=>{
  dialogue.setAssets({
@@ -168,7 +171,7 @@ const memoryLeavesReady=Promise.all(
  Array.from({length:6},(_,i)=>img("../assets/game/phase3/fx/memory-leaves/memory-leaf-"+String(i+1).padStart(2,"0")+".png"))
 ).then(images=>{memoryLeafImages.splice(0,memoryLeafImages.length,...images);return images}).catch(()=>[]);
 window.__PHASE_ASSETS_READY=Promise.allSettled([
- jackStartupReady,dialogueAssetsReady,maraSpriteReady,maraRunReady,phase3DialogueFrameReady,memoryLeavesReady
+ jackStartupReady,dialogueAssetsReady,maraSpriteReady,maraRunReady,forestBackgroundReady,motherTreeBackgroundReady,phase3DialogueFrameReady,memoryLeavesReady
 ]).then(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
 
 function jackSequenceFrame(seq,fps){return seq[Math.floor(p.anim*fps)%seq.length]}
@@ -300,6 +303,26 @@ function drawVoicePuzzleWorld(){
  });
 }
 
+function drawArchivePuzzleWorld(){
+ if(!voicesSolved||archiveSolved)return;
+ const items=story.archivePuzzle.entries;
+ const xs=[5525,5705,5885];
+ items.forEach((it,i)=>{
+   const px=xs[i],active=archiveChoice===i;
+   x.save();x.translate(px,0);
+   if(active){x.shadowColor="rgba(231,202,113,.65)";x.shadowBlur=20}
+   x.strokeStyle=active?"#d8bd72":"#796344";x.lineWidth=4;
+   x.beginPath();x.moveTo(0,590);x.quadraticCurveTo(-20,535,0,475);x.stroke();
+   x.fillStyle=active?"#d7c37d":"#786c4f";
+   if(i===0){x.fillRect(-27,442,54,36);x.strokeRect(-27,442,54,36)}
+   if(i===1){x.beginPath();x.arc(0,455,25,0,Math.PI*2);x.fill();x.strokeRect(-7,420,14,25)}
+   if(i===2){x.beginPath();x.arc(-8,451,13,0,Math.PI*2);x.stroke();x.fillRect(4,447,34,8);x.fillRect(28,447,7,18)}
+   x.shadowBlur=0;x.fillStyle="#efe0ad";x.font="700 11px Georgia";x.textAlign="center";x.fillText(["CARTA","MELODIA","CHAVE"][i],0,515);
+   x.restore();
+ });
+ x.save();x.fillStyle="rgba(10,14,11,.78)";x.fillRect(5460,330,500,58);x.strokeStyle="#8f784b";x.strokeRect(5460,330,500,58);
+ x.fillStyle="#ead9a3";x.font="italic 17px Georgia";x.textAlign="center";x.fillText(story.archivePuzzle.prompt,5710,365);x.restore();
+}
 function drawRootGate(xPos,open){
  if(open)return;
  x.save();x.translate(xPos,0);x.strokeStyle="#513923";x.lineCap="round";
@@ -425,20 +448,20 @@ function tryInteract(){
  lastPlayerAction=performance.now();idleTime=0;waitSitActive=false;
  const pc=p.x+p.w/2,m=maraWorldState();
  if(bossActive&&bossAct===3&&pc>6900){finishBoss();return}
- if(voicesSolved&&!archiveSolved&&pc>5480&&pc<5940){
-   archiveChoice=(archiveChoice+1)%4;
-   if(archiveChoice<3){
-     const item=story.archivePuzzle.entries[archiveChoice];
-     say(item.title+" — "+item.memory);
-   }else{
-     archiveSolved=true;banner("MEMÓRIA NÃO APAGADA — LIBERTADA");
-     dialogue.open([
-       {speaker:"JACK",portrait:"jack",expression:1,text:"Essa é a pergunta errada."},
-       {speaker:"MARA ROWAN",portrait:"mara",expression:3,text:"Como assim?"},
-       {speaker:"JACK",portrait:"jack",expression:5,text:"Não precisamos escolher o que deve ser esquecido. Precisamos deixar que siga adiante."},
-       {speaker:"MARA ROWAN",portrait:"mara",expression:5,text:"Deixar ir... sem fingir que nunca existiu."}
-     ],()=>{say("O Arquivo abriu o caminho para a Árvore-Mãe.");save()});
-   }
+ if(voicesSolved&&!archiveSolved&&pc>5440&&pc<5980){
+   const xs=[5525,5705,5885],near=xs.map((z,i)=>({i,d:Math.abs(z-pc)})).sort((a,b)=>a.d-b.d)[0];
+   archiveChoice=near.i;archiveSeen[near.i]=true;
+   const item=story.archivePuzzle.entries[near.i];
+   if(!archiveSeen.every(Boolean)){say(item.title+" — "+item.memory+" ("+archiveSeen.filter(Boolean).length+"/3 lembranças ouvidas)");save();return}
+   p.vx=0;archiveSolved=true;banner("MEMÓRIA NÃO APAGADA — LIBERTADA");
+   dialogue.open([
+     {speaker:"MARA ROWAN",portrait:"mara",expression:3,text:"Qual delas devemos apagar, Jack? A carta? A melodia? A chave?"},
+     {speaker:"JACK",portrait:"jack",expression:1,text:"Essa é a pergunta errada."},
+     {speaker:"MARA ROWAN",portrait:"mara",expression:3,text:"Como assim?"},
+     {speaker:"JACK",portrait:"jack",expression:5,text:"Não precisamos escolher o que deve ser esquecido. Precisamos deixar que siga adiante."},
+     {speaker:"MARA ROWAN",portrait:"mara",expression:5,text:"Deixar ir... sem fingir que nunca existiu."},
+     {speaker:"JACK",portrait:"jack",expression:2,text:"Finalmente uma porta que abre sem eu precisar arrombá-la."}
+   ],()=>{say("As raízes soltaram o caminho para a Árvore-Mãe.");startMaraRun(5575,6380,()=>save());save()});
    save();return;
  }
  if(!maraRun.active&&Math.abs(pc-m.x)<120){
@@ -475,7 +498,7 @@ function updateNarrativeTriggers(){
  if(dialogue.active)return;
  if(!maraMet&&p.x>2160){
    maraMet=true;p.vx=0;
-   dialogue.open(story.dialogues.maraMeeting,()=>{say("Os retratos respondem à Luz. F revela a lembrança; E troca o nome.");save()});
+   dialogue.open(story.dialogues.maraMeeting,()=>{say("Os retratos respondem à Luz. F revela a lembrança; E troca o nome.");startMaraRun(2275,2700,()=>{banner("BOSQUE DOS RETRATOS");save()});save()});
    return;
  }
  if(voicesSolved&&archiveSolved&&!motherTreeScene&&p.x>6000){
@@ -562,26 +585,25 @@ function update(dt){
 }
 let saveClock=0;
 
+function drawCoverImage(im,alpha=1,offsetX=0){
+ if(!im)return;
+ const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+ const scale=Math.max(W/iw,H/ih),dw=iw*scale,dh=ih*scale;
+ x.save();x.globalAlpha=alpha;x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";
+ x.drawImage(im,(W-dw)/2+offsetX,(H-dh)/2,dw,dh);x.restore();
+}
 function drawBackdrop(){
  const g=x.createLinearGradient(0,0,0,H);g.addColorStop(0,"#071318");g.addColorStop(.5,"#16251d");g.addColorStop(1,"#2c251a");x.fillStyle=g;x.fillRect(0,0,W,H);
- x.save();
- // lua pálida
- x.globalAlpha=.7;x.fillStyle="#e9ddb3";x.beginPath();x.arc(1010,135,68,0,Math.PI*2);x.fill();x.globalAlpha=1;
- // floresta distante
- for(let layer=0;layer<3;layer++){
-   const speed=[.08,.17,.28][layer],base=505-layer*34;
-   x.fillStyle=["#102017","#14281b","#19301f"][layer];
-   const offset=-(cam*speed)%180;
-   for(let i=-2;i<10;i++){
-     const px=offset+i*180+(layer*43),h=185+((i*37+layer*41)%95);
-     x.fillRect(px+75,base-h,16+layer*4,h);
-     x.beginPath();x.moveTo(px,base-h+42);x.lineTo(px+85,base-h-54);x.lineTo(px+165,base-h+42);x.fill();
-     x.beginPath();x.moveTo(px+10,base-h+95);x.lineTo(px+85,base-h+8);x.lineTo(px+160,base-h+95);x.fill();
-   }
+ // Cenário oficial do Bosque das Memórias, com parallax muito leve.
+ if(forestBackground)drawCoverImage(forestBackground,1,-((cam*.035)%36));
+ // A arte da Árvore-Mãe entra gradualmente no último trecho para não haver corte seco.
+ if(motherTreeBackground){
+   const blend=Math.max(0,Math.min(1,(cam-5350)/700));
+   if(blend>0)drawCoverImage(motherTreeBackground,blend,-((cam*.018)%20));
  }
- // névoa baixa
- const fog=x.createLinearGradient(0,430,0,H);fog.addColorStop(0,"rgba(194,209,170,0)");fog.addColorStop(1,"rgba(164,190,146,.13)");x.fillStyle=fog;x.fillRect(0,420,W,300);
- x.restore();
+ // Vignette/fog mantém Jack legível sobre as duas pinturas.
+ const fog=x.createLinearGradient(0,390,0,H);fog.addColorStop(0,"rgba(10,18,13,0)");fog.addColorStop(1,"rgba(8,14,10,.24)");x.fillStyle=fog;x.fillRect(0,390,W,H);
+ const vg=x.createRadialGradient(W/2,H/2,220,W/2,H/2,760);vg.addColorStop(.55,"rgba(0,0,0,0)");vg.addColorStop(1,"rgba(0,0,0,.26)");x.fillStyle=vg;x.fillRect(0,0,W,H);
 }
 
 function drawLeaves(){
@@ -632,6 +654,7 @@ function drawWorld(){
  }
  drawPortraitPuzzleWorld();
  drawVoicePuzzleWorld();
+ drawArchivePuzzleWorld();
  drawRootGate(3740,portraitsSolved);
  drawRootGate(5200,voicesSolved);
  drawMotherTreeAndBoss();
