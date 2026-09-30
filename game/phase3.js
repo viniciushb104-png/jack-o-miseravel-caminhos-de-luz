@@ -10,7 +10,7 @@ let loadedSave=null;if(journeyMode&&!replayMode){try{loadedSave=JSON.parse(local
 
 const input={left:false,right:false,down:false,run:false,jump:false};
 let running=false,last=performance.now(),cam=0,jack=null,jackFrameOverrides={},introLorePlayed=!!loadedSave?.introLorePlayed,section=-1;
-let idleTime=0,idleSpecialFrame=0,idleSpecialClock=0,idleSpecialMode="",idleSpecialImages={lantern:[],sit:[],soul:[],long:[]};
+let idleTime=0,idleSpecialFrame=0,idleSpecialClock=0,idleSpecialMode="",idleSpecialImages={lantern:[],curious:[],sit:[],soul:[],startled:[],long:[]};
 let lastPlayerAction=performance.now();
 let memoryLight=0,memoryPulse=0,playerLife=Math.max(1,Math.min(3,Number(loadedSave?.playerLife)||3));
 let activeCheckpoint=loadedSave?.activeCheckpoint||localStorage.getItem(CHECKPOINT_KEY)||"";
@@ -107,13 +107,16 @@ function buildJackFrameOverrides(image){
  };
 }
 const jackStartupReady=img("../assets/game/phase1/sprites-hd/jack-atlas-hd.png").then(i=>{jack=i;jackFrameOverrides=buildJackFrameOverrides(i)}).catch(()=>{});
-const loadIdleSet=(folder,prefix,count)=>Promise.allSettled(Array.from({length:count},(_,i)=>img("../assets/sprites/jack/idle-special/"+folder+"/"+prefix+String(i+1).padStart(2,"0")+".png"))).then(rs=>rs.filter(r=>r.status==="fulfilled").map(r=>r.value));
-Promise.all([
- loadIdleSet("lantern","jack-idle-lantern-",1),
- loadIdleSet("sit","jack-idle-sit-",1),
- loadIdleSet("soul","jack-idle-soul-",1),
- loadIdleSet("long-idle","jack-idle-long-idle-",7)
-]).then(([lantern,sit,soul,long])=>{idleSpecialImages={lantern,sit,soul,long}}).catch(()=>{});
+// Optional idle-v2 sheets. They never participate in __PHASE_ASSETS_READY.
+const idleV2Files={
+ lantern:"../assets/sprites/jack/idle-v2/lantern/jack-idle-lantern-sheet.png",
+ curious:"../assets/sprites/jack/idle-v2/curious/jack-idle-curious-sheet.png",
+ sit:"../assets/sprites/jack/idle-v2/sit/jack-idle-sit-sheet.png",
+ soul:"../assets/sprites/jack/idle-v2/soul/jack-idle-soul-sheet.png",
+ startled:"../assets/sprites/jack/idle-v2/startled/jack-idle-startled-sheet.png",
+ long:"../assets/sprites/jack/idle-v2/long/jack-idle-long-sheet.png"
+};
+Object.entries(idleV2Files).forEach(([k,src])=>img(src).then(im=>idleSpecialImages[k]=[im]).catch(()=>{}));
 
 // Reaproveita os seis retratos HD oficiais do Jack usados nos Halloweens anteriores.
 // A Fase 3 começa consistente visualmente e já fica pronta para receber Mara depois.
@@ -153,27 +156,27 @@ function currentJackFrame(){
  const speed=Math.abs(p.vx);if(speed>=18){if(input.run&&speed>170)return jackSequenceFrame(anims.run,cfg.timing?.runFps||12);return jackSequenceFrame(anims.walk,cfg.timing?.walkFps||9)}
  return jackSequenceFrame(anims.idle,cfg.timing?.idleFps||2.4);
 }
-// Special-idle strips: crop only the artwork band (never the caption/text below).
-// Scale is tuned per action because the generated figures occupy different amounts of each cell.
-const IDLE_STRIPS={
- lantern:{image:0,frames:8,x:9,y:190,w:238,h:62,scale:2.18,lift:0},
- sit:{image:0,frames:8,x:9,y:204,w:238,h:45,scale:2.28,lift:0},
- soul:{image:0,frames:8,x:9,y:195,w:238,h:54,scale:2.22,lift:0},
- long:{image:4,frames:7,x:9,y:188,w:238,h:60,scale:2.20,lift:0}
+// Exact grids of the six new idle-v2 sprite sheets.
+const IDLE_V2={
+ lantern:{cols:10,rows:2,frames:20},
+ curious:{cols:10,rows:3,frames:30},
+ sit:{cols:10,rows:3,frames:30},
+ soul:{cols:10,rows:3,frames:30},
+ startled:{cols:10,rows:3,frames:30},
+ long:{cols:10,rows:3,frames:30}
 };
-function idleStripRect(mode,frame){
- const s=IDLE_STRIPS[mode];if(!s)return null;
- const fw=s.w/s.frames,i=frame%s.frames;
- return {imgIndex:s.image,sx:s.x+i*fw,sy:s.y,sw:fw,sh:s.h,scale:s.scale||2.2,lift:s.lift||0};
+function idleStripRect(mode,frame,im){
+ const s=IDLE_V2[mode];if(!s||!im)return null;
+ const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height,cw=iw/s.cols,ch=ih/s.rows,i=frame%s.frames;
+ return {imgIndex:0,sx:(i%s.cols)*cw,sy:Math.floor(i/s.cols)*ch,sw:cw,sh:ch,scale:1,lift:0};
 }
 function drawJack(){
  if(idleSpecialMode&&!dialogue.active){
-   const seq=idleSpecialImages[idleSpecialMode]||[],r=idleStripRect(idleSpecialMode,idleSpecialFrame);
-   const im=r&&seq[r.imgIndex];
+   const seq=idleSpecialImages[idleSpecialMode]||[],im=seq[0],r=idleStripRect(idleSpecialMode,idleSpecialFrame,im);
    if(im){
      // Draw the cropped cell at a calibrated pixel-art scale. The feet are anchored
      // to the exact gameplay collision floor (p.y+p.h), so Jack stays on platforms.
-     const targetW=r.sw*r.scale,targetH=r.sh*r.scale;
+     const targetH=190,targetW=r.sw*(targetH/r.sh);
      const dx=p.x-cam+p.w/2-targetW/2,feetY=p.y+p.h-r.lift,dy=feetY-targetH;
      x.save();x.imageSmoothingEnabled=false;
      if(p.dir<0){x.translate(dx+targetW,0);x.scale(-1,1);x.drawImage(im,r.sx,r.sy,r.sw,r.sh,0,dy,targetW,targetH)}
@@ -204,10 +207,10 @@ function update(dt){
  const idleNow=!input.left&&!input.right&&!input.down&&!input.jump&&!input.run&&p.attack<=0;
  if(idleNow){
    idleTime=(performance.now()-lastPlayerAction)/1000;
-   const nextMode=idleTime>=60?"long":idleTime>=40?"soul":idleTime>=25?"sit":idleTime>=8?"lantern":"";
+   const nextMode=idleTime>=60?"long":idleTime>=50?"startled":idleTime>=40?"soul":idleTime>=25?"sit":idleTime>=15?"curious":idleTime>=8?"lantern":"";
    if(nextMode!==idleSpecialMode){idleSpecialMode=nextMode;idleSpecialFrame=0;idleSpecialClock=0}
    const seq=idleSpecialImages[idleSpecialMode]||[];
-   const strip=IDLE_STRIPS[idleSpecialMode],frameCount=seq.length&&strip?strip.frames:seq.length;
+   const strip=IDLE_V2[idleSpecialMode],frameCount=seq.length&&strip?strip.frames:seq.length;
    if(idleSpecialMode&&frameCount){idleSpecialClock+=dt;if(idleSpecialClock>=.32){idleSpecialClock=0;idleSpecialFrame=(idleSpecialFrame+1)%frameCount}}
  }else{lastPlayerAction=performance.now();idleTime=0;idleSpecialClock=0;idleSpecialFrame=0;idleSpecialMode=""}
  memoryLight=Math.max(0,memoryLight-dt);memoryPulse=Math.max(0,memoryPulse-dt);p.attack=Math.max(0,p.attack-dt);
