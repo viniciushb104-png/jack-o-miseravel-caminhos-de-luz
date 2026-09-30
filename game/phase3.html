@@ -69,7 +69,17 @@
 <script src="engine/journey.js?v=2"></script>
 <script src="engine/dialogue.js?v=6"></script>
 <script src="data/phase1/jack-animations.js?v=1"></script>
-<script src="phase3.js?v=4"></script>
+<script src="phase3.js?v=074d219"></script>
+<script>
+/* Failsafe: the intro must always be enterable even if phase3.js stops before binding its handler. */
+document.getElementById("startGame")?.addEventListener("click",function(){
+  const intro=document.getElementById("intro");
+  if(intro && !intro.hidden){
+    intro.hidden=true;
+    intro.style.display="none";
+  }
+});
+</script>
 <script src="preloader.js?v=2"></script>
 </body>
 </html>
