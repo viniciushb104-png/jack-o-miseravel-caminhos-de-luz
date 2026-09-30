@@ -368,13 +368,16 @@ function finishPortraitPuzzle(){
  const names=story.portraitPuzzle.names;
  const all=story.portraitPuzzle.entries.every((q,i)=>names[portraitChoices[i]]===q.correct);
  if(!all)return;
- portraitsSolved=true;voiceStep=0;
+ portraitsSolved=true;voiceStep=0;portraitMemoryProofPlayed=true;
  banner("MEMÓRIA RECONSTRUÍDA — OS RETRATOS");
  p.vx=0;save();
  dialogue.open(story.dialogues.portraitsSolved,()=>{
-   say("Mara correu em direção ao Lago das Vozes.");
-   startMaraRun(2275,4020,()=>{banner("MARA CHEGOU AO LAGO DAS VOZES");save()});
-   save();
+   memoryPulse=1.15;
+   dialogue.open(story.dialogues.portraitMemoryProof,()=>{
+     say("Mara correu em direção ao Lago das Vozes.");
+     startMaraRun(2275,4020,()=>{banner("MARA CHEGOU AO LAGO DAS VOZES");save()});
+     save();
+   });
  });
 }
 
@@ -393,54 +396,134 @@ function activateVoice(i){
  dialogue.open(story.dialogues.voicesSolved,()=>{
    jackEchoPlayed=true;memoryPulse=1.2;banner("UMA MEMÓRIA QUE NÃO PERTENCE AO BOSQUE");
    setTimeout(()=>dialogue.open(story.dialogues.jackMemoryLeak,()=>{
-     say("Mara correu para o Arquivo das Raízes.");
-     startMaraRun(4020,5575,()=>{banner("MARA CHEGOU AO ARQUIVO DAS RAÍZES");save()});
-     save();
+     maraJackSuspicionPlayed=true;
+     dialogue.open(story.dialogues.maraStudiesJack,()=>{
+       say("Mara correu para o Arquivo das Raízes.");
+       startMaraRun(4020,5575,()=>{banner("MARA CHEGOU AO ARQUIVO DAS RAÍZES");save()});
+       save();
+     });
    }),360);
  });
 }
 
-
 function startBoss(){
  if(bossActive||bossComplete)return;
- bossActive=true;bossAct=1;bossStep=0;bossPulse=1.4;p.vx=0;
+ bossActive=true;bossAct=1;bossStep=0;bossPulse=1.6;bossFirstStrike=false;bossFacesSeen=[false,false,false];maraBossX=6700;p.vx=0;
  banner(story.boss.name+" — "+story.boss.acts[0].title);
- dialogue.open(story.dialogues.bossAwakening,()=>{say("ATO I: ilumine o Arquivista três vezes. Cada luz liberta um rosto em vez de feri-lo.");save()});
+ say("A ordem ganhou corpo. Tente usar a Luz no Arquivista.");
  save();
 }
 function advanceBossWithLight(){
  if(!bossActive||bossComplete||bossCooldown>0)return false;
- bossCooldown=.65;bossPulse=1;
+ bossCooldown=.58;bossPulse=1.25;
+ const pc=p.x+p.w/2;
+
  if(bossAct===1){
-   bossStep++;
-   say(["Lívia foi lembrada pelo pão que repartiu.","Tomás foi lembrado pelo que restaurou.","Celina foi lembrada pela música que deixou."][Math.min(2,bossStep-1)]);
-   if(bossStep>=3){bossAct=2;bossStep=0;p.vx=0;dialogue.open(story.dialogues.bossAct2,()=>{banner(story.boss.acts[1].title);say("Repita a sequência aprendida no Lago: I → II → III.");save()})}
+   if(!bossFirstStrike){
+     bossFirstStrike=true;bossPulse=2.4;
+     dialogue.open(story.dialogues.bossFirstStrike,()=>{
+       banner(story.boss.acts[0].title);
+       say("Procure os três rostos presos ao redor do Arquivista e ilumine cada um.");
+       save();
+     });
+     save();return true;
+   }
+   const nearest=bossFacePositions.map((z,i)=>({i,d:Math.abs(z-pc)})).sort((a,b)=>a.d-b.d)[0];
+   if(nearest.d>145){say("A Luz toca o corpo do Arquivista, mas ele se recompõe. Procure um rosto preso.");return true}
+   if(bossFacesSeen[nearest.i]){say("Esse rosto já foi reconhecido. Há outras memórias presas.");return true}
+   bossFacesSeen[nearest.i]=true;
+   const lines=[
+     "Lívia foi lembrada pelo pão que repartiu.",
+     "Tomás foi lembrado pelo que restaurou.",
+     "Celina foi lembrada pela música que deixou."
+   ];
+   say(lines[nearest.i]);memoryPulse=1.1;
+   if(bossFacesSeen.every(Boolean)){
+     p.vx=0;
+     dialogue.open(story.dialogues.bossAct1Solved,()=>{
+       bossAct=2;bossStep=0;
+       dialogue.open(story.dialogues.bossAct2,()=>{
+         banner(story.boss.acts[1].title);
+         say("Repita a sequência aprendida no Lago. A ordem dos ecos ainda importa.");
+         save();
+       });
+     });
+   }
    save();return true;
  }
+
  if(bossAct===2){
-   const expected=[1,2,0][bossStep],zones=[7160,6960,7360],pc=p.x+p.w/2;
+   const expected=[1,2,0][bossStep],zones=[7160,6960,7360];
    const chosen=zones.map((z,i)=>({i,d:Math.abs(z-pc)})).sort((a,b)=>a.d-b.d)[0];
    if(chosen.d>125){say("Aproxime-se de um dos três ecos antes de usar a Luz.");return true}
-   if(chosen.i!==expected){bossStep=0;banner("AS VOZES SE EMBARALHARAM");say("O Arquivista misturou os ecos. Recomece a sequência.");save();return true}
+   if(chosen.i!==expected){
+     bossStep=0;banner("AS VOZES SE EMBARALHARAM");
+     say("O Arquivista misturou os ecos. Recomece a frase de Mara.");save();return true;
+   }
    bossStep++;say("Eco reconhecido — "+bossStep+"/3.");
-   if(bossStep>=3){bossAct=3;bossStep=0;p.vx=0;dialogue.open(story.dialogues.bossAct3,()=>{banner(story.boss.acts[2].title);say("Não ataque. Caminhe com Mara até o coração e use E.");save()})}
+   if(bossStep>=3){
+     p.vx=0;
+     dialogue.open(story.dialogues.bossAct2Solved,()=>{
+       bossAct=3;bossStep=0;maraBossX=6700;
+       dialogue.open(story.dialogues.bossAct3,()=>{
+         banner(story.boss.acts[2].title);
+         say("Abra caminho para Mara: aproxime-se da raiz que bloqueia a passagem e use F.");
+         save();
+       });
+     });
+   }
+   save();return true;
+ }
+
+ if(bossAct===3){
+   if(maraRun.active){say("Mara está avançando. Mantenha o caminho aberto.");return true}
+   if(bossStep>=bossRootPositions.length){say("O coração da ordem está exposto. Aproxime-se e pressione E.");return true}
+   const rootX=bossRootPositions[bossStep];
+   if(Math.abs(rootX-pc)>150){say("A Luz precisa alcançar a raiz que bloqueia Mara.");return true}
+   bossStep++;
+   bossPulse=1.7;memoryPulse=1.1;
+   const targets=[6815,6935,7025],target=targets[Math.min(targets.length-1,bossStep-1)];
+   startMaraRun(maraBossX,target,()=>{maraBossX=target;banner("MARA AVANÇOU — "+bossStep+"/"+bossRootPositions.length);save()});
+   say("A raiz soltou uma memória. Mara pode avançar.");
    save();return true;
  }
  return false;
 }
+function unlockPhase3(){
+ const firstClear=localStorage.getItem("jack-phase3-complete")!=="yes";
+ localStorage.setItem("jack-phase3-complete","yes");
+ if(firstClear)localStorage.setItem("jack-phase3-clear-count",String(Number(localStorage.getItem("jack-phase3-clear-count")||0)+1));
+ return firstClear;
+}
+function showPhase3Complete(){
+ const firstClear=unlockPhase3();
+ finalePlayed=true;endingSequenceActive=false;
+ banner(firstClear?"MEMÓRIA RECUPERADA — MARA ROWAN":"MEMÓRIA REVIVIDA — MARA ROWAN");
+ say(firstClear?"O troféu de Mara foi adicionado às Memórias.":"O Bosque das Memórias foi atravessado novamente.");
+ save();
+ setTimeout(()=>{if(phase3CompleteRoot)phase3CompleteRoot.hidden=false},700);
+}
 function finishBoss(){
- if(!bossActive||bossAct!==3||bossComplete)return;
- bossActive=false;bossComplete=true;bossPulse=2;p.vx=0;
+ if(!bossActive||bossAct!==3||bossComplete||bossStep<bossRootPositions.length)return;
+ const pc=p.x+p.w/2;
+ if(pc<6950){say("Aproxime-se do coração da ordem.");return}
+ endingSequenceActive=true;p.vx=0;
  dialogue.open(story.dialogues.bossLight,()=>dialogue.open(story.finale.maraRelease,()=>{
-   banner("AS FOLHAS VOLTARAM A CAIR");
-   dialogue.open(story.finale.jackRevelation,()=>dialogue.open(story.finale.epilogue,()=>{
-     finalePlayed=true;banner("MEMÓRIA RECUPERADA — MARA ROWAN");
-     say("Jack segue adiante. A pergunta sobre seu próprio caminho permanece.");
-     save();
-   }));
+   bossActive=false;bossComplete=true;bossReleaseT=3.2;bossPulse=2.8;
+   banner("A PRIMEIRA FOLHA CAIU");
+   save();
+   // O silêncio depois do boss é parte da resolução: nenhuma fala por alguns instantes.
+   setTimeout(()=>{
+     dialogue.open(story.finale.epilogue,()=>{
+       dialogue.open(story.finale.jackRevelation,()=>{
+         dialogue.open(story.finale.finalExchange,showPhase3Complete);
+       });
+     });
+   },2200);
  }));
  save();
 }
+
 function drawMotherTreeAndBoss(){
  if(!motherTreeScene&&p.x<6000)return;
 
