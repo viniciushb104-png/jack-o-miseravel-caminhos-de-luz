@@ -165,10 +165,22 @@ const IDLE_V2={
  startled:{cols:10,rows:3,frames:30},
  long:{cols:10,rows:3,frames:30}
 };
+const idleV2CropCache={};
 function idleStripRect(mode,frame,im){
  const s=IDLE_V2[mode];if(!s||!im)return null;
  const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height,cw=iw/s.cols,ch=ih/s.rows,i=frame%s.frames;
- return {imgIndex:0,sx:(i%s.cols)*cw,sy:Math.floor(i/s.cols)*ch,sw:cw,sh:ch,scale:1,lift:0};
+ const key=mode+":"+i;if(idleV2CropCache[key])return idleV2CropCache[key];
+ // Detect the real non-transparent artwork inside each grid cell, removing sheet padding.
+ const cv=document.createElement("canvas"),cx=cv.getContext("2d",{willReadFrequently:true});
+ cv.width=Math.ceil(cw);cv.height=Math.ceil(ch);
+ const cellX=(i%s.cols)*cw,cellY=Math.floor(i/s.cols)*ch;
+ cx.drawImage(im,cellX,cellY,cw,ch,0,0,cv.width,cv.height);
+ const data=cx.getImageData(0,0,cv.width,cv.height).data;
+ let minX=cv.width,minY=cv.height,maxX=-1,maxY=-1;
+ for(let y=0;y<cv.height;y++)for(let x0=0;x0<cv.width;x0++){if(data[(y*cv.width+x0)*4+3]>12){if(x0<minX)minX=x0;if(x0>maxX)maxX=x0;if(y<minY)minY=y;if(y>maxY)maxY=y}}
+ if(maxX<0)return null;
+ const pad=2,minXp=Math.max(0,minX-pad),minYp=Math.max(0,minY-pad),maxXp=Math.min(cv.width-1,maxX+pad),maxYp=Math.min(cv.height-1,maxY+pad);
+ return idleV2CropCache[key]={sx:cellX+minXp*(cw/cv.width),sy:cellY+minYp*(ch/cv.height),sw:(maxXp-minXp+1)*(cw/cv.width),sh:(maxYp-minYp+1)*(ch/cv.height)};
 }
 function drawJack(){
  if(idleV2Mode&&!dialogue.active){
@@ -176,9 +188,10 @@ function drawJack(){
    if(im){
      // Draw the cropped cell at a calibrated pixel-art scale. The feet are anchored
      // to the exact gameplay collision floor (p.y+p.h), so Jack stays on platforms.
-     // Match the normal gameplay Jack (190x190 render box), preserving each cell aspect ratio.
-     const box=190,ratio=r.sw/r.sh,targetH=box,targetW=box*ratio;
-     const dx=p.x-cam+p.w/2-targetW/2,feetY=p.y+p.h-r.lift,dy=feetY-targetH;
+     // Match Jack by visible character height, not by the padded sprite-sheet cell.
+     // Normal Jack occupies roughly 150px inside his 190px render box.
+     const normalVisibleH=150,targetH=normalVisibleH,targetW=r.sw*(targetH/r.sh);
+     const dx=p.x-cam+p.w/2-targetW/2,feetY=p.y+p.h,dy=feetY-targetH;
      x.save();x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";
      if(p.dir<0){x.translate(dx+targetW,0);x.scale(-1,1);x.drawImage(im,r.sx,r.sy,r.sw,r.sh,0,dy,targetW,targetH)}
      else x.drawImage(im,r.sx,r.sy,r.sw,r.sh,dx,dy,targetW,targetH);
