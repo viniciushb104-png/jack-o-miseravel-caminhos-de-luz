@@ -107,15 +107,24 @@ function buildJackFrameOverrides(image){
  };
 }
 const jackStartupReady=img("../assets/game/phase1/sprites-hd/jack-atlas-hd.png").then(i=>{jack=i;jackFrameOverrides=buildJackFrameOverrides(i)}).catch(()=>{});
-Promise.allSettled([
- img("../assets/sprites/jack/idle-special/lantern/jack-idle-lantern-sheet.png"),
- img("../assets/sprites/jack/idle-special/sit/jack-idle-sit-sheet.png"),
- img("../assets/sprites/jack/idle-special/soul/jack-idle-soul-sheet.png"),
- img("../assets/sprites/jack/idle-special/long-idle/jack-idle-long-sheet.png")
-]).then(rs=>{
- const ok=rs.map(r=>r.status==="fulfilled"?r.value:null);
- idleSpecialImages={lantern:ok[0]?[ok[0]]:[],sit:ok[1]?[ok[1]]:[],soul:ok[2]?[ok[2]]:[],long:ok[3]?[ok[3]]:[]};
-});
+const loadIdleSet=(folder,prefix,count)=>Promise.allSettled(Array.from({length:count},(_,i)=>img("../assets/sprites/jack/idle-special/"+folder+"/"+prefix+String(i+1).padStart(2,"0")+".png"))).then(rs=>rs.filter(r=>r.status==="fulfilled").map(r=>r.value));
+Promise.all([
+ loadIdleSet("lantern","jack-idle-lantern-",1),
+ loadIdleSet("sit","jack-idle-sit-",1),
+ loadIdleSet("soul","jack-idle-soul-",1),
+ loadIdleSet("long-idle","jack-idle-long-idle-",7)
+]).then(([lantern,sit,soul,long])=>{idleSpecialImages={lantern,sit,soul,long}}).catch(()=>{});
+
+// Reaproveita os seis retratos HD oficiais do Jack usados nos Halloweens anteriores.
+// A Fase 3 começa consistente visualmente e já fica pronta para receber Mara depois.
+const jackPortraitFiles=[
+ "jack-00-neutral.png",
+ "jack-01-serious.png",
+ "jack-02-smirk.png",
+ "jack-03-surprised.png",
+ "jack-04-determined.png",
+ "jack-05-resolved.png"
+];
 const jackDialogueReady=Promise.allSettled(
  jackPortraitFiles.map(file=>img("../assets/game/phase1/portraits-hd/"+file))
 ).then(results=>{
@@ -146,23 +155,26 @@ function currentJackFrame(){
 }
 // Special-idle strips: crop only the artwork band (never the caption/text below).
 // Scale is tuned per action because the generated figures occupy different amounts of each cell.
-const IDLE_SHEETS={
- lantern:{cols:10,rows:2,frames:20,scale:1.02},
- sit:{cols:9,rows:2,frames:18,scale:1.02},
- soul:{cols:10,rows:2,frames:20,scale:1.02},
- long:{cols:10,rows:3,frames:30,scale:1.02}
+const IDLE_STRIPS={
+ lantern:{image:0,frames:8,x:9,y:190,w:238,h:62,scale:2.18,lift:0},
+ sit:{image:0,frames:8,x:9,y:204,w:238,h:45,scale:2.28,lift:0},
+ soul:{image:0,frames:8,x:9,y:195,w:238,h:54,scale:2.22,lift:0},
+ long:{image:4,frames:7,x:9,y:188,w:238,h:60,scale:2.20,lift:0}
 };
-function idleSheetRect(mode,frame,im){
- const s=IDLE_SHEETS[mode];if(!s||!im)return null;
- const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;if(!iw||!ih)return null;\n const cw=iw/s.cols,ch=ih/s.rows,i=frame%s.frames;
- return {sx:(i%s.cols)*cw,sy:Math.floor(i/s.cols)*ch,sw:cw,sh:ch,scale:s.scale};
+function idleStripRect(mode,frame){
+ const s=IDLE_STRIPS[mode];if(!s)return null;
+ const fw=s.w/s.frames,i=frame%s.frames;
+ return {imgIndex:s.image,sx:s.x+i*fw,sy:s.y,sw:fw,sh:s.h,scale:s.scale||2.2,lift:s.lift||0};
 }
 function drawJack(){
- if(idleSpecialMode&&p.on&&!dialogue.active){
-   const seq=idleSpecialImages[idleSpecialMode]||[],im=seq[0],r=idleSheetRect(idleSpecialMode,idleSpecialFrame,im);
-   if(im&&r){
-     const targetW=190*r.scale,targetH=190*r.scale;
-     const dx=p.x-cam+p.w/2-targetW/2,dy=p.y+p.h/2-132-(targetH-190);
+ if(idleSpecialMode&&!dialogue.active){
+   const seq=idleSpecialImages[idleSpecialMode]||[],r=idleStripRect(idleSpecialMode,idleSpecialFrame);
+   const im=r&&seq[r.imgIndex];
+   if(im){
+     // Draw the cropped cell at a calibrated pixel-art scale. The feet are anchored
+     // to the exact gameplay collision floor (p.y+p.h), so Jack stays on platforms.
+     const targetW=r.sw*r.scale,targetH=r.sh*r.scale;
+     const dx=p.x-cam+p.w/2-targetW/2,feetY=p.y+p.h-r.lift,dy=feetY-targetH;
      x.save();x.imageSmoothingEnabled=false;
      if(p.dir<0){x.translate(dx+targetW,0);x.scale(-1,1);x.drawImage(im,r.sx,r.sy,r.sw,r.sh,0,dy,targetW,targetH)}
      else x.drawImage(im,r.sx,r.sy,r.sw,r.sh,dx,dy,targetW,targetH);
@@ -192,10 +204,10 @@ function update(dt){
  const idleNow=!input.left&&!input.right&&!input.down&&!input.jump&&!input.run&&p.attack<=0;
  if(idleNow){
    idleTime=(performance.now()-lastPlayerAction)/1000;
-   const nextMode=p.on?(idleTime>=60?"long":idleTime>=40?"soul":idleTime>=25?"sit":idleTime>=8?"lantern":""):"";
+   const nextMode=idleTime>=60?"long":idleTime>=40?"soul":idleTime>=25?"sit":idleTime>=8?"lantern":"";
    if(nextMode!==idleSpecialMode){idleSpecialMode=nextMode;idleSpecialFrame=0;idleSpecialClock=0}
    const seq=idleSpecialImages[idleSpecialMode]||[];
-   const sheet=IDLE_SHEETS[idleSpecialMode],frameCount=seq.length&&sheet?sheet.frames:0;
+   const strip=IDLE_STRIPS[idleSpecialMode],frameCount=seq.length&&strip?strip.frames:seq.length;
    if(idleSpecialMode&&frameCount){idleSpecialClock+=dt;if(idleSpecialClock>=.32){idleSpecialClock=0;idleSpecialFrame=(idleSpecialFrame+1)%frameCount}}
  }else{lastPlayerAction=performance.now();idleTime=0;idleSpecialClock=0;idleSpecialFrame=0;idleSpecialMode=""}
  memoryLight=Math.max(0,memoryLight-dt);memoryPulse=Math.max(0,memoryPulse-dt);p.attack=Math.max(0,p.attack-dt);
