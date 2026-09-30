@@ -1,7 +1,7 @@
 (()=>{"use strict";
 const c=document.getElementById("game"),x=c.getContext("2d"),W=1280,H=720,WORLD=7600,G=1500;
 const ui={obj:document.querySelector("#objective strong"),health:document.getElementById("healthValue"),banner:document.getElementById("sectionBanner"),msg:document.getElementById("message"),intro:document.getElementById("intro")};
-const phase3CompleteRoot=document.getElementById("phase3Complete"),phase3ReplayBtn=document.getElementById("phase3Replay"),phase3MenuBtn=document.getElementById("phase3Menu");
+const phase3CompleteRoot=document.getElementById("phase3Complete"),phase3ReplayBtn=document.getElementById("phase3Replay"),phase3MenuBtn=document.getElementById("phase3Menu"),phase3NextBtn=document.getElementById("phase3Next");
 const dialogueRoot=document.getElementById("dialogue"),dialogue=new window.DialogueSystem(dialogueRoot);
 const journey=window.JackJourney||null,urlParams=new URLSearchParams(location.search),journeyMode=urlParams.get("journey")==="1",replayMode=urlParams.get("replay")==="1",forceNewRun=urlParams.get("new")==="1";
 const SAVE_KEY="jack-phase3-save",CHECKPOINT_KEY="jack-phase3-checkpoint";
@@ -19,6 +19,7 @@ let memoryLight=0,memoryPulse=0,playerLife=Math.max(1,Math.min(3,Number(loadedSa
 let activeCheckpoint=loadedSave?.activeCheckpoint||localStorage.getItem(CHECKPOINT_KEY)||"";
 let maraSpriteSheet=null,maraRunSheet=null,forestBackground=null,motherTreeBackground=null;
 const motherTreeSprites={idle:null,awakened:null,corrupted:null,restored:null};
+const archivistSprites={base:[],attacks:[],faces:[],voices:[],heart:[],release:[]};
 let maraRun={active:false,x:2275,targetX:2275,groundY:590,onDone:null};
 let maraMet=!!loadedSave?.maraMet;
 let portraitsSolved=!!loadedSave?.portraitsSolved;
@@ -178,6 +179,26 @@ const motherTreeSpriteReady=Promise.allSettled([
  img("../assets/phase3/mother-tree/mother-tree-restored.png").then(im=>{motherTreeSprites.restored=im;return im})
 ]);
 
+const archivistVisualSets=[
+ ["base","archivist-base-"],
+ ["attacks","archivist-attack-"],
+ ["faces","archivist-faces-"],
+ ["voices","archivist-voices-"],
+ ["heart","archivist-heart-"],
+ ["release","archivist-release-"]
+];
+const archivistVisualsReady=Promise.allSettled(
+ archivistVisualSets.flatMap(([folder,prefix])=>
+   Array.from({length:3},(_,i)=>
+     img("../assets/game/phase3/boss/archivist/"+folder+"/"+prefix+String(i+1).padStart(2,"0")+".png")
+       .then(im=>({folder,im}))
+   )
+ )
+).then(results=>{
+ results.forEach(r=>{if(r.status==="fulfilled")archivistSprites[r.value.folder].push(r.value.im)});
+ return archivistSprites;
+});
+
 const archivistPortraitFiles=[
  "archivist-dialogue-01-awake.png",
  "archivist-dialogue-02-faces.png",
@@ -202,7 +223,7 @@ const memoryLeavesReady=Promise.all(
  Array.from({length:6},(_,i)=>img("../assets/game/phase3/fx/memory-leaves/memory-leaf-"+String(i+1).padStart(2,"0")+".png"))
 ).then(images=>{memoryLeafImages.splice(0,memoryLeafImages.length,...images);return images}).catch(()=>[]);
 window.__PHASE_ASSETS_READY=Promise.allSettled([
- jackStartupReady,dialogueAssetsReady,maraSpriteReady,maraRunReady,forestBackgroundReady,motherTreeBackgroundReady,motherTreeSpriteReady,phase3DialogueFrameReady,memoryLeavesReady
+ jackStartupReady,dialogueAssetsReady,maraSpriteReady,maraRunReady,forestBackgroundReady,motherTreeBackgroundReady,motherTreeSpriteReady,archivistVisualsReady,phase3DialogueFrameReady,memoryLeavesReady
 ]).then(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
 
 function jackSequenceFrame(seq,fps){return seq[Math.floor(p.anim*fps)%seq.length]}
@@ -509,6 +530,8 @@ function unlockPhase3(){
 }
 function showPhase3Complete(){
  const firstClear=unlockPhase3();
+ journey?.unlockPhase(4);
+ if(journeyMode&&!replayMode)journey?.advanceTo(4);
  finalePlayed=true;endingSequenceActive=false;
  banner(firstClear?"MEMÓRIA RECUPERADA — MARA ROWAN":"MEMÓRIA REVIVIDA — MARA ROWAN");
  say(firstClear?"O troféu de Mara foi adicionado às Memórias.":"O Bosque das Memórias foi atravessado novamente.");
@@ -602,31 +625,60 @@ function drawMotherTreeAndBoss(){
 
  const showingBoss=(bossActive&&!bossComplete)||(bossComplete&&bossReleaseT>0);
  if(showingBoss){
-   const releaseAlpha=bossComplete?Math.max(0,Math.min(1,bossReleaseT/3.2)):1;
-   const pulse=1+Math.sin(p.anim*4)*.025;
-   x.save();x.globalAlpha=releaseAlpha;x.translate(treeX,0);x.scale(pulse,pulse);
-   x.shadowColor="rgba(231,196,102,.42)";x.shadowBlur=18+bossPulse*18;
-   // Corpo de raízes provisório, coerente com o conceito visual do Arquivista.
-   x.strokeStyle="#65452d";x.lineCap="round";
-   for(let i=-3;i<=3;i++){x.lineWidth=14-Math.abs(i);x.beginPath();x.moveTo(i*17,525);x.quadraticCurveTo(i*38,420,i*22,292);x.stroke()}
-   x.fillStyle="rgba(29,21,18,.92)";x.beginPath();x.ellipse(0,392,78,128,0,0,Math.PI*2);x.fill();
-   x.strokeStyle="#80613d";x.lineWidth=15;
-   x.beginPath();x.moveTo(-54,350);x.quadraticCurveTo(-130,365,-152,425);x.stroke();
-   x.beginPath();x.moveTo(54,350);x.quadraticCurveTo(130,365,152,425);x.stroke();
-   x.fillStyle="#251b18";x.beginPath();x.ellipse(0,255,58,66,0,0,Math.PI*2);x.fill();
-   // placas e fitas formam um rosto que nunca é fixo
-   x.strokeStyle="#b89659";x.lineWidth=3;
-   [-28,0,28].forEach((px,i)=>{x.strokeRect(px-13,238+(i%2)*14,26,18)});
-   // coração-luz preso
-   x.fillStyle="#e1c36d";x.beginPath();x.arc(0,397,18+bossPulse*5,0,Math.PI*2);x.fill();
-   x.restore();
+   let pool=archivistSprites.base,idx=0,labelState="base";
 
-   x.save();x.globalAlpha=releaseAlpha;x.fillStyle="#f1dda0";x.font="700 15px Georgia";x.textAlign="center";
+   if(bossComplete&&bossReleaseT>0){
+     pool=archivistSprites.release;
+     const progress=Math.max(0,Math.min(.999,(3.2-bossReleaseT)/3.2));
+     idx=Math.min(2,Math.floor(progress*3));
+     labelState="release";
+   }else if(bossAct===3&&bossStep>=bossRootPositions.length){
+     pool=archivistSprites.heart;
+     idx=Math.floor(p.anim*1.45)%Math.max(1,pool.length);
+     labelState="heart";
+   }else if(bossAct===2){
+     pool=archivistSprites.voices;
+     idx=Math.floor(p.anim*1.15)%Math.max(1,pool.length);
+     labelState="voices";
+   }else if(bossAct===1&&bossFirstStrike){
+     pool=archivistSprites.faces;
+     idx=Math.min(Math.max(0,pool.length-1),bossFacesSeen.filter(Boolean).length);
+     labelState="faces";
+   }else if(bossPulse>1.35&&archivistSprites.attacks.length){
+     pool=archivistSprites.attacks;
+     idx=Math.floor(p.anim*5)%archivistSprites.attacks.length;
+     labelState="attack";
+   }
+
+   if(!pool?.length)pool=archivistSprites.base;
+   const bossIm=pool?.[Math.min(idx,Math.max(0,pool.length-1))]||archivistSprites.base[0];
+
+   if(bossIm){
+     const iw=bossIm.naturalWidth||bossIm.width,ih=bossIm.naturalHeight||bossIm.height;
+     const releaseAlpha=bossComplete?Math.max(0,Math.min(1,bossReleaseT/3.2)):1;
+     const breathing=1+Math.sin(p.anim*(labelState==="heart"?3.3:1.7))*(labelState==="heart"?.018:.007);
+     const baseH=labelState==="release"?520:(labelState==="heart"?530:500);
+     const dh=baseH*breathing,dw=iw*(dh/ih);
+     const dx=treeX-dw/2,dy=groundY-dh+9;
+     x.save();
+     x.globalAlpha=releaseAlpha;
+     x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";
+     x.shadowColor=labelState==="heart"||labelState==="release"?"rgba(248,214,122,.72)":"rgba(218,176,87,.38)";
+     x.shadowBlur=(labelState==="heart"?38:20)+bossPulse*8;
+     x.drawImage(bossIm,dx,dy,dw,dh);
+     x.restore();
+   }else{
+     // Fallback mínimo se algum PNG falhar: não deixa o combate invisível.
+     x.save();x.translate(treeX,0);x.strokeStyle="#725137";x.lineWidth=18;x.lineCap="round";
+     x.beginPath();x.moveTo(-55,540);x.quadraticCurveTo(-35,410,0,260);x.quadraticCurveTo(35,410,55,540);x.stroke();
+     x.fillStyle="#e2c36d";x.beginPath();x.arc(0,395,22+bossPulse*4,0,Math.PI*2);x.fill();x.restore();
+   }
+
+   x.save();x.fillStyle="#f1dda0";x.font="700 15px Georgia";x.textAlign="center";
    x.fillText(story.boss.name,treeX,92);
    if(bossActive)x.fillText(story.boss.acts[Math.max(0,bossAct-1)].title,treeX,118);
    x.restore();
  }
-
  if(bossActive&&bossAct===1&&bossFirstStrike){
    bossFacePositions.forEach((z,i)=>{
      const seen=bossFacesSeen[i];
@@ -976,6 +1028,10 @@ phase3ReplayBtn?.addEventListener("click",()=>{
  location.href="phase3.html?replay=1&new=1";
 });
 phase3MenuBtn?.addEventListener("click",()=>{location.href="../index.html#fases"});
+phase3NextBtn?.addEventListener("click",()=>{
+ if(journeyMode&&!replayMode)journey?.advanceTo(4);
+ location.href="phase4.html"+(journeyMode&&!replayMode?"?journey=1":"?from=phase3");
+});
 function loop(t){if(!running)return;const dt=Math.min(.033,(t-last)/1000);last=t;update(dt);draw();requestAnimationFrame(loop)}
 addEventListener("pagehide",save);document.addEventListener("visibilitychange",()=>{if(document.hidden)save()});
 syncHud();draw();
