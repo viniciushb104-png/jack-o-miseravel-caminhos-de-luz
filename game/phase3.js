@@ -524,6 +524,33 @@ function finishBoss(){
  save();
 }
 
+function drawCycleFailures(){
+ if(!archiveSolved||bossComplete)return;
+ // O caminho final mostra o problema antes da Árvore-Mãe explicá-lo:
+ // flor, carta e folha tentam concluir seus ciclos e são puxadas de volta.
+ const t=p.anim;
+ x.save();
+ x.translate(6260,0);
+ const flowerPhase=(Math.sin(t*2.4)+1)/2;
+ x.strokeStyle="#6f845d";x.lineWidth=4;x.beginPath();x.moveTo(0,590);x.lineTo(0,520);x.stroke();
+ x.fillStyle="rgba(202,165,102,"+(0.35+flowerPhase*.65)+")";
+ for(let i=0;i<6;i++){const a=i*Math.PI/3;x.beginPath();x.ellipse(Math.cos(a)*15,510+Math.sin(a)*10,10,5,a,0,Math.PI*2);x.fill()}
+ x.fillStyle="#d6c18b";x.font="italic 12px Georgia";x.textAlign="center";x.fillText("floresce · murcha · volta",0,620);
+
+ x.translate(170,0);
+ x.fillStyle="rgba(225,211,166,.82)";x.fillRect(-42,450,84,62);
+ x.fillStyle="#574a34";x.font="12px Georgia";x.textAlign="left";
+ const letters="ADEUS".slice(0,1+Math.floor((t*2)%5));
+ x.fillText(letters,-31,482);
+ x.fillStyle="#d6c18b";x.textAlign="center";x.fillText("a despedida nunca termina",0,620);
+
+ x.translate(170,0);
+ const leafY=500-Math.abs(Math.sin(t*1.8))*70;
+ x.save();x.translate(0,leafY);x.rotate(t*.7);x.fillStyle="#c18b43";x.beginPath();x.ellipse(0,0,12,22,.35,0,Math.PI*2);x.fill();x.restore();
+ x.fillStyle="#d6c18b";x.textAlign="center";x.fillText("a folha tenta cair",0,620);
+ x.restore();
+}
+
 function drawMotherTreeAndBoss(){
  if(!motherTreeScene&&p.x<6000)return;
 
@@ -541,72 +568,135 @@ function drawMotherTreeAndBoss(){
    const pulse=(state==="awakened"||state==="restored")?1+Math.sin(p.anim*1.8)*.008:1;
    const dh=baseH*pulse,dw=iw*(dh/ih);
    const dx=treeX-dw/2,dy=groundY-dh+5;
-   x.save();
-   x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";
-   if(state==="restored"){
-     x.shadowColor="rgba(247,219,137,.52)";x.shadowBlur=28+Math.sin(p.anim*2)*8;
-   }else if(state==="awakened"){
-     x.shadowColor="rgba(224,181,92,.28)";x.shadowBlur=18;
-   }else if(state==="corrupted"){
-     x.shadowColor="rgba(150,53,96,.30)";x.shadowBlur=18;
+   x.save();x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";
+   if(state==="restored"){x.shadowColor="rgba(247,219,137,.52)";x.shadowBlur=28+Math.sin(p.anim*2)*8}
+   else if(state==="awakened"){x.shadowColor="rgba(224,181,92,.28)";x.shadowBlur=18}
+   else if(state==="corrupted"){x.shadowColor="rgba(150,53,96,.30)";x.shadowBlur=18}
+   x.drawImage(im,dx,dy,dw,dh);x.restore();
+ }
+
+ if(bossPrelude&&!bossActive&&!bossComplete){
+   // Durante o diálogo de nascimento, nomes, cartas e retratos convergem para o centro.
+   x.save();x.translate(treeX,360);
+   for(let i=0;i<10;i++){
+     const a=p.anim*(.35+(i%3)*.08)+i*(Math.PI*2/10),r=95+(i%4)*24;
+     const px=Math.cos(a)*r,py=Math.sin(a)*r*.62;
+     x.save();x.translate(px,py);x.rotate(-a*.45);
+     x.fillStyle=i%2?"rgba(210,185,119,.72)":"rgba(90,67,43,.82)";
+     x.strokeStyle="#b69658";x.lineWidth=2;x.fillRect(-24,-13,48,26);x.strokeRect(-24,-13,48,26);x.restore();
    }
-   x.drawImage(im,dx,dy,dw,dh);
    x.restore();
  }
 
- if(bossActive&&!bossComplete){
-   const pulse=1+Math.sin(p.anim*4)*.04;
-   x.save();x.translate(treeX,0);x.scale(pulse,pulse);
+ const showingBoss=(bossActive&&!bossComplete)||(bossComplete&&bossReleaseT>0);
+ if(showingBoss){
+   const releaseAlpha=bossComplete?Math.max(0,Math.min(1,bossReleaseT/3.2)):1;
+   const pulse=1+Math.sin(p.anim*4)*.025;
+   x.save();x.globalAlpha=releaseAlpha;x.translate(treeX,0);x.scale(pulse,pulse);
    x.shadowColor="rgba(231,196,102,.42)";x.shadowBlur=18+bossPulse*18;
-   x.fillStyle="rgba(24,15,20,.55)";x.beginPath();x.ellipse(0,392,72,118,0,0,Math.PI*2);x.fill();
-   x.fillStyle="#e1c36d";x.beginPath();x.arc(0,392,17+bossPulse*5,0,Math.PI*2);x.fill();
+   // Corpo de raízes provisório, coerente com o conceito visual do Arquivista.
+   x.strokeStyle="#65452d";x.lineCap="round";
+   for(let i=-3;i<=3;i++){x.lineWidth=14-Math.abs(i);x.beginPath();x.moveTo(i*17,525);x.quadraticCurveTo(i*38,420,i*22,292);x.stroke()}
+   x.fillStyle="rgba(29,21,18,.92)";x.beginPath();x.ellipse(0,392,78,128,0,0,Math.PI*2);x.fill();
+   x.strokeStyle="#80613d";x.lineWidth=15;
+   x.beginPath();x.moveTo(-54,350);x.quadraticCurveTo(-130,365,-152,425);x.stroke();
+   x.beginPath();x.moveTo(54,350);x.quadraticCurveTo(130,365,152,425);x.stroke();
+   x.fillStyle="#251b18";x.beginPath();x.ellipse(0,255,58,66,0,0,Math.PI*2);x.fill();
+   // placas e fitas formam um rosto que nunca é fixo
+   x.strokeStyle="#b89659";x.lineWidth=3;
+   [-28,0,28].forEach((px,i)=>{x.strokeRect(px-13,238+(i%2)*14,26,18)});
+   // coração-luz preso
+   x.fillStyle="#e1c36d";x.beginPath();x.arc(0,397,18+bossPulse*5,0,Math.PI*2);x.fill();
    x.restore();
 
-   x.save();x.fillStyle="#f1dda0";x.font="700 15px Georgia";x.textAlign="center";
+   x.save();x.globalAlpha=releaseAlpha;x.fillStyle="#f1dda0";x.font="700 15px Georgia";x.textAlign="center";
    x.fillText(story.boss.name,treeX,92);
-   x.fillText(story.boss.acts[Math.max(0,bossAct-1)].title,treeX,118);x.restore();
+   if(bossActive)x.fillText(story.boss.acts[Math.max(0,bossAct-1)].title,treeX,118);
+   x.restore();
+ }
+
+ if(bossActive&&bossAct===1&&bossFirstStrike){
+   bossFacePositions.forEach((z,i)=>{
+     const seen=bossFacesSeen[i];
+     x.save();x.translate(z,0);
+     x.shadowColor=seen?"rgba(239,214,132,.62)":"rgba(95,74,49,.35)";x.shadowBlur=seen?22:8;
+     x.strokeStyle=seen?"#e3ca82":"#8a7048";x.lineWidth=4;x.strokeRect(-35,420,70,86);
+     x.fillStyle=seen?"rgba(225,201,128,.34)":"rgba(19,20,17,.72)";x.fillRect(-31,424,62,78);
+     x.fillStyle="#ead9a3";x.font="700 11px Georgia";x.textAlign="center";x.fillText(["LÍVIA","TOMÁS","CELINA"][i],0,530);x.restore();
+   });
  }
 
  if(bossActive&&bossAct===2){
-   [6960,7160,7360].forEach((z,i)=>{x.save();x.translate(z,0);x.strokeStyle="#a4b887";x.lineWidth=4;x.beginPath();x.arc(0,505,34,0,Math.PI*2);x.stroke();x.fillStyle="#ead792";x.font="700 15px Georgia";x.textAlign="center";x.fillText(["II","I","III"][i],0,510);x.restore()});
+   [6960,7160,7360].forEach((z,i)=>{
+     x.save();x.translate(z,0);x.shadowColor="rgba(157,193,136,.42)";x.shadowBlur=16;
+     x.strokeStyle="#a4b887";x.lineWidth=4;x.beginPath();x.arc(0,505,34,0,Math.PI*2);x.stroke();
+     x.fillStyle="#ead792";x.font="700 15px Georgia";x.textAlign="center";x.fillText(["II","I","III"][i],0,510);x.restore();
+   });
+ }
+
+ if(bossActive&&bossAct===3){
+   for(let i=bossStep;i<bossRootPositions.length;i++){
+     const z=bossRootPositions[i];x.save();x.translate(z,0);x.strokeStyle="#6f4d31";x.lineCap="round";
+     for(let k=-2;k<=2;k++){x.lineWidth=10-Math.abs(k);x.beginPath();x.moveTo(k*9,590);x.quadraticCurveTo(k*18-18,520,k*8,425);x.stroke()}
+     x.fillStyle="#d5b66b";x.beginPath();x.arc(0,420,5,0,Math.PI*2);x.fill();x.restore();
+   }
+   if(bossStep>=bossRootPositions.length){
+     x.save();x.translate(treeX,0);x.shadowColor="rgba(246,216,130,.8)";x.shadowBlur=36;
+     x.strokeStyle="#f0d58d";x.lineWidth=4;x.beginPath();x.arc(0,397,42+Math.sin(p.anim*3)*5,0,Math.PI*2);x.stroke();x.restore();
+   }
  }
 }
+
 function tryInteract(){
- if(!running||dialogue.active)return;
+ if(!running||dialogue.active||endingSequenceActive)return;
  lastPlayerAction=performance.now();idleTime=0;waitSitActive=false;
  const pc=p.x+p.w/2,m=maraWorldState();
- if(bossActive&&bossAct===3&&pc>6900){finishBoss();return}
+
+ if(bossActive&&bossAct===3){
+   if(bossStep<bossRootPositions.length){say("Ainda há raízes entre Mara e o coração. Use a Luz para abrir o caminho.");return}
+   finishBoss();return;
+ }
+
  if(voicesSolved&&!archiveSolved&&pc>5440&&pc<5980){
    const xs=[5525,5705,5885],near=xs.map((z,i)=>({i,d:Math.abs(z-pc)})).sort((a,b)=>a.d-b.d)[0];
    archiveChoice=near.i;archiveSeen[near.i]=true;
    const item=story.archivePuzzle.entries[near.i];
-   if(!archiveSeen.every(Boolean)){say(item.title+" — "+item.memory+" ("+archiveSeen.filter(Boolean).length+"/3 lembranças ouvidas)");save();return}
+
+   if(near.i===2&&!archiveKeyReactionPlayed){
+     archiveKeyReactionPlayed=true;p.vx=0;
+     dialogue.open(story.dialogues.archiveKey,()=>{say(item.title+" — "+item.memory);save()});
+     save();return;
+   }
+
+   if(!archiveSeen.every(Boolean)){
+     say(item.title+" — "+item.memory+" ("+archiveSeen.filter(Boolean).length+"/3 lembranças ouvidas)");
+     save();return;
+   }
+
    p.vx=0;archiveSolved=true;banner("MEMÓRIA NÃO APAGADA — LIBERTADA");
-   dialogue.open([
-     {speaker:"MARA ROWAN",portrait:"mara",expression:3,text:"Qual delas devemos apagar, Jack? A carta? A melodia? A chave?"},
-     {speaker:"JACK",portrait:"jack",expression:1,text:"Essa é a pergunta errada."},
-     {speaker:"MARA ROWAN",portrait:"mara",expression:3,text:"Como assim?"},
-     {speaker:"JACK",portrait:"jack",expression:5,text:"Não precisamos escolher o que deve ser esquecido. Precisamos deixar que siga adiante."},
-     {speaker:"MARA ROWAN",portrait:"mara",expression:5,text:"Deixar ir... sem fingir que nunca existiu."},
-     {speaker:"JACK",portrait:"jack",expression:2,text:"Finalmente uma porta que abre sem eu precisar arrombá-la."}
-   ],()=>{say("As raízes soltaram o caminho para a Árvore-Mãe.");startMaraRun(5575,6380,()=>save());save()});
+   dialogue.open(story.dialogues.archiveSolved,()=>{
+     say("As raízes soltaram o caminho para a Árvore-Mãe.");
+     startMaraRun(5575,6380,()=>save());save();
+   });
    save();return;
  }
+
  if(!maraRun.active&&Math.abs(pc-m.x)<120){
    if(!maraMet){
      maraMet=true;p.vx=0;
      dialogue.open(story.dialogues.maraMeeting,()=>{
        say("Os retratos respondem à Luz. F revela a lembrança; E troca o nome.");
-       // Primeira saída de Mara: ela conduz Jack até o começo do Bosque dos Retratos.
-       startMaraRun(2275,2700,()=>{banner("BOSQUE DOS RETRATOS");save()});
-       save();
+       startMaraRun(2275,2700,()=>{banner("BOSQUE DOS RETRATOS");save()});save();
      });
      return;
    }
    if(!portraitsSolved){say("Mara: Ilumine cada retrato e devolva a ele o nome que pertence àquela história.");return}
    if(!voicesSolved){say("Mara: As três vozes formavam uma única frase. A Luz ainda consegue separá-las.");return}
-   say("Mara: A Árvore-Mãe está adiante. Eu consigo sentir as raízes tentando nos ouvir.");return;
+   if(!archiveSolved){say("Mara: O Arquivo não quer apagar nada. Talvez estejamos fazendo a pergunta errada.");return}
+   if(!motherTreeScene){say("Mara: A Árvore-Mãe está adiante. E acho que ela já sabe que estamos chegando.");return}
+   say("Mara: Não posso desfazer o passado. Mas posso escolher o que faço com ele agora.");return;
  }
+
  if(maraMet&&!portraitsSolved){
    const hit=nearestPuzzleEntry(story.portraitPuzzle.entries);
    if(hit){
@@ -623,21 +713,37 @@ function tryInteract(){
 }
 
 function updateNarrativeTriggers(){
- if(dialogue.active)return;
+ if(dialogue.active||endingSequenceActive)return;
+
+ if(!firstWhisperPlayed&&p.x>1240){
+   firstWhisperPlayed=true;p.vx=0;memoryPulse=.8;
+   dialogue.open(story.dialogues.firstWhisper,()=>save());return;
+ }
+
  if(!maraMet&&p.x>2160){
    maraMet=true;p.vx=0;
-   dialogue.open(story.dialogues.maraMeeting,()=>{say("Os retratos respondem à Luz. F revela a lembrança; E troca o nome.");startMaraRun(2275,2700,()=>{banner("BOSQUE DOS RETRATOS");save()});save()});
+   dialogue.open(story.dialogues.maraMeeting,()=>{
+     say("Os retratos respondem à Luz. F revela a lembrança; E troca o nome.");
+     startMaraRun(2275,2700,()=>{banner("BOSQUE DOS RETRATOS");save()});save();
+   });
    return;
  }
- if(voicesSolved&&archiveSolved&&!motherTreeScene&&p.x>6000){
-   motherTreeScene=true;p.vx=0;
+
+ if(archiveSolved&&!approachTreePlayed&&p.x>6170){
+   approachTreePlayed=true;p.vx=0;memoryPulse=1.05;
+   dialogue.open(story.dialogues.approachTree,()=>{say("Adiante, nada consegue terminar.");save()});return;
+ }
+
+ if(archiveSolved&&approachTreePlayed&&!motherTreeScene&&p.x>6500){
+   motherTreeScene=true;p.vx=0;maraBossX=6680;
+   banner("ÁRVORE-MÃE — O CORAÇÃO DAS RAÍZES");
    dialogue.open(story.dialogues.motherTree,()=>{
-     bossPrelude=true;
-     banner("ÁRVORE-MÃE — O CORAÇÃO DAS RAÍZES");
-     ui.obj.textContent="A presença nas raízes despertou. Entre no Coração das Raízes.";
-     save();
-     setTimeout(()=>{if(!dialogue.active)startBoss()},300);
+     bossPrelude=true;memoryPulse=1.4;save();
+     dialogue.open(story.dialogues.bossBirth,()=>{
+       startBoss();
+     });
    });
+   return;
  }
 }
 
