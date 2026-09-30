@@ -12,7 +12,7 @@ const input={left:false,right:false,down:false,run:false,jump:false};
 let running=false,last=performance.now(),cam=0,jack=null,jackFrameOverrides={},introLorePlayed=!!loadedSave?.introLorePlayed,section=-1;
 let waitSince=performance.now(),waitFrame=0,waitClock=0,waitMode="";
 const waitSheets={lantern:null,sit:null,soul:null,long:null,curious:null,startled:null};
-const waitCfg={lantern:{cols:10,rows:2,frames:20},sit:{cols:9,rows:2,frames:18},soul:{cols:10,rows:2,frames:20},long:{cols:10,rows:3,frames:30},curious:{cols:10,rows:3,frames:30},startled:{cols:10,rows:3,frames:30}};
+const waitCfg={lantern:{cols:10,rows:2,frames:20},curious:{cols:10,rows:3,frames:30},sit:{cols:10,rows:3,frames:30},soul:{cols:10,rows:3,frames:30},startled:{cols:10,rows:3,frames:30},long:{cols:10,rows:3,frames:30}};
 let idleTime=0,idleSpecialFrame=0,idleSpecialClock=0,idleSpecialMode="",idleSpecialImages={lantern:[],sit:[],soul:[],long:[]};
 let lastPlayerAction=performance.now();
 let memoryLight=0,memoryPulse=0,playerLife=Math.max(1,Math.min(3,Number(loadedSave?.playerLife)||3));
@@ -178,19 +178,17 @@ function idleStripRect(mode,frame){
  return {imgIndex:s.image,sx:s.x+i*fw,sy:s.y,sw:fw,sh:s.h,scale:s.scale||2.2,lift:s.lift||0};
 }
 function drawJack(){
- if(idleSpecialMode&&!dialogue.active){
-   const seq=idleSpecialImages[idleSpecialMode]||[],r=idleStripRect(idleSpecialMode,idleSpecialFrame);
-   const im=r&&seq[r.imgIndex];
-   if(im){
-     // Draw the cropped cell at a calibrated pixel-art scale. The feet are anchored
-     // to the exact gameplay collision floor (p.y+p.h), so Jack stays on platforms.
-     const targetW=r.sw*r.scale,targetH=r.sh*r.scale;
-     const dx=p.x-cam+p.w/2-targetW/2,feetY=p.y+p.h-r.lift,dy=feetY-targetH;
-     x.save();x.imageSmoothingEnabled=false;
-     if(p.dir<0){x.translate(dx+targetW,0);x.scale(-1,1);x.drawImage(im,r.sx,r.sy,r.sw,r.sh,0,dy,targetW,targetH)}
-     else x.drawImage(im,r.sx,r.sy,r.sw,r.sh,dx,dy,targetW,targetH);
-     x.restore();return;
-   }
+ const idleSec=(performance.now()-waitSince)/1000;
+ const mode=idleSec>=60?"long":idleSec>=50?"startled":idleSec>=40?"soul":idleSec>=25?"sit":idleSec>=15?"curious":idleSec>=8?"lantern":"";
+ const sheet=waitSheets[mode],cfg=waitCfg[mode];
+ if(mode&&p.on&&sheet&&cfg&&!dialogue.active){
+   const iw=sheet.naturalWidth||sheet.width,ih=sheet.naturalHeight||sheet.height,cw=iw/cfg.cols,ch=ih/cfg.rows;
+   const i=waitFrame%cfg.frames,sx=(i%cfg.cols)*cw,sy=Math.floor(i/cfg.cols)*ch;
+   const targetH=190,targetW=cw*(targetH/ch),dx=p.x-cam+p.w/2-targetW/2,dy=p.y+p.h-targetH;
+   x.save();x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";
+   if(p.dir<0){x.translate(dx+targetW,0);x.scale(-1,1);x.drawImage(sheet,sx,sy,cw,ch,0,dy,targetW,targetH)}
+   else x.drawImage(sheet,sx,sy,cw,ch,dx,dy,targetW,targetH);
+   x.restore();return;
  }
  if(p.on){x.save();x.globalAlpha=.2;x.fillStyle="#020704";x.beginPath();x.ellipse(p.x-cam+p.w/2,p.y+p.h+1,18,3.3,0,0,Math.PI*2);x.fill();x.restore()}
  if(!jack){x.fillStyle="#eee";x.fillRect(p.x-cam,p.y,p.w,p.h);return}
