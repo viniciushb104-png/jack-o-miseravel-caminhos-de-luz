@@ -1,5 +1,5 @@
 (()=>{"use strict";
-const c=document.getElementById("game"),x=c.getContext("2d"),W=1280,H=720,WORLD=6800,G=1500;
+const c=document.getElementById("game"),x=c.getContext("2d"),W=1280,H=720,WORLD=7600,G=1500;
 const ui={obj:document.querySelector("#objective strong"),health:document.getElementById("healthValue"),banner:document.getElementById("sectionBanner"),msg:document.getElementById("message"),intro:document.getElementById("intro")};
 const dialogueRoot=document.getElementById("dialogue"),dialogue=new window.DialogueSystem(dialogueRoot);
 const journey=window.JackJourney||null,urlParams=new URLSearchParams(location.search),journeyMode=urlParams.get("journey")==="1",replayMode=urlParams.get("replay")==="1",forceNewRun=urlParams.get("new")==="1";
@@ -28,6 +28,8 @@ let motherTreeScene=!!loadedSave?.motherTreeScene;
 let archiveSolved=!!loadedSave?.archiveSolved;
 let archiveChoice=Math.max(0,Math.min(3,Number(loadedSave?.archiveChoice)||0));
 let bossPrelude=!!loadedSave?.bossPrelude;
+let bossActive=!!loadedSave?.bossActive,bossAct=Math.max(0,Math.min(3,Number(loadedSave?.bossAct)||0)),bossStep=Math.max(0,Number(loadedSave?.bossStep)||0),bossComplete=!!loadedSave?.bossComplete,finalePlayed=!!loadedSave?.finalePlayed;
+let bossCooldown=0,bossPulse=0;
 let gateMessageCooldown=0;
 const p={x:Number.isFinite(loadedSave?.x)?loadedSave.x:120,y:Number.isFinite(loadedSave?.y)?loadedSave.y:470,w:46,h:86,vx:0,vy:0,dir:loadedSave?.dir===-1?-1:1,on:false,coyote:0,buffer:0,anim:0,attack:0};
 
@@ -45,14 +47,15 @@ const sections=[
  {x:2550,n:"BOSQUE DOS RETRATOS"},
  {x:4100,n:"LAGO DAS VOZES"},
  {x:5480,n:"ARQUIVO DAS RAÍZES"},
- {x:6200,n:"CAMINHO DA ÁRVORE-MÃE"}
+ {x:6200,n:"CAMINHO DA ÁRVORE-MÃE"},
+ {x:6750,n:"O CORAÇÃO DAS RAÍZES"}
 ];
 
 const plats=[
  {x:0,y:590,w:1080,h:130},
  {x:1480,y:590,w:900,h:130},
  {x:2700,y:590,w:980,h:130},
- {x:4100,y:590,w:2700,h:130},
+ {x:4100,y:590,w:3500,h:130},
  {x:520,y:500,w:250,h:30},
  {x:1760,y:485,w:260,h:30},
  {x:3000,y:500,w:240,h:30},
@@ -91,7 +94,7 @@ function save(){
  localStorage.setItem(SAVE_KEY,JSON.stringify({
    x:p.x,y:p.y,dir:p.dir,playerLife,activeCheckpoint,introLorePlayed,
    maraMet,portraitsSolved,portraitChoices:[...portraitChoices],
-   voicesSolved,voiceStep,jackEchoPlayed,motherTreeScene,archiveSolved,archiveChoice,bossPrelude,savedAt:Date.now()
+   voicesSolved,voiceStep,jackEchoPlayed,motherTreeScene,archiveSolved,archiveChoice,bossPrelude,bossActive,bossAct,bossStep,bossComplete,finalePlayed,savedAt:Date.now()
  }));
 }
 function respawn(msg){
@@ -351,10 +354,77 @@ function activateVoice(i){
  });
 }
 
+
+function startBoss(){
+ if(bossActive||bossComplete)return;
+ bossActive=true;bossAct=1;bossStep=0;bossPulse=1.4;p.vx=0;
+ banner(story.boss.name+" — "+story.boss.acts[0].title);
+ dialogue.open(story.dialogues.bossAwakening,()=>{say("ATO I: ilumine o Arquivista três vezes. Cada luz liberta um rosto em vez de feri-lo.");save()});
+ save();
+}
+function advanceBossWithLight(){
+ if(!bossActive||bossComplete||bossCooldown>0)return false;
+ bossCooldown=.65;bossPulse=1;
+ if(bossAct===1){
+   bossStep++;
+   say(["Lívia foi lembrada pelo pão que repartiu.","Tomás foi lembrado pelo que restaurou.","Celina foi lembrada pela música que deixou."][Math.min(2,bossStep-1)]);
+   if(bossStep>=3){bossAct=2;bossStep=0;p.vx=0;dialogue.open(story.dialogues.bossAct2,()=>{banner(story.boss.acts[1].title);say("Repita a sequência aprendida no Lago: I → II → III.");save()})}
+   save();return true;
+ }
+ if(bossAct===2){
+   const expected=[1,2,0][bossStep],zones=[7160,6960,7360],pc=p.x+p.w/2;
+   const chosen=zones.map((z,i)=>({i,d:Math.abs(z-pc)})).sort((a,b)=>a.d-b.d)[0];
+   if(chosen.d>125){say("Aproxime-se de um dos três ecos antes de usar a Luz.");return true}
+   if(chosen.i!==expected){bossStep=0;banner("AS VOZES SE EMBARALHARAM");say("O Arquivista misturou os ecos. Recomece a sequência.");save();return true}
+   bossStep++;say("Eco reconhecido — "+bossStep+"/3.");
+   if(bossStep>=3){bossAct=3;bossStep=0;p.vx=0;dialogue.open(story.dialogues.bossAct3,()=>{banner(story.boss.acts[2].title);say("Não ataque. Caminhe com Mara até o coração e use E.");save()})}
+   save();return true;
+ }
+ return false;
+}
+function finishBoss(){
+ if(!bossActive||bossAct!==3||bossComplete)return;
+ bossActive=false;bossComplete=true;bossPulse=2;p.vx=0;
+ dialogue.open(story.dialogues.bossLight,()=>dialogue.open(story.finale.maraRelease,()=>{
+   banner("AS FOLHAS VOLTARAM A CAIR");
+   dialogue.open(story.finale.jackRevelation,()=>dialogue.open(story.finale.epilogue,()=>{
+     finalePlayed=true;banner("MEMÓRIA RECUPERADA — MARA ROWAN");
+     say("Jack segue adiante. A pergunta sobre seu próprio caminho permanece.");
+     save();
+   }));
+ }));
+ save();
+}
+function drawMotherTreeAndBoss(){
+ if(!motherTreeScene&&p.x<6000)return;
+ x.save();
+ // protótipo da Árvore-Mãe: será substituído pela arte final sem mudar a lógica.
+ x.translate(7040,0);
+ x.strokeStyle="#44301f";x.lineCap="round";
+ for(let i=-5;i<=5;i++){x.lineWidth=22-Math.abs(i)*1.5;x.beginPath();x.moveTo(i*24,590);x.quadraticCurveTo(i*42,390,i*26,165);x.stroke()}
+ x.fillStyle="#70502b";x.beginPath();x.arc(0,205,135,0,Math.PI*2);x.fill();
+ if(bossActive&&!bossComplete){
+   const pulse=1+Math.sin(p.anim*4)*.04;
+   x.save();x.scale(pulse,pulse);
+   x.shadowColor="rgba(231,196,102,.5)";x.shadowBlur=22+bossPulse*18;
+   x.fillStyle="#211c17";x.beginPath();x.ellipse(0,395,88,145,0,0,Math.PI*2);x.fill();
+   x.strokeStyle="#80643b";x.lineWidth=13;
+   for(let i=-3;i<=3;i++){x.beginPath();x.moveTo(i*18,500);x.quadraticCurveTo(i*45,390,i*26,285);x.stroke()}
+   x.fillStyle="#e1c36d";x.beginPath();x.arc(0,390,20+bossPulse*5,0,Math.PI*2);x.fill();x.restore();
+   x.fillStyle="#f1dda0";x.font="700 15px Georgia";x.textAlign="center";
+   x.fillText("PROTÓTIPO — "+story.boss.name,0,110);
+   x.fillText(story.boss.acts[Math.max(0,bossAct-1)].title,0,135);
+ }
+ x.restore();
+ if(bossActive&&bossAct===2){
+   [6960,7160,7360].forEach((z,i)=>{x.save();x.translate(z,0);x.strokeStyle="#a4b887";x.lineWidth=4;x.beginPath();x.arc(0,505,34,0,Math.PI*2);x.stroke();x.fillStyle="#ead792";x.font="700 15px Georgia";x.textAlign="center";x.fillText(["II","I","III"][i],0,510);x.restore()});
+ }
+}
 function tryInteract(){
  if(!running||dialogue.active)return;
  lastPlayerAction=performance.now();idleTime=0;waitSitActive=false;
  const pc=p.x+p.w/2,m=maraWorldState();
+ if(bossActive&&bossAct===3&&pc>6900){finishBoss();return}
  if(voicesSolved&&!archiveSolved&&pc>5480&&pc<5940){
    archiveChoice=(archiveChoice+1)%4;
    if(archiveChoice<3){
@@ -413,8 +483,9 @@ function updateNarrativeTriggers(){
    dialogue.open(story.dialogues.motherTree,()=>{
      bossPrelude=true;
      banner("ÁRVORE-MÃE — O CORAÇÃO DAS RAÍZES");
-     ui.obj.textContent="A presença nas raízes despertou. O Arquivista Eterno aguarda além da Árvore-Mãe.";
+     ui.obj.textContent="A presença nas raízes despertou. Entre no Coração das Raízes.";
      save();
+     setTimeout(()=>{if(!dialogue.active)startBoss()},300);
    });
  }
 }
@@ -425,6 +496,7 @@ function useMemoryLight(){
  const duration=window.JACK_ANIMATIONS?.timing?.attackDuration||.48;
  p.attack=duration;
  memoryLight=3.25;memoryPulse=.65;
+ if(advanceBossWithLight())return;
 
  if(maraMet&&!portraitsSolved){
    const hit=nearestPuzzleEntry(story.portraitPuzzle.entries,175);
@@ -452,7 +524,7 @@ function update(dt){
      }
    }
  }else{lastPlayerAction=performance.now();idleTime=0;waitSitClock=0;waitSitFrame=0;waitSitActive=false}
- memoryLight=Math.max(0,memoryLight-dt);memoryPulse=Math.max(0,memoryPulse-dt);p.attack=Math.max(0,p.attack-dt);gateMessageCooldown=Math.max(0,gateMessageCooldown-dt);updateMaraRun(dt);
+ memoryLight=Math.max(0,memoryLight-dt);memoryPulse=Math.max(0,memoryPulse-dt);p.attack=Math.max(0,p.attack-dt);gateMessageCooldown=Math.max(0,gateMessageCooldown-dt);bossCooldown=Math.max(0,bossCooldown-dt);bossPulse=Math.max(0,bossPulse-dt);updateMaraRun(dt);
  p.coyote=p.on?.12:Math.max(0,p.coyote-dt);
  if(input.jump){p.buffer=.14;input.jump=false}else p.buffer=Math.max(0,p.buffer-dt);
  const speed=input.down?90:(input.run?325:228),dir=(input.right?1:0)-(input.left?1:0);
@@ -462,6 +534,8 @@ function update(dt){
  if(!portraitsSolved&&p.x+p.w>3740){p.x=3740-p.w;p.vx=Math.min(0,p.vx);if(gateMessageCooldown<=0){say("As raízes seguram o caminho. Os três retratos ainda não estão completos.");gateMessageCooldown=2}}
  if(portraitsSolved&&!voicesSolved&&p.x+p.w>5200){p.x=5200-p.w;p.vx=Math.min(0,p.vx);if(gateMessageCooldown<=0){say("O lago não abre passagem enquanto a voz de Mara continuar fragmentada.");gateMessageCooldown=2}}
  if(voicesSolved&&!archiveSolved&&p.x+p.w>6000){p.x=6000-p.w;p.vx=Math.min(0,p.vx);if(gateMessageCooldown<=0){say("As raízes recusam a passagem. O Arquivo ainda guarda algo que precisa ser deixado ir.");gateMessageCooldown=2}}
+ if(bossActive&&p.x<6650){p.x=6650;p.vx=Math.max(0,p.vx)}
+ if(bossActive&&p.x+p.w>7540){p.x=7540-p.w;p.vx=Math.min(0,p.vx)}
  p.y+=p.vy*dt;p.on=false;
  const solids=plats.concat(memoryLight>0?memoryPlats:[]);
  for(const q of solids){
@@ -477,7 +551,12 @@ function update(dt){
  else if(portraitsSolved&&!voicesSolved&&p.x>=3900)ui.obj.textContent="Ouça os três ecos com F e monte a frase de Mara usando E.";
  else if(voicesSolved&&!archiveSolved)ui.obj.textContent="Arquivo das Raízes: aproxime-se das lembranças e pressione E. A resposta não é apagar.";
  else if(archiveSolved&&!motherTreeScene)ui.obj.textContent="O caminho foi liberado. Siga Mara até a Árvore-Mãe.";
- else if(motherTreeScene)ui.obj.textContent="O Arquivista Eterno despertou. A arena do boss está preparada para receber o visual definitivo.";
+ else if(bossActive&&bossAct===1)ui.obj.textContent="ATO I — OS ROSTOS: use F três vezes para libertar as memórias presas.";
+ else if(bossActive&&bossAct===2)ui.obj.textContent="ATO II — AS VOZES: aproxime-se dos ecos e use F na ordem aprendida no Lago.";
+ else if(bossActive&&bossAct===3)ui.obj.textContent="ATO III — OS NOMES: avance até o coração e pressione E. Não destrua.";
+ else if(bossComplete&&!finalePlayed)ui.obj.textContent="A Árvore-Mãe está libertando o que guardou.";
+ else if(finalePlayed)ui.obj.textContent="O caminho de Mara terminou. O de Jack continua.";
+ else if(motherTreeScene)ui.obj.textContent="Entre no Coração das Raízes.";
  else ui.obj.textContent="Siga as folhas que caem para o céu.";
  p.anim+=dt;saveClock+=dt;if(saveClock>2.5){saveClock=0;save()}
 }
@@ -555,6 +634,7 @@ function drawWorld(){
  drawVoicePuzzleWorld();
  drawRootGate(3740,portraitsSolved);
  drawRootGate(5200,voicesSolved);
+ drawMotherTreeAndBoss();
  drawMaraWorld();
  x.restore();
 }
