@@ -91,6 +91,10 @@
   const input = { left:false, right:false, run:false, jump:false, down:false };
   let running = false, finished = false, cameraX = 0, last = performance.now();
   let jack = null, jackHD = null, jackPortraits = null, eleanorPortraits = null, guardianPortraits = null;
+  // Shared Jack wait-sit animation used by every gameplay phase.
+  let waitSitFrame=0,waitSitClock=0,waitSitActive=false,lastPlayerAction=performance.now(),waitSitImages=[];
+  Array.from({length:11},(_,i)=>"../assets/sprites/jack/wait-sit/jack-wait-"+String(i+1).padStart(2,"0")+".png")
+    .forEach((src,i)=>{const im=new Image();im.onload=()=>waitSitImages[i]=im;im.src=src});
   const portraitHD = { jack:[], eleanor:[], guardian:[] };
   const memoryHD = { key:null, storm:null, candle:null, letter:null, family:null };
   const sceneryHD = Object.create(null);
@@ -1429,6 +1433,15 @@
     dt=Math.min(dt,.034);
     if(dialogue.active){player.vx=0;return;}
     updatePlayer(dt);
+    const idleNow=!input.left&&!input.right&&!input.down&&!input.jump&&!input.run&&player.attackT<=0&&player.onGround;
+    if(idleNow){
+      const idleSeconds=(performance.now()-lastPlayerAction)/1000;
+      if(idleSeconds>=8){
+        if(!waitSitActive){waitSitActive=true;waitSitFrame=0;waitSitClock=0}
+        waitSitClock+=dt;
+        if(waitSitClock>=.38){waitSitClock=0;waitSitFrame=waitSitFrame<10?waitSitFrame+1:7}
+      }
+    }else{lastPlayerAction=performance.now();waitSitActive=false;waitSitFrame=0;waitSitClock=0}
     updateEnemies(dt);
     updateProjectiles(dt);
     updateBoss(dt);
@@ -2425,6 +2438,18 @@
   function drawPlayer(){
     const x=player.x-cameraX;
     const blinkAlpha=player.inv>0&&Math.floor(player.inv*12)%2?.35:1;
+    if(waitSitActive&&player.onGround){
+      const im=waitSitImages[waitSitFrame];
+      if(im){
+        const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height,seated=waitSitFrame>=5;
+        const targetH=seated?222:164,targetW=iw*(targetH/ih);
+        const groundY=player.y+player.h/2+(seated?22:2),dx=x-targetW/2,dy=groundY-targetH;
+        ctx.save();ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";
+        if(player.dir<0){ctx.translate(dx+targetW,0);ctx.scale(-1,1);ctx.drawImage(im,0,dy,targetW,targetH)}
+        else ctx.drawImage(im,dx,dy,targetW,targetH);
+        ctx.restore();return;
+      }
+    }
 
     if(jackHD && spriteHD.jack && window.JACK_ANIMATIONS){
       const cfg=window.JACK_ANIMATIONS;
