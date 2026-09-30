@@ -13,8 +13,6 @@ let running=false,last=performance.now(),cam=0,jack=null,jackFrameOverrides={},i
 let waitSince=performance.now(),waitFrame=0,waitClock=0,waitMode="";
 const waitSheets={lantern:null,sit:null,soul:null,long:null,curious:null,startled:null};
 const waitCfg={lantern:{cols:10,rows:2,frames:20},curious:{cols:10,rows:3,frames:30},sit:{cols:10,rows:3,frames:30},soul:{cols:10,rows:3,frames:30},startled:{cols:10,rows:3,frames:30},long:{cols:10,rows:3,frames:30}};
-let idleTime=0,idleSpecialFrame=0,idleSpecialClock=0,idleSpecialMode="",idleSpecialImages={lantern:[],sit:[],soul:[],long:[]};
-let lastPlayerAction=performance.now();
 let memoryLight=0,memoryPulse=0,playerLife=Math.max(1,Math.min(3,Number(loadedSave?.playerLife)||3));
 let activeCheckpoint=loadedSave?.activeCheckpoint||localStorage.getItem(CHECKPOINT_KEY)||"";
 const p={x:Number.isFinite(loadedSave?.x)?loadedSave.x:120,y:Number.isFinite(loadedSave?.y)?loadedSave.y:470,w:46,h:86,vx:0,vy:0,dir:loadedSave?.dir===-1?-1:1,on:false,coyote:0,buffer:0,anim:0,attack:0};
@@ -110,14 +108,6 @@ function buildJackFrameOverrides(image){
  };
 }
 const jackStartupReady=img("../assets/game/phase1/sprites-hd/jack-atlas-hd.png").then(i=>{jack=i;jackFrameOverrides=buildJackFrameOverrides(i)}).catch(()=>{});
-const loadIdleSet=(folder,prefix,count)=>Promise.allSettled(Array.from({length:count},(_,i)=>img("../assets/sprites/jack/idle-special/"+folder+"/"+prefix+String(i+1).padStart(2,"0")+".png"))).then(rs=>rs.filter(r=>r.status==="fulfilled").map(r=>r.value));
-Promise.all([
- loadIdleSet("lantern","jack-idle-lantern-",1),
- loadIdleSet("sit","jack-idle-sit-",1),
- loadIdleSet("soul","jack-idle-soul-",1),
- loadIdleSet("long-idle","jack-idle-long-idle-",7)
-]).then(([lantern,sit,soul,long])=>{idleSpecialImages={lantern,sit,soul,long}}).catch(()=>{});
-
 // Reaproveita os seis retratos HD oficiais do Jack usados nos Halloweens anteriores.
 // A Fase 3 começa consistente visualmente e já fica pronta para receber Mara depois.
 const jackPortraitFiles=[
@@ -164,19 +154,7 @@ function currentJackFrame(){
  const speed=Math.abs(p.vx);if(speed>=18){if(input.run&&speed>170)return jackSequenceFrame(anims.run,cfg.timing?.runFps||12);return jackSequenceFrame(anims.walk,cfg.timing?.walkFps||9)}
  return jackSequenceFrame(anims.idle,cfg.timing?.idleFps||2.4);
 }
-// Special-idle strips: crop only the artwork band (never the caption/text below).
-// Scale is tuned per action because the generated figures occupy different amounts of each cell.
-const IDLE_STRIPS={
- lantern:{image:0,frames:8,x:9,y:190,w:238,h:62,scale:2.18,lift:0},
- sit:{image:0,frames:8,x:9,y:204,w:238,h:45,scale:2.28,lift:0},
- soul:{image:0,frames:8,x:9,y:195,w:238,h:54,scale:2.22,lift:0},
- long:{image:4,frames:7,x:9,y:188,w:238,h:60,scale:2.20,lift:0}
-};
-function idleStripRect(mode,frame){
- const s=IDLE_STRIPS[mode];if(!s)return null;
- const fw=s.w/s.frames,i=frame%s.frames;
- return {imgIndex:s.image,sx:s.x+i*fw,sy:s.y,sw:fw,sh:s.h,scale:s.scale||2.2,lift:s.lift||0};
-}
+// New waiting sheets only.
 function drawJack(){
  const idleSec=(performance.now()-waitSince)/1000;
  const mode=idleSec>=60?"long":idleSec>=50?"startled":idleSec>=40?"soul":idleSec>=25?"sit":idleSec>=15?"curious":idleSec>=8?"lantern":"";
@@ -201,7 +179,7 @@ function drawJack(){
 }
 
 function useMemoryLight(){
- lastPlayerAction=performance.now();idleTime=0;idleSpecialMode="";idleSpecialFrame=0;
+ waitSince=performance.now();waitMode="";waitFrame=0;waitClock=0;
  const duration=window.JACK_ANIMATIONS?.timing?.attackDuration||.48;
  p.attack=duration;
  memoryLight=3.25;memoryPulse=.65;
@@ -209,16 +187,15 @@ function useMemoryLight(){
 }
 
 function update(dt){
- if(dialogue.active){lastPlayerAction=performance.now();idleTime=0;idleSpecialMode="";p.vx*=.72;p.anim+=dt;return}
+ if(dialogue.active){waitSince=performance.now();waitMode="";waitFrame=0;waitClock=0;p.vx*=.72;p.anim+=dt;return}
  const idleNow=!input.left&&!input.right&&!input.down&&!input.jump&&!input.run&&p.attack<=0;
  if(idleNow){
-   idleTime=(performance.now()-lastPlayerAction)/1000;
-   const nextMode=idleTime>=60?"long":idleTime>=40?"soul":idleTime>=25?"sit":idleTime>=8?"lantern":"";
-   if(nextMode!==idleSpecialMode){idleSpecialMode=nextMode;idleSpecialFrame=0;idleSpecialClock=0}
-   const seq=idleSpecialImages[idleSpecialMode]||[];
-   const strip=IDLE_STRIPS[idleSpecialMode],frameCount=seq.length&&strip?strip.frames:seq.length;
-   if(idleSpecialMode&&frameCount){idleSpecialClock+=dt;if(idleSpecialClock>=.32){idleSpecialClock=0;idleSpecialFrame=(idleSpecialFrame+1)%frameCount}}
- }else{lastPlayerAction=performance.now();idleTime=0;idleSpecialClock=0;idleSpecialFrame=0;idleSpecialMode=""}
+   const idleSec=(performance.now()-waitSince)/1000;
+   const mode=idleSec>=60?"long":idleSec>=50?"startled":idleSec>=40?"soul":idleSec>=25?"sit":idleSec>=15?"curious":idleSec>=8?"lantern":"";
+   const cfg=waitCfg[mode];
+   if(mode!==waitMode){waitMode=mode;waitFrame=0;waitClock=0}
+   if(mode&&p.on&&waitSheets[mode]&&cfg){waitClock+=dt;if(waitClock>=.20){waitClock=0;waitFrame=(waitFrame+1)%cfg.frames}}
+ }else{waitSince=performance.now();waitMode="";waitFrame=0;waitClock=0}
  memoryLight=Math.max(0,memoryLight-dt);memoryPulse=Math.max(0,memoryPulse-dt);p.attack=Math.max(0,p.attack-dt);
  p.coyote=p.on?.12:Math.max(0,p.coyote-dt);
  if(input.jump){p.buffer=.14;input.jump=false}else p.buffer=Math.max(0,p.buffer-dt);
@@ -314,9 +291,9 @@ function draw(){
 
 function bindHold(id,key){const b=document.getElementById(id);["pointerdown","pointerup","pointercancel","pointerleave"].forEach(ev=>b.addEventListener(ev,()=>{input[key]=ev==="pointerdown";if(ev==="pointerdown"){waitSince=performance.now();waitFrame=0;waitClock=0}}))}
 bindHold("leftBtn","left");bindHold("rightBtn","right");bindHold("downBtn","down");
-document.getElementById("jumpBtn")?.addEventListener("pointerdown",()=>{lastPlayerAction=performance.now();idleTime=0;idleSpecialMode="";input.jump=true});
+document.getElementById("jumpBtn")?.addEventListener("pointerdown",()=>{waitSince=performance.now();waitMode="";waitFrame=0;waitClock=0;input.jump=true});
 document.getElementById("lightBtn")?.addEventListener("pointerdown",useMemoryLight);
-addEventListener("keydown",e=>{if(dialogue.active)return;waitSince=performance.now();waitFrame=0;waitClock=0;waitMode="";lastPlayerAction=performance.now();idleTime=0;idleSpecialMode="";idleSpecialFrame=0;if(["ArrowLeft","a","A"].includes(e.key))input.left=true;if(["ArrowRight","d","D"].includes(e.key))input.right=true;if(["ArrowDown","s","S"].includes(e.key))input.down=true;if(e.key==="Shift")input.run=true;if(e.code==="Space"){input.jump=true;e.preventDefault()}if(["f","F"].includes(e.key))useMemoryLight()});
+addEventListener("keydown",e=>{if(dialogue.active)return;waitSince=performance.now();waitFrame=0;waitClock=0;waitMode="";waitSince=performance.now();waitMode="";waitFrame=0;waitClock=0;if(["ArrowLeft","a","A"].includes(e.key))input.left=true;if(["ArrowRight","d","D"].includes(e.key))input.right=true;if(["ArrowDown","s","S"].includes(e.key))input.down=true;if(e.key==="Shift")input.run=true;if(e.code==="Space"){input.jump=true;e.preventDefault()}if(["f","F"].includes(e.key))useMemoryLight()});
 addEventListener("keyup",e=>{if(["ArrowLeft","a","A"].includes(e.key))input.left=false;if(["ArrowRight","d","D"].includes(e.key))input.right=false;if(["ArrowDown","s","S"].includes(e.key))input.down=false;if(e.key==="Shift")input.run=false});
 
 document.getElementById("startGame").onclick=()=>{
