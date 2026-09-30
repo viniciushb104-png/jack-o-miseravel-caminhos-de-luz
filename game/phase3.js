@@ -220,7 +220,12 @@ function maraWorldState(){
  return {x:5575,groundY:590,frame:5};
 }
 function startMaraRun(fromX,toX,onDone){
- maraRun.active=true;maraRun.x=fromX;maraRun.targetX=toX;maraRun.groundY=590;maraRun.onDone=typeof onDone==="function"?onDone:null;
+ // A corrida narrativa precisa começar dentro da área que o jogador está vendo.
+ // Caso Mara estivesse estacionada num ponto antigo do mapa, trazemos o início
+ // para logo à frente de Jack em vez de animá-la fora da câmera.
+ const visibleStart=Math.min(toX-150,Math.max(fromX,p.x+p.w+82));
+ maraRun.active=true;maraRun.x=visibleStart;maraRun.targetX=toX;maraRun.groundY=590;
+ maraRun.onDone=typeof onDone==="function"?onDone:null;
 }
 function updateMaraRun(dt){
  if(!maraRun.active)return;
@@ -347,7 +352,7 @@ function tryInteract(){
  if(!running||dialogue.active)return;
  lastPlayerAction=performance.now();idleTime=0;waitSitActive=false;
  const pc=p.x+p.w/2,m=maraWorldState();
- if(Math.abs(pc-m.x)<120){
+ if(!maraRun.active&&Math.abs(pc-m.x)<120){
    if(!maraMet){
      maraMet=true;p.vx=0;
      dialogue.open(story.dialogues.maraMeeting,()=>{say("Os retratos respondem à Luz. F revela a lembrança; E troca o nome.");save()});
