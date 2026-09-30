@@ -355,7 +355,12 @@ function tryInteract(){
  if(!maraRun.active&&Math.abs(pc-m.x)<120){
    if(!maraMet){
      maraMet=true;p.vx=0;
-     dialogue.open(story.dialogues.maraMeeting,()=>{say("Os retratos respondem à Luz. F revela a lembrança; E troca o nome.");save()});
+     dialogue.open(story.dialogues.maraMeeting,()=>{
+       say("Os retratos respondem à Luz. F revela a lembrança; E troca o nome.");
+       // Primeira saída de Mara: ela conduz Jack até o começo do Bosque dos Retratos.
+       startMaraRun(2275,2700,()=>{banner("BOSQUE DOS RETRATOS");save()});
+       save();
+     });
      return;
    }
    if(!portraitsSolved){say("Mara: Ilumine cada retrato e devolva a ele o nome que pertence àquela história.");return}
