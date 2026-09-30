@@ -153,6 +153,16 @@ function currentJackFrame(){
  return jackSequenceFrame(anims.idle,cfg.timing?.idleFps||2.4);
 }
 function drawJack(){
+ if(idleSpecialMode&&p.on&&!dialogue.active){
+   const seq=idleSpecialImages[idleSpecialMode]||[],im=seq.length?seq[idleSpecialFrame%seq.length]:null;
+   if(im){
+     const rw=190,rh=190,dx=p.x-cam+p.w/2-rw/2,dy=p.y+p.h/2-132;
+     x.save();x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";
+     if(p.dir<0){x.translate(dx+rw,0);x.scale(-1,1);x.drawImage(im,0,dy,rw,rh)}
+     else x.drawImage(im,dx,dy,rw,rh);
+     x.restore();return;
+   }
+ }
  if(p.on){x.save();x.globalAlpha=.2;x.fillStyle="#020704";x.beginPath();x.ellipse(p.x-cam+p.w/2,p.y+p.h+1,18,3.3,0,0,Math.PI*2);x.fill();x.restore()}
  if(!jack){x.fillStyle="#eee";x.fillRect(p.x-cam,p.y,p.w,p.h);return}
  const cfg=window.JACK_ANIMATIONS||{},idx=currentJackFrame(),cell=cfg.cell||320,cols=cfg.cols||8,sx=(idx%cols)*cell,sy=Math.floor(idx/cols)*cell;
@@ -171,7 +181,15 @@ function useMemoryLight(){
 }
 
 function update(dt){
- if(dialogue.active){p.vx*=.72;p.anim+=dt;return}
+ if(dialogue.active){idleTime=0;idleSpecialMode="";p.vx*=.72;p.anim+=dt;return}
+ const idleNow=p.on&&!input.left&&!input.right&&!input.down&&!input.jump&&!input.run&&p.attack<=0&&Math.abs(p.vx)<10;
+ if(idleNow){
+   idleTime+=dt;
+   const nextMode=idleTime>=60?"long":idleTime>=40?"soul":idleTime>=25?"sit":idleTime>=8?"lantern":"";
+   if(nextMode!==idleSpecialMode){idleSpecialMode=nextMode;idleSpecialFrame=0;idleSpecialClock=0}
+   const seq=idleSpecialImages[idleSpecialMode]||[];
+   if(idleSpecialMode&&seq.length){idleSpecialClock+=dt;if(idleSpecialClock>=.42){idleSpecialClock=0;idleSpecialFrame=(idleSpecialFrame+1)%seq.length}}
+ }else{idleTime=0;idleSpecialClock=0;idleSpecialFrame=0;idleSpecialMode=""}
  memoryLight=Math.max(0,memoryLight-dt);memoryPulse=Math.max(0,memoryPulse-dt);p.attack=Math.max(0,p.attack-dt);
  p.coyote=p.on?.12:Math.max(0,p.coyote-dt);
  if(input.jump){p.buffer=.14;input.jump=false}else p.buffer=Math.max(0,p.buffer-dt);
