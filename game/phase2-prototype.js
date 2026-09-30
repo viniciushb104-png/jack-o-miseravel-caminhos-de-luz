@@ -252,9 +252,9 @@ phase2ReplayBtn?.addEventListener("click",()=>{
   location.href="phase2-prototype.html?replay=1";
 });
 phase2NextBtn?.addEventListener("click",()=>{
-  // Botão já preparado para Halloween III. Enquanto a fase não existir,
-  // volta ao mapa de fases em vez de enviar o jogador para uma página quebrada.
-  location.href="../index.html#fases";
+  // Halloween III já possui uma primeira rota jogável.
+  if(journeyMode&&!replayMode)journey?.advanceTo(3);
+  location.href="phase3.html"+(journeyMode&&!replayMode?"?journey=1":"?replay=1&new=1");
 });
 phase2MenuBtn?.addEventListener("click",()=>{ location.href="../index.html"; });
 shadowVideo?.addEventListener("ended",finishShadowVideo);
