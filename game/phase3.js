@@ -1,6 +1,7 @@
 (()=>{"use strict";
 const c=document.getElementById("game"),x=c.getContext("2d"),W=1280,H=720,WORLD=7600,G=1500;
 const ui={obj:document.querySelector("#objective strong"),health:document.getElementById("healthValue"),banner:document.getElementById("sectionBanner"),msg:document.getElementById("message"),intro:document.getElementById("intro")};
+const phase3CompleteRoot=document.getElementById("phase3Complete"),phase3ReplayBtn=document.getElementById("phase3Replay"),phase3MenuBtn=document.getElementById("phase3Menu");
 const dialogueRoot=document.getElementById("dialogue"),dialogue=new window.DialogueSystem(dialogueRoot);
 const journey=window.JackJourney||null,urlParams=new URLSearchParams(location.search),journeyMode=urlParams.get("journey")==="1",replayMode=urlParams.get("replay")==="1",forceNewRun=urlParams.get("new")==="1";
 const SAVE_KEY="jack-phase3-save",CHECKPOINT_KEY="jack-phase3-checkpoint";
@@ -25,13 +26,23 @@ let portraitChoices=Array.isArray(loadedSave?.portraitChoices)&&loadedSave.portr
 let voicesSolved=!!loadedSave?.voicesSolved;
 let voiceStep=Math.max(0,Math.min(3,Number(loadedSave?.voiceStep)||0));
 let jackEchoPlayed=!!loadedSave?.jackEchoPlayed;
+let firstWhisperPlayed=!!loadedSave?.firstWhisperPlayed;
+let portraitMemoryProofPlayed=!!loadedSave?.portraitMemoryProofPlayed;
+let maraJackSuspicionPlayed=!!loadedSave?.maraJackSuspicionPlayed;
+let archiveKeyReactionPlayed=!!loadedSave?.archiveKeyReactionPlayed;
+let approachTreePlayed=!!loadedSave?.approachTreePlayed;
 let motherTreeScene=!!loadedSave?.motherTreeScene;
 let archiveSolved=!!loadedSave?.archiveSolved;
 let archiveChoice=Math.max(0,Math.min(2,Number(loadedSave?.archiveChoice)||0));
 let archiveSeen=Array.isArray(loadedSave?.archiveSeen)?loadedSave.archiveSeen.slice(0,3).map(Boolean):[false,false,false];
 let bossPrelude=!!loadedSave?.bossPrelude;
 let bossActive=!!loadedSave?.bossActive,bossAct=Math.max(0,Math.min(3,Number(loadedSave?.bossAct)||0)),bossStep=Math.max(0,Number(loadedSave?.bossStep)||0),bossComplete=!!loadedSave?.bossComplete,finalePlayed=!!loadedSave?.finalePlayed;
-let bossCooldown=0,bossPulse=0;
+let bossFirstStrike=!!loadedSave?.bossFirstStrike;
+let bossFacesSeen=Array.isArray(loadedSave?.bossFacesSeen)?loadedSave.bossFacesSeen.slice(0,3).map(Boolean):[false,false,false];
+let maraBossX=Number.isFinite(loadedSave?.maraBossX)?loadedSave.maraBossX:6700;
+let bossCooldown=0,bossPulse=0,bossReleaseT=0;
+let endingSequenceActive=false;
+const bossFacePositions=[6780,7010,7270],bossRootPositions=[6795,6915,7005];
 let gateMessageCooldown=0;
 const p={x:Number.isFinite(loadedSave?.x)?loadedSave.x:120,y:Number.isFinite(loadedSave?.y)?loadedSave.y:470,w:46,h:86,vx:0,vy:0,dir:loadedSave?.dir===-1?-1:1,on:false,coyote:0,buffer:0,anim:0,attack:0};
 
@@ -96,7 +107,8 @@ function save(){
  localStorage.setItem(SAVE_KEY,JSON.stringify({
    x:p.x,y:p.y,dir:p.dir,playerLife,activeCheckpoint,introLorePlayed,
    maraMet,portraitsSolved,portraitChoices:[...portraitChoices],
-   voicesSolved,voiceStep,jackEchoPlayed,motherTreeScene,archiveSolved,archiveChoice,archiveSeen:[...archiveSeen],bossPrelude,bossActive,bossAct,bossStep,bossComplete,finalePlayed,savedAt:Date.now()
+   voicesSolved,voiceStep,jackEchoPlayed,firstWhisperPlayed,portraitMemoryProofPlayed,maraJackSuspicionPlayed,archiveKeyReactionPlayed,approachTreePlayed,motherTreeScene,
+   archiveSolved,archiveChoice,archiveSeen:[...archiveSeen],bossPrelude,bossActive,bossAct,bossStep,bossComplete,finalePlayed,bossFirstStrike,bossFacesSeen:[...bossFacesSeen],maraBossX,savedAt:Date.now()
  }));
 }
 function respawn(msg){
@@ -166,10 +178,11 @@ const motherTreeSpriteReady=Promise.allSettled([
  img("../assets/phase3/mother-tree/mother-tree-restored.png").then(im=>{motherTreeSprites.restored=im;return im})
 ]);
 
-const dialogueAssetsReady=Promise.all([jackPortraitReady,maraDialogueReady]).then(([jackFrames,maraSheet])=>{
+const dialogueAssetsReady=Promise.all([jackPortraitReady,maraDialogueReady,motherTreeSpriteReady]).then(([jackFrames,maraSheet])=>{
  dialogue.setAssets({
    jack:{frames:jackFrames},
-   mara:maraSheet?{sheet:maraSheet}:null
+   mara:maraSheet?{sheet:maraSheet}:null,
+   motherTree:{frames:[motherTreeSprites.idle,motherTreeSprites.awakened||motherTreeSprites.restored]}
  });
 });
 
@@ -231,6 +244,9 @@ function drawJack(){
 
 function maraWorldState(){
  if(maraRun.active)return {x:maraRun.x,groundY:maraRun.groundY,run:true};
+ if(bossActive)return {x:maraBossX,groundY:590,frame:bossAct===3?0:5};
+ if(motherTreeScene||bossComplete)return {x:6680,groundY:590,frame:bossComplete?1:5};
+ if(archiveSolved)return {x:6380,groundY:590,frame:5};
  if(!portraitsSolved)return {x:2275,groundY:590,frame:maraMet?3:0};
  if(!voicesSolved)return {x:4020,groundY:590,frame:4};
  return {x:5575,groundY:590,frame:5};
