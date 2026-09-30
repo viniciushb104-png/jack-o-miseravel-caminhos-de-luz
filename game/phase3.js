@@ -125,7 +125,8 @@ const jackDialogueReady=Promise.allSettled(
  return results;
 });
 
-window.__PHASE_ASSETS_READY=Promise.allSettled([jackStartupReady,jackDialogueReady]).then(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
+const phase3DialogueFrameReady=img("../assets/game/phase3/ui/phase3-dialogue-frame.png").catch(()=>null);
+window.__PHASE_ASSETS_READY=Promise.allSettled([jackStartupReady,jackDialogueReady,phase3DialogueFrameReady]).then(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
 
 function jackSequenceFrame(seq,fps){return seq[Math.floor(p.anim*fps)%seq.length]}
 function currentJackFrame(){
