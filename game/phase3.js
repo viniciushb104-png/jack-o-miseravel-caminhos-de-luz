@@ -5,6 +5,33 @@ const phase3CompleteRoot=document.getElementById("phase3Complete"),phase3ReplayB
 const dialogueRoot=document.getElementById("dialogue"),dialogue=new window.DialogueSystem(dialogueRoot);
 const journey=window.JackJourney||null,urlParams=new URLSearchParams(location.search),journeyMode=urlParams.get("journey")==="1",replayMode=urlParams.get("replay")==="1",forceNewRun=urlParams.get("new")==="1";
 const SAVE_KEY="jack-phase3-save",CHECKPOINT_KEY="jack-phase3-checkpoint";
+const phase3Music={
+ forest:new Audio("../assets/phase3/audio/music/phase3-memory-forest-theme.mp3"),
+ motherTree:new Audio("../assets/phase3/audio/music/phase3-mother-tree-theme.mp3"),
+ archivist:new Audio("../assets/phase3/audio/music/phase3-archivist-theme.mp3")
+};
+Object.values(phase3Music).forEach(a=>{a.loop=true;a.preload="auto";a.volume=0});
+let activeMusic=null,musicFadeTimer=0;
+function fadeMusicTo(name,target=.58,duration=900){
+ const next=phase3Music[name];if(!next||activeMusic===next)return;
+ const prev=activeMusic;activeMusic=next;
+ try{next.currentTime=Math.max(0,next.currentTime||0);next.play().catch(()=>{})}catch(_){}
+ const start=performance.now(),fromNext=next.volume,fromPrev=prev?.volume||0;
+ cancelAnimationFrame(musicFadeTimer);
+ const tick=(now)=>{
+   const t=Math.min(1,(now-start)/duration),ease=t*t*(3-2*t);
+   next.volume=fromNext+(target-fromNext)*ease;
+   if(prev)prev.volume=fromPrev*(1-ease);
+   if(t<1)musicFadeTimer=requestAnimationFrame(tick);
+   else if(prev){prev.pause();prev.volume=0}
+ };
+ musicFadeTimer=requestAnimationFrame(tick);
+}
+function stopPhase3Music(){
+ cancelAnimationFrame(musicFadeTimer);
+ Object.values(phase3Music).forEach(a=>{a.pause();a.volume=0});
+ activeMusic=null;
+}
 if(replayMode)journey?.beginReplay(3,[SAVE_KEY,CHECKPOINT_KEY]);
 if(forceNewRun){localStorage.removeItem(SAVE_KEY);localStorage.removeItem(CHECKPOINT_KEY)}
 let loadedSave=null;if(journeyMode&&!replayMode){try{loadedSave=JSON.parse(localStorage.getItem(SAVE_KEY)||"null")}catch(_){loadedSave=null}}
@@ -441,6 +468,7 @@ function activateVoice(i){
 
 function startBoss(){
  if(bossActive||bossComplete)return;
+ fadeMusicTo("archivist",.64,760);
  bossActive=true;bossAct=1;bossStep=0;bossPulse=1.6;bossFirstStrike=false;bossFacesSeen=[false,false,false];maraBossX=6700;p.vx=0;
  banner(story.boss.name+" — "+story.boss.acts[0].title);
  say("A ordem ganhou corpo. Tente usar a Luz no Arquivista.");
@@ -529,6 +557,7 @@ function unlockPhase3(){
  return firstClear;
 }
 function showPhase3Complete(){
+ fadeMusicTo("motherTree",.48,1100);
  const firstClear=unlockPhase3();
  finalePlayed=true;endingSequenceActive=false;
  banner(firstClear?"MEMÓRIA RECUPERADA — MARA ROWAN":"MEMÓRIA REVIVIDA — MARA ROWAN");
@@ -546,6 +575,7 @@ function finishBoss(){
  endingSequenceActive=true;p.vx=0;
  dialogue.open(story.dialogues.bossLight,()=>dialogue.open(story.finale.maraRelease,()=>{
    bossActive=false;bossComplete=true;bossReleaseT=3.2;bossPulse=2.8;
+   fadeMusicTo("motherTree",.52,1200);
    banner("A PRIMEIRA FOLHA CAIU");
    save();
    // O silêncio depois do boss é parte da resolução: nenhuma fala por alguns instantes.
@@ -801,6 +831,7 @@ function updateNarrativeTriggers(){
 
  if(archiveSolved&&approachTreePlayed&&!motherTreeScene&&p.x>6500){
    motherTreeScene=true;p.vx=0;maraBossX=6680;
+   fadeMusicTo("motherTree",.56,1100);
    banner("ÁRVORE-MÃE — O CORAÇÃO DAS RAÍZES");
    dialogue.open(story.dialogues.motherTree,()=>{
      bossPrelude=true;memoryPulse=1.4;save();
@@ -1018,6 +1049,7 @@ if(loadedSave&&journeyMode&&!replayMode){
 }
 startGameBtn.onclick=()=>{
  if(journeyMode&&!replayMode)journey?.advanceTo(3);
+ fadeMusicTo(bossActive&&!bossComplete?"archivist":(motherTreeScene||bossComplete?"motherTree":"forest"),.56,700);
  ui.intro.hidden=true;running=true;last=performance.now();requestAnimationFrame(loop);
  setTimeout(()=>{
    if(finalePlayed){if(phase3CompleteRoot)phase3CompleteRoot.hidden=false;return}
@@ -1034,6 +1066,6 @@ phase3NextBtn?.addEventListener("click",()=>{
  location.href="phase4.html"+(journeyMode&&!replayMode?"?journey=1":"?from=phase3");
 });
 function loop(t){if(!running)return;const dt=Math.min(.033,(t-last)/1000);last=t;update(dt);draw();requestAnimationFrame(loop)}
-addEventListener("pagehide",save);document.addEventListener("visibilitychange",()=>{if(document.hidden)save()});
+addEventListener("pagehide",()=>{save();stopPhase3Music()});document.addEventListener("visibilitychange",()=>{if(document.hidden){save();Object.values(phase3Music).forEach(a=>a.pause())}else if(running&&activeMusic){activeMusic.play().catch(()=>{})}});
 syncHud();draw();
 })();
