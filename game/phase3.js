@@ -109,7 +109,7 @@ function buildJackFrameOverrides(image){
 const jackStartupReady=img("../assets/game/phase1/sprites-hd/jack-atlas-hd.png").then(i=>{jack=i;jackFrameOverrides=buildJackFrameOverrides(i)}).catch(()=>{});
 const loadIdleSet=(folder,prefix,count)=>Promise.allSettled(Array.from({length:count},(_,i)=>img("../assets/sprites/jack/idle-special/"+folder+"/"+prefix+String(i+1).padStart(2,"0")+".png"))).then(rs=>rs.filter(r=>r.status==="fulfilled").map(r=>r.value));
 Promise.all([
- loadIdleSet("lantern","jack-idle-lantern-",2),
+ loadIdleSet("lantern","jack-idle-lantern-",1),
  loadIdleSet("sit","jack-idle-sit-",1),
  loadIdleSet("soul","jack-idle-soul-",1),
  loadIdleSet("long-idle","jack-idle-long-idle-",7)
@@ -153,9 +153,22 @@ function currentJackFrame(){
  const speed=Math.abs(p.vx);if(speed>=18){if(input.run&&speed>170)return jackSequenceFrame(anims.run,cfg.timing?.runFps||12);return jackSequenceFrame(anims.walk,cfg.timing?.walkFps||9)}
  return jackSequenceFrame(anims.idle,cfg.timing?.idleFps||2.4);
 }
+const LANTERN_RECTS=[
+ [8,196,32,56],[38,196,32,56],[66,194,36,58],[101,194,31,58],
+ [129,194,32,58],[158,194,32,58],[186,194,31,58],[211,194,35,58]
+];
 function drawJack(){
  if(idleSpecialMode&&!dialogue.active){
-   const seq=idleSpecialImages[idleSpecialMode]||[],im=seq.length?seq[idleSpecialFrame%seq.length]:null;
+   const seq=idleSpecialImages[idleSpecialMode]||[];
+   if(idleSpecialMode==="lantern"&&seq[0]){
+     const im=seq[0],rect=LANTERN_RECTS[idleSpecialFrame%LANTERN_RECTS.length];
+     const rw=190,rh=190,dx=p.x-cam+p.w/2-rw/2,dy=p.y+p.h/2-132;
+     x.save();x.imageSmoothingEnabled=false;
+     if(p.dir<0){x.translate(dx+rw,0);x.scale(-1,1);x.drawImage(im,rect[0],rect[1],rect[2],rect[3],0,dy,rw,rh)}
+     else x.drawImage(im,rect[0],rect[1],rect[2],rect[3],dx,dy,rw,rh);
+     x.restore();return;
+   }
+   const im=seq.length?seq[idleSpecialFrame%seq.length]:null;
    if(im){
      const rw=190,rh=190,dx=p.x-cam+p.w/2-rw/2,dy=p.y+p.h/2-132;
      x.save();x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";
@@ -190,7 +203,8 @@ function update(dt){
    const nextMode=idleTime>=60?"long":idleTime>=40?"soul":idleTime>=25?"sit":idleTime>=8?"lantern":"";
    if(nextMode!==idleSpecialMode){idleSpecialMode=nextMode;idleSpecialFrame=0;idleSpecialClock=0}
    const seq=idleSpecialImages[idleSpecialMode]||[];
-   if(idleSpecialMode&&seq.length){idleSpecialClock+=dt;if(idleSpecialClock>=.42){idleSpecialClock=0;idleSpecialFrame=(idleSpecialFrame+1)%seq.length}}
+   const frameCount=idleSpecialMode==="lantern"&&seq.length?LANTERN_RECTS.length:seq.length;
+   if(idleSpecialMode&&frameCount){idleSpecialClock+=dt;if(idleSpecialClock>=.32){idleSpecialClock=0;idleSpecialFrame=(idleSpecialFrame+1)%frameCount}}
  }else{lastPlayerAction=performance.now();idleTime=0;idleSpecialClock=0;idleSpecialFrame=0;idleSpecialMode=""}
  memoryLight=Math.max(0,memoryLight-dt);memoryPulse=Math.max(0,memoryPulse-dt);p.attack=Math.max(0,p.attack-dt);
  p.coyote=p.on?.12:Math.max(0,p.coyote-dt);
