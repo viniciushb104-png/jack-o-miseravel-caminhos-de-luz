@@ -17,6 +17,7 @@ let lastPlayerAction=performance.now();
 let memoryLight=0,memoryPulse=0,playerLife=Math.max(1,Math.min(3,Number(loadedSave?.playerLife)||3));
 let activeCheckpoint=loadedSave?.activeCheckpoint||localStorage.getItem(CHECKPOINT_KEY)||"";
 let maraSpriteSheet=null,maraRunSheet=null,forestBackground=null,motherTreeBackground=null;
+const motherTreeSprites={idle:null,awakened:null,corrupted:null,restored:null};
 let maraRun={active:false,x:2275,targetX:2275,groundY:590,onDone:null};
 let maraMet=!!loadedSave?.maraMet;
 let portraitsSolved=!!loadedSave?.portraitsSolved;
@@ -158,6 +159,12 @@ const maraSpriteReady=img("../assets/game/phase3/mara/sprites/mara-sprite-sheet.
 const maraRunReady=img("../assets/game/phase3/mara/sprites/mara-run-sheet.png").then(im=>{maraRunSheet=im;return im}).catch(()=>null);
 const forestBackgroundReady=img("../assets/phase3/backgrounds/phase3-memory-forest-bg.png").then(im=>{forestBackground=im;return im}).catch(()=>null);
 const motherTreeBackgroundReady=img("../assets/phase3/backgrounds/phase3-mother-tree-area-bg.png").then(im=>{motherTreeBackground=im;return im}).catch(()=>null);
+const motherTreeSpriteReady=Promise.allSettled([
+ img("../assets/phase3/mother-tree/mother-tree-idle.png").then(im=>{motherTreeSprites.idle=im;return im}),
+ img("../assets/phase3/mother-tree/mother-tree-awakened.png").then(im=>{motherTreeSprites.awakened=im;return im}),
+ img("../assets/phase3/mother-tree/mother-tree-corrupted.png").then(im=>{motherTreeSprites.corrupted=im;return im}),
+ img("../assets/phase3/mother-tree/mother-tree-restored.png").then(im=>{motherTreeSprites.restored=im;return im})
+]);
 
 const dialogueAssetsReady=Promise.all([jackPortraitReady,maraDialogueReady]).then(([jackFrames,maraSheet])=>{
  dialogue.setAssets({
@@ -171,7 +178,7 @@ const memoryLeavesReady=Promise.all(
  Array.from({length:6},(_,i)=>img("../assets/game/phase3/fx/memory-leaves/memory-leaf-"+String(i+1).padStart(2,"0")+".png"))
 ).then(images=>{memoryLeafImages.splice(0,memoryLeafImages.length,...images);return images}).catch(()=>[]);
 window.__PHASE_ASSETS_READY=Promise.allSettled([
- jackStartupReady,dialogueAssetsReady,maraSpriteReady,maraRunReady,forestBackgroundReady,motherTreeBackgroundReady,phase3DialogueFrameReady,memoryLeavesReady
+ jackStartupReady,dialogueAssetsReady,maraSpriteReady,maraRunReady,forestBackgroundReady,motherTreeBackgroundReady,motherTreeSpriteReady,phase3DialogueFrameReady,memoryLeavesReady
 ]).then(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
 
 function jackSequenceFrame(seq,fps){return seq[Math.floor(p.anim*fps)%seq.length]}
@@ -420,25 +427,47 @@ function finishBoss(){
 }
 function drawMotherTreeAndBoss(){
  if(!motherTreeScene&&p.x<6000)return;
- x.save();
- // protótipo da Árvore-Mãe: será substituído pela arte final sem mudar a lógica.
- x.translate(7040,0);
- x.strokeStyle="#44301f";x.lineCap="round";
- for(let i=-5;i<=5;i++){x.lineWidth=22-Math.abs(i)*1.5;x.beginPath();x.moveTo(i*24,590);x.quadraticCurveTo(i*42,390,i*26,165);x.stroke()}
- x.fillStyle="#70502b";x.beginPath();x.arc(0,205,135,0,Math.PI*2);x.fill();
+
+ let state="idle";
+ if(bossComplete)state="restored";
+ else if(bossActive)state="corrupted";
+ else if(motherTreeScene)state="awakened";
+
+ const im=motherTreeSprites[state]||motherTreeSprites.idle;
+ const treeX=7040,groundY=590;
+
+ if(im){
+   const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+   const baseH=585;
+   const pulse=(state==="awakened"||state==="restored")?1+Math.sin(p.anim*1.8)*.008:1;
+   const dh=baseH*pulse,dw=iw*(dh/ih);
+   const dx=treeX-dw/2,dy=groundY-dh+5;
+   x.save();
+   x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";
+   if(state==="restored"){
+     x.shadowColor="rgba(247,219,137,.52)";x.shadowBlur=28+Math.sin(p.anim*2)*8;
+   }else if(state==="awakened"){
+     x.shadowColor="rgba(224,181,92,.28)";x.shadowBlur=18;
+   }else if(state==="corrupted"){
+     x.shadowColor="rgba(150,53,96,.30)";x.shadowBlur=18;
+   }
+   x.drawImage(im,dx,dy,dw,dh);
+   x.restore();
+ }
+
  if(bossActive&&!bossComplete){
    const pulse=1+Math.sin(p.anim*4)*.04;
-   x.save();x.scale(pulse,pulse);
-   x.shadowColor="rgba(231,196,102,.5)";x.shadowBlur=22+bossPulse*18;
-   x.fillStyle="#211c17";x.beginPath();x.ellipse(0,395,88,145,0,0,Math.PI*2);x.fill();
-   x.strokeStyle="#80643b";x.lineWidth=13;
-   for(let i=-3;i<=3;i++){x.beginPath();x.moveTo(i*18,500);x.quadraticCurveTo(i*45,390,i*26,285);x.stroke()}
-   x.fillStyle="#e1c36d";x.beginPath();x.arc(0,390,20+bossPulse*5,0,Math.PI*2);x.fill();x.restore();
-   x.fillStyle="#f1dda0";x.font="700 15px Georgia";x.textAlign="center";
-   x.fillText("PROTÓTIPO — "+story.boss.name,0,110);
-   x.fillText(story.boss.acts[Math.max(0,bossAct-1)].title,0,135);
+   x.save();x.translate(treeX,0);x.scale(pulse,pulse);
+   x.shadowColor="rgba(231,196,102,.42)";x.shadowBlur=18+bossPulse*18;
+   x.fillStyle="rgba(24,15,20,.55)";x.beginPath();x.ellipse(0,392,72,118,0,0,Math.PI*2);x.fill();
+   x.fillStyle="#e1c36d";x.beginPath();x.arc(0,392,17+bossPulse*5,0,Math.PI*2);x.fill();
+   x.restore();
+
+   x.save();x.fillStyle="#f1dda0";x.font="700 15px Georgia";x.textAlign="center";
+   x.fillText(story.boss.name,treeX,92);
+   x.fillText(story.boss.acts[Math.max(0,bossAct-1)].title,treeX,118);x.restore();
  }
- x.restore();
+
  if(bossActive&&bossAct===2){
    [6960,7160,7360].forEach((z,i)=>{x.save();x.translate(z,0);x.strokeStyle="#a4b887";x.lineWidth=4;x.beginPath();x.arc(0,505,34,0,Math.PI*2);x.stroke();x.fillStyle="#ead792";x.font="700 15px Georgia";x.textAlign="center";x.fillText(["II","I","III"][i],0,510);x.restore()});
  }
