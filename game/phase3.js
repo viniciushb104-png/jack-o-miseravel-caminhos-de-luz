@@ -15,11 +15,11 @@ let activeCheckpoint=loadedSave?.activeCheckpoint||localStorage.getItem(CHECKPOI
 const p={x:Number.isFinite(loadedSave?.x)?loadedSave.x:120,y:Number.isFinite(loadedSave?.y)?loadedSave.y:470,w:46,h:86,vx:0,vy:0,dir:loadedSave?.dir===-1?-1:1,on:false,coyote:0,buffer:0,anim:0};
 
 const opening=[
- {speaker:"JACK",text:"Quatro e quatorze. Engraçado... o mundo continuou."},
- {speaker:"JACK",text:"Então por que minha lanterna está apontando para trás?"},
- {speaker:"JACK",text:"E desde quando folhas caem para o céu?"},
- {speaker:"???",text:"Algumas coisas não caem, Jack. Elas voltam."},
- {speaker:"JACK",text:"Ótimo. Uma floresta que responde. Isso sempre termina bem."}
+ {speaker:"JACK",portrait:"jack",expression:1,text:"Quatro e quatorze. Engraçado... o mundo continuou."},
+ {speaker:"JACK",portrait:"jack",expression:1,text:"Então por que minha lanterna está apontando para trás?"},
+ {speaker:"JACK",portrait:"jack",expression:3,text:"E desde quando folhas caem para o céu?"},
+ {speaker:"???",portrait:null,text:"Algumas coisas não caem, Jack. Elas voltam."},
+ {speaker:"JACK",portrait:"jack",expression:2,text:"Ótimo. Uma floresta que responde. Isso sempre termina bem."}
 ];
 
 const sections=[
@@ -93,7 +93,27 @@ function buildJackFrameOverrides(image){
  return {25:buildCleanJackFrame(image,25,[[260,0,60,320]]),26:buildCleanJackFrame(image,26,[[126,0,76,82],[126,82,54,30],[202,0,28,32]])};
 }
 const jackStartupReady=img("../assets/game/phase1/sprites-hd/jack-atlas-hd.png").then(i=>{jack=i;jackFrameOverrides=buildJackFrameOverrides(i)}).catch(()=>{});
-window.__PHASE_ASSETS_READY=Promise.allSettled([jackStartupReady]).then(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
+
+// Reaproveita os seis retratos HD oficiais do Jack usados nos Halloweens anteriores.
+// A Fase 3 começa consistente visualmente e já fica pronta para receber Mara depois.
+const jackPortraitFiles=[
+ "jack-00-neutral.png",
+ "jack-01-serious.png",
+ "jack-02-smirk.png",
+ "jack-03-surprised.png",
+ "jack-04-determined.png",
+ "jack-05-resolved.png"
+];
+const jackDialogueReady=Promise.allSettled(
+ jackPortraitFiles.map(file=>img("../assets/game/phase1/portraits-hd/"+file))
+).then(results=>{
+ dialogue.setAssets({
+   jack:{frames:results.map(r=>r.status==="fulfilled"?r.value:null)}
+ });
+ return results;
+});
+
+window.__PHASE_ASSETS_READY=Promise.allSettled([jackStartupReady,jackDialogueReady]).then(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
 
 function jackSequenceFrame(seq,fps){return seq[Math.floor(p.anim*fps)%seq.length]}
 function currentJackFrame(){
