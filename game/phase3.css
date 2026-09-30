@@ -95,15 +95,17 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#030907;col
   display:flex;
   align-items:center;
   justify-content:center;
-  color:#ffe2a0;
   background:transparent;
   border:0;
+  font-family:"Cinzel","Copperplate","Copperplate Gothic Light","Palatino Linotype",Georgia,serif;
   font-weight:700;
+  font-variant:small-caps;
   font-size:clamp(.58rem,1.1vw,.9rem);
   line-height:1;
-  letter-spacing:.13em;
+  letter-spacing:.18em;
+  color:#ffe09a;
   text-align:center;
-  text-shadow:0 2px 3px #000,0 0 10px #6d3d16;
+  text-shadow:0 2px 2px #000,0 0 10px rgba(238,157,55,.34);
   white-space:nowrap;
   overflow:hidden;
   text-overflow:ellipsis;
@@ -120,11 +122,15 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#030907;col
   padding:1.5% 2.0%;
   display:block;
   overflow:hidden;
-  color:#f6e9ca;
   background:transparent;
-  font-size:clamp(.78rem,1.35vw,1.06rem);
-  line-height:1.48;
-  text-shadow:0 2px 3px #000;
+  font-family:"Palatino Linotype","Book Antiqua",Palatino,Georgia,serif;
+  font-size:clamp(.88rem,1.58vw,1.18rem);
+  font-style:italic;
+  letter-spacing:.018em;
+  line-height:1.52;
+  color:#fff0c9;
+  text-shadow:0 2px 3px #000,0 0 8px rgba(255,190,94,.16);
+  overflow-wrap:anywhere;
 }
 
 /* A seta fica dentro do canto inferior-direito da área de texto sem cobrir a arte. */
