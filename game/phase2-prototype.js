@@ -1753,9 +1753,9 @@ function drawTowerFinalMechanism(){
   // Coordenadas normalizadas dos três encaixes desenhados no PNG:
   // Horas no alto, Minutos embaixo à esquerda, Amanhecer embaixo à direita.
   const slots=[
-    {dx:0,dy:-.67,size:72,gear:0,spin:.24},
-    {dx:-.245,dy:-.31,size:74,gear:1,spin:-.27},
-    {dx:.245,dy:-.31,size:76,gear:2,spin:.23}
+    {dx:0,dy:-.675,size:56,gear:0,spin:.24},
+    {dx:-.245,dy:-.395,size:58,gear:1,spin:-.27},
+    {dx:.245,dy:-.395,size:60,gear:2,spin:.23}
   ];
   for(const slot of slots){
     if(!gears[slot.gear]?.got)continue;
