@@ -5,6 +5,8 @@ const ui={obj:document.querySelector("#objective strong"),gear:document.getEleme
 const achievementRoot=document.getElementById("achievementToast"),achievementEyebrow=document.getElementById("achievementEyebrow"),achievementTitle=document.getElementById("achievementTitle"),achievementDetail=document.getElementById("achievementDetail");
 let achievementTimer=0;
 const input={left:false,right:false,run:false,jump:false,down:false};let running=false,last=performance.now(),cam=0,camY=0,jack=null,jackFrameOverrides={},ameliaMap={},light=0,cool=0,section=-1;
+let waitSitFrame=0,waitSitClock=0,waitSitActive=false,lastPlayerAction=performance.now(),waitSitImages=[];
+Array.from({length:11},(_,i)=>"../assets/sprites/jack/wait-sit/jack-wait-"+String(i+1).padStart(2,"0")+".png").forEach((src,i)=>{const im=new Image();im.onload=()=>waitSitImages[i]=im;im.src=src});
 const dialogueRoot=document.getElementById("dialogue");
 const dialogue=new window.DialogueSystem(dialogueRoot);
 const phaseAudio=new window.GameAudio({
@@ -1290,6 +1292,9 @@ if(shadowCutscene.active){
   p.vx=0;p.vy=0;p.anim+=dt;interactPrompt.hidden=true;
   return
 }
+const waitIdle=!input.left&&!input.right&&!input.down&&!input.jump&&!input.run&&p.attack<=0&&p.on;
+if(waitIdle){const idleSeconds=(performance.now()-lastPlayerAction)/1000;if(idleSeconds>=8){if(!waitSitActive){waitSitActive=true;waitSitFrame=0;waitSitClock=0}waitSitClock+=dt;if(waitSitClock>=.38){waitSitClock=0;waitSitFrame=waitSitFrame<10?waitSitFrame+1:7}}}
+else{lastPlayerAction=performance.now();waitSitActive=false;waitSitFrame=0;waitSitClock=0}
 cool=Math.max(0,cool-dt);light=Math.max(0,light-dt);p.attack=Math.max(0,p.attack-dt);bellAnim.t=Math.max(0,bellAnim.t-dt);bellAnim.wrongT=Math.max(0,bellAnim.wrongT-dt);windowFx.t=Math.max(0,windowFx.t-dt);windowFx.errorT=Math.max(0,windowFx.errorT-dt);shadowFx.t=Math.max(0,shadowFx.t-dt);shadowFx.errorT=Math.max(0,shadowFx.errorT-dt);towerSealFx.t=Math.max(0,towerSealFx.t-dt);towerSealFx.errorT=Math.max(0,towerSealFx.errorT-dt);if(windowFx.t<=0)windowFx.active=-1;if(shadowFx.t<=0)shadowFx.active=-1;if(towerSealFx.t<=0)towerSealFx.active=-1;if(bellAnim.t<=0)bellAnim.ringing=-1;if(bellAnim.wrongT<=0)bellAnim.wrong=-1;reveal.forEach(q=>q.t=Math.max(0,q.t-dt));p.coyote=p.on?.12:Math.max(0,p.coyote-dt);if(input.jump){p.buffer=.14;input.jump=false}else p.buffer=Math.max(0,p.buffer-dt);
 const speed=input.down?95:(input.run?335:235),dir=(input.right?1:0)-(input.left?1:0);p.vx+=((dir*speed)-p.vx)*Math.min(1,dt*12);if(dir)p.dir=dir;
 if(p.buffer>0&&p.coyote>0&&!input.down){p.vy=-575;p.on=false;p.coyote=0;p.buffer=0}p.vy+=G*dt;const oldY=p.y;p.x=Math.max(0,Math.min(WORLD-p.w,p.x+p.vx*dt));p.y+=p.vy*dt;p.on=false;
@@ -1433,6 +1438,18 @@ function currentJackFrame(){
 }
 function drawJack(){
   const py=p.y-camY;
+  if(waitSitActive&&p.on){
+    const im=waitSitImages[waitSitFrame];
+    if(im){
+      const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height,seated=waitSitFrame>=5;
+      const targetH=seated?222:164,targetW=iw*(targetH/ih);
+      const groundY=py+p.h+(seated?22:2),dx=p.x-cam+p.w/2-targetW/2,dy=groundY-targetH;
+      x.save();x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";
+      if(p.dir<0){x.translate(dx+targetW,0);x.scale(-1,1);x.drawImage(im,0,dy,targetW,targetH)}
+      else x.drawImage(im,dx,dy,targetW,targetH);
+      x.restore();return;
+    }
+  }
   if(p.on){
     x.save();x.globalAlpha=.18;x.fillStyle="#05030a";
     x.beginPath();x.ellipse(p.x-cam+p.w/2,py+p.h+1,18,3.2,0,0,Math.PI*2);x.fill();x.restore();
