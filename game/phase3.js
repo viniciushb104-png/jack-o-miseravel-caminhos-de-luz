@@ -69,11 +69,13 @@ const checkpoints=[
  {id:"archive",x:5580,groundY:590,respawnX:5525,respawnY:504,name:"Raiz do Arquivo"}
 ];
 
-const leaves=Array.from({length:92},(_,i)=>({
+const memoryLeafImages=[];
+const leaves=Array.from({length:46},(_,i)=>({
  sx:Math.random()*W,sy:Math.random()*H,
- speed:26+Math.random()*62,drift:(Math.random()-.5)*34,
- size:3+Math.random()*6,rot:Math.random()*Math.PI*2,spin:(Math.random()-.5)*1.7,
- phase:Math.random()*Math.PI*2,depth:.45+Math.random()*.75
+ speed:18+Math.random()*46,drift:(Math.random()-.5)*26,
+ size:14+Math.random()*22,rot:Math.random()*Math.PI*2,spin:(Math.random()-.5)*1.15,
+ phase:Math.random()*Math.PI*2,depth:.38+Math.random()*.72,
+ imageIndex:i%6
 }));
 
 function say(t){ui.msg.textContent=t;ui.msg.classList.add("show");clearTimeout(say.t);say.t=setTimeout(()=>ui.msg.classList.remove("show"),2700)}
@@ -154,8 +156,11 @@ const dialogueAssetsReady=Promise.all([jackPortraitReady,maraDialogueReady]).the
 });
 
 const phase3DialogueFrameReady=img("../assets/game/phase3/ui/phase3-dialogue-frame.png").catch(()=>null);
+const memoryLeavesReady=Promise.all(
+ Array.from({length:6},(_,i)=>img("../assets/game/phase3/fx/memory-leaves/memory-leaf-"+String(i+1).padStart(2,"0")+".png"))
+).then(images=>{memoryLeafImages.splice(0,memoryLeafImages.length,...images);return images}).catch(()=>[]);
 window.__PHASE_ASSETS_READY=Promise.allSettled([
- jackStartupReady,dialogueAssetsReady,maraSpriteReady,phase3DialogueFrameReady
+ jackStartupReady,dialogueAssetsReady,maraSpriteReady,phase3DialogueFrameReady,memoryLeavesReady
 ]).then(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
 
 function jackSequenceFrame(seq,fps){return seq[Math.floor(p.anim*fps)%seq.length]}
@@ -441,14 +446,26 @@ function drawBackdrop(){
 }
 
 function drawLeaves(){
+ const dt=.016;
  for(const l of leaves){
-   l.sy-=l.speed*.016;l.sx+=Math.sin(p.anim*.55+l.phase)*.24+l.drift*.016;l.rot+=l.spin*.016;
-   if(l.sy<-25){l.sy=H+20+Math.random()*110;l.sx=Math.random()*W}
-   if(l.sx<-30)l.sx=W+20;if(l.sx>W+30)l.sx=-20;
-   x.save();x.translate(l.sx,l.sy);x.rotate(l.rot);x.globalAlpha=.35+.45*l.depth;
-   x.fillStyle=l.depth>.9?"#d49a4b":(l.depth>.65?"#9b743b":"#70835b");
-   x.beginPath();x.ellipse(0,0,l.size*1.55,l.size*.72,.18,0,Math.PI*2);x.fill();
-   x.strokeStyle="#4f4b2c";x.lineWidth=.8;x.beginPath();x.moveTo(-l.size*.9,0);x.lineTo(l.size*.9,0);x.stroke();x.restore();
+   l.sy-=l.speed*dt;
+   l.sx+=Math.sin(p.anim*.55+l.phase)*.32+l.drift*dt;
+   l.rot+=l.spin*dt;
+   if(l.sy<-55){l.sy=H+35+Math.random()*130;l.sx=Math.random()*W;l.imageIndex=Math.floor(Math.random()*6)}
+   if(l.sx<-65)l.sx=W+45;if(l.sx>W+65)l.sx=-45;
+
+   const im=memoryLeafImages[l.imageIndex];
+   if(!im)continue;
+   const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+   const scale=l.depth<.58?.72:(l.depth>.9?1.18:1);
+   const h=l.size*2.15*scale,w=h*(iw/ih);
+   x.save();
+   x.translate(l.sx,l.sy);
+   x.rotate(l.rot+Math.sin(p.anim*.8+l.phase)*.16);
+   x.globalAlpha=l.depth<.58?.34:(l.depth>.9?.82:.58);
+   if(l.depth>.9){x.shadowColor="rgba(232,178,78,.22)";x.shadowBlur=7}
+   x.drawImage(im,-w/2,-h/2,w,h);
+   x.restore();
  }
 }
 
