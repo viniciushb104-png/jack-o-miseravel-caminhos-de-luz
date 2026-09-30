@@ -530,12 +530,13 @@ function unlockPhase3(){
 }
 function showPhase3Complete(){
  const firstClear=unlockPhase3();
- journey?.unlockPhase(4);
- if(journeyMode&&!replayMode)journey?.advanceTo(4);
  finalePlayed=true;endingSequenceActive=false;
  banner(firstClear?"MEMÓRIA RECUPERADA — MARA ROWAN":"MEMÓRIA REVIVIDA — MARA ROWAN");
  say(firstClear?"O troféu de Mara foi adicionado às Memórias.":"O Bosque das Memórias foi atravessado novamente.");
+ // Grave o final da Fase 3 antes de mover a Jornada para a próxima fase.
  save();
+ journey?.unlockPhase(4);
+ if(journeyMode&&!replayMode)journey?.advanceTo(4);
  setTimeout(()=>{if(phase3CompleteRoot)phase3CompleteRoot.hidden=false},700);
 }
 function finishBoss(){
