@@ -19,15 +19,163 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#030907;col
 .section-banner{top:112px}.message{top:150px}.section-banner.show,.message.show{opacity:1}
 .intro-card{position:fixed;z-index:70;left:50%;top:50%;transform:translate(-50%,-50%);width:min(590px,91vw);text-align:center;padding:29px 27px;background:linear-gradient(#10251af7,#06100bfa);border:2px solid #b88a3d;box-shadow:0 20px 80px #000e,inset 0 0 50px #28442b33}
 .intro-card p{margin:0;color:#a8c990;letter-spacing:.19em;font-size:.68rem}.intro-card h1{margin:10px 0;color:#f2d691;font-size:clamp(2rem,6.5vw,3.8rem);line-height:.9}.intro-card span{display:block;color:#d7ccb0;margin:15px auto 21px;line-height:1.45;max-width:500px}.intro-card button{border:0;color:#f8e4ad;background:#1a3824;box-shadow:inset 0 0 0 2px #c89a43;padding:13px 22px;font-weight:700}
-.dialogue{position:fixed;z-index:80;left:50%;bottom:max(12px,env(safe-area-inset-bottom));transform:translate(-50%,18px);opacity:0;width:min(930px,94vw);height:min(230px,36vh);pointer-events:auto;transition:.16s;filter:drop-shadow(0 18px 34px #000e)}
+/* Halloween III — moldura oficial do Bosque das Memórias
+   Arte 2098x749. Retrato, nome e texto são posicionados sobre as áreas vazias
+   da própria moldura para manter o desenho intacto. */
+.dialogue{
+  position:fixed;
+  z-index:80;
+  left:50%;
+  bottom:max(4px,env(safe-area-inset-bottom));
+  transform:translate(-50%,18px);
+  opacity:0;
+  width:min(1180px,96vw);
+  height:auto;
+  aspect-ratio:2098/749;
+  max-height:46vh;
+  pointer-events:auto;
+  transition:.16s;
+  filter:drop-shadow(0 18px 38px #000e);
+}
 .dialogue.is-open{opacity:1;transform:translate(-50%,0)}
-.dialogue-shell{position:absolute;inset:0;display:grid;grid-template-columns:190px 1fr 58px;align-items:stretch;background:linear-gradient(180deg,#10261df9,#06110dfa);border:2px solid #9b773b;box-shadow:inset 0 0 0 3px #243823,inset 0 0 32px #49634733}
-.dialogue-portrait{display:block;position:relative;margin:10px 0 10px 10px;min-width:0;border-right:1px solid #8b7444;background-repeat:no-repeat;background-position:center bottom!important;background-size:contain!important;filter:drop-shadow(0 7px 10px #000a)}
-.dialogue-portrait::after{content:"";position:absolute;inset:0;background:radial-gradient(circle at 52% 42%,rgba(231,211,146,.08),transparent 58%);pointer-events:none}
-.dialogue-portrait.is-hidden{visibility:hidden}
-.dialogue-shell:has(.dialogue-portrait.is-hidden){grid-template-columns:1fr 58px}
-.dialogue-main{padding:30px 28px;min-width:0}.dialogue-name{color:#b8d393;font-weight:700;letter-spacing:.13em;font-size:.8rem}.dialogue-text{color:#f4e7c7;font-size:clamp(.9rem,1.8vw,1.12rem);line-height:1.48;margin:13px 0}
-.dialogue-next{align-self:end;margin:0 13px 13px 0;width:43px;height:43px;border:1px solid #b88a3d;background:#203722;color:#f5db9c}
+.dialogue-shell{
+  position:absolute;
+  inset:0;
+  display:block;
+  overflow:hidden;
+  border:0;
+  box-shadow:none;
+  background:
+    url("../assets/game/phase3/ui/phase3-dialogue-frame.png") center/100% 100% no-repeat;
+}
+
+/* Janela de retrato transparente da moldura: aproximadamente x 7%–24%, y 20%–76%. */
+.dialogue-portrait{
+  position:absolute;
+  left:7.25%;
+  top:20.4%;
+  bottom:24.5%;
+  width:16.55%;
+  margin:0;
+  border:0;
+  background-color:transparent;
+  background-repeat:no-repeat;
+  background-position:center bottom!important;
+  background-size:contain!important;
+  filter:drop-shadow(0 7px 10px #000b);
+  z-index:2;
+}
+.dialogue-portrait.is-hd-portrait{
+  background-size:contain!important;
+  background-position:center bottom!important;
+}
+.dialogue-portrait.is-hidden{
+  opacity:0;
+  visibility:hidden;
+}
+
+/* Nome do personagem dentro da placa estreita superior. */
+.dialogue-main{
+  position:absolute;
+  inset:0;
+  display:block;
+  padding:0;
+  overflow:visible;
+  z-index:3;
+  pointer-events:none;
+}
+.dialogue-name{
+  position:absolute;
+  left:31.2%;
+  top:20.1%;
+  width:36.4%;
+  height:12.4%;
+  margin:0;
+  padding:0 2%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:#ffe2a0;
+  background:transparent;
+  border:0;
+  font-weight:700;
+  font-size:clamp(.58rem,1.1vw,.9rem);
+  line-height:1;
+  letter-spacing:.13em;
+  text-align:center;
+  text-shadow:0 2px 3px #000,0 0 10px #6d3d16;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+/* Área limpa azul-escura da moldura principal. */
+.dialogue-text{
+  position:absolute;
+  left:28.2%;
+  right:9.1%;
+  top:39.1%;
+  bottom:24.0%;
+  margin:0;
+  padding:1.5% 2.0%;
+  display:block;
+  overflow:hidden;
+  color:#f6e9ca;
+  background:transparent;
+  font-size:clamp(.78rem,1.35vw,1.06rem);
+  line-height:1.48;
+  text-shadow:0 2px 3px #000;
+}
+
+/* A seta fica dentro do canto inferior-direito da área de texto sem cobrir a arte. */
+.dialogue-next{
+  position:absolute;
+  right:8.4%;
+  bottom:23.8%;
+  width:5.1%;
+  height:12.6%;
+  min-width:34px;
+  min-height:30px;
+  margin:0;
+  padding:0;
+  border:1px solid #d9ad58aa;
+  border-radius:7px;
+  background:#14251bd9;
+  color:#f4d68e;
+  cursor:pointer;
+  z-index:5;
+  box-shadow:inset 0 0 10px #0008,0 0 12px #b9782733;
+}
+.dialogue-next:hover,.dialogue-next:focus-visible{
+  outline:2px solid #e9bd6aaa;
+  outline-offset:2px;
+  background:#203a29e8;
+}
+
+@media(max-width:700px){
+  .dialogue{
+    width:98vw;
+    max-height:48vh;
+  }
+  .dialogue-name{
+    font-size:clamp(.46rem,2vw,.66rem);
+  }
+  .dialogue-text{
+    font-size:clamp(.58rem,2.15vw,.76rem);
+    line-height:1.30;
+    padding:1.2% 1.6%;
+  }
+  .dialogue-next{
+    min-width:28px;
+    min-height:25px;
+    font-size:.7rem;
+  }
+}
+@media(max-height:520px) and (orientation:landscape){
+  .dialogue{width:min(900px,92vw);max-height:47vh}
+  .dialogue-text{font-size:.68rem;line-height:1.25}
+}
+
 .memory-hint{position:fixed;z-index:24;right:18px;bottom:18px;display:flex;align-items:center;gap:8px;padding:7px 10px;background:#07150fba;border:1px solid #71895f;color:#d8e3c4;font-size:.62rem;letter-spacing:.08em;pointer-events:none}
 .memory-hint b{display:grid;place-items:center;width:25px;height:25px;border:1px solid #d1ae61;color:#f3d990}
 .mobile-controls{display:none;position:fixed;z-index:40;left:0;right:0;bottom:max(10px,env(safe-area-inset-bottom));padding:0 16px;justify-content:space-between;align-items:end;pointer-events:none}
