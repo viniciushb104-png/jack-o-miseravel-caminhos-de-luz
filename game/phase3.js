@@ -10,6 +10,7 @@ let loadedSave=null;if(journeyMode&&!replayMode){try{loadedSave=JSON.parse(local
 
 const input={left:false,right:false,down:false,run:false,jump:false};
 let running=false,last=performance.now(),cam=0,jack=null,jackFrameOverrides={},introLorePlayed=!!loadedSave?.introLorePlayed,section=-1;
+let waitSince=performance.now(),waitFrame=0,waitClock=0,lanternIdleSheet=null;
 let idleTime=0,idleSpecialFrame=0,idleSpecialClock=0,idleSpecialMode="",idleSpecialImages={lantern:[],sit:[],soul:[],long:[]};
 let lastPlayerAction=performance.now();
 let memoryLight=0,memoryPulse=0,playerLife=Math.max(1,Math.min(3,Number(loadedSave?.playerLife)||3));
@@ -125,6 +126,7 @@ const jackPortraitFiles=[
  "jack-04-determined.png",
  "jack-05-resolved.png"
 ];
+img("../assets/sprites/jack/idle-special/lantern/jack-idle-lantern-sheet.png").then(i=>lanternIdleSheet=i).catch(()=>{});
 const jackDialogueReady=Promise.allSettled(
  jackPortraitFiles.map(file=>img("../assets/game/phase1/portraits-hd/"+file))
 ).then(results=>{
@@ -303,11 +305,11 @@ function draw(){
  drawBackdrop();drawLeaves();drawWorld();drawJack();drawMemoryLight();
 }
 
-function bindHold(id,key){const b=document.getElementById(id);["pointerdown","pointerup","pointercancel","pointerleave"].forEach(ev=>b.addEventListener(ev,()=>input[key]=ev==="pointerdown"))}
+function bindHold(id,key){const b=document.getElementById(id);["pointerdown","pointerup","pointercancel","pointerleave"].forEach(ev=>b.addEventListener(ev,()=>{input[key]=ev==="pointerdown";if(ev==="pointerdown"){waitSince=performance.now();waitFrame=0;waitClock=0}}))}
 bindHold("leftBtn","left");bindHold("rightBtn","right");bindHold("downBtn","down");
 document.getElementById("jumpBtn")?.addEventListener("pointerdown",()=>{lastPlayerAction=performance.now();idleTime=0;idleSpecialMode="";input.jump=true});
 document.getElementById("lightBtn")?.addEventListener("pointerdown",useMemoryLight);
-addEventListener("keydown",e=>{if(dialogue.active)return;lastPlayerAction=performance.now();idleTime=0;idleSpecialMode="";idleSpecialFrame=0;if(["ArrowLeft","a","A"].includes(e.key))input.left=true;if(["ArrowRight","d","D"].includes(e.key))input.right=true;if(["ArrowDown","s","S"].includes(e.key))input.down=true;if(e.key==="Shift")input.run=true;if(e.code==="Space"){input.jump=true;e.preventDefault()}if(["f","F"].includes(e.key))useMemoryLight()});
+addEventListener("keydown",e=>{if(dialogue.active)return;waitSince=performance.now();waitFrame=0;waitClock=0;lastPlayerAction=performance.now();idleTime=0;idleSpecialMode="";idleSpecialFrame=0;if(["ArrowLeft","a","A"].includes(e.key))input.left=true;if(["ArrowRight","d","D"].includes(e.key))input.right=true;if(["ArrowDown","s","S"].includes(e.key))input.down=true;if(e.key==="Shift")input.run=true;if(e.code==="Space"){input.jump=true;e.preventDefault()}if(["f","F"].includes(e.key))useMemoryLight()});
 addEventListener("keyup",e=>{if(["ArrowLeft","a","A"].includes(e.key))input.left=false;if(["ArrowRight","d","D"].includes(e.key))input.right=false;if(["ArrowDown","s","S"].includes(e.key))input.down=false;if(e.key==="Shift")input.run=false});
 
 document.getElementById("startGame").onclick=()=>{
