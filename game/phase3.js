@@ -25,6 +25,9 @@ let voicesSolved=!!loadedSave?.voicesSolved;
 let voiceStep=Math.max(0,Math.min(3,Number(loadedSave?.voiceStep)||0));
 let jackEchoPlayed=!!loadedSave?.jackEchoPlayed;
 let motherTreeScene=!!loadedSave?.motherTreeScene;
+let archiveSolved=!!loadedSave?.archiveSolved;
+let archiveChoice=Math.max(0,Math.min(3,Number(loadedSave?.archiveChoice)||0));
+let bossPrelude=!!loadedSave?.bossPrelude;
 let gateMessageCooldown=0;
 const p={x:Number.isFinite(loadedSave?.x)?loadedSave.x:120,y:Number.isFinite(loadedSave?.y)?loadedSave.y:470,w:46,h:86,vx:0,vy:0,dir:loadedSave?.dir===-1?-1:1,on:false,coyote:0,buffer:0,anim:0,attack:0};
 
@@ -88,7 +91,7 @@ function save(){
  localStorage.setItem(SAVE_KEY,JSON.stringify({
    x:p.x,y:p.y,dir:p.dir,playerLife,activeCheckpoint,introLorePlayed,
    maraMet,portraitsSolved,portraitChoices:[...portraitChoices],
-   voicesSolved,voiceStep,jackEchoPlayed,motherTreeScene,savedAt:Date.now()
+   voicesSolved,voiceStep,jackEchoPlayed,motherTreeScene,archiveSolved,archiveChoice,bossPrelude,savedAt:Date.now()
  }));
 }
 function respawn(msg){
@@ -352,6 +355,22 @@ function tryInteract(){
  if(!running||dialogue.active)return;
  lastPlayerAction=performance.now();idleTime=0;waitSitActive=false;
  const pc=p.x+p.w/2,m=maraWorldState();
+ if(voicesSolved&&!archiveSolved&&pc>5480&&pc<5940){
+   archiveChoice=(archiveChoice+1)%4;
+   if(archiveChoice<3){
+     const item=story.archivePuzzle.entries[archiveChoice];
+     say(item.title+" — "+item.memory);
+   }else{
+     archiveSolved=true;banner("MEMÓRIA NÃO APAGADA — LIBERTADA");
+     dialogue.open([
+       {speaker:"JACK",portrait:"jack",expression:1,text:"Essa é a pergunta errada."},
+       {speaker:"MARA ROWAN",portrait:"mara",expression:3,text:"Como assim?"},
+       {speaker:"JACK",portrait:"jack",expression:5,text:"Não precisamos escolher o que deve ser esquecido. Precisamos deixar que siga adiante."},
+       {speaker:"MARA ROWAN",portrait:"mara",expression:5,text:"Deixar ir... sem fingir que nunca existiu."}
+     ],()=>{say("O Arquivo abriu o caminho para a Árvore-Mãe.");save()});
+   }
+   save();return;
+ }
  if(!maraRun.active&&Math.abs(pc-m.x)<120){
    if(!maraMet){
      maraMet=true;p.vx=0;
@@ -389,11 +408,12 @@ function updateNarrativeTriggers(){
    dialogue.open(story.dialogues.maraMeeting,()=>{say("Os retratos respondem à Luz. F revela a lembrança; E troca o nome.");save()});
    return;
  }
- if(voicesSolved&&!motherTreeScene&&p.x>6000){
+ if(voicesSolved&&archiveSolved&&!motherTreeScene&&p.x>6000){
    motherTreeScene=true;p.vx=0;
    dialogue.open(story.dialogues.motherTree,()=>{
-     banner("PRÓXIMO CAMINHO — O CORAÇÃO DAS RAÍZES");
-     ui.obj.textContent="A entrada da Árvore-Mãe ainda está selada.";
+     bossPrelude=true;
+     banner("ÁRVORE-MÃE — O CORAÇÃO DAS RAÍZES");
+     ui.obj.textContent="A presença nas raízes despertou. O Arquivista Eterno aguarda além da Árvore-Mãe.";
      save();
    });
  }
@@ -441,6 +461,7 @@ function update(dt){
  p.vy+=G*dt;const oldY=p.y;p.x=Math.max(0,Math.min(WORLD-p.w,p.x+p.vx*dt));
  if(!portraitsSolved&&p.x+p.w>3740){p.x=3740-p.w;p.vx=Math.min(0,p.vx);if(gateMessageCooldown<=0){say("As raízes seguram o caminho. Os três retratos ainda não estão completos.");gateMessageCooldown=2}}
  if(portraitsSolved&&!voicesSolved&&p.x+p.w>5200){p.x=5200-p.w;p.vx=Math.min(0,p.vx);if(gateMessageCooldown<=0){say("O lago não abre passagem enquanto a voz de Mara continuar fragmentada.");gateMessageCooldown=2}}
+ if(voicesSolved&&!archiveSolved&&p.x+p.w>6000){p.x=6000-p.w;p.vx=Math.min(0,p.vx);if(gateMessageCooldown<=0){say("As raízes recusam a passagem. O Arquivo ainda guarda algo que precisa ser deixado ir.");gateMessageCooldown=2}}
  p.y+=p.vy*dt;p.on=false;
  const solids=plats.concat(memoryLight>0?memoryPlats:[]);
  for(const q of solids){
@@ -454,8 +475,9 @@ function update(dt){
  else if(!maraMet&&p.x>=1480)ui.obj.textContent="Siga as folhas até a mulher que espera junto às raízes.";
  else if(maraMet&&!portraitsSolved&&p.x>=2500)ui.obj.textContent="F revela a lembrança de cada retrato. E troca o nome da placa.";
  else if(portraitsSolved&&!voicesSolved&&p.x>=3900)ui.obj.textContent="Ouça os três ecos com F e monte a frase de Mara usando E.";
- else if(voicesSolved&&!motherTreeScene)ui.obj.textContent="Siga Mara em direção à Árvore-Mãe.";
- else if(motherTreeScene)ui.obj.textContent="A entrada da Árvore-Mãe ainda está selada.";
+ else if(voicesSolved&&!archiveSolved)ui.obj.textContent="Arquivo das Raízes: aproxime-se das lembranças e pressione E. A resposta não é apagar.";
+ else if(archiveSolved&&!motherTreeScene)ui.obj.textContent="O caminho foi liberado. Siga Mara até a Árvore-Mãe.";
+ else if(motherTreeScene)ui.obj.textContent="O Arquivista Eterno despertou. A arena do boss está preparada para receber o visual definitivo.";
  else ui.obj.textContent="Siga as folhas que caem para o céu.";
  p.anim+=dt;saveClock+=dt;if(saveClock>2.5){saveClock=0;save()}
 }
