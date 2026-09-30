@@ -16,7 +16,8 @@ let idleTime=0,waitSitFrame=0,waitSitClock=0,waitSitActive=false,waitSitImages=[
 let lastPlayerAction=performance.now();
 let memoryLight=0,memoryPulse=0,playerLife=Math.max(1,Math.min(3,Number(loadedSave?.playerLife)||3));
 let activeCheckpoint=loadedSave?.activeCheckpoint||localStorage.getItem(CHECKPOINT_KEY)||"";
-let maraSpriteSheet=null;
+let maraSpriteSheet=null,maraRunSheet=null;
+let maraRun={active:false,x:2275,targetX:2275,groundY:590,onDone:null};
 let maraMet=!!loadedSave?.maraMet;
 let portraitsSolved=!!loadedSave?.portraitsSolved;
 let portraitChoices=Array.isArray(loadedSave?.portraitChoices)&&loadedSave.portraitChoices.length===3?loadedSave.portraitChoices.map(v=>Math.max(0,Math.min(2,Number(v)||0))):[0,0,0];
@@ -147,6 +148,7 @@ const jackPortraitReady=Promise.allSettled(
 
 const maraDialogueReady=img("../assets/game/phase3/mara/dialogue/mara-dialogue-sheet.png").catch(()=>null);
 const maraSpriteReady=img("../assets/game/phase3/mara/sprites/mara-sprite-sheet.png").then(im=>{maraSpriteSheet=im;return im}).catch(()=>null);
+const maraRunReady=img("../assets/game/phase3/mara/sprites/mara-run-sheet.png").then(im=>{maraRunSheet=im;return im}).catch(()=>null);
 
 const dialogueAssetsReady=Promise.all([jackPortraitReady,maraDialogueReady]).then(([jackFrames,maraSheet])=>{
  dialogue.setAssets({
@@ -160,7 +162,7 @@ const memoryLeavesReady=Promise.all(
  Array.from({length:6},(_,i)=>img("../assets/game/phase3/fx/memory-leaves/memory-leaf-"+String(i+1).padStart(2,"0")+".png"))
 ).then(images=>{memoryLeafImages.splice(0,memoryLeafImages.length,...images);return images}).catch(()=>[]);
 window.__PHASE_ASSETS_READY=Promise.allSettled([
- jackStartupReady,dialogueAssetsReady,maraSpriteReady,phase3DialogueFrameReady,memoryLeavesReady
+ jackStartupReady,dialogueAssetsReady,maraSpriteReady,maraRunReady,phase3DialogueFrameReady,memoryLeavesReady
 ]).then(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
 
 function jackSequenceFrame(seq,fps){return seq[Math.floor(p.anim*fps)%seq.length]}
@@ -212,12 +214,32 @@ function drawJack(){
 }
 
 function maraWorldState(){
+ if(maraRun.active)return {x:maraRun.x,groundY:maraRun.groundY,run:true};
  if(!portraitsSolved)return {x:2275,groundY:590,frame:maraMet?3:0};
  if(!voicesSolved)return {x:4020,groundY:590,frame:4};
  return {x:5575,groundY:590,frame:5};
 }
+function startMaraRun(fromX,toX,onDone){
+ maraRun.active=true;maraRun.x=fromX;maraRun.targetX=toX;maraRun.groundY=590;maraRun.onDone=typeof onDone==="function"?onDone:null;
+}
+function updateMaraRun(dt){
+ if(!maraRun.active)return;
+ const dir=Math.sign(maraRun.targetX-maraRun.x)||1;
+ maraRun.x+=dir*285*dt;
+ if((dir>0&&maraRun.x>=maraRun.targetX)||(dir<0&&maraRun.x<=maraRun.targetX)){
+   maraRun.x=maraRun.targetX;maraRun.active=false;
+   const done=maraRun.onDone;maraRun.onDone=null;if(done)done();
+ }
+}
 function drawMaraWorld(){
  const m=maraWorldState();
+ if(m.run&&maraRunSheet){
+   const cols=4,rows=2,iw=maraRunSheet.naturalWidth||maraRunSheet.width,ih=maraRunSheet.naturalHeight||maraRunSheet.height;
+   const cw=iw/cols,ch=ih/rows,idx=Math.floor(p.anim*11)%8,sx=(idx%cols)*cw,sy=Math.floor(idx/cols)*ch;
+   const rh=174,rw=rh*(cw/ch),dx=m.x-rw/2,dy=m.groundY-rh+2;
+   x.save();x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";
+   x.drawImage(maraRunSheet,sx,sy,cw,ch,dx,dy,rw,rh);x.restore();return;
+ }
  if(!maraSpriteSheet)return;
  const cols=3,rows=2,iw=maraSpriteSheet.naturalWidth||maraSpriteSheet.width,ih=maraSpriteSheet.naturalHeight||maraSpriteSheet.height;
  const cw=iw/cols,ch=ih/rows,idx=m.frame%6,sx=(idx%cols)*cw,sy=Math.floor(idx/cols)*ch;
@@ -293,7 +315,9 @@ function finishPortraitPuzzle(){
  banner("MEMÓRIA RECONSTRUÍDA — OS RETRATOS");
  p.vx=0;save();
  dialogue.open(story.dialogues.portraitsSolved,()=>{
-   say("Mara seguiu para o Lago das Vozes.");save();
+   say("Mara correu em direção ao Lago das Vozes.");
+   startMaraRun(2275,4020,()=>{banner("MARA CHEGOU AO LAGO DAS VOZES");save()});
+   save();
  });
 }
 
@@ -311,7 +335,11 @@ function activateVoice(i){
  voicesSolved=true;banner("MEMÓRIA RECONSTRUÍDA — A VOZ DE MARA");p.vx=0;save();
  dialogue.open(story.dialogues.voicesSolved,()=>{
    jackEchoPlayed=true;memoryPulse=1.2;banner("UMA MEMÓRIA QUE NÃO PERTENCE AO BOSQUE");
-   setTimeout(()=>dialogue.open(story.dialogues.jackMemoryLeak,()=>{save()}),360);
+   setTimeout(()=>dialogue.open(story.dialogues.jackMemoryLeak,()=>{
+     say("Mara correu para o Arquivo das Raízes.");
+     startMaraRun(4020,5575,()=>{banner("MARA CHEGOU AO ARQUIVO DAS RAÍZES");save()});
+     save();
+   }),360);
  });
 }
 
@@ -394,7 +422,7 @@ function update(dt){
      }
    }
  }else{lastPlayerAction=performance.now();idleTime=0;waitSitClock=0;waitSitFrame=0;waitSitActive=false}
- memoryLight=Math.max(0,memoryLight-dt);memoryPulse=Math.max(0,memoryPulse-dt);p.attack=Math.max(0,p.attack-dt);gateMessageCooldown=Math.max(0,gateMessageCooldown-dt);
+ memoryLight=Math.max(0,memoryLight-dt);memoryPulse=Math.max(0,memoryPulse-dt);p.attack=Math.max(0,p.attack-dt);gateMessageCooldown=Math.max(0,gateMessageCooldown-dt);updateMaraRun(dt);
  p.coyote=p.on?.12:Math.max(0,p.coyote-dt);
  if(input.jump){p.buffer=.14;input.jump=false}else p.buffer=Math.max(0,p.buffer-dt);
  const speed=input.down?90:(input.run?325:228),dir=(input.right?1:0)-(input.left?1:0);
