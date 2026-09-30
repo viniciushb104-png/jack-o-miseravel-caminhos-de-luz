@@ -124,6 +124,7 @@
   const continueJourneyButton = document.getElementById('continueJourneyBtn');
   const chapterTwo = document.getElementById('chapterTwo');
   const chapterThree = document.getElementById('chapterThree');
+  const chapterFour = document.getElementById('chapterFour');
 
   function syncJourneyUI() {
     if (!journey) return;
@@ -168,6 +169,23 @@
       } else {
         chapterThree.removeAttribute('href');
         if (status) status.textContent = 'Conclua o Halloween II para desbloquear';
+        if (arrow) arrow.textContent = '🔒';
+      }
+    }
+
+    if (chapterFour) {
+      const unlocked = journey.isPhaseUnlocked(4);
+      chapterFour.classList.toggle('chapter-card--open', unlocked);
+      chapterFour.setAttribute('aria-disabled', unlocked ? 'false' : 'true');
+      const status = chapterFour.querySelector('[data-phase-status]');
+      const arrow = chapterFour.querySelector('[data-phase-arrow]');
+      if (unlocked) {
+        chapterFour.href = './game/phase4.html';
+        if (status) status.textContent = 'Desbloqueada · próxima fase em preparação';
+        if (arrow) arrow.textContent = '›';
+      } else {
+        chapterFour.removeAttribute('href');
+        if (status) status.textContent = 'Conclua o Halloween III para desbloquear';
         if (arrow) arrow.textContent = '🔒';
       }
     }
@@ -222,6 +240,13 @@
     if (chapterThree.getAttribute('aria-disabled') === 'true') {
       event.preventDefault();
       showToast('Conclua o Halloween II para abrir O Bosque das Memórias.');
+    }
+  });
+
+  chapterFour?.addEventListener('click', event => {
+    if (chapterFour.getAttribute('aria-disabled') === 'true') {
+      event.preventDefault();
+      showToast('Conclua o Halloween III para abrir A Estrada dos Esquecidos.');
     }
   });
 
