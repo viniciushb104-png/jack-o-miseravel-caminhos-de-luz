@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
   <meta name="theme-color" content="#07120d">
   <title>Halloween III — O Bosque das Memórias</title>
-  <link rel="stylesheet" href="phase3.css?v=6">
+  <link rel="stylesheet" href="phase3.css?v=7">
   <link rel="stylesheet" href="preloader.css?v=4">
 </head>
 <body>
@@ -61,10 +61,11 @@
       <blockquote>“Talvez essa seja a pergunta que ainda lhe resta.”</blockquote>
       <strong>O caminho de Jack continua.</strong>
       <div class="phase3-complete-actions">
+        <button id="phase3Next" class="phase3-next" type="button">✦ IR PARA HALLOWEEN IV</button>
         <button id="phase3Replay" type="button">↻ JOGAR NOVAMENTE</button>
         <button id="phase3Menu" type="button">⌂ VOLTAR ÀS FASES</button>
       </div>
-      <span>Halloween IV ainda aguarda além da névoa.</span>
+      <span>Halloween IV · A Estrada dos Esquecidos foi revelada além da névoa.</span>
     </div>
   </section>
 
@@ -82,11 +83,11 @@
   </div>
 </main>
 
-<script src="engine/journey.js?v=2"></script>
+<script src="engine/journey.js?v=3"></script>
 <script src="engine/dialogue.js?v=6"></script>
 <script src="data/phase1/jack-animations.js?v=1"></script>
 <script src="data/phase3/story.js?v=4"></script>
-<script src="phase3.js?v=17"></script>
+<script src="phase3.js?v=18"></script>
 <script>
 /* Failsafe: the intro must always be enterable even if phase3.js stops before binding its handler. */
 document.getElementById("startGame")?.addEventListener("click",function(){
