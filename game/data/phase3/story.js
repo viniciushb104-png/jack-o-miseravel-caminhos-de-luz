@@ -54,10 +54,40 @@ window.PHASE3_STORY=Object.freeze({
     motherTree:Object.freeze([
       {speaker:"MARA ROWAN",portrait:"mara",expression:4,text:"Mais adiante fica a Árvore-Mãe. Eu nunca deixei ninguém entrar."},
       {speaker:"JACK",portrait:"jack",expression:2,text:"Então deve ser exatamente onde precisamos ir."},
-      {speaker:"MARA ROWAN",portrait:"mara",expression:2,text:"Há alguma coisa dentro dela repetindo a mesma ordem."},
-      {speaker:"JACK",portrait:"jack",expression:1,text:"Qual ordem?"},
+      {speaker:"MARA ROWAN",portrait:"mara",expression:2,text:"Quando tudo começou a desaparecer, eu vim até ela. Pedi que guardasse o que restava."},
+      {speaker:"JACK",portrait:"jack",expression:1,text:"O que você pediu, exatamente?"},
       {speaker:"MARA ROWAN",portrait:"mara",expression:5,text:"Não deixe nada ser esquecido."},
-      {speaker:"JACK",portrait:"jack",expression:1,text:"Ordens simples costumam causar os problemas mais complicados."}
+      {speaker:"JACK",portrait:"jack",expression:1,text:"Ordens simples costumam causar os problemas mais complicados."},
+      {speaker:"MARA ROWAN",portrait:"mara",expression:5,text:"Eu só queria que ninguém desaparecesse outra vez."},
+      {speaker:"JACK",portrait:"jack",expression:5,text:"Eu sei. Mas querer salvar alguma coisa e saber como salvá-la são coisas diferentes."}
+    ]),
+    bossAwakening:Object.freeze([
+      {speaker:"???",text:"NENHUM NOME SERÁ PERDIDO."},
+      {speaker:"MARA ROWAN",portrait:"mara",expression:3,text:"Eu conheço essas palavras."},
+      {speaker:"???",text:"NENHUMA VOZ SERÁ SILENCIADA. NENHUM ROSTO SERÁ LEVADO."},
+      {speaker:"MARA ROWAN",portrait:"mara",expression:4,text:"Jack... eu criei isso?"},
+      {speaker:"JACK",portrait:"jack",expression:1,text:"Não."},
+      {speaker:"JACK",portrait:"jack",expression:5,text:"Mas acho que você o alimentou por muito tempo."},
+      {speaker:"ARQUIVISTA ETERNO",text:"ORDEM: NÃO DEIXE NADA SER ESQUECIDO."}
+    ]),
+    bossAct2:Object.freeze([
+      {speaker:"JACK",portrait:"jack",expression:1,text:"Quanto mais eu tento quebrá-lo, mais ele se agarra às lembranças."},
+      {speaker:"MARA ROWAN",portrait:"mara",expression:2,text:"Então não quebre. Reconheça."},
+      {speaker:"ARQUIVISTA ETERNO",text:"UMA VOZ SEM NOME É UMA VOZ PERDIDA."},
+      {speaker:"JACK",portrait:"jack",expression:2,text:"Já ouvimos essa história antes."}
+    ]),
+    bossAct3:Object.freeze([
+      {speaker:"ARQUIVISTA ETERNO",text:"ORDEM ETERNA."},
+      {speaker:"MARA ROWAN",portrait:"mara",expression:5,text:"Não."},
+      {speaker:"ARQUIVISTA ETERNO",text:"NÃO DEIXE NADA SER ESQUECIDO."},
+      {speaker:"MARA ROWAN",portrait:"mara",expression:0,text:"Essa ordem era minha. E eu a retiro."},
+      {speaker:"JACK",portrait:"jack",expression:5,text:"Eu abro o caminho. Você termina isso."}
+    ]),
+    bossLight:Object.freeze([
+      {speaker:"MARA ROWAN",portrait:"mara",expression:2,text:"Jack. Não precisa destruí-lo."},
+      {speaker:"JACK",portrait:"jack",expression:2,text:"Estou começando a desconfiar que metade dos meus problemas vem de tentar resolver tudo na pancada."},
+      {speaker:"MARA ROWAN",portrait:"mara",expression:1,text:"Só metade?"},
+      {speaker:"JACK",portrait:"jack",expression:2,text:"Estou trabalhando nisso."}
     ])
   }),
 
@@ -132,7 +162,7 @@ window.PHASE3_STORY=Object.freeze({
       {speaker:"JACK",portrait:"jack",expression:1,text:"..."},
       {speaker:"ÁRVORE-MÃE",text:"A luz não veio apenas para aqueles que você procura, Jack."},
       {speaker:"JACK",portrait:"jack",expression:3,text:"Então para quem?"},
-      {speaker:"ÁRVORE-MÃE",text:"Para aquele que a carrega."}
+      {speaker:"ÁRVORE-MÃE",text:"Talvez essa seja a pergunta que ainda lhe resta."}
     ]),
     epilogue:Object.freeze([
       {speaker:"JACK",portrait:"jack",expression:2,text:"Só uma carta?"},
