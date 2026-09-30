@@ -160,8 +160,8 @@ function currentJackFrame(){
 const IDLE_V2={
  lantern:{cols:10,rows:2,frames:20},
  curious:{cols:10,rows:3,frames:30},
- sit:{cols:10,rows:3,frames:30},
- soul:{cols:10,rows:3,frames:30},
+ sit:{cols:9,rows:2,frames:18},
+ soul:{cols:10,rows:2,frames:20},
  startled:{cols:10,rows:3,frames:30},
  long:{cols:10,rows:3,frames:30}
 };
@@ -176,9 +176,10 @@ function drawJack(){
    if(im){
      // Draw the cropped cell at a calibrated pixel-art scale. The feet are anchored
      // to the exact gameplay collision floor (p.y+p.h), so Jack stays on platforms.
-     const targetH=190,targetW=r.sw*(targetH/r.sh);
+     // Match the normal gameplay Jack (190x190 render box), preserving each cell aspect ratio.
+     const box=190,ratio=r.sw/r.sh,targetH=box,targetW=box*ratio;
      const dx=p.x-cam+p.w/2-targetW/2,feetY=p.y+p.h-r.lift,dy=feetY-targetH;
-     x.save();x.imageSmoothingEnabled=false;
+     x.save();x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";
      if(p.dir<0){x.translate(dx+targetW,0);x.scale(-1,1);x.drawImage(im,r.sx,r.sy,r.sw,r.sh,0,dy,targetW,targetH)}
      else x.drawImage(im,r.sx,r.sy,r.sw,r.sh,dx,dy,targetW,targetH);
      x.restore();return;
