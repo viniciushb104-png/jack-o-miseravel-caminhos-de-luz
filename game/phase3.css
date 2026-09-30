@@ -60,8 +60,8 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#030907;col
   border:0;
   background-color:transparent;
   background-repeat:no-repeat;
-  background-position:center bottom!important;
-  background-size:contain!important;
+  background-position:center bottom;
+  background-size:contain;
   filter:drop-shadow(0 7px 10px #000b);
   z-index:2;
 }
@@ -186,5 +186,6 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#030907;col
 .memory-hint b{display:grid;place-items:center;width:25px;height:25px;border:1px solid #d1ae61;color:#f3d990}
 .mobile-controls{display:none;position:fixed;z-index:40;left:0;right:0;bottom:max(10px,env(safe-area-inset-bottom));padding:0 16px;justify-content:space-between;align-items:end;pointer-events:none}
 .mobile-controls button{pointer-events:auto;border:2px solid #8c6b33;background:#081910c7;color:#f0d79b;width:58px;height:58px;border-radius:10px;font-size:1.3rem}.dpad,.actions{display:flex;gap:9px}.actions button{border-radius:50%;width:68px;height:68px}.actions small{display:block;font-size:.42rem}
+.actions #interactBtn{width:62px;height:62px;font-size:1rem}.actions #interactBtn small{font-size:.34rem}
 @media(pointer:coarse),(max-width:900px){.mobile-controls{display:flex}.memory-hint{display:none}.objective{top:58px}.hud-title strong{font-size:.62rem}}
 @media(max-width:700px){.dialogue{height:190px}.dialogue-shell{grid-template-columns:125px 1fr 46px}.dialogue-portrait{margin:8px 0 8px 8px}.dialogue-main{padding:20px 14px}.dialogue-name{font-size:.68rem}.dialogue-text{font-size:.76rem;line-height:1.34}.dialogue-next{width:36px;height:36px}.dialogue-shell:has(.dialogue-portrait.is-hidden){grid-template-columns:1fr 46px}}
