@@ -1,0 +1,32 @@
+:root{
+  --gold:#efbd61;
+  --cream:#f5e8c8;
+  --green:#86b78a;
+  --deep:#07120d;
+  --moss:#1d3524;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#030907;color:var(--cream);font-family:Georgia,"Times New Roman",serif;touch-action:none}
+.game-page{position:fixed;inset:0;display:grid;place-items:center;overflow:hidden}
+#game{display:block;width:100vw;height:100vh;object-fit:contain;background:#07120d}
+.hud{position:fixed;z-index:30;top:max(8px,env(safe-area-inset-top));left:10px;right:10px;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px;text-shadow:0 2px 3px #000}
+.hud-btn{text-decoration:none;color:#f7dc9c;background:#07150fe8;border:2px solid #8b6a2f;padding:9px 13px}
+.hud-title{text-align:center}.hud-title small{display:block;color:#9fc18d;font-size:.52rem;letter-spacing:.18em}.hud-title strong{font-size:clamp(.62rem,1.55vw,.98rem);color:#f3d990}
+.hud-box{text-align:center;background:#07150fe8;border:2px solid #8b6a2f;padding:5px 12px}.hud-box span{display:block;font-size:.45rem;color:#9eae95}.hud-box b{color:#f3d990}
+.objective{position:fixed;z-index:22;top:62px;left:50%;transform:translateX(-50%);width:min(680px,76vw);padding:7px 20px;text-align:center;background:linear-gradient(90deg,transparent,#07150fed 12%,#07150fed 88%,transparent);pointer-events:none}
+.objective small{display:block;color:#9fc18d;font-size:.48rem}.objective strong{font-size:.78rem;font-weight:400}
+.section-banner,.message{position:fixed;z-index:45;left:50%;transform:translateX(-50%);background:#07150ff0;border:1px solid var(--gold);color:#f8e2aa;padding:9px 15px;opacity:0;transition:.25s;pointer-events:none;text-align:center}
+.section-banner{top:112px}.message{top:150px}.section-banner.show,.message.show{opacity:1}
+.intro-card{position:fixed;z-index:70;left:50%;top:50%;transform:translate(-50%,-50%);width:min(590px,91vw);text-align:center;padding:29px 27px;background:linear-gradient(#10251af7,#06100bfa);border:2px solid #b88a3d;box-shadow:0 20px 80px #000e,inset 0 0 50px #28442b33}
+.intro-card p{margin:0;color:#a8c990;letter-spacing:.19em;font-size:.68rem}.intro-card h1{margin:10px 0;color:#f2d691;font-size:clamp(2rem,6.5vw,3.8rem);line-height:.9}.intro-card span{display:block;color:#d7ccb0;margin:15px auto 21px;line-height:1.45;max-width:500px}.intro-card button{border:0;color:#f8e4ad;background:#1a3824;box-shadow:inset 0 0 0 2px #c89a43;padding:13px 22px;font-weight:700}
+.dialogue{position:fixed;z-index:80;left:50%;bottom:max(12px,env(safe-area-inset-bottom));transform:translate(-50%,18px);opacity:0;width:min(930px,94vw);height:min(230px,36vh);pointer-events:auto;transition:.16s;filter:drop-shadow(0 18px 34px #000e)}
+.dialogue.is-open{opacity:1;transform:translate(-50%,0)}
+.dialogue-shell{position:absolute;inset:0;display:grid;grid-template-columns:1fr 58px;align-items:stretch;background:linear-gradient(180deg,#10261df9,#06110dfa);border:2px solid #9b773b;box-shadow:inset 0 0 0 3px #243823,inset 0 0 32px #49634733}
+.dialogue-portrait{display:none}.dialogue-main{padding:30px 28px;min-width:0}.dialogue-name{color:#b8d393;font-weight:700;letter-spacing:.13em;font-size:.8rem}.dialogue-text{color:#f4e7c7;font-size:clamp(.9rem,1.8vw,1.12rem);line-height:1.48;margin:13px 0}
+.dialogue-next{align-self:end;margin:0 13px 13px 0;width:43px;height:43px;border:1px solid #b88a3d;background:#203722;color:#f5db9c}
+.memory-hint{position:fixed;z-index:24;right:18px;bottom:18px;display:flex;align-items:center;gap:8px;padding:7px 10px;background:#07150fba;border:1px solid #71895f;color:#d8e3c4;font-size:.62rem;letter-spacing:.08em;pointer-events:none}
+.memory-hint b{display:grid;place-items:center;width:25px;height:25px;border:1px solid #d1ae61;color:#f3d990}
+.mobile-controls{display:none;position:fixed;z-index:40;left:0;right:0;bottom:max(10px,env(safe-area-inset-bottom));padding:0 16px;justify-content:space-between;align-items:end;pointer-events:none}
+.mobile-controls button{pointer-events:auto;border:2px solid #8c6b33;background:#081910c7;color:#f0d79b;width:58px;height:58px;border-radius:10px;font-size:1.3rem}.dpad,.actions{display:flex;gap:9px}.actions button{border-radius:50%;width:68px;height:68px}.actions small{display:block;font-size:.42rem}
+@media(pointer:coarse),(max-width:900px){.mobile-controls{display:flex}.memory-hint{display:none}.objective{top:58px}.hud-title strong{font-size:.62rem}}
+@media(max-width:700px){.dialogue{height:190px}.dialogue-main{padding:22px 20px}.dialogue-text{font-size:.78rem}}
