@@ -170,7 +170,7 @@ function drawJack(){
    const im=r&&seq[r.imgIndex];
    if(im){
      // Keep Jack at gameplay scale instead of stretching the whole 256px sheet to 190x190.
-     const targetH=96,targetW=targetH*(r.sw/r.sh);
+     const targetH=190,targetW=targetH*(r.sw/r.sh);
      const dx=p.x-cam+p.w/2-targetW/2,dy=p.y+p.h-targetH;
      x.save();x.imageSmoothingEnabled=false;
      if(p.dir<0){x.translate(dx+targetW,0);x.scale(-1,1);x.drawImage(im,r.sx,r.sy,r.sw,r.sh,0,dy,targetW,targetH)}
