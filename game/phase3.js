@@ -637,6 +637,10 @@ function drawMotherTreeAndBoss(){
      pool=archivistSprites.heart;
      idx=Math.floor(p.anim*1.45)%Math.max(1,pool.length);
      labelState="heart";
+   }else if(bossPulse>1.35&&archivistSprites.attacks.length){
+     pool=archivistSprites.attacks;
+     idx=Math.floor(p.anim*5)%archivistSprites.attacks.length;
+     labelState="attack";
    }else if(bossAct===2){
      pool=archivistSprites.voices;
      idx=Math.floor(p.anim*1.15)%Math.max(1,pool.length);
@@ -645,10 +649,6 @@ function drawMotherTreeAndBoss(){
      pool=archivistSprites.faces;
      idx=Math.min(Math.max(0,pool.length-1),bossFacesSeen.filter(Boolean).length);
      labelState="faces";
-   }else if(bossPulse>1.35&&archivistSprites.attacks.length){
-     pool=archivistSprites.attacks;
-     idx=Math.floor(p.anim*5)%archivistSprites.attacks.length;
-     labelState="attack";
    }
 
    if(!pool?.length)pool=archivistSprites.base;
