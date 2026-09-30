@@ -107,7 +107,7 @@ function buildJackFrameOverrides(image){
  };
 }
 const jackStartupReady=img("../assets/game/phase1/sprites-hd/jack-atlas-hd.png").then(i=>{jack=i;jackFrameOverrides=buildJackFrameOverrides(i)}).catch(()=>{});
-const idleSheetReady=Promise.allSettled([
+Promise.allSettled([
  img("../assets/sprites/jack/idle-special/lantern/jack-idle-lantern-sheet.png"),
  img("../assets/sprites/jack/idle-special/sit/jack-idle-sit-sheet.png"),
  img("../assets/sprites/jack/idle-special/soul/jack-idle-soul-sheet.png"),
@@ -154,11 +154,11 @@ const IDLE_SHEETS={
 };
 function idleSheetRect(mode,frame,im){
  const s=IDLE_SHEETS[mode];if(!s||!im)return null;
- const cw=im.naturalWidth/s.cols,ch=im.naturalHeight/s.rows,i=frame%s.frames;
+ const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;if(!iw||!ih)return null;\n const cw=iw/s.cols,ch=ih/s.rows,i=frame%s.frames;
  return {sx:(i%s.cols)*cw,sy:Math.floor(i/s.cols)*ch,sw:cw,sh:ch,scale:s.scale};
 }
 function drawJack(){
- if(idleSpecialMode&&!dialogue.active){
+ if(idleSpecialMode&&p.on&&!dialogue.active){
    const seq=idleSpecialImages[idleSpecialMode]||[],im=seq[0],r=idleSheetRect(idleSpecialMode,idleSpecialFrame,im);
    if(im&&r){
      const targetW=190*r.scale,targetH=190*r.scale;
@@ -192,7 +192,7 @@ function update(dt){
  const idleNow=!input.left&&!input.right&&!input.down&&!input.jump&&!input.run&&p.attack<=0;
  if(idleNow){
    idleTime=(performance.now()-lastPlayerAction)/1000;
-   const nextMode=idleTime>=60?"long":idleTime>=40?"soul":idleTime>=25?"sit":idleTime>=8?"lantern":"";
+   const nextMode=p.on?(idleTime>=60?"long":idleTime>=40?"soul":idleTime>=25?"sit":idleTime>=8?"lantern":""):"";
    if(nextMode!==idleSpecialMode){idleSpecialMode=nextMode;idleSpecialFrame=0;idleSpecialClock=0}
    const seq=idleSpecialImages[idleSpecialMode]||[];
    const sheet=IDLE_SHEETS[idleSpecialMode],frameCount=seq.length&&sheet?sheet.frames:0;
