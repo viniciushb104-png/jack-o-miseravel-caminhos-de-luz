@@ -1,5 +1,5 @@
 (()=>{"use strict";
-const c=document.getElementById("game"),x=c.getContext("2d"),W=1280,H=720,WORLD=5600,G=1500;
+const c=document.getElementById("game"),x=c.getContext("2d"),W=1280,H=720,WORLD=6800,G=1500;
 const ui={obj:document.querySelector("#objective strong"),health:document.getElementById("healthValue"),banner:document.getElementById("sectionBanner"),msg:document.getElementById("message"),intro:document.getElementById("intro")};
 const dialogueRoot=document.getElementById("dialogue"),dialogue=new window.DialogueSystem(dialogueRoot);
 const journey=window.JackJourney||null,urlParams=new URLSearchParams(location.search),journeyMode=urlParams.get("journey")==="1",replayMode=urlParams.get("replay")==="1",forceNewRun=urlParams.get("new")==="1";
@@ -7,6 +7,8 @@ const SAVE_KEY="jack-phase3-save",CHECKPOINT_KEY="jack-phase3-checkpoint";
 if(replayMode)journey?.beginReplay(3,[SAVE_KEY,CHECKPOINT_KEY]);
 if(forceNewRun){localStorage.removeItem(SAVE_KEY);localStorage.removeItem(CHECKPOINT_KEY)}
 let loadedSave=null;if(journeyMode&&!replayMode){try{loadedSave=JSON.parse(localStorage.getItem(SAVE_KEY)||"null")}catch(_){loadedSave=null}}
+const story=window.PHASE3_STORY;
+if(!story)throw new Error("PHASE3_STORY não carregou.");
 
 const input={left:false,right:false,down:false,run:false,jump:false};
 let running=false,last=performance.now(),cam=0,jack=null,jackFrameOverrides={},introLorePlayed=!!loadedSave?.introLorePlayed,section=-1;
@@ -14,6 +16,15 @@ let idleTime=0,idleV2Frame=0,idleV2Clock=0,idleV2Mode="",idleV2Images={lantern:n
 let lastPlayerAction=performance.now();
 let memoryLight=0,memoryPulse=0,playerLife=Math.max(1,Math.min(3,Number(loadedSave?.playerLife)||3));
 let activeCheckpoint=loadedSave?.activeCheckpoint||localStorage.getItem(CHECKPOINT_KEY)||"";
+let maraSpriteSheet=null;
+let maraMet=!!loadedSave?.maraMet;
+let portraitsSolved=!!loadedSave?.portraitsSolved;
+let portraitChoices=Array.isArray(loadedSave?.portraitChoices)&&loadedSave.portraitChoices.length===3?loadedSave.portraitChoices.map(v=>Math.max(0,Math.min(2,Number(v)||0))):[0,0,0];
+let voicesSolved=!!loadedSave?.voicesSolved;
+let voiceStep=Math.max(0,Math.min(3,Number(loadedSave?.voiceStep)||0));
+let jackEchoPlayed=!!loadedSave?.jackEchoPlayed;
+let motherTreeScene=!!loadedSave?.motherTreeScene;
+let gateMessageCooldown=0;
 const p={x:Number.isFinite(loadedSave?.x)?loadedSave.x:120,y:Number.isFinite(loadedSave?.y)?loadedSave.y:470,w:46,h:86,vx:0,vy:0,dir:loadedSave?.dir===-1?-1:1,on:false,coyote:0,buffer:0,anim:0,attack:0};
 
 const opening=[
@@ -27,15 +38,17 @@ const opening=[
 const sections=[
  {x:0,n:"ESTRADA DE 4:14"},
  {x:1150,n:"O LIMIAR DAS RAÍZES"},
- {x:2550,n:"BOSQUE DAS MEMÓRIAS"},
- {x:4200,n:"TRILHA QUE SE LEMBRA"}
+ {x:2550,n:"BOSQUE DOS RETRATOS"},
+ {x:4100,n:"LAGO DAS VOZES"},
+ {x:5480,n:"ARQUIVO DAS RAÍZES"},
+ {x:6200,n:"CAMINHO DA ÁRVORE-MÃE"}
 ];
 
 const plats=[
  {x:0,y:590,w:1080,h:130},
  {x:1480,y:590,w:900,h:130},
  {x:2700,y:590,w:980,h:130},
- {x:4100,y:590,w:1500,h:130},
+ {x:4100,y:590,w:2700,h:130},
  {x:520,y:500,w:250,h:30},
  {x:1760,y:485,w:260,h:30},
  {x:3000,y:500,w:240,h:30},
@@ -51,7 +64,9 @@ const memoryPlats=[
  {x:3880,y:460,w:170,h:24}
 ];
 const checkpoints=[
- {id:"threshold",x:2100,groundY:590,respawnX:2040,respawnY:504,name:"Árvore da Primeira Lembrança"}
+ {id:"threshold",x:2100,groundY:590,respawnX:2040,respawnY:504,name:"Árvore da Primeira Lembrança"},
+ {id:"lake",x:4240,groundY:590,respawnX:4185,respawnY:504,name:"Salgueiro das Vozes"},
+ {id:"archive",x:5580,groundY:590,respawnX:5525,respawnY:504,name:"Raiz do Arquivo"}
 ];
 
 const leaves=Array.from({length:92},(_,i)=>({
@@ -67,7 +82,11 @@ function syncHud(){ui.health.textContent="♥ ".repeat(playerLife).trim()||"♡"
 
 function save(){
  if(!journeyMode||replayMode||!journey?.isActive()||journey.currentPhase()!==3)return;
- localStorage.setItem(SAVE_KEY,JSON.stringify({x:p.x,y:p.y,dir:p.dir,playerLife,activeCheckpoint,introLorePlayed,savedAt:Date.now()}));
+ localStorage.setItem(SAVE_KEY,JSON.stringify({
+   x:p.x,y:p.y,dir:p.dir,playerLife,activeCheckpoint,introLorePlayed,
+   maraMet,portraitsSolved,portraitChoices:[...portraitChoices],
+   voicesSolved,voiceStep,jackEchoPlayed,motherTreeScene,savedAt:Date.now()
+ }));
 }
 function respawn(msg){
  const cp=checkpoints.find(z=>z.id===activeCheckpoint);
@@ -118,8 +137,7 @@ const idleV2Files={
 };
 Object.entries(idleV2Files).forEach(([k,src])=>img(src).then(im=>idleV2Images[k]=im).catch(()=>{}));
 
-// Reaproveita os seis retratos HD oficiais do Jack usados nos Halloweens anteriores.
-// A Fase 3 começa consistente visualmente e já fica pronta para receber Mara depois.
+// Retratos HD oficiais de Jack + folha 3x2 de Mara.
 const jackPortraitFiles=[
  "jack-00-neutral.png",
  "jack-01-serious.png",
@@ -128,17 +146,24 @@ const jackPortraitFiles=[
  "jack-04-determined.png",
  "jack-05-resolved.png"
 ];
-const jackDialogueReady=Promise.allSettled(
+const jackPortraitReady=Promise.allSettled(
  jackPortraitFiles.map(file=>img("../assets/game/phase1/portraits-hd/"+file))
-).then(results=>{
+).then(results=>results.map(r=>r.status==="fulfilled"?r.value:null));
+
+const maraDialogueReady=img("../assets/game/phase3/mara/dialogue/mara-dialogue-sheet.png").catch(()=>null);
+const maraSpriteReady=img("../assets/game/phase3/mara/sprites/mara-sprite-sheet.png").then(im=>{maraSpriteSheet=im;return im}).catch(()=>null);
+
+const dialogueAssetsReady=Promise.all([jackPortraitReady,maraDialogueReady]).then(([jackFrames,maraSheet])=>{
  dialogue.setAssets({
-   jack:{frames:results.map(r=>r.status==="fulfilled"?r.value:null)}
+   jack:{frames:jackFrames},
+   mara:maraSheet?{sheet:maraSheet}:null
  });
- return results;
 });
 
 const phase3DialogueFrameReady=img("../assets/game/phase3/ui/phase3-dialogue-frame.png").catch(()=>null);
-window.__PHASE_ASSETS_READY=Promise.allSettled([jackStartupReady,jackDialogueReady,phase3DialogueFrameReady]).then(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
+window.__PHASE_ASSETS_READY=Promise.allSettled([
+ jackStartupReady,dialogueAssetsReady,maraSpriteReady,phase3DialogueFrameReady
+]).then(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
 
 function jackSequenceFrame(seq,fps){return seq[Math.floor(p.anim*fps)%seq.length]}
 function currentJackFrame(){
@@ -197,11 +222,171 @@ function drawJack(){
  x.restore();
 }
 
+function maraWorldState(){
+ if(!portraitsSolved)return {x:2275,groundY:590,frame:maraMet?3:0};
+ if(!voicesSolved)return {x:4020,groundY:590,frame:4};
+ return {x:5575,groundY:590,frame:5};
+}
+function drawMaraWorld(){
+ const m=maraWorldState();
+ if(!maraSpriteSheet)return;
+ const cols=3,rows=2,iw=maraSpriteSheet.naturalWidth||maraSpriteSheet.width,ih=maraSpriteSheet.naturalHeight||maraSpriteSheet.height;
+ const cw=iw/cols,ch=ih/rows,idx=m.frame%6,sx=(idx%cols)*cw,sy=Math.floor(idx/cols)*ch;
+ const rh=178,rw=rh*(cw/ch),dx=m.x-rw/2,dy=m.groundY-rh;
+ x.save();x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";
+ x.drawImage(maraSpriteSheet,sx,sy,cw,ch,dx,dy,rw,rh);
+ x.restore();
+}
+
+function drawPortraitPuzzleWorld(){
+ if(!maraMet)return;
+ const names=story.portraitPuzzle.names;
+ story.portraitPuzzle.entries.forEach((q,i)=>{
+   const selected=names[portraitChoices[i]],ok=selected===q.correct,lit=memoryLight>0;
+   x.save();x.translate(q.x,0);
+   if(lit){
+     const glow=x.createRadialGradient(0,410,10,0,410,120);
+     glow.addColorStop(0,"rgba(234,211,121,.28)");glow.addColorStop(1,"rgba(104,148,89,0)");
+     x.fillStyle=glow;x.beginPath();x.arc(0,410,120,0,Math.PI*2);x.fill();
+   }
+   x.strokeStyle=ok?"#c9c87a":"#8b6b3b";x.lineWidth=7;
+   x.beginPath();x.moveTo(-58,535);x.quadraticCurveTo(-82,445,-48,360);x.quadraticCurveTo(0,325,48,360);x.quadraticCurveTo(82,445,58,535);x.stroke();
+   x.fillStyle="#111912";x.fillRect(-48,365,96,122);
+   x.strokeStyle=lit?"#e8c76e":"#6f6042";x.lineWidth=4;x.strokeRect(-48,365,96,122);
+   x.globalAlpha=lit?1:.22;x.fillStyle=ok?"#c9d78a":"#d0b873";
+   x.beginPath();x.arc(0,418,25,0,Math.PI*2);x.fill();x.fillRect(-18,445,36,26);x.globalAlpha=1;
+   x.fillStyle=ok?"#263d25":"#241b14";x.fillRect(-78,500,156,34);
+   x.strokeStyle=ok?"#a7c274":"#876a3f";x.lineWidth=2;x.strokeRect(-78,500,156,34);
+   x.fillStyle="#f5dfaa";x.font="700 12px Georgia";x.textAlign="center";x.textBaseline="middle";x.fillText(selected,0,517);
+   x.restore();
+ });
+}
+
+function drawVoicePuzzleWorld(){
+ if(!portraitsSolved)return;
+ const order=story.voicePuzzle.order,activated=new Set(order.slice(0,voiceStep));
+ story.voicePuzzle.entries.forEach((q,i)=>{
+   const on=activated.has(i),lit=memoryLight>0;
+   x.save();x.translate(q.x,0);
+   const glow=x.createRadialGradient(0,455,8,0,455,on?105:70);
+   glow.addColorStop(0,on?"rgba(242,218,126,.55)":"rgba(153,190,132,.30)");
+   glow.addColorStop(1,"rgba(90,130,82,0)");x.fillStyle=glow;x.beginPath();x.arc(0,455,on?105:70,0,Math.PI*2);x.fill();
+   x.strokeStyle=on?"#e4ca76":"#6f8767";x.lineWidth=5;x.beginPath();x.moveTo(0,580);x.quadraticCurveTo(-28,525,0,490);x.quadraticCurveTo(30,455,0,410);x.stroke();
+   x.fillStyle=on?"#f3d888":"#91b488";x.globalAlpha=lit||on?1:.5;x.beginPath();x.arc(0,400,18,0,Math.PI*2);x.fill();x.globalAlpha=1;
+   x.fillStyle="#d8c989";x.font="700 13px Georgia";x.textAlign="center";x.fillText(["I","II","III"][i],0,455);
+   x.restore();
+ });
+}
+
+function drawRootGate(xPos,open){
+ if(open)return;
+ x.save();x.translate(xPos,0);x.strokeStyle="#513923";x.lineCap="round";
+ for(let i=-3;i<=3;i++){
+   x.lineWidth=12-Math.abs(i);
+   x.beginPath();x.moveTo(i*10,590);x.quadraticCurveTo(i*22-18,470,i*8,340);x.quadraticCurveTo(i*20+15,280,i*15,220);x.stroke();
+ }
+ x.fillStyle="#9d6f31";for(let j=0;j<5;j++){x.beginPath();x.arc((j-2)*18,315-j*17,4,0,Math.PI*2);x.fill()}
+ x.restore();
+}
+
+function nearestPuzzleEntry(entries,range=135){
+ const pc=p.x+p.w/2;let best=null,bestD=Infinity;
+ entries.forEach((q,i)=>{const d=Math.abs(q.x-pc);if(d<range&&d<bestD){best={q,i,d};bestD=d}});
+ return best;
+}
+
+function finishPortraitPuzzle(){
+ if(portraitsSolved)return;
+ const names=story.portraitPuzzle.names;
+ const all=story.portraitPuzzle.entries.every((q,i)=>names[portraitChoices[i]]===q.correct);
+ if(!all)return;
+ portraitsSolved=true;voiceStep=0;
+ banner("MEMÓRIA RECONSTRUÍDA — OS RETRATOS");
+ p.vx=0;save();
+ dialogue.open(story.dialogues.portraitsSolved,()=>{
+   say("Mara seguiu para o Lago das Vozes.");save();
+ });
+}
+
+function activateVoice(i){
+ if(voicesSolved)return;
+ if(memoryLight<=0){say("O eco está abafado. Use a Luz da Memória antes de tocá-lo.");return}
+ const expected=story.voicePuzzle.order[voiceStep];
+ if(i!==expected){
+   voiceStep=0;banner("AS VOZES SE EMBARALHARAM");
+   say("A frase se perdeu na água. Recomece pelo primeiro fragmento.");save();return;
+ }
+ voiceStep++;
+ say("Fragmento "+voiceStep+"/3 — "+story.voicePuzzle.entries[i].fragment);
+ if(voiceStep<story.voicePuzzle.order.length){save();return}
+ voicesSolved=true;banner("MEMÓRIA RECONSTRUÍDA — A VOZ DE MARA");p.vx=0;save();
+ dialogue.open(story.dialogues.voicesSolved,()=>{
+   jackEchoPlayed=true;memoryPulse=1.2;banner("UMA MEMÓRIA QUE NÃO PERTENCE AO BOSQUE");
+   setTimeout(()=>dialogue.open(story.dialogues.jackMemoryLeak,()=>{save()}),360);
+ });
+}
+
+function tryInteract(){
+ if(!running||dialogue.active)return;
+ lastPlayerAction=performance.now();idleTime=0;idleV2Mode="";
+ const pc=p.x+p.w/2,m=maraWorldState();
+ if(Math.abs(pc-m.x)<120){
+   if(!maraMet){
+     maraMet=true;p.vx=0;
+     dialogue.open(story.dialogues.maraMeeting,()=>{say("Os retratos respondem à Luz. F revela a lembrança; E troca o nome.");save()});
+     return;
+   }
+   if(!portraitsSolved){say("Mara: Ilumine cada retrato e devolva a ele o nome que pertence àquela história.");return}
+   if(!voicesSolved){say("Mara: As três vozes formavam uma única frase. A Luz ainda consegue separá-las.");return}
+   say("Mara: A Árvore-Mãe está adiante. Eu consigo sentir as raízes tentando nos ouvir.");return;
+ }
+ if(maraMet&&!portraitsSolved){
+   const hit=nearestPuzzleEntry(story.portraitPuzzle.entries);
+   if(hit){
+     portraitChoices[hit.i]=(portraitChoices[hit.i]+1)%story.portraitPuzzle.names.length;
+     say(hit.q.title+" — "+story.portraitPuzzle.names[portraitChoices[hit.i]]);
+     finishPortraitPuzzle();save();return;
+   }
+ }
+ if(portraitsSolved&&!voicesSolved){
+   const hit=nearestPuzzleEntry(story.voicePuzzle.entries,145);
+   if(hit){activateVoice(hit.i);return}
+ }
+ say("Nada aqui respondeu ao toque.");
+}
+
+function updateNarrativeTriggers(){
+ if(dialogue.active)return;
+ if(!maraMet&&p.x>2160){
+   maraMet=true;p.vx=0;
+   dialogue.open(story.dialogues.maraMeeting,()=>{say("Os retratos respondem à Luz. F revela a lembrança; E troca o nome.");save()});
+   return;
+ }
+ if(voicesSolved&&!motherTreeScene&&p.x>6000){
+   motherTreeScene=true;p.vx=0;
+   dialogue.open(story.dialogues.motherTree,()=>{
+     banner("PRÓXIMO CAMINHO — O CORAÇÃO DAS RAÍZES");
+     ui.obj.textContent="A entrada da Árvore-Mãe ainda está selada.";
+     save();
+   });
+ }
+}
+
 function useMemoryLight(){
+ if(dialogue.active)return;
  lastPlayerAction=performance.now();idleTime=0;idleV2Mode="";idleV2Frame=0;
  const duration=window.JACK_ANIMATIONS?.timing?.attackDuration||.48;
  p.attack=duration;
  memoryLight=3.25;memoryPulse=.65;
+
+ if(maraMet&&!portraitsSolved){
+   const hit=nearestPuzzleEntry(story.portraitPuzzle.entries,175);
+   if(hit){say("Memória — "+hit.q.clue);return}
+ }
+ if(portraitsSolved&&!voicesSolved){
+   const hit=nearestPuzzleEntry(story.voicePuzzle.entries,175);
+   if(hit){say('Eco — “'+hit.q.fragment+'”');return}
+ }
  say("A lanterna recorda um caminho que já não existe.");
 }
 
@@ -216,24 +401,30 @@ function update(dt){
    const strip=IDLE_V2[idleV2Mode],frameCount=im&&strip?strip.frames:0;
    if(idleV2Mode&&frameCount){idleV2Clock+=dt;if(idleV2Clock>=.32){idleV2Clock=0;idleV2Frame=(idleV2Frame+1)%frameCount}}
  }else{lastPlayerAction=performance.now();idleTime=0;idleV2Clock=0;idleV2Frame=0;idleV2Mode=""}
- memoryLight=Math.max(0,memoryLight-dt);memoryPulse=Math.max(0,memoryPulse-dt);p.attack=Math.max(0,p.attack-dt);
+ memoryLight=Math.max(0,memoryLight-dt);memoryPulse=Math.max(0,memoryPulse-dt);p.attack=Math.max(0,p.attack-dt);gateMessageCooldown=Math.max(0,gateMessageCooldown-dt);
  p.coyote=p.on?.12:Math.max(0,p.coyote-dt);
  if(input.jump){p.buffer=.14;input.jump=false}else p.buffer=Math.max(0,p.buffer-dt);
  const speed=input.down?90:(input.run?325:228),dir=(input.right?1:0)-(input.left?1:0);
  p.vx+=((dir*speed)-p.vx)*Math.min(1,dt*12);if(dir)p.dir=dir;
  if(p.buffer>0&&p.coyote>0&&!input.down){p.vy=-575;p.on=false;p.coyote=0;p.buffer=0}
- p.vy+=G*dt;const oldY=p.y;p.x=Math.max(0,Math.min(WORLD-p.w,p.x+p.vx*dt));p.y+=p.vy*dt;p.on=false;
+ p.vy+=G*dt;const oldY=p.y;p.x=Math.max(0,Math.min(WORLD-p.w,p.x+p.vx*dt));
+ if(!portraitsSolved&&p.x+p.w>3740){p.x=3740-p.w;p.vx=Math.min(0,p.vx);if(gateMessageCooldown<=0){say("As raízes seguram o caminho. Os três retratos ainda não estão completos.");gateMessageCooldown=2}}
+ if(portraitsSolved&&!voicesSolved&&p.x+p.w>5200){p.x=5200-p.w;p.vx=Math.min(0,p.vx);if(gateMessageCooldown<=0){say("O lago não abre passagem enquanto a voz de Mara continuar fragmentada.");gateMessageCooldown=2}}
+ p.y+=p.vy*dt;p.on=false;
  const solids=plats.concat(memoryLight>0?memoryPlats:[]);
  for(const q of solids){
    if(p.x+p.w>q.x&&p.x<q.x+q.w&&oldY+p.h<=q.y+8&&p.y+p.h>=q.y&&p.vy>=0){p.y=q.y-p.h;p.vy=0;p.on=true}
  }
  if(p.y>780){playerLife--;syncHud();if(playerLife<=0)respawn("As raízes devolveram Jack ao último ponto de luz.");else{const cp=checkpoints.find(z=>z.id===activeCheckpoint);p.x=cp?cp.respawnX:120;p.y=cp?cp.respawnY:470;p.vx=p.vy=0;say("O Bosque engoliu um passo — "+playerLife+"/3 luzes.");}}
- updateCheckpoint();
+ updateCheckpoint();updateNarrativeTriggers();
  cam+=(Math.max(0,Math.min(WORLD-W,p.x-W*.35))-cam)*Math.min(1,dt*5);
  let si=0;for(let i=0;i<sections.length;i++)if(p.x>=sections[i].x)si=i;if(si!==section){section=si;banner(sections[si].n)}
  if(p.x>980&&p.x<1480)ui.obj.textContent="Use a Luz para caminhar sobre uma lembrança do caminho.";
- else if(p.x>=1480&&p.x<2550)ui.obj.textContent="Siga as folhas. Elas estão voltando para algum lugar.";
- else if(p.x>=2550)ui.obj.textContent="Entre mais fundo no Bosque das Memórias.";
+ else if(!maraMet&&p.x>=1480)ui.obj.textContent="Siga as folhas até a mulher que espera junto às raízes.";
+ else if(maraMet&&!portraitsSolved&&p.x>=2500)ui.obj.textContent="F revela a lembrança de cada retrato. E troca o nome da placa.";
+ else if(portraitsSolved&&!voicesSolved&&p.x>=3900)ui.obj.textContent="Ouça os três ecos com F e monte a frase de Mara usando E.";
+ else if(voicesSolved&&!motherTreeScene)ui.obj.textContent="Siga Mara em direção à Árvore-Mãe.";
+ else if(motherTreeScene)ui.obj.textContent="A entrada da Árvore-Mãe ainda está selada.";
  else ui.obj.textContent="Siga as folhas que caem para o céu.";
  p.anim+=dt;saveClock+=dt;if(saveClock>2.5){saveClock=0;save()}
 }
@@ -295,6 +486,11 @@ function drawWorld(){
    x.lineWidth=6;x.beginPath();x.moveTo(-5,-90);x.lineTo(-48,-132);x.moveTo(-4,-72);x.lineTo(45,-116);x.stroke();
    x.fillStyle=lit?"#f0ce72":"#39463a";x.beginPath();x.arc(-48,-132,10,0,Math.PI*2);x.fill();x.beginPath();x.arc(45,-116,10,0,Math.PI*2);x.fill();x.restore();
  }
+ drawPortraitPuzzleWorld();
+ drawVoicePuzzleWorld();
+ drawRootGate(3740,portraitsSolved);
+ drawRootGate(5200,voicesSolved);
+ drawMaraWorld();
  x.restore();
 }
 
@@ -313,7 +509,8 @@ function bindHold(id,key){const b=document.getElementById(id);["pointerdown","po
 bindHold("leftBtn","left");bindHold("rightBtn","right");bindHold("downBtn","down");
 document.getElementById("jumpBtn")?.addEventListener("pointerdown",()=>{lastPlayerAction=performance.now();idleTime=0;idleV2Mode="";input.jump=true});
 document.getElementById("lightBtn")?.addEventListener("pointerdown",useMemoryLight);
-addEventListener("keydown",e=>{if(dialogue.active)return;lastPlayerAction=performance.now();idleTime=0;idleV2Mode="";idleV2Frame=0;if(["ArrowLeft","a","A"].includes(e.key))input.left=true;if(["ArrowRight","d","D"].includes(e.key))input.right=true;if(["ArrowDown","s","S"].includes(e.key))input.down=true;if(e.key==="Shift")input.run=true;if(e.code==="Space"){input.jump=true;e.preventDefault()}if(["f","F"].includes(e.key))useMemoryLight()});
+document.getElementById("interactBtn")?.addEventListener("pointerdown",tryInteract);
+addEventListener("keydown",e=>{if(dialogue.active)return;lastPlayerAction=performance.now();idleTime=0;idleV2Mode="";idleV2Frame=0;if(["ArrowLeft","a","A"].includes(e.key))input.left=true;if(["ArrowRight","d","D"].includes(e.key))input.right=true;if(["ArrowDown","s","S"].includes(e.key))input.down=true;if(e.key==="Shift")input.run=true;if(e.code==="Space"){input.jump=true;e.preventDefault()}if(["f","F"].includes(e.key))useMemoryLight();if(["e","E"].includes(e.key))tryInteract()});
 addEventListener("keyup",e=>{if(["ArrowLeft","a","A"].includes(e.key))input.left=false;if(["ArrowRight","d","D"].includes(e.key))input.right=false;if(["ArrowDown","s","S"].includes(e.key))input.down=false;if(e.key==="Shift")input.run=false});
 
 document.getElementById("startGame").onclick=()=>{
