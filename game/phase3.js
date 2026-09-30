@@ -178,11 +178,22 @@ const motherTreeSpriteReady=Promise.allSettled([
  img("../assets/phase3/mother-tree/mother-tree-restored.png").then(im=>{motherTreeSprites.restored=im;return im})
 ]);
 
-const dialogueAssetsReady=Promise.all([jackPortraitReady,maraDialogueReady,motherTreeSpriteReady]).then(([jackFrames,maraSheet])=>{
+const archivistPortraitFiles=[
+ "archivist-dialogue-01-awake.png",
+ "archivist-dialogue-02-faces.png",
+ "archivist-dialogue-03-heart.png",
+ "archivist-dialogue-04-release.png"
+];
+const archivistDialogueReady=Promise.allSettled(
+ archivistPortraitFiles.map(file=>img("../assets/game/phase3/boss/dialogue/"+file))
+).then(results=>results.map(r=>r.status==="fulfilled"?r.value:null));
+
+const dialogueAssetsReady=Promise.all([jackPortraitReady,maraDialogueReady,motherTreeSpriteReady,archivistDialogueReady]).then(([jackFrames,maraSheet,_treeReady,archivistFrames])=>{
  dialogue.setAssets({
    jack:{frames:jackFrames},
    mara:maraSheet?{sheet:maraSheet}:null,
-   motherTree:{frames:[motherTreeSprites.idle,motherTreeSprites.awakened||motherTreeSprites.restored]}
+   motherTree:{frames:[motherTreeSprites.idle,motherTreeSprites.awakened||motherTreeSprites.restored]},
+   archivist:{frames:archivistFrames}
  });
 });
 
@@ -246,6 +257,7 @@ function maraWorldState(){
  if(maraRun.active)return {x:maraRun.x,groundY:maraRun.groundY,run:true};
  if(bossActive)return {x:maraBossX,groundY:590,frame:bossAct===3?0:5};
  if(motherTreeScene||bossComplete)return {x:6680,groundY:590,frame:bossComplete?1:5};
+ if(archiveSolved&&approachTreePlayed)return {x:6680,groundY:590,frame:5};
  if(archiveSolved)return {x:6380,groundY:590,frame:5};
  if(!portraitsSolved)return {x:2275,groundY:590,frame:maraMet?3:0};
  if(!voicesSolved)return {x:4020,groundY:590,frame:4};
@@ -731,7 +743,7 @@ function updateNarrativeTriggers(){
 
  if(archiveSolved&&!approachTreePlayed&&p.x>6170){
    approachTreePlayed=true;p.vx=0;memoryPulse=1.05;
-   dialogue.open(story.dialogues.approachTree,()=>{say("Adiante, nada consegue terminar.");save()});return;
+   dialogue.open(story.dialogues.approachTree,()=>{say("Adiante, nada consegue terminar.");startMaraRun(6380,6680,()=>save());save()});return;
  }
 
  if(archiveSolved&&approachTreePlayed&&!motherTreeScene&&p.x>6500){
