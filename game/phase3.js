@@ -767,54 +767,87 @@ function useMemoryLight(){
 }
 
 function update(dt){
- if(dialogue.active){lastPlayerAction=performance.now();idleTime=0;waitSitActive=false;p.vx*=.72;p.anim+=dt;return}
+ bossReleaseT=Math.max(0,bossReleaseT-dt);
+ if(endingSequenceActive&&!dialogue.active){
+   p.vx=0;p.vy=0;p.anim+=dt;
+   cam+=(Math.max(0,Math.min(WORLD-W,p.x-W*.35))-cam)*Math.min(1,dt*4);
+   return;
+ }
+ if(dialogue.active){
+   lastPlayerAction=performance.now();idleTime=0;waitSitActive=false;p.vx*=.72;p.anim+=dt;
+   cam+=(Math.max(0,Math.min(WORLD-W,p.x-W*.35))-cam)*Math.min(1,dt*4);
+   return;
+ }
  const idleNow=!input.left&&!input.right&&!input.down&&!input.jump&&!input.run&&p.attack<=0;
  if(idleNow){
    idleTime=(performance.now()-lastPlayerAction)/1000;
    if(idleTime>=8&&p.on){
      if(!waitSitActive){waitSitActive=true;waitSitFrame=0;waitSitClock=0}
      waitSitClock+=dt;
-     if(waitSitClock>=.38){
-       waitSitClock=0;
-       if(waitSitFrame<10)waitSitFrame++;
-       else waitSitFrame=7;
-     }
+     if(waitSitClock>=.38){waitSitClock=0;if(waitSitFrame<10)waitSitFrame++;else waitSitFrame=7}
    }
  }else{lastPlayerAction=performance.now();idleTime=0;waitSitClock=0;waitSitFrame=0;waitSitActive=false}
- memoryLight=Math.max(0,memoryLight-dt);memoryPulse=Math.max(0,memoryPulse-dt);p.attack=Math.max(0,p.attack-dt);gateMessageCooldown=Math.max(0,gateMessageCooldown-dt);bossCooldown=Math.max(0,bossCooldown-dt);bossPulse=Math.max(0,bossPulse-dt);updateMaraRun(dt);
+
+ memoryLight=Math.max(0,memoryLight-dt);memoryPulse=Math.max(0,memoryPulse-dt);p.attack=Math.max(0,p.attack-dt);
+ gateMessageCooldown=Math.max(0,gateMessageCooldown-dt);bossCooldown=Math.max(0,bossCooldown-dt);bossPulse=Math.max(0,bossPulse-dt);
+ updateMaraRun(dt);
+
  p.coyote=p.on?.12:Math.max(0,p.coyote-dt);
  if(input.jump){p.buffer=.14;input.jump=false}else p.buffer=Math.max(0,p.buffer-dt);
  const speed=input.down?90:(input.run?325:228),dir=(input.right?1:0)-(input.left?1:0);
  p.vx+=((dir*speed)-p.vx)*Math.min(1,dt*12);if(dir)p.dir=dir;
  if(p.buffer>0&&p.coyote>0&&!input.down){p.vy=-575;p.on=false;p.coyote=0;p.buffer=0}
+
  p.vy+=G*dt;const oldY=p.y;p.x=Math.max(0,Math.min(WORLD-p.w,p.x+p.vx*dt));
  if(!portraitsSolved&&p.x+p.w>3740){p.x=3740-p.w;p.vx=Math.min(0,p.vx);if(gateMessageCooldown<=0){say("As raízes seguram o caminho. Os três retratos ainda não estão completos.");gateMessageCooldown=2}}
  if(portraitsSolved&&!voicesSolved&&p.x+p.w>5200){p.x=5200-p.w;p.vx=Math.min(0,p.vx);if(gateMessageCooldown<=0){say("O lago não abre passagem enquanto a voz de Mara continuar fragmentada.");gateMessageCooldown=2}}
  if(voicesSolved&&!archiveSolved&&p.x+p.w>6000){p.x=6000-p.w;p.vx=Math.min(0,p.vx);if(gateMessageCooldown<=0){say("As raízes recusam a passagem. O Arquivo ainda guarda algo que precisa ser deixado ir.");gateMessageCooldown=2}}
+
  if(bossActive&&p.x<6650){p.x=6650;p.vx=Math.max(0,p.vx)}
  if(bossActive&&p.x+p.w>7540){p.x=7540-p.w;p.vx=Math.min(0,p.vx)}
+ if(bossActive&&bossAct===3&&bossStep<bossRootPositions.length){
+   const rootX=bossRootPositions[bossStep];
+   if(p.x+p.w>rootX-16){p.x=rootX-16-p.w;p.vx=Math.min(0,p.vx)}
+ }
+
  p.y+=p.vy*dt;p.on=false;
  const solids=plats.concat(memoryLight>0?memoryPlats:[]);
  for(const q of solids){
    if(p.x+p.w>q.x&&p.x<q.x+q.w&&oldY+p.h<=q.y+8&&p.y+p.h>=q.y&&p.vy>=0){p.y=q.y-p.h;p.vy=0;p.on=true}
  }
- if(p.y>780){playerLife--;syncHud();if(playerLife<=0)respawn("As raízes devolveram Jack ao último ponto de luz.");else{const cp=checkpoints.find(z=>z.id===activeCheckpoint);p.x=cp?cp.respawnX:120;p.y=cp?cp.respawnY:470;p.vx=p.vy=0;say("O Bosque engoliu um passo — "+playerLife+"/3 luzes.");}}
+
+ if(p.y>780){
+   playerLife--;syncHud();
+   if(playerLife<=0)respawn("As raízes devolveram Jack ao último ponto de luz.");
+   else{
+     const cp=checkpoints.find(z=>z.id===activeCheckpoint);
+     p.x=cp?cp.respawnX:120;p.y=cp?cp.respawnY:470;p.vx=p.vy=0;
+     say("O Bosque engoliu um passo — "+playerLife+"/3 luzes.");
+   }
+ }
+
  updateCheckpoint();updateNarrativeTriggers();
  cam+=(Math.max(0,Math.min(WORLD-W,p.x-W*.35))-cam)*Math.min(1,dt*5);
  let si=0;for(let i=0;i<sections.length;i++)if(p.x>=sections[i].x)si=i;if(si!==section){section=si;banner(sections[si].n)}
+
  if(p.x>980&&p.x<1480)ui.obj.textContent="Use a Luz para caminhar sobre uma lembrança do caminho.";
  else if(!maraMet&&p.x>=1480)ui.obj.textContent="Siga as folhas até a mulher que espera junto às raízes.";
  else if(maraMet&&!portraitsSolved&&p.x>=2500)ui.obj.textContent="F revela a lembrança de cada retrato. E troca o nome da placa.";
  else if(portraitsSolved&&!voicesSolved&&p.x>=3900)ui.obj.textContent="Ouça os três ecos com F e monte a frase de Mara usando E.";
- else if(voicesSolved&&!archiveSolved)ui.obj.textContent="Arquivo das Raízes: aproxime-se das lembranças e pressione E. A resposta não é apagar.";
- else if(archiveSolved&&!motherTreeScene)ui.obj.textContent="O caminho foi liberado. Siga Mara até a Árvore-Mãe.";
- else if(bossActive&&bossAct===1)ui.obj.textContent="ATO I — OS ROSTOS: use F três vezes para libertar as memórias presas.";
- else if(bossActive&&bossAct===2)ui.obj.textContent="ATO II — AS VOZES: aproxime-se dos ecos e use F na ordem aprendida no Lago.";
- else if(bossActive&&bossAct===3)ui.obj.textContent="ATO III — OS NOMES: avance até o coração e pressione E. Não destrua.";
- else if(bossComplete&&!finalePlayed)ui.obj.textContent="A Árvore-Mãe está libertando o que guardou.";
+ else if(voicesSolved&&!archiveSolved)ui.obj.textContent="Arquivo das Raízes: examine carta, melodia e chave com E. Nenhuma precisa ser apagada.";
+ else if(archiveSolved&&!approachTreePlayed)ui.obj.textContent="Siga Mara. Observe o que acontece com as coisas que tentam terminar.";
+ else if(archiveSolved&&!motherTreeScene)ui.obj.textContent="O ciclo está quebrado. Alcance a Árvore-Mãe.";
+ else if(bossPrelude&&!bossActive&&!bossComplete)ui.obj.textContent="As memórias estão se reunindo. A antiga ordem de Mara ganhou forma.";
+ else if(bossActive&&bossAct===1&&!bossFirstStrike)ui.obj.textContent="ATO I — OS ROSTOS: use a Luz no Arquivista e descubra por que ele não pode ser vencido pela força.";
+ else if(bossActive&&bossAct===1)ui.obj.textContent="ATO I — OS ROSTOS: aproxime-se de Lívia, Tomás e Celina e use F para reconhecê-los.";
+ else if(bossActive&&bossAct===2)ui.obj.textContent="ATO II — AS VOZES: reconheça os ecos na mesma sequência aprendida no Lago.";
+ else if(bossActive&&bossAct===3&&bossStep<bossRootPositions.length)ui.obj.textContent="ATO III — A ESCOLHA: ilumine a raiz à frente de Mara para abrir o caminho.";
+ else if(bossActive&&bossAct===3)ui.obj.textContent="O coração da ordem está exposto. Aproxime-se e pressione E.";
+ else if(bossComplete&&!finalePlayed)ui.obj.textContent="Pela primeira vez, as folhas estão caindo para o chão.";
  else if(finalePlayed)ui.obj.textContent="O caminho de Mara terminou. O de Jack continua.";
- else if(motherTreeScene)ui.obj.textContent="Entre no Coração das Raízes.";
+ else if(motherTreeScene)ui.obj.textContent="Escute a Árvore-Mãe.";
  else ui.obj.textContent="Siga as folhas que caem para o céu.";
+
  p.anim+=dt;saveClock+=dt;if(saveClock>2.5){saveClock=0;save()}
 }
 let saveClock=0;
@@ -841,12 +874,13 @@ function drawBackdrop(){
 }
 
 function drawLeaves(){
- const dt=.016;
+ const dt=.016,down=bossComplete;
  for(const l of leaves){
-   l.sy-=l.speed*dt;
+   l.sy+=(down?1:-1)*l.speed*dt;
    l.sx+=Math.sin(p.anim*.55+l.phase)*.32+l.drift*dt;
-   l.rot+=l.spin*dt;
-   if(l.sy<-55){l.sy=H+35+Math.random()*130;l.sx=Math.random()*W;l.imageIndex=Math.floor(Math.random()*6)}
+   l.rot+=l.spin*dt*(down?.72:1);
+   if(!down&&l.sy<-55){l.sy=H+35+Math.random()*130;l.sx=Math.random()*W;l.imageIndex=Math.floor(Math.random()*6)}
+   if(down&&l.sy>H+65){l.sy=-35-Math.random()*140;l.sx=Math.random()*W;l.imageIndex=Math.floor(Math.random()*6)}
    if(l.sx<-65)l.sx=W+45;if(l.sx>W+65)l.sx=-45;
 
    const im=memoryLeafImages[l.imageIndex];
@@ -854,16 +888,12 @@ function drawLeaves(){
    const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
    const scale=l.depth<.58?.72:(l.depth>.9?1.18:1);
    const h=l.size*2.15*scale,w=h*(iw/ih);
-   x.save();
-   x.translate(l.sx,l.sy);
-   x.rotate(l.rot+Math.sin(p.anim*.8+l.phase)*.16);
+   x.save();x.translate(l.sx,l.sy);x.rotate(l.rot+Math.sin(p.anim*.8+l.phase)*.16);
    x.globalAlpha=l.depth<.58?.34:(l.depth>.9?.82:.58);
-   if(l.depth>.9){x.shadowColor="rgba(232,178,78,.22)";x.shadowBlur=7}
-   x.drawImage(im,-w/2,-h/2,w,h);
-   x.restore();
+   if(l.depth>.9){x.shadowColor=down?"rgba(243,211,125,.30)":"rgba(232,178,78,.22)";x.shadowBlur=7}
+   x.drawImage(im,-w/2,-h/2,w,h);x.restore();
  }
 }
-
 function drawWorld(){
  x.save();x.translate(-cam,0);
  // chão e plataformas normais
@@ -889,6 +919,7 @@ function drawWorld(){
  drawPortraitPuzzleWorld();
  drawVoicePuzzleWorld();
  drawArchivePuzzleWorld();
+ drawCycleFailures();
  drawRootGate(3740,portraitsSolved);
  drawRootGate(5200,voicesSolved);
  drawMotherTreeAndBoss();
@@ -915,11 +946,24 @@ document.getElementById("interactBtn")?.addEventListener("pointerdown",tryIntera
 addEventListener("keydown",e=>{if(dialogue.active)return;lastPlayerAction=performance.now();idleTime=0;waitSitActive=false;waitSitFrame=0;if(["ArrowLeft","a","A"].includes(e.key))input.left=true;if(["ArrowRight","d","D"].includes(e.key))input.right=true;if(["ArrowDown","s","S"].includes(e.key))input.down=true;if(e.key==="Shift")input.run=true;if(e.code==="Space"){input.jump=true;e.preventDefault()}if(["f","F"].includes(e.key))useMemoryLight();if(["e","E"].includes(e.key))tryInteract()});
 addEventListener("keyup",e=>{if(["ArrowLeft","a","A"].includes(e.key))input.left=false;if(["ArrowRight","d","D"].includes(e.key))input.right=false;if(["ArrowDown","s","S"].includes(e.key))input.down=false;if(e.key==="Shift")input.run=false});
 
-document.getElementById("startGame").onclick=()=>{
+const startGameBtn=document.getElementById("startGame");
+if(loadedSave&&journeyMode&&!replayMode){
+ startGameBtn.textContent="✦ CONTINUAR JORNADA";
+ const introCopy=ui.intro.querySelector("span");if(introCopy)introCopy.textContent="A lanterna guardou seu caminho pelo Bosque das Memórias.";
+}
+startGameBtn.onclick=()=>{
  if(journeyMode&&!replayMode)journey?.advanceTo(3);
  ui.intro.hidden=true;running=true;last=performance.now();requestAnimationFrame(loop);
- setTimeout(()=>{if(!introLorePlayed){introLorePlayed=true;dialogue.open(opening,()=>{say("A lanterna iluminou algo que não existe mais. Pressione F para revelar memórias do caminho.");save()})}},420);
+ setTimeout(()=>{
+   if(finalePlayed){if(phase3CompleteRoot)phase3CompleteRoot.hidden=false;return}
+   if(!introLorePlayed){introLorePlayed=true;dialogue.open(opening,()=>{say("A lanterna iluminou algo que não existe mais. Pressione F para revelar memórias do caminho.");save()})}
+ },420);
 };
+phase3ReplayBtn?.addEventListener("click",()=>{
+ try{localStorage.removeItem(SAVE_KEY);localStorage.removeItem(CHECKPOINT_KEY)}catch(_){}
+ location.href="phase3.html?replay=1&new=1";
+});
+phase3MenuBtn?.addEventListener("click",()=>{location.href="../index.html#fases"});
 function loop(t){if(!running)return;const dt=Math.min(.033,(t-last)/1000);last=t;update(dt);draw();requestAnimationFrame(loop)}
 addEventListener("pagehide",save);document.addEventListener("visibilitychange",()=>{if(document.hidden)save()});
 syncHud();draw();
