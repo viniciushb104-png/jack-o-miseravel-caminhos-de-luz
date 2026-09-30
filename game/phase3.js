@@ -153,26 +153,28 @@ function currentJackFrame(){
  const speed=Math.abs(p.vx);if(speed>=18){if(input.run&&speed>170)return jackSequenceFrame(anims.run,cfg.timing?.runFps||12);return jackSequenceFrame(anims.walk,cfg.timing?.walkFps||9)}
  return jackSequenceFrame(anims.idle,cfg.timing?.idleFps||2.4);
 }
+// Special-idle strips: crop only the artwork band (never the caption/text below).
+// Scale is tuned per action because the generated figures occupy different amounts of each cell.
 const IDLE_STRIPS={
- lantern:{image:0,frames:8,x:9,y:190,w:238,h:62},
- sit:{image:0,frames:8,x:9,y:204,w:238,h:48},
- soul:{image:0,frames:8,x:9,y:195,w:238,h:57},
- long:{image:4,frames:7,x:9,y:188,w:238,h:64}
+ lantern:{image:0,frames:8,x:9,y:190,w:238,h:62,scale:2.18,lift:0},
+ sit:{image:0,frames:8,x:9,y:204,w:238,h:45,scale:2.28,lift:0},
+ soul:{image:0,frames:8,x:9,y:195,w:238,h:54,scale:2.22,lift:0},
+ long:{image:4,frames:7,x:9,y:188,w:238,h:60,scale:2.20,lift:0}
 };
 function idleStripRect(mode,frame){
  const s=IDLE_STRIPS[mode];if(!s)return null;
  const fw=s.w/s.frames,i=frame%s.frames;
- return {imgIndex:s.image,sx:s.x+i*fw,sy:s.y,sw:fw,sh:s.h};
+ return {imgIndex:s.image,sx:s.x+i*fw,sy:s.y,sw:fw,sh:s.h,scale:s.scale||2.2,lift:s.lift||0};
 }
 function drawJack(){
  if(idleSpecialMode&&!dialogue.active){
    const seq=idleSpecialImages[idleSpecialMode]||[],r=idleStripRect(idleSpecialMode,idleSpecialFrame);
    const im=r&&seq[r.imgIndex];
    if(im){
-     // Keep Jack at gameplay scale instead of stretching the whole 256px sheet to 190x190.
-     // Use the exact same 190x190 render box and vertical anchor as normal Jack.
-     const targetW=190,targetH=190;
-     const dx=p.x-cam+p.w/2-targetW/2,dy=p.y+p.h/2-132;
+     // Draw the cropped cell at a calibrated pixel-art scale. The feet are anchored
+     // to the exact gameplay collision floor (p.y+p.h), so Jack stays on platforms.
+     const targetW=r.sw*r.scale,targetH=r.sh*r.scale;
+     const dx=p.x-cam+p.w/2-targetW/2,feetY=p.y+p.h-r.lift,dy=feetY-targetH;
      x.save();x.imageSmoothingEnabled=false;
      if(p.dir<0){x.translate(dx+targetW,0);x.scale(-1,1);x.drawImage(im,r.sx,r.sy,r.sw,r.sh,0,dy,targetW,targetH)}
      else x.drawImage(im,r.sx,r.sy,r.sw,r.sh,dx,dy,targetW,targetH);
