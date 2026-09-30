@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+  <meta name="theme-color" content="#07120d">
+  <title>Halloween III — O Bosque das Memórias</title>
+  <link rel="stylesheet" href="phase3.css?v=1">
+  <link rel="stylesheet" href="preloader.css?v=4">
+</head>
+<body>
+<section id="journeyLoader" aria-label="Carregando caminho">
+  <div class="loader-vignette"></div>
+  <div class="loader-card">
+    <div class="loader-title">CAMINHOS DE LUZ</div>
+    <div class="loader-jack run"></div>
+    <div class="loader-track"><div class="loader-fill"></div></div>
+    <div class="loader-copy"><span data-loader-message>OUVINDO AS RAÍZES...</span><strong data-loader-percent>0%</strong></div>
+  </div>
+  <div class="loader-flash"></div>
+</section>
+
+<main class="game-page">
+  <canvas id="game" width="1280" height="720" aria-label="Halloween III — O Bosque das Memórias"></canvas>
+
+  <header class="hud">
+    <a class="hud-btn" href="../index.html#fases">‹ MAPA</a>
+    <div class="hud-title"><small>HALLOWEEN III</small><strong>O BOSQUE DAS MEMÓRIAS</strong></div>
+    <div class="hud-box"><span>VIDA</span><b id="healthValue">♥ ♥ ♥</b></div>
+  </header>
+
+  <div id="objective" class="objective"><small>OBJETIVO</small><strong>Siga as folhas que caem para o céu.</strong></div>
+  <div id="sectionBanner" class="section-banner"></div>
+  <div id="message" class="message"></div>
+
+  <section id="intro" class="intro-card">
+    <p>CAMINHOS DE LUZ · HALLOWEEN III</p>
+    <h1>O BOSQUE DAS<br>MEMÓRIAS</h1>
+    <span>Algumas lembranças criam raízes profundas. Outras aprendem a crescer sobre quem tenta guardá-las.</span>
+    <button id="startGame">✦ ENTRAR NO BOSQUE</button>
+  </section>
+
+  <section id="dialogue" class="dialogue" hidden aria-live="polite">
+    <div class="dialogue-shell">
+      <div class="dialogue-portrait is-hidden" data-dialogue-portrait aria-hidden="true"></div>
+      <div class="dialogue-main">
+        <div class="dialogue-name" data-dialogue-name></div>
+        <p class="dialogue-text" data-dialogue-text></p>
+      </div>
+      <button class="dialogue-next" data-dialogue-next type="button" aria-label="Próxima fala">▶</button>
+    </div>
+  </section>
+
+  <div class="memory-hint"><b>F</b><span>LUZ DA MEMÓRIA</span></div>
+
+  <div class="mobile-controls">
+    <div class="dpad">
+      <button id="leftBtn" type="button">◀</button>
+      <button id="downBtn" type="button">▼</button>
+      <button id="rightBtn" type="button">▶</button>
+    </div>
+    <div class="actions">
+      <button id="lightBtn" type="button">✦<small>LUZ</small></button>
+      <button id="jumpBtn" type="button">▲<small>PULAR</small></button>
+    </div>
+  </div>
+</main>
+
+<script src="engine/journey.js?v=2"></script>
+<script src="engine/dialogue.js?v=6"></script>
+<script src="data/phase1/jack-animations.js?v=1"></script>
+<script src="phase3.js?v=1"></script>
+<script src="preloader.js?v=2"></script>
+</body>
+</html>
