@@ -123,6 +123,7 @@
   const startJourneyButton = document.getElementById('startJourneyBtn');
   const continueJourneyButton = document.getElementById('continueJourneyBtn');
   const chapterTwo = document.getElementById('chapterTwo');
+  const chapterThree = document.getElementById('chapterThree');
 
   function syncJourneyUI() {
     if (!journey) return;
@@ -150,6 +151,23 @@
       } else {
         chapterTwo.removeAttribute('href');
         if (status) status.textContent = 'Conclua o Halloween I para desbloquear';
+        if (arrow) arrow.textContent = '🔒';
+      }
+    }
+
+    if (chapterThree) {
+      const unlocked = journey.isPhaseUnlocked(3);
+      chapterThree.classList.toggle('chapter-card--open', unlocked);
+      chapterThree.setAttribute('aria-disabled', unlocked ? 'false' : 'true');
+      const status = chapterThree.querySelector('[data-phase-status]');
+      const arrow = chapterThree.querySelector('[data-phase-arrow]');
+      if (unlocked) {
+        chapterThree.href = './game/phase3.html?replay=1&new=1';
+        if (status) status.textContent = 'Desbloqueada · protótipo jogável';
+        if (arrow) arrow.textContent = '›';
+      } else {
+        chapterThree.removeAttribute('href');
+        if (status) status.textContent = 'Conclua o Halloween II para desbloquear';
         if (arrow) arrow.textContent = '🔒';
       }
     }
@@ -197,6 +215,13 @@
     if (chapterTwo.getAttribute('aria-disabled') === 'true') {
       event.preventDefault();
       showToast('Conclua o Halloween I para abrir A Vila sem Amanhecer.');
+    }
+  });
+
+  chapterThree?.addEventListener('click', event => {
+    if (chapterThree.getAttribute('aria-disabled') === 'true') {
+      event.preventDefault();
+      showToast('Conclua o Halloween II para abrir O Bosque das Memórias.');
     }
   });
 
