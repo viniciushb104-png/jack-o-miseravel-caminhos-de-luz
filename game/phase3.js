@@ -12,7 +12,7 @@ const input={left:false,right:false,down:false,run:false,jump:false};
 let running=false,last=performance.now(),cam=0,jack=null,jackFrameOverrides={},introLorePlayed=!!loadedSave?.introLorePlayed,section=-1;
 let memoryLight=0,memoryPulse=0,playerLife=Math.max(1,Math.min(3,Number(loadedSave?.playerLife)||3));
 let activeCheckpoint=loadedSave?.activeCheckpoint||localStorage.getItem(CHECKPOINT_KEY)||"";
-const p={x:Number.isFinite(loadedSave?.x)?loadedSave.x:120,y:Number.isFinite(loadedSave?.y)?loadedSave.y:470,w:46,h:86,vx:0,vy:0,dir:loadedSave?.dir===-1?-1:1,on:false,coyote:0,buffer:0,anim:0};
+const p={x:Number.isFinite(loadedSave?.x)?loadedSave.x:120,y:Number.isFinite(loadedSave?.y)?loadedSave.y:470,w:46,h:86,vx:0,vy:0,dir:loadedSave?.dir===-1?-1:1,on:false,coyote:0,buffer:0,anim:0,attack:0};
 
 const opening=[
  {speaker:"JACK",portrait:"jack",expression:1,text:"Quatro e quatorze. Engraçado... o mundo continuou."},
@@ -90,7 +90,19 @@ function buildCleanJackFrame(image,frame,eraseRects=[]){
  const cx=cv.getContext("2d"),col=frame%cols,row=Math.floor(frame/cols);cx.drawImage(image,col*cell,row*cell,cell,cell,0,0,cell,cell);eraseRects.forEach(r=>cx.clearRect(...r));return cv;
 }
 function buildJackFrameOverrides(image){
- return {25:buildCleanJackFrame(image,25,[[260,0,60,320]]),26:buildCleanJackFrame(image,26,[[126,0,76,82],[126,82,54,30],[202,0,28,32]])};
+ // Mesma limpeza já testada nas Fases 1 e 2:
+ // frame 25 remove resíduo lateral; frame 26 remove o boot/pé de uma célula vizinha
+ // que invade a área acima da cabeça quando Jack ergue a lanterna.
+ return {
+   25:buildCleanJackFrame(image,25,[
+     [260,0,60,320]
+   ]),
+   26:buildCleanJackFrame(image,26,[
+     [126,0,76,82],
+     [126,82,54,30],
+     [202,0,28,32]
+   ])
+ };
 }
 const jackStartupReady=img("../assets/game/phase1/sprites-hd/jack-atlas-hd.png").then(i=>{jack=i;jackFrameOverrides=buildJackFrameOverrides(i)}).catch(()=>{});
 
@@ -118,6 +130,14 @@ window.__PHASE_ASSETS_READY=Promise.allSettled([jackStartupReady,jackDialogueRea
 function jackSequenceFrame(seq,fps){return seq[Math.floor(p.anim*fps)%seq.length]}
 function currentJackFrame(){
  const cfg=window.JACK_ANIMATIONS,anims=cfg?.animations;if(!anims)return 0;
+ // A Luz da Memória usa a animação oficial de Jack levantando a lanterna.
+ // Ela tem prioridade sobre caminhada, pulo e agachar, como nas fases anteriores.
+ if(p.attack>0&&anims.attack?.length){
+   const duration=cfg.timing?.attackDuration||.48;
+   const progress=Math.max(0,Math.min(.999,(duration-p.attack)/duration));
+   const seq=anims.attack;
+   return seq[Math.min(seq.length-1,Math.floor(progress*seq.length))];
+ }
  if(!p.on){if(p.vy<-360)return anims.jumpStart[0];if(p.vy<-90)return anims.jumpRise[0];if(p.vy<120)return anims.jumpApex[0];return anims.jumpFall[0]}
  if(input.down)return anims.crouch[0];
  const speed=Math.abs(p.vx);if(speed>=18){if(input.run&&speed>170)return jackSequenceFrame(anims.run,cfg.timing?.runFps||12);return jackSequenceFrame(anims.walk,cfg.timing?.walkFps||9)}
@@ -135,13 +155,15 @@ function drawJack(){
 }
 
 function useMemoryLight(){
+ const duration=window.JACK_ANIMATIONS?.timing?.attackDuration||.48;
+ p.attack=duration;
  memoryLight=3.25;memoryPulse=.65;
  say("A lanterna recorda um caminho que já não existe.");
 }
 
 function update(dt){
  if(dialogue.active){p.vx*=.72;p.anim+=dt;return}
- memoryLight=Math.max(0,memoryLight-dt);memoryPulse=Math.max(0,memoryPulse-dt);
+ memoryLight=Math.max(0,memoryLight-dt);memoryPulse=Math.max(0,memoryPulse-dt);p.attack=Math.max(0,p.attack-dt);
  p.coyote=p.on?.12:Math.max(0,p.coyote-dt);
  if(input.jump){p.buffer=.14;input.jump=false}else p.buffer=Math.max(0,p.buffer-dt);
  const speed=input.down?90:(input.run?325:228),dir=(input.right?1:0)-(input.left?1:0);
