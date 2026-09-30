@@ -104,7 +104,7 @@ function buildJackFrameOverrides(image){
    ])
  };
 }
-const jackStartupReady=img("../assets/game/phase1/sprites-hd/jack-atlas-hd.png").then(i=>{jack=i;jackFrameOverrides=buildJackFrameOverrides(i)}).catch(()=>{});\nconst idleSpecialReady=Promise.allSettled(Array.from({length:7},(_,i)=>img("../assets/sprites/jack/idle-special/long-idle/jack-idle-long-idle-"+String(i+1).padStart(2,"0")+".png"))).then(rs=>{idleSpecialImages=rs.filter(r=>r.status==="fulfilled").map(r=>r.value)});
+const jackStartupReady=img("../assets/game/phase1/sprites-hd/jack-atlas-hd.png").then(i=>{jack=i;jackFrameOverrides=buildJackFrameOverrides(i)}).catch(()=>{});\nPromise.allSettled(Array.from({length:7},(_,i)=>img("../assets/sprites/jack/idle-special/long-idle/jack-idle-long-idle-"+String(i+1).padStart(2,"0")+".png"))).then(rs=>{idleSpecialImages=rs.filter(r=>r.status==="fulfilled").map(r=>r.value)});
 
 // Reaproveita os seis retratos HD oficiais do Jack usados nos Halloweens anteriores.
 // A Fase 3 começa consistente visualmente e já fica pronta para receber Mara depois.
@@ -126,7 +126,7 @@ const jackDialogueReady=Promise.allSettled(
 });
 
 const phase3DialogueFrameReady=img("../assets/game/phase3/ui/phase3-dialogue-frame.png").catch(()=>null);
-window.__PHASE_ASSETS_READY=Promise.allSettled([jackStartupReady,jackDialogueReady,phase3DialogueFrameReady,idleSpecialReady]).then(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
+window.__PHASE_ASSETS_READY=Promise.allSettled([jackStartupReady,jackDialogueReady,phase3DialogueFrameReady]).then(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
 
 function jackSequenceFrame(seq,fps){return seq[Math.floor(p.anim*fps)%seq.length]}
 function currentJackFrame(){
