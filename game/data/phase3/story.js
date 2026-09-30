@@ -92,5 +92,55 @@ window.PHASE3_STORY=Object.freeze({
       Object.freeze({x:4380,fragment:"Eu guardava histórias..."}),
       Object.freeze({x:4690,fragment:"...para que ninguém desaparecesse..."})
     ])
+  }),
+  archivePuzzle:Object.freeze({
+    prompt:"Qual destas lembranças deve ser esquecida?",
+    releaseLabel:"DEIXAR IR",
+    entries:Object.freeze([
+      Object.freeze({id:"letter",title:"Carta nunca entregue",memory:"Uma despedida que nunca encontrou seu destinatário."}),
+      Object.freeze({id:"musicbox",title:"Caixa de música quebrada",memory:"Uma melodia guardada depois que já não havia ninguém para ouvi-la."}),
+      Object.freeze({id:"woodkey",title:"Pequena chave de madeira",memory:"Uma chave conservada mesmo depois de a porta deixar de existir."})
+    ])
+  }),
+
+  boss:Object.freeze({
+    name:"O ARQUIVISTA ETERNO",
+    subtitle:"A Memória que se Recusa a Morrer",
+    command:"NÃO DEIXE NADA SER ESQUECIDO",
+    acts:Object.freeze([
+      Object.freeze({id:"faces",title:"ATO I — OS ROSTOS",lesson:"Reconhecer sem destruir.",objective:"Use a Luz da Memória para libertar os três retratos corretos."}),
+      Object.freeze({id:"voices",title:"ATO II — AS VOZES",lesson:"Escutar sem possuir.",objective:"Reconheça a verdadeira voz de Mara entre os ecos."}),
+      Object.freeze({id:"names",title:"ATO III — OS NOMES",lesson:"Confiar e deixar ir.",objective:"Proteja Mara enquanto ela se aproxima do coração das raízes."})
+    ])
+  }),
+
+  finale:Object.freeze({
+    maraRelease:Object.freeze([
+      {speaker:"ARQUIVISTA ETERNO",text:"SE EU OS LIBERTAR, QUEM OS GUARDARÁ?"},
+      {speaker:"MARA ROWAN",portrait:"mara",expression:5,text:"Eu achei que essa responsabilidade fosse minha."},
+      {speaker:"MARA ROWAN",portrait:"mara",expression:5,text:"Nunca foi."},
+      {speaker:"MARA ROWAN",portrait:"mara",expression:0,text:"Eu os entrego Àquele que não esquece nenhum nome."},
+      {speaker:"ARQUIVISTA ETERNO",text:"ENTÃO O QUE DEVO PRESERVAR?"},
+      {speaker:"MARA ROWAN",portrait:"mara",expression:1,text:"Aquilo que mudou alguém."}
+    ]),
+    jackRevelation:Object.freeze([
+      {speaker:"MARA ROWAN",portrait:"mara",expression:2,text:"Jack... a Árvore conhece sua lanterna."},
+      {speaker:"JACK",portrait:"jack",expression:2,text:"Não gostei desse tom."},
+      {speaker:"???",text:"Você prometeu que encontraria o caminho de volta."},
+      {speaker:"JACK",portrait:"jack",expression:1,text:"Para quem?"},
+      {speaker:"ÁRVORE-MÃE",text:"Para todos eles."},
+      {speaker:"JACK",portrait:"jack",expression:1,text:"..."},
+      {speaker:"ÁRVORE-MÃE",text:"A luz não veio apenas para aqueles que você procura, Jack."},
+      {speaker:"JACK",portrait:"jack",expression:3,text:"Então para quem?"},
+      {speaker:"ÁRVORE-MÃE",text:"Para aquele que a carrega."}
+    ]),
+    epilogue:Object.freeze([
+      {speaker:"JACK",portrait:"jack",expression:2,text:"Só uma carta?"},
+      {speaker:"MARA ROWAN",portrait:"mara",expression:1,text:"Só uma."},
+      {speaker:"JACK",portrait:"jack",expression:1,text:"E as outras?"},
+      {speaker:"MARA ROWAN",portrait:"mara",expression:0,text:"Eu lembro que existiram."},
+      {speaker:"JACK",portrait:"jack",expression:1,text:"Não lembra o que estava escrito?"},
+      {speaker:"MARA ROWAN",portrait:"mara",expression:1,text:"Não. Acho que finalmente está tudo bem."}
+    ])
   })
 });
