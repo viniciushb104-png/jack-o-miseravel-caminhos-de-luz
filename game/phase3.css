@@ -276,6 +276,17 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#030907;col
   outline:2px solid #d5b86f;
   outline-offset:2px;
 }
+.phase3-complete-actions .phase3-next{
+  min-width:280px;
+  border-color:#e0b85e;
+  background:linear-gradient(180deg,#31452a,#182c1d);
+  color:#ffe7a4;
+  box-shadow:0 0 24px rgba(220,171,76,.16),inset 0 0 18px rgba(246,211,125,.06);
+}
+.phase3-complete-actions .phase3-next:hover,.phase3-complete-actions .phase3-next:focus-visible{
+  background:linear-gradient(180deg,#405b34,#213b27);
+  box-shadow:0 0 30px rgba(220,171,76,.28);
+}
 .phase3-complete-card>span{
   display:block;
   margin-top:16px;
