@@ -232,8 +232,13 @@ const archivistPortraitFiles=[
  "archivist-dialogue-03-heart.png",
  "archivist-dialogue-04-release.png"
 ];
+// Retratos de diálogo do Arquivista Eterno.
+ // 0 = awake / despertar
+ // 1 = faces / rostos e vozes
+ // 2 = heart / coração exposto
+ // 3 = release / libertação
 const archivistDialogueReady=Promise.allSettled(
- archivistPortraitFiles.map(file=>img("../assets/game/phase3/boss/dialogue/"+file))
+ archivistPortraitFiles.map(file=>img("../assets/game/phase3/boss/archivist/dialogue/"+file))
 ).then(results=>results.map(r=>r.status==="fulfilled"?r.value:null));
 
 const dialogueAssetsReady=Promise.all([jackPortraitReady,maraDialogueReady,motherTreeSpriteReady,archivistDialogueReady]).then(([jackFrames,maraSheet,_treeReady,archivistFrames])=>{
