@@ -163,6 +163,7 @@ const checkpoints=[
 ];
 
 const memoryLeafImages=[];
+const phase3PlatformImages=[null,null,null,null];
 let maraWoodKeyImage=null,maraWoodKeyGlowImage=null;
 const leaves=Array.from({length:46},(_,i)=>({
  sx:Math.random()*W,sy:Math.random()*H,
@@ -315,11 +316,17 @@ const phase3DialogueFrameReady=img("../assets/game/phase3/ui/phase3-dialogue-fra
 const memoryLeavesReady=Promise.all(
  Array.from({length:6},(_,i)=>img("../assets/game/phase3/fx/memory-leaves/memory-leaf-"+String(i+1).padStart(2,"0")+".png"))
 ).then(images=>{memoryLeafImages.splice(0,memoryLeafImages.length,...images);return images}).catch(()=>[]);
+const phase3PlatformsReady=Promise.all(
+ Array.from({length:4},(_,i)=>img("../assets/game/phase3/platforms/phase3-platform-roots-"+String(i+1).padStart(2,"0")+".png"))
+).then(images=>{
+ images.forEach((im,i)=>{phase3PlatformImages[i]=im});
+ return images;
+}).catch(()=>[]);
  // Item permanente de Mara. Carrega sem bloquear o início da fase.
 img("../assets/game/phase3/items/mara-wood-key.png").then(im=>{maraWoodKeyImage=im}).catch(()=>{});
 img("../assets/game/phase3/items/mara-wood-key-glow.png").then(im=>{maraWoodKeyGlowImage=im}).catch(()=>{});
 window.__PHASE_ASSETS_READY=Promise.allSettled([
- jackStartupReady,dialogueAssetsReady,maraSpriteReady,maraRunReady,forestBackgroundReady,motherTreeBackgroundReady,motherTreeSpriteReady,archivistVisualsReady,phase3DialogueFrameReady,memoryLeavesReady
+ jackStartupReady,dialogueAssetsReady,maraSpriteReady,maraRunReady,forestBackgroundReady,motherTreeBackgroundReady,motherTreeSpriteReady,archivistVisualsReady,phase3DialogueFrameReady,memoryLeavesReady,phase3PlatformsReady
 ]).then(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
 
 function jackSequenceFrame(seq,fps){return seq[Math.floor(p.anim*fps)%seq.length]}
@@ -1352,20 +1359,72 @@ function drawLeaves(){
    x.drawImage(im,-w/2,-h/2,w,h);x.restore();
  }
 }
+const phase3PlatformSurface=[.305,.285,.335,.285];
+
+function drawPhase3PlatformSprite(q,isMemory=false,variant=0){
+ const im=phase3PlatformImages[isMemory?3:Math.max(0,Math.min(2,variant))];
+ if(!im){
+   // Fallback: mantém o chão legível caso algum PNG falhe.
+   x.save();
+   x.globalAlpha=isMemory?(memoryLight>0?.72:.07):1;
+   x.fillStyle=isMemory?"#657a5d":(q.h>100?"#263024":"#394133");
+   x.fillRect(q.x,q.y,q.w,q.h);
+   x.fillStyle=isMemory?"#d8c879":"#81704a";
+   x.fillRect(q.x,q.y,q.w,Math.min(6,q.h));
+   x.restore();
+   return;
+ }
+
+ const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+ const idx=isMemory?3:Math.max(0,Math.min(2,variant));
+ const surfaceFrac=phase3PlatformSurface[idx]||.30;
+
+ // Plataformas de chão muito longas são formadas por trechos, evitando esticar
+ // a pintura por milhares de pixels. As elevadas usam um único sprite.
+ const ground=q.h>100;
+ const idealPieceW=ground?Math.min(720,Math.max(500,q.w*.62)):Math.max(q.w+34,235);
+ const pieces=ground?Math.max(1,Math.ceil(q.w/idealPieceW)):1;
+ const pieceW=q.w/pieces;
+
+ for(let i=0;i<pieces;i++){
+   // Alterna 01/02/03 no chão para o Bosque não parecer uma textura repetida.
+   const useIdx=isMemory?3:(ground?(variant+i)%3:idx);
+   const pieceIm=phase3PlatformImages[useIdx]||im;
+   const piw=pieceIm.naturalWidth||pieceIm.width,pih=pieceIm.naturalHeight||pieceIm.height;
+   const visualW=ground?pieceW+16:q.w+34;
+   const visualH=visualW*(pih/piw);
+   const surf=phase3PlatformSurface[useIdx]||.30;
+   const drawX=(ground?q.x+i*pieceW:q.x)-((visualW-(ground?pieceW:q.w))/2);
+   const drawY=q.y-visualH*surf;
+
+   x.save();
+   x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";
+   if(isMemory){
+     const visible=memoryLight>0;
+     x.globalAlpha=visible?.92:.065;
+     x.shadowColor=visible?"rgba(235,215,132,.72)":"transparent";
+     x.shadowBlur=visible?24:0;
+     if(visible)x.globalCompositeOperation="screen";
+   }
+   x.drawImage(pieceIm,drawX,drawY,visualW,visualH);
+   x.restore();
+ }
+}
+
 function drawWorld(){
  x.save();x.translate(-cam,0);
- // chão e plataformas normais
- for(const q of plats){
-   x.fillStyle=q.h>100?"#263024":"#394133";x.fillRect(q.x,q.y,q.w,q.h);
-   x.fillStyle="#81704a";x.fillRect(q.x,q.y,q.w,6);
-   x.fillStyle="#182019";for(let px=q.x+18;px<q.x+q.w;px+=44)x.fillRect(px,q.y+18,16,Math.min(42,q.h-18));
- }
- // plataformas-memória
- for(const q of memoryPlats){
-   const visible=memoryLight>0;
-   x.save();x.globalAlpha=visible?.78:.07;x.fillStyle=visible?"#b9d6a6":"#536252";x.shadowColor=visible?"#d7e8b4":"transparent";x.shadowBlur=visible?18:0;
-   x.fillRect(q.x,q.y,q.w,q.h);x.fillStyle=visible?"#f0d995":"#596456";x.fillRect(q.x,q.y,q.w,4);x.restore();
- }
+
+ // Plataformas oficiais do Bosque. A colisão continua sendo a dos arrays
+ // plats/memoryPlats; os PNGs substituem apenas os antigos retângulos.
+ plats.forEach((q,i)=>{
+   const variant=q.h>100?(i%3):((i+1)%3);
+   drawPhase3PlatformSprite(q,false,variant);
+ });
+
+ // Plataformas-memória usam a quarta arte, mais luminosa, e continuam
+ // praticamente invisíveis até Jack erguer a Luz da Memória.
+ memoryPlats.forEach(q=>drawPhase3PlatformSprite(q,true,3));
+
  // checkpoint procedural
  for(const cp of checkpoints){
    const lit=activeCheckpoint===cp.id;x.save();x.translate(cp.x,cp.groundY);
