@@ -95,7 +95,9 @@ let maraSettledX=Number.isFinite(loadedSave?.maraSettledX)
    : 2275);
 let maraMet=!!loadedSave?.maraMet;
 let portraitsSolved=!!loadedSave?.portraitsSolved;
-let portraitChoices=Array.isArray(loadedSave?.portraitChoices)&&loadedSave.portraitChoices.length===3?loadedSave.portraitChoices.map(v=>Math.max(0,Math.min(2,Number(v)||0))):[0,0,0];
+let portraitChoices=Array.isArray(loadedSave?.portraitChoices)&&loadedSave.portraitChoices.length===3?loadedSave.portraitChoices.map(v=>Math.max(0,Math.min(2,Number(v)||0))):[0,1,2];
+let portraitRevealed=Array.isArray(loadedSave?.portraitRevealed)&&loadedSave.portraitRevealed.length===3?loadedSave.portraitRevealed.slice(0,3).map(Boolean):(portraitsSolved?[true,true,true]:[false,false,false]);
+const portraitPulse=[0,0,0],portraitWrong=[0,0,0];
 let voicesSolved=!!loadedSave?.voicesSolved;
 let voiceStep=Math.max(0,Math.min(3,Number(loadedSave?.voiceStep)||0));
 let jackEchoPlayed=!!loadedSave?.jackEchoPlayed;
@@ -187,7 +189,7 @@ function save(){
  if(!journeyMode||replayMode||!journey?.isActive()||journey.currentPhase()!==3)return;
  localStorage.setItem(SAVE_KEY,JSON.stringify({
    x:p.x,y:p.y,dir:p.dir,playerLife,activeCheckpoint,introLorePlayed,
-   maraMet,portraitsSolved,portraitChoices:[...portraitChoices],
+   maraMet,portraitsSolved,portraitChoices:[...portraitChoices],portraitRevealed:[...portraitRevealed],
    voicesSolved,voiceStep,jackEchoPlayed,firstWhisperPlayed,portraitMemoryProofPlayed,maraJackSuspicionPlayed,archiveKeyReactionPlayed,approachTreePlayed,motherTreeScene,
    archiveSolved,archiveChoice,archiveSeen:[...archiveSeen],bossPrelude,bossActive,bossAct,bossStep,bossComplete,finalePlayed,bossFirstStrike,bossFacesSeen:[...bossFacesSeen],maraBossX,maraSettledX,savedAt:Date.now()
  }));
@@ -447,26 +449,98 @@ function drawMaraWorld(){
  x.restore();
 }
 
+function drawPortraitMemoryGlyph(i,revealed,ok){
+ if(!revealed)return;
+ const breathe=1+Math.sin(p.anim*2+i*.9)*.04;
+ x.save();x.scale(breathe,breathe);
+ x.strokeStyle=ok?"#f1dc91":"#d2ba78";x.fillStyle=ok?"rgba(244,218,137,.32)":"rgba(207,184,120,.22)";
+ x.lineWidth=3;x.lineCap="round";x.lineJoin="round";
+
+ if(i===0){
+   // Lívia — a janela e o pão repartido.
+   x.strokeRect(-24,-21,48,42);
+   x.beginPath();x.moveTo(0,-21);x.lineTo(0,21);x.moveTo(-24,0);x.lineTo(24,0);x.stroke();
+   x.beginPath();x.ellipse(0,31,21,9,0,0,Math.PI*2);x.fill();x.stroke();
+   x.beginPath();x.moveTo(-9,27);x.quadraticCurveTo(0,20,9,27);x.stroke();
+ }else if(i===1){
+   // Tomás — um brinquedo quebrado voltando a funcionar.
+   x.beginPath();x.arc(-13,12,10,0,Math.PI*2);x.arc(15,12,10,0,Math.PI*2);x.stroke();
+   x.beginPath();x.moveTo(-23,3);x.lineTo(-15,-17);x.lineTo(14,-17);x.lineTo(25,3);x.closePath();x.stroke();
+   x.beginPath();x.arc(0,-3,8,0,Math.PI*2);x.stroke();
+   for(let a=0;a<6;a++){const ang=a*Math.PI/3;x.beginPath();x.moveTo(Math.cos(ang)*8,-3+Math.sin(ang)*8);x.lineTo(Math.cos(ang)*14,-3+Math.sin(ang)*14);x.stroke()}
+ }else{
+   // Celina — o violino que quebrava o silêncio do Bosque.
+   x.beginPath();x.ellipse(-5,7,11,17,-.15,0,Math.PI*2);x.ellipse(7,-8,9,14,.15,0,Math.PI*2);x.stroke();
+   x.beginPath();x.moveTo(3,-20);x.lineTo(15,-40);x.lineTo(21,-38);x.lineTo(10,-17);x.stroke();
+   x.beginPath();x.moveTo(-18,28);x.quadraticCurveTo(6,5,25,-26);x.stroke();
+   x.font="700 16px Georgia";x.textAlign="center";x.fillText("♪",29,-20);x.fillText("♪",-27,-14);
+ }
+ x.restore();
+}
+
 function drawPortraitPuzzleWorld(){
  if(!maraMet)return;
  const names=story.portraitPuzzle.names;
  story.portraitPuzzle.entries.forEach((q,i)=>{
-   const selected=names[portraitChoices[i]],ok=selected===q.correct,lit=memoryLight>0;
-   x.save();x.translate(q.x,0);
-   if(lit){
-     const glow=x.createRadialGradient(0,410,10,0,410,120);
-     glow.addColorStop(0,"rgba(234,211,121,.28)");glow.addColorStop(1,"rgba(104,148,89,0)");
-     x.fillStyle=glow;x.beginPath();x.arc(0,410,120,0,Math.PI*2);x.fill();
+   const selected=names[portraitChoices[i]],ok=selected===q.correct,revealed=portraitRevealed[i],lit=memoryLight>0;
+   const shake=portraitWrong[i]>0?Math.sin(p.anim*42+i)*5*portraitWrong[i]:0;
+   const pulse=Math.min(1,portraitPulse[i]);
+   const sway=Math.sin(p.anim*1.25+i*.8)*1.5;
+
+   x.save();x.translate(q.x+shake,sway);
+
+   // O retrato desperto permanece levemente vivo mesmo depois da lanterna apagar.
+   if(lit||revealed||ok){
+     const radius=105+pulse*22+Math.sin(p.anim*2+i)*5;
+     const glow=x.createRadialGradient(0,410,8,0,410,radius);
+     const glowAlpha=ok?.48:(revealed?.28:.18);
+     glow.addColorStop(0,"rgba(240,215,126,"+(glowAlpha+pulse*.18)+")");
+     glow.addColorStop(1,"rgba(104,148,89,0)");
+     x.fillStyle=glow;x.beginPath();x.arc(0,410,radius,0,Math.PI*2);x.fill();
    }
-   x.strokeStyle=ok?"#c9c87a":"#8b6b3b";x.lineWidth=7;
+
+   // Raízes-moldura.
+   x.strokeStyle=ok?"#d6ca77":(revealed?"#a8874a":"#705838");x.lineWidth=7;
    x.beginPath();x.moveTo(-58,535);x.quadraticCurveTo(-82,445,-48,360);x.quadraticCurveTo(0,325,48,360);x.quadraticCurveTo(82,445,58,535);x.stroke();
-   x.fillStyle="#111912";x.fillRect(-48,365,96,122);
-   x.strokeStyle=lit?"#e8c76e":"#6f6042";x.lineWidth=4;x.strokeRect(-48,365,96,122);
-   x.globalAlpha=lit?1:.22;x.fillStyle=ok?"#c9d78a":"#d0b873";
-   x.beginPath();x.arc(0,418,25,0,Math.PI*2);x.fill();x.fillRect(-18,445,36,26);x.globalAlpha=1;
-   x.fillStyle=ok?"#263d25":"#241b14";x.fillRect(-78,500,156,34);
-   x.strokeStyle=ok?"#a7c274":"#876a3f";x.lineWidth=2;x.strokeRect(-78,500,156,34);
-   x.fillStyle="#f5dfaa";x.font="700 12px Georgia";x.textAlign="center";x.textBaseline="middle";x.fillText(selected,0,517);
+
+   // Interior: quase morto antes de F, memória ativa depois.
+   x.fillStyle=revealed?"rgba(18,29,20,.94)":"rgba(8,13,10,.96)";x.fillRect(-48,365,96,122);
+   x.strokeStyle=ok?"#efd47e":(lit||revealed?"#c9aa61":"#5d5038");x.lineWidth=4;x.strokeRect(-48,365,96,122);
+
+   x.save();x.translate(0,422);
+   drawPortraitMemoryGlyph(i,revealed,ok);
+   x.restore();
+
+   // Pequenas partículas de memória giram em torno de um retrato revelado.
+   if(revealed){
+     for(let k=0;k<6;k++){
+       const a=p.anim*.75+k*Math.PI/3+i*.7,r=49+(k%2)*9;
+       x.globalAlpha=.32+.18*Math.sin(p.anim*2+k);
+       x.fillStyle=ok?"#f3dc87":"#cab570";
+       x.beginPath();x.arc(Math.cos(a)*r,420+Math.sin(a)*r*.72,1.8+(k%2),0,Math.PI*2);x.fill();
+     }
+     x.globalAlpha=1;
+   }else{
+     // Um véu de raízes finas comunica que o quadro ainda está “adormecido”.
+     x.strokeStyle="rgba(95,72,46,.72)";x.lineWidth=3;
+     for(let k=-2;k<=2;k++){
+       x.beginPath();x.moveTo(k*17-7,370);x.quadraticCurveTo(k*11+15,420,k*15-5,482);x.stroke();
+     }
+   }
+
+   // Placa.
+   x.fillStyle=ok?"#29452a":(revealed?"#2d2719":"#1b1712");x.fillRect(-78,500,156,34);
+   x.strokeStyle=ok?"#bfd17b":(revealed?"#a7864f":"#655339");x.lineWidth=2;x.strokeRect(-78,500,156,34);
+   x.fillStyle=revealed?"#f5dfaa":"#8d8064";x.font="700 12px Georgia";x.textAlign="center";x.textBaseline="middle";
+   x.fillText(revealed?selected:"NOME ESQUECIDO",0,517);
+
+   if(ok){
+     x.fillStyle="#efd67d";x.font="700 10px Georgia";x.fillText("LEMBRADO",0,548);
+   }else if(revealed){
+     x.fillStyle="#a99a72";x.font="italic 9px Georgia";x.fillText("E · trocar nome",0,548);
+   }else{
+     x.fillStyle="#8e9c7c";x.font="italic 9px Georgia";x.fillText("F · despertar memória",0,548);
+   }
    x.restore();
  });
 }
@@ -580,7 +654,7 @@ function nearestPuzzleEntry(entries,range=135){
 function finishPortraitPuzzle(){
  if(portraitsSolved)return;
  const names=story.portraitPuzzle.names;
- const all=story.portraitPuzzle.entries.every((q,i)=>names[portraitChoices[i]]===q.correct);
+ const all=story.portraitPuzzle.entries.every((q,i)=>portraitRevealed[i]&&names[portraitChoices[i]]===q.correct);
  if(!all)return;
  portraitsSolved=true;voiceStep=0;portraitMemoryProofPlayed=true;
  banner("MEMÓRIA RECONSTRUÍDA — OS RETRATOS");
@@ -1112,8 +1186,22 @@ function tryInteract(){
  if(maraMet&&!portraitsSolved){
    const hit=nearestPuzzleEntry(story.portraitPuzzle.entries);
    if(hit){
+     if(!portraitRevealed[hit.i]){
+       portraitWrong[hit.i]=.7;
+       say("A placa está presa às raízes. Primeiro desperte a lembrança com F.");
+       return;
+     }
      portraitChoices[hit.i]=(portraitChoices[hit.i]+1)%story.portraitPuzzle.names.length;
-     say(hit.q.title+" — "+story.portraitPuzzle.names[portraitChoices[hit.i]]);
+     const chosen=story.portraitPuzzle.names[portraitChoices[hit.i]];
+     const correct=chosen===hit.q.correct;
+     portraitPulse[hit.i]=correct?1.6:.75;
+     if(correct){
+       banner("NOME DEVOLVIDO — "+chosen);
+       say(hit.q.title+" reconheceu "+chosen+".");
+     }else{
+       portraitWrong[hit.i]=.85;
+       say("A placa range. "+chosen+" não pertence a esta lembrança.");
+     }
      finishPortraitPuzzle();save();return;
    }
  }
@@ -1279,7 +1367,15 @@ function useMemoryLight(){
 
  if(maraMet&&!portraitsSolved){
    const hit=nearestPuzzleEntry(story.portraitPuzzle.entries,175);
-   if(hit){say("Memória — "+hit.q.clue);return}
+   if(hit){
+     const first=!portraitRevealed[hit.i];
+     portraitRevealed[hit.i]=true;
+     portraitPulse[hit.i]=first?1.7:1.0;
+     memoryPulse=Math.max(memoryPulse,first?1.05:.72);
+     if(first)banner("LEMBRANÇA DESPERTA — "+hit.q.title.toUpperCase());
+     say("Memória — "+hit.q.clue);
+     save();return;
+   }
  }
  if(portraitsSolved&&!voicesSolved){
    const hit=nearestPuzzleEntry(story.voicePuzzle.entries,175);
@@ -1314,6 +1410,7 @@ function update(dt){
  }else{lastPlayerAction=performance.now();idleTime=0;waitSitClock=0;waitSitFrame=0;waitSitActive=false}
 
  memoryLight=Math.max(0,memoryLight-dt);memoryPulse=Math.max(0,memoryPulse-dt);p.attack=Math.max(0,p.attack-dt);
+ for(let i=0;i<3;i++){portraitPulse[i]=Math.max(0,portraitPulse[i]-dt*1.8);portraitWrong[i]=Math.max(0,portraitWrong[i]-dt*2.6)}
  gateMessageCooldown=Math.max(0,gateMessageCooldown-dt);bossCooldown=Math.max(0,bossCooldown-dt);bossPulse=Math.max(0,bossPulse-dt);
  updateMaraRun(dt);
 
@@ -1375,7 +1472,7 @@ function update(dt){
 
  if(p.x>980&&p.x<1480)ui.obj.textContent="Use a Luz para caminhar sobre uma lembrança do caminho.";
  else if(!maraMet&&p.x>=1480)ui.obj.textContent="Siga as folhas até a mulher que espera junto às raízes.";
- else if(maraMet&&!portraitsSolved&&p.x>=2500)ui.obj.textContent="F revela a lembrança de cada retrato. E troca o nome da placa.";
+ else if(maraMet&&!portraitsSolved&&p.x>=2500)ui.obj.textContent="BOSQUE DOS RETRATOS: F desperta a lembrança. Leia a história e use E para devolver o nome correto.";
  else if(portraitsSolved&&!voicesSolved&&p.x>=3900)ui.obj.textContent="Ouça os três ecos com F e monte a frase de Mara usando E.";
  else if(voicesSolved&&!archiveSolved)ui.obj.textContent="Arquivo das Raízes: examine carta, melodia e chave com E. Nenhuma precisa ser apagada.";
  else if(archiveSolved&&!approachTreePlayed)ui.obj.textContent="Siga Mara. Observe o que acontece com as coisas que tentam terminar.";
