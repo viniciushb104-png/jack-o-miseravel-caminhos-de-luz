@@ -559,6 +559,24 @@
       chapter: 'HALLOWEEN II · O ÚLTIMO MINUTO',
       title: 'O Último Minuto — A Sombra de Amélia',
       src: 'assets/audio/phase2/phase2-boss-last-minute.mp3'
+    },
+    {
+      phase: 3,
+      chapter: 'HALLOWEEN III · O BOSQUE DAS MEMÓRIAS',
+      title: 'O Bosque das Memórias',
+      src: 'assets/phase3/audio/music/phase3-memory-forest-theme.mp3'
+    },
+    {
+      phase: 3,
+      chapter: 'HALLOWEEN III · A ÁRVORE-MÃE',
+      title: 'A Árvore-Mãe',
+      src: 'assets/phase3/audio/music/phase3-mother-tree-theme.mp3'
+    },
+    {
+      phase: 3,
+      chapter: 'HALLOWEEN III · O ARQUIVISTA ETERNO',
+      title: 'O Arquivista Eterno',
+      src: 'assets/phase3/audio/music/phase3-archivist-theme.mp3'
     }
   ];
 
