@@ -524,34 +524,40 @@ function drawPortraitSuspended(i,q,state){
  const biw=base.naturalWidth||base.width,bih=base.naturalHeight||base.height;
  const aiw=art.naturalWidth||art.width,aih=art.naturalHeight||art.height;
 
- // Calibração para os três altares caberem lado a lado entre x=2700 e x=3680.
+ // Microcalibração por retrato: mantém o tamanho aprovado e apenas corrige
+ // o encaixe visual dentro das raízes, sem alterar posições de gameplay.
+ const tune=[
+   {baseX:-3,artX:-2,artY:1},
+   {baseX:0,artX:0,artY:3},
+   {baseX:4,artX:2,artY:1}
+ ][i]||{baseX:0,artX:0,artY:0};
+
  const baseH=352,baseW=biw*(baseH/bih);
  const baseY=590-baseH;
  const artH=214,artW=aiw*(artH/aih);
- const hangY=292+Math.sin(p.anim*1.1+i*.8)*1.7;
- const artX=-artW/2;
+ const hangY=292+tune.artY+Math.sin(p.anim*1.1+i*.8)*1.35;
+ const artX=-artW/2+tune.artX;
 
  x.save();
  x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";
 
- // Base/altar atrás do retrato.
- x.drawImage(base,-baseW/2,baseY,baseW,baseH);
+ // Todas as bases compartilham a mesma linha de chão; só há ajuste horizontal.
+ x.drawImage(base,-baseW/2+tune.baseX,baseY,baseW,baseH);
 
- // Duas pequenas correntes orgânicas fazem o quadro parecer realmente pendurado.
+ // Correntes/raízes acompanham exatamente o centro visual de cada base.
  const hookY=baseY+62,hookSpread=Math.min(42,artW*.25);
  x.strokeStyle=state==="remembered"?"rgba(224,190,102,.82)":"rgba(132,103,70,.82)";
  x.lineWidth=2.2;
  for(const side of [-1,1]){
-   const hx=side*hookSpread;
+   const hx=side*hookSpread+tune.baseX;
    x.beginPath();x.moveTo(hx,hookY);
    for(let s=0;s<4;s++){
-     const yy=hookY+s*10,xx=hx+Math.sin(p.anim*1.2+s+i)*1.2;
+     const yy=hookY+s*10,xx=hx+Math.sin(p.anim*1.2+s+i)*1.05;
      x.lineTo(xx,yy+9);
    }
    x.stroke();
  }
 
- // Retrato por cima da base.
  if(state==="awakened"){
    x.shadowColor="rgba(238,204,106,.52)";x.shadowBlur=14;
  }else if(state==="remembered"){
@@ -560,14 +566,14 @@ function drawPortraitSuspended(i,q,state){
  x.drawImage(art,artX,hangY,artW,artH);
  x.shadowBlur=0;
 
- // O texto entra na placa que já existe dentro da própria arte.
+ // Nome centralizado na placa interna de cada arte.
  const selected=story.portraitPuzzle.names[portraitChoices[i]];
  const label=state==="dormant"?"NOME ESQUECIDO":selected;
  const labelY=hangY+artH*.842;
  x.fillStyle=state==="remembered"?"#fff0b3":(state==="awakened"?"#f2dda8":"#9b8c70");
  x.font="700 9px Georgia";x.textAlign="center";x.textBaseline="middle";
  x.shadowColor="rgba(0,0,0,.85)";x.shadowBlur=3;
- x.fillText(label,0,labelY);
+ x.fillText(label,tune.artX,labelY);
  x.shadowBlur=0;
 
  x.restore();
@@ -628,11 +634,11 @@ function drawPortraitPuzzleWorld(){
    // Instrução fica junto ao pedestal, sem cobrir a placa artística do retrato.
    x.textAlign="center";x.textBaseline="middle";
    if(ok){
-     x.fillStyle="#efd67d";x.font="700 10px Georgia";x.fillText("LEMBRADO",0,566);
+     x.fillStyle="#efd67d";x.font="700 10px Georgia";x.fillText("LEMBRADO",0,558);
    }else if(revealed){
-     x.fillStyle="#c2af80";x.font="italic 9px Georgia";x.fillText("E · trocar nome",0,566);
+     x.fillStyle="#c2af80";x.font="italic 9px Georgia";x.fillText("E · trocar nome",0,558);
    }else{
-     x.fillStyle="#96a889";x.font="italic 9px Georgia";x.fillText("F · despertar memória",0,566);
+     x.fillStyle="#96a889";x.font="italic 9px Georgia";x.fillText("F · despertar memória",0,558);
    }
 
    x.restore();
