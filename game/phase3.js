@@ -44,7 +44,7 @@ let idleTime=0,waitSitFrame=0,waitSitClock=0,waitSitActive=false,waitSitImages=[
 let lastPlayerAction=performance.now();
 let memoryLight=0,memoryPulse=0,playerLife=Math.max(1,Math.min(3,Number(loadedSave?.playerLife)||3));
 let activeCheckpoint=loadedSave?.activeCheckpoint||localStorage.getItem(CHECKPOINT_KEY)||"";
-let maraSpriteSheet=null,maraRunSheet=null,forestBackground=null,motherTreeBackground=null;
+let maraSpriteSheet=null,maraRunSheet=null,maraLanternAdvanceSheet=null,forestBackground=null,motherTreeBackground=null;
 const motherTreeSprites={idle:null,awakened:null,corrupted:null,restored:null};
 const motherTreeFragments=[];
 let motherTreeFragmentCurrent=-1,motherTreeFragmentPrevious=-1,motherTreeFragmentBlend=1;
@@ -273,6 +273,8 @@ const jackPortraitReady=Promise.allSettled(
 const maraDialogueReady=img("../assets/game/phase3/mara/dialogue/mara-dialogue-sheet.png").catch(()=>null);
 const maraSpriteReady=img("../assets/game/phase3/mara/sprites/mara-sprite-sheet.png").then(im=>{maraSpriteSheet=im;return im}).catch(()=>null);
 const maraRunReady=img("../assets/game/phase3/mara/sprites/mara-run-sheet.png").then(im=>{maraRunSheet=im;return im}).catch(()=>null);
+const maraLanternAdvanceReady=img("../assets/game/phase3/mara/sprites/lantern-advance/mara-rowan-lantern-advance-sheet.png")
+ .then(im=>{maraLanternAdvanceSheet=im;return im}).catch(()=>null);
 const forestBackgroundReady=img("../assets/phase3/backgrounds/phase3-memory-forest-bg.png").then(im=>{forestBackground=im;return im}).catch(()=>null);
 const motherTreeBackgroundReady=img("../assets/phase3/backgrounds/phase3-mother-tree-area-bg.png").then(im=>{motherTreeBackground=im;return im}).catch(()=>null);
 const motherTreeSpriteReady=Promise.allSettled([
@@ -418,7 +420,7 @@ function ensureBossRootSealAssets(){
 }
 
 window.__PHASE_ASSETS_READY=Promise.allSettled([
- jackStartupReady,dialogueAssetsReady,maraSpriteReady,maraRunReady,forestBackgroundReady,motherTreeBackgroundReady,motherTreeSpriteReady,archivistVisualsReady,phase3DialogueFrameReady,memoryLeavesReady,phase3PlatformsReady
+ jackStartupReady,dialogueAssetsReady,maraSpriteReady,maraRunReady,maraLanternAdvanceReady,forestBackgroundReady,motherTreeBackgroundReady,motherTreeSpriteReady,archivistVisualsReady,phase3DialogueFrameReady,memoryLeavesReady,phase3PlatformsReady
 ]).then(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
 
 function jackSequenceFrame(seq,fps){return seq[Math.floor(p.anim*fps)%seq.length]}
@@ -469,8 +471,41 @@ function drawJack(){
  x.restore();
 }
 
+const maraMemoryJumpSegments=[
+ // Primeiro abismo: Mara usa as mesmas lembranças que Jack precisa iluminar.
+ {x1:2340,y1:590,x2:2462,y2:535,h:48},
+ {x1:2462,y1:535,x2:2622,y2:480,h:44},
+ {x1:2622,y1:480,x2:2710,y2:590,h:62},
+ // Segundo abismo, antes do Lago das Vozes.
+ {x1:3650,y1:590,x2:3770,y2:505,h:52},
+ {x1:3770,y1:505,x2:3965,y2:460,h:48},
+ {x1:3965,y1:460,x2:4110,y2:590,h:68}
+];
+
+function maraAdvanceMotion(worldX){
+ for(const seg of maraMemoryJumpSegments){
+   if(worldX<seg.x1||worldX>seg.x2)continue;
+   const t=Math.max(0,Math.min(1,(worldX-seg.x1)/(seg.x2-seg.x1)));
+   const baseY=seg.y1+(seg.y2-seg.y1)*t;
+   const arc=Math.sin(Math.PI*t)*seg.h;
+   return {
+     groundY:baseY-arc,
+     lantern:true,
+     jump:true,
+     jumpProgress:t,
+     segment:seg
+   };
+ }
+ // Acende a lanterna pouco antes/depois do vão, preparando visualmente o salto.
+ const nearGap=maraMemoryJumpSegments.some(seg=>worldX>=seg.x1-75&&worldX<=seg.x2+55);
+ return {groundY:590,lantern:nearGap,jump:false,jumpProgress:0,segment:null};
+}
+
 function maraWorldState(){
- if(maraRun.active)return {x:maraRun.x,groundY:maraRun.groundY,run:true};
+ if(maraRun.active){
+   const motion=maraAdvanceMotion(maraRun.x);
+   return {x:maraRun.x,groundY:motion.groundY,run:true,lantern:motion.lantern,jump:motion.jump,jumpProgress:motion.jumpProgress};
+ }
  if(bossActive)return {x:maraBossX,groundY:590,frame:bossAct===3?0:5};
  if(motherTreeScene||bossComplete)return {x:6680,groundY:590,frame:bossComplete?1:5};
  if(archiveSolved&&approachTreePlayed)return {x:maraSettledX,groundY:590,frame:5};
@@ -479,6 +514,15 @@ function maraWorldState(){
  if(!voicesSolved)return {x:maraSettledX,groundY:590,frame:4};
  return {x:maraSettledX,groundY:590,frame:5};
 }
+
+function maraIlluminatesMemoryPlatform(q){
+ if(!maraRun.active)return false;
+ const motion=maraAdvanceMotion(maraRun.x);
+ if(!motion.lantern)return false;
+ const center=q.x+q.w/2;
+ return Math.abs(center-maraRun.x)<215;
+}
+
 function startMaraRun(fromX,toX,onDone){
  // A corrida narrativa precisa começar dentro da área que o jogador está vendo.
  // Usa a posição persistente atual como referência para nunca "ressuscitar"
@@ -491,7 +535,10 @@ function startMaraRun(fromX,toX,onDone){
 function updateMaraRun(dt){
  if(!maraRun.active)return;
  const dir=Math.sign(maraRun.targetX-maraRun.x)||1;
- maraRun.x+=dir*285*dt;
+ // Um pouco mais lenta durante a travessia iluminada para o salto ficar legível.
+ const motion=maraAdvanceMotion(maraRun.x);
+ const speed=motion.lantern?238:285;
+ maraRun.x+=dir*speed*dt;
  if((dir>0&&maraRun.x>=maraRun.targetX)||(dir<0&&maraRun.x<=maraRun.targetX)){
    maraRun.x=maraRun.targetX;
    maraSettledX=maraRun.targetX;
@@ -501,8 +548,50 @@ function updateMaraRun(dt){
    if(done)done();
  }
 }
+
+function drawMaraLanternGlow(m){
+ const cx=m.x+54,cy=m.groundY-100;
+ const pulse=.82+.18*Math.sin(p.anim*5.2);
+ const gr=x.createRadialGradient(cx,cy,8,cx,cy,120);
+ gr.addColorStop(0,"rgba(255,213,111,"+(.34*pulse)+")");
+ gr.addColorStop(.42,"rgba(239,170,62,"+(.17*pulse)+")");
+ gr.addColorStop(1,"rgba(220,135,38,0)");
+ x.save();
+ x.globalCompositeOperation="screen";
+ x.fillStyle=gr;x.beginPath();x.arc(cx,cy,120,0,Math.PI*2);x.fill();
+ x.restore();
+}
+
 function drawMaraWorld(){
  const m=maraWorldState();
+
+ // Novo avanço com lanterna: usado apenas nos vãos/plataformas de memória.
+ if(m.run&&m.lantern&&maraLanternAdvanceSheet){
+   const cols=3,rows=2;
+   const iw=maraLanternAdvanceSheet.naturalWidth||maraLanternAdvanceSheet.width;
+   const ih=maraLanternAdvanceSheet.naturalHeight||maraLanternAdvanceSheet.height;
+   const cw=iw/cols,ch=ih/rows;
+   let idx=0;
+   if(m.jump){
+     if(m.jumpProgress<.30)idx=3;
+     else if(m.jumpProgress<.68)idx=4;
+     else idx=5;
+   }else{
+     idx=Math.floor(p.anim*5.2)%3;
+   }
+   const sx=(idx%cols)*cw,sy=Math.floor(idx/cols)*ch;
+   const rh=m.jump?181:178,rw=rh*(cw/ch);
+   const dx=m.x-rw/2,dy=m.groundY-rh+3;
+
+   drawMaraLanternGlow(m);
+   x.save();x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";
+   x.shadowColor="rgba(246,189,71,.30)";x.shadowBlur=10;
+   x.drawImage(maraLanternAdvanceSheet,sx,sy,cw,ch,dx,dy,rw,rh);
+   x.restore();
+   return;
+ }
+
+ // Corrida tradicional continua nos trechos de chão firme.
  if(m.run&&maraRunSheet){
    const cols=4,rows=2,iw=maraRunSheet.naturalWidth||maraRunSheet.width,ih=maraRunSheet.naturalHeight||maraRunSheet.height;
    const cw=iw/cols,ch=ih/rows,idx=Math.floor(p.anim*11)%8,sx=(idx%cols)*cw,sy=Math.floor(idx/cols)*ch;
@@ -804,7 +893,7 @@ function finishPortraitPuzzle(){
  dialogue.open(story.dialogues.portraitsSolved,()=>{
    memoryPulse=1.15;
    dialogue.open(story.dialogues.portraitMemoryProof,()=>{
-     say("Mara correu em direção ao Lago das Vozes.");
+     say("Mara ergueu a própria lanterna e seguiu em direção ao Lago das Vozes.");
      startMaraRun(2275,4020,()=>{banner("MARA CHEGOU AO LAGO DAS VOZES");save()});
      save();
    });
@@ -1873,9 +1962,11 @@ function drawPhase3PlatformSprite(q,isMemory=false,variant=0){
    x.save();
    x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";
    if(isMemory){
-     const visible=memoryLight>0;
+     const jackVisible=memoryLight>0;
+     const maraVisible=maraIlluminatesMemoryPlatform(q);
+     const visible=jackVisible||maraVisible;
      x.globalAlpha=visible?.92:.065;
-     x.shadowColor=visible?"rgba(235,215,132,.72)":"transparent";
+     x.shadowColor=maraVisible&&!jackVisible?"rgba(255,185,67,.82)":(visible?"rgba(235,215,132,.72)":"transparent");
      x.shadowBlur=visible?24:0;
      if(visible)x.globalCompositeOperation="screen";
    }
