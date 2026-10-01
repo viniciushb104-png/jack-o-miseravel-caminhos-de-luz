@@ -179,6 +179,7 @@ const checkpoints=[
 const memoryLeafImages=[];
 const phase3PlatformImages=[null,null,null,null];
 const rootGateSprites=[null,null,null,null];
+const checkpointPumpkinSprites={off:null,on:null};
 const portraitPuzzleImages={
  livia:{dormant:null,awakened:null,remembered:null},
  tomas:{dormant:null,awakened:null,remembered:null},
@@ -223,6 +224,7 @@ function updateCheckpoint(){
    if(activeCheckpoint===cp.id)continue;
    if(Math.abs(pc-cp.x)<130&&Math.abs(feet-cp.groundY)<115){
      activeCheckpoint=cp.id;localStorage.setItem(CHECKPOINT_KEY,cp.id);playerLife=3;syncHud();
+     memoryPulse=Math.max(memoryPulse,.72);
      banner("RAIZ DE LUZ — CHECKPOINT");
      say(cp.name+" guardou este caminho.");
      save();
@@ -384,6 +386,12 @@ Promise.allSettled(
    return img("../assets/game/phase3/root-gates/"+files[i]).then(im=>{rootGateSprites[i]=im;return im});
  })
 );
+// Checkpoint discreto da Fase 3: uma pequena jack-o'-lantern entre as raízes.
+img("../assets/game/phase3/checkpoints/phase3-checkpoint-pumpkin-off.png")
+ .then(im=>{checkpointPumpkinSprites.off=im}).catch(()=>{});
+img("../assets/game/phase3/checkpoints/phase3-checkpoint-pumpkin-on.png")
+ .then(im=>{checkpointPumpkinSprites.on=im}).catch(()=>{});
+
  // Item permanente de Mara. Carrega sem bloquear o início da fase.
 img("../assets/game/phase3/items/mara-wood-key.png").then(im=>{maraWoodKeyImage=im}).catch(()=>{});
 img("../assets/game/phase3/items/mara-wood-key-glow.png").then(im=>{maraWoodKeyGlowImage=im}).catch(()=>{});
@@ -1876,6 +1884,54 @@ function drawPhase3PlatformSprite(q,isMemory=false,variant=0){
  }
 }
 
+function drawPhase3Checkpoint(cp,lit){
+ const im=lit?checkpointPumpkinSprites.on:checkpointPumpkinSprites.off;
+
+ if(!im){
+   // Fallback antigo: nunca deixa o checkpoint invisível se um PNG falhar.
+   x.save();x.translate(cp.x,cp.groundY);
+   if(lit){
+     const gr=x.createRadialGradient(0,-58,8,0,-58,78);
+     gr.addColorStop(0,"rgba(240,201,92,.28)");
+     gr.addColorStop(1,"rgba(89,130,80,0)");
+     x.fillStyle=gr;x.beginPath();x.arc(0,-58,78,0,Math.PI*2);x.fill();
+   }
+   x.strokeStyle=lit?"#d0ac5d":"#65725d";x.lineWidth=6;
+   x.beginPath();x.moveTo(0,0);x.lineTo(-4,-70);x.stroke();
+   x.fillStyle=lit?"#f0ce72":"#39463a";x.beginPath();x.arc(-4,-76,10,0,Math.PI*2);x.fill();
+   x.restore();
+   return;
+ }
+
+ const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+
+ // Os PNGs foram gerados com bastante área transparente ao redor.
+ // Recortamos apenas o objeto para ele ficar pequeno e apoiado nas raízes.
+ const sx=iw*.055,sy=ih*.18,sw=iw*.89,sh=ih*.64;
+ const dh=112,dw=sw*(dh/sh);
+ const dx=cp.x-dw/2,dy=cp.groundY-dh+5;
+
+ x.save();
+ x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";
+
+ if(lit){
+   const pulse=.5+.5*Math.sin(p.anim*2.4);
+   const gr=x.createRadialGradient(cp.x,cp.groundY-58,8,cp.x,cp.groundY-58,82+pulse*7);
+   gr.addColorStop(0,"rgba(255,192,66,"+(.22+pulse*.08)+")");
+   gr.addColorStop(.52,"rgba(231,150,42,.10)");
+   gr.addColorStop(1,"rgba(231,150,42,0)");
+   x.fillStyle=gr;x.beginPath();x.arc(cp.x,cp.groundY-58,90,0,Math.PI*2);x.fill();
+
+   x.shadowColor="rgba(255,180,55,.48)";
+   x.shadowBlur=10+pulse*5;
+ }else{
+   x.globalAlpha=.88;
+ }
+
+ x.drawImage(im,sx,sy,sw,sh,dx,dy,dw,dh);
+ x.restore();
+}
+
 function drawWorld(){
  x.save();x.translate(-cam,0);
 
@@ -1890,14 +1946,8 @@ function drawWorld(){
  // praticamente invisíveis até Jack erguer a Luz da Memória.
  memoryPlats.forEach(q=>drawPhase3PlatformSprite(q,true,3));
 
- // checkpoint procedural
- for(const cp of checkpoints){
-   const lit=activeCheckpoint===cp.id;x.save();x.translate(cp.x,cp.groundY);
-   if(lit){const gr=x.createRadialGradient(0,-115,12,0,-115,130);gr.addColorStop(0,"rgba(240,201,92,.32)");gr.addColorStop(1,"rgba(89,130,80,0)");x.fillStyle=gr;x.beginPath();x.arc(0,-115,130,0,Math.PI*2);x.fill()}
-   x.strokeStyle=lit?"#d0ac5d":"#65725d";x.lineWidth=9;x.beginPath();x.moveTo(0,0);x.lineTo(-6,-125);x.stroke();
-   x.lineWidth=6;x.beginPath();x.moveTo(-5,-90);x.lineTo(-48,-132);x.moveTo(-4,-72);x.lineTo(45,-116);x.stroke();
-   x.fillStyle=lit?"#f0ce72":"#39463a";x.beginPath();x.arc(-48,-132,10,0,Math.PI*2);x.fill();x.beginPath();x.arc(45,-116,10,0,Math.PI*2);x.fill();x.restore();
- }
+ // Checkpoints: jack-o'-lantern apagada/inativa; acesa no ponto de retorno atual.
+ for(const cp of checkpoints)drawPhase3Checkpoint(cp,activeCheckpoint===cp.id);
  drawPortraitPuzzleWorld();
  drawVoicePuzzleWorld();
  drawArchivePuzzleWorld();
