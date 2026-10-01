@@ -48,6 +48,39 @@ let maraSpriteSheet=null,maraRunSheet=null,forestBackground=null,motherTreeBackg
 const motherTreeSprites={idle:null,awakened:null,corrupted:null,restored:null};
 const motherTreeFragments=[];
 let motherTreeFragmentCurrent=-1,motherTreeFragmentPrevious=-1,motherTreeFragmentBlend=1;
+
+// Memórias Suspensas: relíquias menores que orbitam a Árvore-Mãe.
+// Carregamento é tardio para não pesar o início da fase.
+const motherTreeSuspendedMemories=Array(9).fill(null);
+let motherTreeSuspendedLoadStarted=false;
+const motherTreeSuspendedFiles=[
+ "mother-tree-suspended-memory-letter-01.png",
+ "mother-tree-suspended-memory-nameplate-01.png",
+ "mother-tree-suspended-memory-nameplate-02.png",
+ "mother-tree-suspended-memory-portrait-01.png",
+ "mother-tree-suspended-memory-portrait-02.png",
+ "mother-tree-suspended-memory-crystal-01-mother-tree.png",
+ "mother-tree-suspended-memory-crystal-02-lake-of-voices.png",
+ "mother-tree-suspended-memory-crystal-03-jack-pumpkin.png",
+ "mother-tree-suspended-memory-fx-01-golden-swirl.png"
+];
+
+const suspendedMemoryOrbits=[
+ // Mara — cartas e nomes próximos do tronco.
+ {image:0,angle:.25,speed:.105,rx:138,ry:62,lift:-182,h:72,alpha:.73,rot:.052},
+ {image:1,angle:2.28,speed:-.078,rx:152,ry:68,lift:-113,h:64,alpha:.66,rot:.045},
+ {image:2,angle:4.22,speed:.071,rx:162,ry:72,lift:-52,h:68,alpha:.66,rot:.050},
+ // Bosque — retratos e cristais numa órbita um pouco maior.
+ {image:3,angle:1.12,speed:.056,rx:218,ry:96,lift:-168,h:78,alpha:.66,rot:.042},
+ {image:4,angle:3.46,speed:-.049,rx:235,ry:101,lift:-66,h:74,alpha:.62,rot:.040},
+ {image:5,angle:5.08,speed:.043,rx:248,ry:108,lift:-126,h:76,alpha:.61,rot:.038},
+ {image:6,angle:2.72,speed:-.040,rx:265,ry:112,lift:-12,h:72,alpha:.58,rot:.036},
+ // Jack — memória intrusa, propositalmente rara e discreta.
+ {image:7,angle:5.72,speed:.030,rx:292,ry:122,lift:-88,h:84,alpha:.72,rot:.032},
+ // Aura geral, sempre atrás da árvore.
+ {image:8,angle:.0,speed:.018,rx:0,ry:0,lift:-104,h:390,alpha:.115,rot:.018,fx:true}
+];
+
 const archivistSprites={base:[],attacks:[],faces:[],voices:[],heart:[],release:[]};
 let maraRun={active:false,x:2275,targetX:2275,groundY:590,onDone:null};
 let maraMet=!!loadedSave?.maraMet;
@@ -639,6 +672,93 @@ function drawCycleFailures(){
  x.restore();
 }
 
+function ensureMotherTreeSuspendedMemories(){
+ if(motherTreeSuspendedLoadStarted)return;
+ motherTreeSuspendedLoadStarted=true;
+ motherTreeSuspendedFiles.forEach((file,i)=>{
+   img("../assets/game/phase3/mother-tree/suspended-memories/"+file)
+     .then(im=>{motherTreeSuspendedMemories[i]=im})
+     .catch(()=>{motherTreeSuspendedMemories[i]=null});
+ });
+}
+
+function jackSuspendedMemoryFocus(){
+ if(!dialogue.active)return false;
+ const line=dialogue.lines?.[dialogue.index];
+ if(!line)return false;
+ if(dialogue.lines===story.dialogues.motherTree){
+   const text=String(line.text||"");
+   return /não é minha|raízes em você|não toque nelas|caminho de volta/i.test(text);
+ }
+ return false;
+}
+
+function drawMotherTreeSuspendedMemories(treeX,groundY,layer="back"){
+ if(!motherTreeSuspendedLoadStarted)return;
+ // Antes da conversa, elas já existem como ruído da prisão; durante a cena ganham força.
+ const proximity=Math.max(0,Math.min(1,(p.x-5950)/520));
+ if(proximity<=0&&!motherTreeScene)return;
+
+ const t=p.anim;
+ const centerY=groundY-272;
+ const jackFocus=jackSuspendedMemoryFocus();
+ const phaseAlpha=bossComplete?.34:(bossActive?.56:(motherTreeScene?1:.54+.42*proximity));
+ const speedMul=bossComplete?.16:(bossActive?1.18:1);
+
+ suspendedMemoryOrbits.forEach((item,i)=>{
+   const im=motherTreeSuspendedMemories[item.image];
+   if(!im)return;
+
+   if(item.fx){
+     if(layer!=="back")return;
+     const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+     const dh=item.h*(1+Math.sin(t*.72)*.025),dw=iw*(dh/ih);
+     x.save();
+     x.translate(treeX,centerY+item.lift);
+     x.rotate(t*item.speed*speedMul);
+     x.globalAlpha=item.alpha*phaseAlpha*(bossActive?.55:1);
+     x.globalCompositeOperation="screen";
+     x.shadowColor="rgba(246,194,82,.32)";
+     x.shadowBlur=22;
+     x.drawImage(im,-dw/2,-dh/2,dw,dh);
+     x.restore();
+     return;
+   }
+
+   const a=item.angle+t*item.speed*speedMul;
+   const depth=Math.sin(a);
+   const itemLayer=depth<0?"back":"front";
+   if(itemLayer!==layer)return;
+
+   // Quando a memória de Jack não está sendo evocada, ela quase se perde entre as demais.
+   let specialMul=1;
+   if(item.image===7)specialMul=jackFocus?1.18:.22;
+
+   const bob=Math.sin(t*.92+i*1.31)*5;
+   const px=treeX+Math.cos(a)*item.rx;
+   const py=centerY+item.lift+Math.sin(a)*item.ry+bob;
+   const depthScale=.88+(depth+1)*.085;
+   const dh=item.h*depthScale*(item.image===7&&jackFocus?1.12:1);
+   const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height,dw=iw*(dh/ih);
+
+   x.save();
+   x.translate(px,py);
+   x.rotate(Math.sin(t*.63+i)*item.rot+Math.cos(a)*.035);
+   x.globalAlpha=item.alpha*phaseAlpha*specialMul*(layer==="back"?.76:1);
+   x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";
+
+   if(item.image===7&&jackFocus){
+     x.shadowColor="rgba(255,195,73,.88)";
+     x.shadowBlur=28+Math.sin(t*5)*6;
+   }else{
+     x.shadowColor="rgba(233,182,74,.34)";
+     x.shadowBlur=9;
+   }
+   x.drawImage(im,-dw/2,-dh/2,dw,dh);
+   x.restore();
+ });
+}
+
 function drawMotherTreeAndBoss(){
  if(!motherTreeScene&&p.x<6000)return;
 
@@ -649,6 +769,9 @@ function drawMotherTreeAndBoss(){
 
  const im=motherTreeSprites[state]||motherTreeSprites.idle;
  const treeX=7040,groundY=590;
+
+ // Camada traseira: cartas, placas, retratos e cristais passam por trás dos galhos.
+ drawMotherTreeSuspendedMemories(treeX,groundY,"back");
 
  if(im){
    const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
@@ -662,6 +785,9 @@ function drawMotherTreeAndBoss(){
    else if(state==="corrupted"){x.shadowColor="rgba(150,53,96,.30)";x.shadowBlur=18}
    x.drawImage(im,dx,dy,dw,dh);x.restore();
  }
+
+ // Camada frontal: completa a órbita e dá a sensação de relíquias realmente circulando o tronco.
+ drawMotherTreeSuspendedMemories(treeX,groundY,"front");
 
  if(bossPrelude&&!bossActive&&!bossComplete){
    // Durante o diálogo de nascimento, nomes, cartas e retratos convergem para o centro.
@@ -961,6 +1087,7 @@ function updateNarrativeTriggers(){
 
  if(archiveSolved&&approachTreePlayed&&!motherTreeScene&&p.x>6500){
    motherTreeScene=true;p.vx=0;maraBossX=6680;
+   ensureMotherTreeSuspendedMemories();
    fadeMusicTo("motherTree",.56,1100);
    banner("ÁRVORE-MÃE — O CORAÇÃO DAS RAÍZES");
    dialogue.open(story.dialogues.motherTree,()=>{
@@ -994,6 +1121,7 @@ function useMemoryLight(){
 
 function update(dt){
  updateMotherTreeFragmentState(dt);
+ if((p.x>5550||motherTreeScene)&&!motherTreeSuspendedLoadStarted)ensureMotherTreeSuspendedMemories();
  bossReleaseT=Math.max(0,bossReleaseT-dt);
  if(endingSequenceActive&&!dialogue.active){
    p.vx=0;p.vy=0;p.anim+=dt;
