@@ -164,6 +164,12 @@ const checkpoints=[
 
 const memoryLeafImages=[];
 const phase3PlatformImages=[null,null,null,null];
+const rootGateSprites=[null,null,null,null];
+const rootGateProgress={
+ portraits:portraitsSolved?1:0,
+ voices:voicesSolved?1:0,
+ archive:archiveSolved?1:0
+};
 let maraWoodKeyImage=null,maraWoodKeyGlowImage=null;
 const leaves=Array.from({length:46},(_,i)=>({
  sx:Math.random()*W,sy:Math.random()*H,
@@ -322,6 +328,20 @@ const phase3PlatformsReady=Promise.all(
  images.forEach((im,i)=>{phase3PlatformImages[i]=im});
  return images;
 }).catch(()=>[]);
+
+// Portões vivos do Bosque. Carregam em segundo plano para não pesar ainda mais
+// o preloader inicial; existe fallback procedural se algum PNG ainda não chegou.
+Promise.allSettled(
+ Array.from({length:4},(_,i)=>{
+   const files=[
+     "phase3-root-gate-01-closed.png",
+     "phase3-root-gate-02-opening-glow.png",
+     "phase3-root-gate-03-half-open.png",
+     "phase3-root-gate-04-open.png"
+   ];
+   return img("../assets/game/phase3/root-gates/"+files[i]).then(im=>{rootGateSprites[i]=im;return im});
+ })
+);
  // Item permanente de Mara. Carrega sem bloquear o início da fase.
 img("../assets/game/phase3/items/mara-wood-key.png").then(im=>{maraWoodKeyImage=im}).catch(()=>{});
 img("../assets/game/phase3/items/mara-wood-key-glow.png").then(im=>{maraWoodKeyGlowImage=im}).catch(()=>{});
@@ -501,14 +521,53 @@ function drawArchivePuzzleWorld(){
  x.save();x.fillStyle="rgba(10,14,11,.78)";x.fillRect(5460,330,500,58);x.strokeStyle="#8f784b";x.strokeRect(5460,330,500,58);
  x.fillStyle="#ead9a3";x.font="italic 17px Georgia";x.textAlign="center";x.fillText(story.archivePuzzle.prompt,5710,365);x.restore();
 }
-function drawRootGate(xPos,open){
- if(open)return;
- x.save();x.translate(xPos,0);x.strokeStyle="#513923";x.lineCap="round";
- for(let i=-3;i<=3;i++){
-   x.lineWidth=12-Math.abs(i);
-   x.beginPath();x.moveTo(i*10,590);x.quadraticCurveTo(i*22-18,470,i*8,340);x.quadraticCurveTo(i*20+15,280,i*15,220);x.stroke();
+function updateRootGateAnimations(dt){
+ const targets={
+   portraits:portraitsSolved?1:0,
+   voices:voicesSolved?1:0,
+   archive:archiveSolved?1:0
+ };
+ for(const key of Object.keys(rootGateProgress)){
+   const target=targets[key];
+   if(rootGateProgress[key]<target)rootGateProgress[key]=Math.min(target,rootGateProgress[key]+dt*1.35);
  }
- x.fillStyle="#9d6f31";for(let j=0;j<5;j++){x.beginPath();x.arc((j-2)*18,315-j*17,4,0,Math.PI*2);x.fill()}
+}
+function rootGatePassable(key){
+ return rootGateProgress[key]>=.86;
+}
+function drawRootGate(xPos,progress){
+ const pgr=Math.max(0,Math.min(1,progress));
+ let frame=0;
+ if(pgr>.18)frame=1;
+ if(pgr>.47)frame=2;
+ if(pgr>.76)frame=3;
+
+ const im=rootGateSprites[frame];
+ if(!im){
+   // Fallback antigo enquanto os PNGs carregam.
+   if(pgr>=.86)return;
+   x.save();x.translate(xPos,0);x.strokeStyle="#513923";x.lineCap="round";
+   for(let i=-3;i<=3;i++){
+     x.lineWidth=12-Math.abs(i);
+     x.beginPath();x.moveTo(i*10,590);x.quadraticCurveTo(i*22-18,470,i*8,340);x.quadraticCurveTo(i*20+15,280,i*15,220);x.stroke();
+   }
+   x.fillStyle="#9d6f31";
+   for(let j=0;j<5;j++){x.beginPath();x.arc((j-2)*18,315-j*17,4,0,Math.PI*2);x.fill()}
+   x.restore();
+   return;
+ }
+
+ const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+ const dh=455,dw=iw*(dh/ih);
+ const dy=590-dh;
+
+ x.save();
+ x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";
+ if(pgr>0&&pgr<1){
+   x.shadowColor="rgba(240,190,72,.62)";
+   x.shadowBlur=18+Math.sin(p.anim*5)*5;
+ }
+ x.drawImage(im,xPos-dw/2,dy,dw,dh);
  x.restore();
 }
 
@@ -1230,6 +1289,7 @@ function useMemoryLight(){
 }
 
 function update(dt){
+ updateRootGateAnimations(dt);
  updateMotherTreeFragmentState(dt);
  if((p.x>5550||motherTreeScene)&&!motherTreeSuspendedLoadStarted)ensureMotherTreeSuspendedMemories();
  bossReleaseT=Math.max(0,bossReleaseT-dt);
@@ -1264,9 +1324,27 @@ function update(dt){
  if(p.buffer>0&&p.coyote>0&&!input.down){p.vy=-575;p.on=false;p.coyote=0;p.buffer=0}
 
  p.vy+=G*dt;const oldY=p.y;p.x=Math.max(0,Math.min(WORLD-p.w,p.x+p.vx*dt));
- if(!portraitsSolved&&p.x+p.w>3740){p.x=3740-p.w;p.vx=Math.min(0,p.vx);if(gateMessageCooldown<=0){say("As raízes seguram o caminho. Os três retratos ainda não estão completos.");gateMessageCooldown=2}}
- if(portraitsSolved&&!voicesSolved&&p.x+p.w>5200){p.x=5200-p.w;p.vx=Math.min(0,p.vx);if(gateMessageCooldown<=0){say("O lago não abre passagem enquanto a voz de Mara continuar fragmentada.");gateMessageCooldown=2}}
- if(voicesSolved&&!archiveSolved&&p.x+p.w>6000){p.x=6000-p.w;p.vx=Math.min(0,p.vx);if(gateMessageCooldown<=0){say("As raízes recusam a passagem. O Arquivo ainda guarda algo que precisa ser deixado ir.");gateMessageCooldown=2}}
+ if(!rootGatePassable("portraits")&&p.x+p.w>3740){
+   p.x=3740-p.w;p.vx=Math.min(0,p.vx);
+   if(gateMessageCooldown<=0){
+     say(portraitsSolved?"As raízes estão abrindo o caminho...":"As raízes seguram o caminho. Os três retratos ainda não estão completos.");
+     gateMessageCooldown=2;
+   }
+ }
+ if(portraitsSolved&&!rootGatePassable("voices")&&p.x+p.w>5200){
+   p.x=5200-p.w;p.vx=Math.min(0,p.vx);
+   if(gateMessageCooldown<=0){
+     say(voicesSolved?"O portão do Lago está despertando...":"O lago não abre passagem enquanto a voz de Mara continuar fragmentada.");
+     gateMessageCooldown=2;
+   }
+ }
+ if(voicesSolved&&!rootGatePassable("archive")&&p.x+p.w>6000){
+   p.x=6000-p.w;p.vx=Math.min(0,p.vx);
+   if(gateMessageCooldown<=0){
+     say(archiveSolved?"O Arquivo está soltando suas raízes...":"As raízes recusam a passagem. O Arquivo ainda guarda algo que precisa ser deixado ir.");
+     gateMessageCooldown=2;
+   }
+ }
 
  if(bossActive&&p.x<6650){p.x=6650;p.vx=Math.max(0,p.vx)}
  if(bossActive&&p.x+p.w>7540){p.x=7540-p.w;p.vx=Math.min(0,p.vx)}
@@ -1437,9 +1515,9 @@ function drawWorld(){
  drawVoicePuzzleWorld();
  drawArchivePuzzleWorld();
  drawCycleFailures();
- drawRootGate(3740,portraitsSolved);
- drawRootGate(5200,voicesSolved);
- drawRootGate(6000,archiveSolved);
+ drawRootGate(3740,rootGateProgress.portraits);
+ drawRootGate(5200,rootGateProgress.voices);
+ drawRootGate(6000,rootGateProgress.archive);
  drawMotherTreeAndBoss();
  drawMaraWorld();
  x.restore();
