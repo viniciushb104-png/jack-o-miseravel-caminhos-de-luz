@@ -102,6 +102,14 @@ let voicesSolved=!!loadedSave?.voicesSolved;
 // Migração dos saves anteriores ao novo pouso do Lago.
 if(portraitsSolved&&!voicesSolved&&maraSettledX>=3980&&maraSettledX<4100)maraSettledX=4140;
 let voiceStep=Math.max(0,Math.min(3,Number(loadedSave?.voiceStep)||0));
+let voiceAwakened=Array.isArray(loadedSave?.voiceAwakened)&&loadedSave.voiceAwakened.length===3
+ ? loadedSave.voiceAwakened.slice(0,3).map(Boolean)
+ : (voicesSolved?[true,true,true]:[false,false,false]);
+if(!Array.isArray(loadedSave?.voiceAwakened)&&voiceStep>0){
+ for(const idx of story.voicePuzzle.order.slice(0,voiceStep))voiceAwakened[idx]=true;
+}
+const voicePulse=[0,0,0],voiceWrong=[0,0,0];
+let voiceCorePulse=0;
 let jackEchoPlayed=!!loadedSave?.jackEchoPlayed;
 let firstWhisperPlayed=!!loadedSave?.firstWhisperPlayed;
 let portraitMemoryProofPlayed=!!loadedSave?.portraitMemoryProofPlayed;
@@ -192,6 +200,16 @@ const portraitPuzzleImages={
 };
 const portraitPuzzleBases={motherTree:null,archivist:null};
 let portraitPuzzleAssetsLoadStarted=false;
+
+const voicePuzzleBases=[null,null,null];
+const voicePuzzleEchoes=[
+ {dormant:null,awakened:null,aligned:null},
+ {dormant:null,awakened:null,aligned:null},
+ {dormant:null,awakened:null,aligned:null}
+];
+const voicePuzzleCore={dormant:null,awakened:null};
+let voicePuzzleAssetsLoadStarted=false;
+
 const rootGateProgress={
  portraits:portraitsSolved?1:0,
  voices:voicesSolved?1:0,
@@ -215,7 +233,7 @@ function save(){
  localStorage.setItem(SAVE_KEY,JSON.stringify({
    x:p.x,y:p.y,dir:p.dir,playerLife,activeCheckpoint,introLorePlayed,
    maraMet,portraitsSolved,portraitChoices:[...portraitChoices],portraitRevealed:[...portraitRevealed],
-   voicesSolved,voiceStep,jackEchoPlayed,firstWhisperPlayed,portraitMemoryProofPlayed,maraJackSuspicionPlayed,archiveKeyReactionPlayed,approachTreePlayed,motherTreeScene,
+   voicesSolved,voiceStep,voiceAwakened:[...voiceAwakened],jackEchoPlayed,firstWhisperPlayed,portraitMemoryProofPlayed,maraJackSuspicionPlayed,archiveKeyReactionPlayed,approachTreePlayed,motherTreeScene,
    archiveSolved,archiveChoice,archiveSeen:[...archiveSeen],bossPrelude,bossActive,bossAct,bossStep,bossComplete,finalePlayed,bossFirstStrike,bossFacesSeen:[...bossFacesSeen],maraBossX,maraSettledX,savedAt:Date.now()
  }));
 }
@@ -378,6 +396,24 @@ function ensurePortraitPuzzleAssets(){
    .then(im=>{portraitPuzzleBases.motherTree=im}).catch(()=>{});
  img("../assets/game/phase3/portrait-puzzle/bases/phase3-portrait-base-archivist.png")
    .then(im=>{portraitPuzzleBases.archivist=im}).catch(()=>{});
+}
+
+function ensureVoicePuzzleAssets(){
+ if(voicePuzzleAssetsLoadStarted)return;
+ voicePuzzleAssetsLoadStarted=true;
+ for(let i=0;i<3;i++){
+   const n=String(i+1).padStart(2,"0");
+   img("../assets/game/phase3/voice-puzzle/bases/phase3-voice-base-"+n+".png")
+     .then(im=>{voicePuzzleBases[i]=im}).catch(()=>{});
+   for(const state of ["dormant","awakened","aligned"]){
+     img("../assets/game/phase3/voice-puzzle/echo-"+n+"/phase3-voice-echo-"+n+"-"+state+".png")
+       .then(im=>{voicePuzzleEchoes[i][state]=im}).catch(()=>{});
+   }
+ }
+ img("../assets/game/phase3/voice-puzzle/core/phase3-voice-core-dormant.png")
+   .then(im=>{voicePuzzleCore.dormant=im}).catch(()=>{});
+ img("../assets/game/phase3/voice-puzzle/core/phase3-voice-core-awakened.png")
+   .then(im=>{voicePuzzleCore.awakened=im}).catch(()=>{});
 }
 
 // Portões vivos do Bosque. Carregam em segundo plano para não pesar ainda mais
@@ -784,20 +820,109 @@ function drawPortraitPuzzleWorld(){
  });
 }
 
+function drawVoiceImage(im,cx,cy,targetH,alpha=1,glow=0,bob=0){
+ if(!im||alpha<=0)return false;
+ const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+ const dh=targetH,dw=iw*(dh/ih);
+ x.save();
+ x.globalAlpha=alpha;
+ x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";
+ if(glow>0){
+   x.shadowColor="rgba(238,210,133,"+(0.28+glow*.38)+")";
+   x.shadowBlur=10+glow*22;
+ }
+ x.drawImage(im,cx-dw/2,cy-dh/2+bob,dw,dh);
+ x.restore();
+ return true;
+}
+
 function drawVoicePuzzleWorld(){
  if(!portraitsSolved)return;
- const order=story.voicePuzzle.order,activated=new Set(order.slice(0,voiceStep));
+ ensureVoicePuzzleAssets();
+
+ const order=story.voicePuzzle.order;
+ const aligned=new Set(voicesSolved?[0,1,2]:order.slice(0,voiceStep));
+ const coreX=4690;
+ const coreAwake=voicesSolved;
+ const coreIm=coreAwake?voicePuzzleCore.awakened:voicePuzzleCore.dormant;
+ const coreGlow=(voiceStep/3)*.65+Math.min(1,voiceCorePulse)*.45+(coreAwake?.55:0);
+
+ // Núcleo do Lago: fica acima dos três Ecos e recebe fios de memória
+ // conforme a verdadeira frase de Mara é recomposta.
+ if(coreIm){
+   drawVoiceImage(coreIm,coreX,242,174,coreAwake?1:.72,coreGlow,Math.sin(p.anim*.8)*2);
+ }else{
+   x.save();x.globalAlpha=.32+.18*(voiceStep/3);x.strokeStyle="#9f9ad0";x.lineWidth=3;
+   x.beginPath();x.arc(coreX,242,42+Math.sin(p.anim*1.4)*3,0,Math.PI*2);x.stroke();x.restore();
+ }
+
  story.voicePuzzle.entries.forEach((q,i)=>{
-   const on=activated.has(i),lit=memoryLight>0;
-   x.save();x.translate(q.x,0);
-   const glow=x.createRadialGradient(0,455,8,0,455,on?105:70);
-   glow.addColorStop(0,on?"rgba(242,218,126,.55)":"rgba(153,190,132,.30)");
-   glow.addColorStop(1,"rgba(90,130,82,0)");x.fillStyle=glow;x.beginPath();x.arc(0,455,on?105:70,0,Math.PI*2);x.fill();
-   x.strokeStyle=on?"#e4ca76":"#6f8767";x.lineWidth=5;x.beginPath();x.moveTo(0,580);x.quadraticCurveTo(-28,525,0,490);x.quadraticCurveTo(30,455,0,410);x.stroke();
-   x.fillStyle=on?"#f3d888":"#91b488";x.globalAlpha=lit||on?1:.5;x.beginPath();x.arc(0,400,18,0,Math.PI*2);x.fill();x.globalAlpha=1;
-   x.fillStyle="#d8c989";x.font="700 13px Georgia";x.textAlign="center";x.fillText(["I","II","III"][i],0,455);
+   const isAligned=aligned.has(i);
+   const isAwake=voiceAwakened[i]||isAligned||voicesSolved;
+   const state=isAligned?"aligned":(isAwake?"awakened":"dormant");
+   const base=voicePuzzleBases[i];
+   const echo=voicePuzzleEchoes[i][state];
+   const pulse=Math.min(1.5,voicePulse[i]);
+   const wrong=Math.min(1,voiceWrong[i]);
+   const shake=wrong>0?Math.sin(p.anim*45+i)*5*wrong:0;
+   const bob=Math.sin(p.anim*1.15+i*.85)*2.1;
+
+   x.save();x.translate(q.x+shake,0);
+
+   // Eco alinhado envia a memória ao núcleo central.
+   if(isAligned){
+     const sx=0,sy=360,tx=coreX-q.x,ty=260;
+     x.save();
+     x.globalAlpha=.42+.12*Math.sin(p.anim*2+i);
+     x.strokeStyle="#efdba0";x.lineWidth=2.2;
+     x.shadowColor="rgba(241,209,121,.55)";x.shadowBlur=12;
+     x.beginPath();x.moveTo(sx,sy);
+     x.quadraticCurveTo(tx*.45,300-Math.abs(tx)*.035,tx,ty);
+     x.stroke();x.restore();
+   }
+
+   // Aura atrás do altar/eco.
+   const auraR=isAligned?112:(isAwake?92:70);
+   const gr=x.createRadialGradient(0,403,10,0,403,auraR+pulse*8);
+   gr.addColorStop(0,isAligned?"rgba(244,220,143,.36)":(isAwake?"rgba(171,167,223,.25)":"rgba(104,128,125,.15)"));
+   gr.addColorStop(1,"rgba(77,91,86,0)");
+   x.fillStyle=gr;x.beginPath();x.arc(0,403,auraR+pulse*8,0,Math.PI*2);x.fill();
+
+   if(base){
+     const iw=base.naturalWidth||base.width,ih=base.naturalHeight||base.height;
+     const dh=232,dw=iw*(dh/ih);
+     x.save();x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";
+     if(isAligned){x.shadowColor="rgba(230,191,91,.28)";x.shadowBlur=12}
+     x.drawImage(base,-dw/2,590-dh+5,dw,dh);x.restore();
+   }else{
+     // Fallback procedural enquanto a base carrega.
+     x.strokeStyle=isAligned?"#e4ca76":"#6f8767";x.lineWidth=5;
+     x.beginPath();x.moveTo(0,580);x.quadraticCurveTo(-28,525,0,490);x.quadraticCurveTo(30,455,0,410);x.stroke();
+   }
+
+   if(!drawVoiceImage(echo,0,382,146,isAwake?1:.78,isAligned?1:(isAwake?.55:.08),bob)){
+     x.fillStyle=isAligned?"#f3d888":(isAwake?"#a9a2dc":"#65766f");
+     x.beginPath();x.arc(0,390,18,0,Math.PI*2);x.fill();
+   }
+
+   // Leitura discreta da mecânica sem transformar o lago em um menu.
+   x.textAlign="center";x.textBaseline="middle";
+   if(isAligned){
+     x.fillStyle="#f0dda0";x.font="700 10px Georgia";x.fillText("ECO ALINHADO",0,562);
+   }else if(isAwake){
+     x.fillStyle="#d9cead";x.font="italic 9px Georgia";x.fillText("E · alinhar",0,562);
+   }else{
+     x.fillStyle="#9eaa9e";x.font="italic 9px Georgia";x.fillText("F · ouvir",0,562);
+   }
    x.restore();
  });
+
+ if(coreAwake){
+   x.save();x.textAlign="center";x.textBaseline="middle";
+   x.fillStyle="rgba(246,225,159,.92)";x.font="italic 11px Georgia";
+   x.fillText("A voz voltou a ser inteira.",coreX,336);
+   x.restore();
+ }
 }
 
 function drawArchivePuzzleWorld(){
@@ -910,16 +1035,28 @@ function finishPortraitPuzzle(){
 
 function activateVoice(i){
  if(voicesSolved)return;
- if(memoryLight<=0){say("O eco está abafado. Use a Luz da Memória antes de tocá-lo.");return}
+ if(!voiceAwakened[i]){
+   voiceWrong[i]=.75;
+   say("O Eco ainda está adormecido. Use F para escutar o fragmento primeiro.");
+   return;
+ }
+ if(memoryLight<=0){
+   say("A voz está desperta, mas a conexão enfraqueceu. Erga novamente a Luz da Memória.");
+   return;
+ }
  const expected=story.voicePuzzle.order[voiceStep];
  if(i!==expected){
-   voiceStep=0;banner("AS VOZES SE EMBARALHARAM");
-   say("A frase se perdeu na água. Recomece pelo primeiro fragmento.");save();return;
+   voiceStep=0;voiceWrong[i]=1;voiceCorePulse=.45;
+   banner("AS VOZES SE EMBARALHARAM");
+   say("A frase se perdeu na água. Os Ecos continuam despertos — reorganize a sequência.");save();return;
  }
  voiceStep++;
+ voicePulse[i]=1.45;voiceCorePulse=.95;
  say("Fragmento "+voiceStep+"/3 — "+story.voicePuzzle.entries[i].fragment);
  if(voiceStep<story.voicePuzzle.order.length){save();return}
- voicesSolved=true;banner("MEMÓRIA RECONSTRUÍDA — A VOZ DE MARA");p.vx=0;save();
+
+ voicesSolved=true;voiceAwakened=[true,true,true];voiceCorePulse=1.8;
+ banner("MEMÓRIA RECONSTRUÍDA — A VOZ DE MARA");p.vx=0;memoryPulse=1.1;save();
  dialogue.open(story.dialogues.voicesSolved,()=>{
    jackEchoPlayed=true;memoryPulse=1.2;banner("UMA MEMÓRIA QUE NÃO PERTENCE AO BOSQUE");
    setTimeout(()=>dialogue.open(story.dialogues.jackMemoryLeak,()=>{
@@ -1771,13 +1908,22 @@ function useMemoryLight(){
  }
  if(portraitsSolved&&!voicesSolved){
    const hit=nearestPuzzleEntry(story.voicePuzzle.entries,175);
-   if(hit){say('Eco — “'+hit.q.fragment+'”');return}
+   if(hit){
+     const first=!voiceAwakened[hit.i];
+     voiceAwakened[hit.i]=true;
+     voicePulse[hit.i]=first?1.45:.9;
+     voiceCorePulse=Math.max(voiceCorePulse,first?.55:.32);
+     if(first)banner("ECO DESPERTO — UMA VOZ VOLTOU À SUPERFÍCIE");
+     say('Eco — “'+hit.q.fragment+'”');
+     save();return;
+   }
  }
  say("A lanterna recorda um caminho que já não existe.");
 }
 
 function update(dt){
  if((maraMet||p.x>2180)&&!portraitPuzzleAssetsLoadStarted)ensurePortraitPuzzleAssets();
+ if((portraitsSolved||p.x>3850)&&!voicePuzzleAssetsLoadStarted)ensureVoicePuzzleAssets();
  updateRootGateAnimations(dt);
  updateBossRootSealAnimation(dt);
  updateMotherTreeFragmentState(dt);
@@ -1804,7 +1950,13 @@ function update(dt){
  }else{lastPlayerAction=performance.now();idleTime=0;waitSitClock=0;waitSitFrame=0;waitSitActive=false}
 
  memoryLight=Math.max(0,memoryLight-dt);memoryPulse=Math.max(0,memoryPulse-dt);p.attack=Math.max(0,p.attack-dt);
- for(let i=0;i<3;i++){portraitPulse[i]=Math.max(0,portraitPulse[i]-dt*1.8);portraitWrong[i]=Math.max(0,portraitWrong[i]-dt*2.6)}
+ for(let i=0;i<3;i++){
+   portraitPulse[i]=Math.max(0,portraitPulse[i]-dt*1.8);
+   portraitWrong[i]=Math.max(0,portraitWrong[i]-dt*2.6);
+   voicePulse[i]=Math.max(0,voicePulse[i]-dt*1.75);
+   voiceWrong[i]=Math.max(0,voiceWrong[i]-dt*2.8);
+ }
+ voiceCorePulse=Math.max(0,voiceCorePulse-dt*1.35);
  gateMessageCooldown=Math.max(0,gateMessageCooldown-dt);bossCooldown=Math.max(0,bossCooldown-dt);bossPulse=Math.max(0,bossPulse-dt);
  updateMaraRun(dt);
 
@@ -1868,7 +2020,7 @@ function update(dt){
  if(p.x>980&&p.x<1480)ui.obj.textContent="Use a Luz para caminhar sobre uma lembrança do caminho.";
  else if(!maraMet&&p.x>=1480)ui.obj.textContent="Siga as folhas até a mulher que espera junto às raízes.";
  else if(maraMet&&!portraitsSolved&&p.x>=2500)ui.obj.textContent="BOSQUE DOS RETRATOS: F desperta a lembrança. Leia a história e use E para devolver o nome correto.";
- else if(portraitsSolved&&!voicesSolved&&p.x>=3900)ui.obj.textContent="Ouça os três ecos com F e monte a frase de Mara usando E.";
+ else if(portraitsSolved&&!voicesSolved&&p.x>=3900)ui.obj.textContent="LAGO DAS VOZES: F desperta cada Eco. Escute os fragmentos e use E para reconstruir a voz de Mara na ordem correta.";
  else if(voicesSolved&&!archiveSolved)ui.obj.textContent="Arquivo das Raízes: examine carta, melodia e chave com E. Nenhuma precisa ser apagada.";
  else if(archiveSolved&&!approachTreePlayed)ui.obj.textContent="Siga Mara. Observe o que acontece com as coisas que tentam terminar.";
  else if(archiveSolved&&!motherTreeScene)ui.obj.textContent="O ciclo está quebrado. Alcance a Árvore-Mãe.";
