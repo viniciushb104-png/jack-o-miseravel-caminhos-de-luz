@@ -83,6 +83,16 @@ const suspendedMemoryOrbits=[
 
 const archivistSprites={base:[],attacks:[],faces:[],voices:[],heart:[],release:[]};
 let maraRun={active:false,x:2275,targetX:2275,groundY:590,onDone:null};
+// Posição narrativa persistente da Mara. Evita que ela volte ao ponto inicial
+// quando uma animação/efeito (como a Luz da Memória) força um novo redraw.
+let maraSettledX=Number.isFinite(loadedSave?.maraSettledX)
+ ? loadedSave.maraSettledX
+ : (loadedSave?.motherTreeScene||loadedSave?.approachTreePlayed?6680
+   : loadedSave?.archiveSolved?6380
+   : loadedSave?.voicesSolved?5575
+   : loadedSave?.portraitsSolved?4020
+   : loadedSave?.maraMet?2700
+   : 2275);
 let maraMet=!!loadedSave?.maraMet;
 let portraitsSolved=!!loadedSave?.portraitsSolved;
 let portraitChoices=Array.isArray(loadedSave?.portraitChoices)&&loadedSave.portraitChoices.length===3?loadedSave.portraitChoices.map(v=>Math.max(0,Math.min(2,Number(v)||0))):[0,0,0];
@@ -172,7 +182,7 @@ function save(){
    x:p.x,y:p.y,dir:p.dir,playerLife,activeCheckpoint,introLorePlayed,
    maraMet,portraitsSolved,portraitChoices:[...portraitChoices],
    voicesSolved,voiceStep,jackEchoPlayed,firstWhisperPlayed,portraitMemoryProofPlayed,maraJackSuspicionPlayed,archiveKeyReactionPlayed,approachTreePlayed,motherTreeScene,
-   archiveSolved,archiveChoice,archiveSeen:[...archiveSeen],bossPrelude,bossActive,bossAct,bossStep,bossComplete,finalePlayed,bossFirstStrike,bossFacesSeen:[...bossFacesSeen],maraBossX,savedAt:Date.now()
+   archiveSolved,archiveChoice,archiveSeen:[...archiveSeen],bossPrelude,bossActive,bossAct,bossStep,bossComplete,finalePlayed,bossFirstStrike,bossFacesSeen:[...bossFacesSeen],maraBossX,maraSettledX,savedAt:Date.now()
  }));
 }
 function respawn(msg){
@@ -364,17 +374,18 @@ function maraWorldState(){
  if(maraRun.active)return {x:maraRun.x,groundY:maraRun.groundY,run:true};
  if(bossActive)return {x:maraBossX,groundY:590,frame:bossAct===3?0:5};
  if(motherTreeScene||bossComplete)return {x:6680,groundY:590,frame:bossComplete?1:5};
- if(archiveSolved&&approachTreePlayed)return {x:6680,groundY:590,frame:5};
- if(archiveSolved)return {x:6380,groundY:590,frame:5};
- if(!portraitsSolved)return {x:2275,groundY:590,frame:maraMet?3:0};
- if(!voicesSolved)return {x:4020,groundY:590,frame:4};
- return {x:5575,groundY:590,frame:5};
+ if(archiveSolved&&approachTreePlayed)return {x:maraSettledX,groundY:590,frame:5};
+ if(archiveSolved)return {x:maraSettledX,groundY:590,frame:5};
+ if(!portraitsSolved)return {x:maraSettledX,groundY:590,frame:maraMet?3:0};
+ if(!voicesSolved)return {x:maraSettledX,groundY:590,frame:4};
+ return {x:maraSettledX,groundY:590,frame:5};
 }
 function startMaraRun(fromX,toX,onDone){
  // A corrida narrativa precisa começar dentro da área que o jogador está vendo.
- // Caso Mara estivesse estacionada num ponto antigo do mapa, trazemos o início
- // para logo à frente de Jack em vez de animá-la fora da câmera.
- const visibleStart=Math.min(toX-150,Math.max(fromX,p.x+p.w+82));
+ // Usa a posição persistente atual como referência para nunca "ressuscitar"
+ // um ponto antigo da Mara durante transições ou redraws.
+ const narrativeStart=Number.isFinite(maraSettledX)?maraSettledX:fromX;
+ const visibleStart=Math.min(toX-150,Math.max(narrativeStart,p.x+p.w+82));
  maraRun.active=true;maraRun.x=visibleStart;maraRun.targetX=toX;maraRun.groundY=590;
  maraRun.onDone=typeof onDone==="function"?onDone:null;
 }
@@ -383,8 +394,12 @@ function updateMaraRun(dt){
  const dir=Math.sign(maraRun.targetX-maraRun.x)||1;
  maraRun.x+=dir*285*dt;
  if((dir>0&&maraRun.x>=maraRun.targetX)||(dir<0&&maraRun.x<=maraRun.targetX)){
-   maraRun.x=maraRun.targetX;maraRun.active=false;
-   const done=maraRun.onDone;maraRun.onDone=null;if(done)done();
+   maraRun.x=maraRun.targetX;
+   maraSettledX=maraRun.targetX;
+   maraRun.active=false;
+   const done=maraRun.onDone;maraRun.onDone=null;
+   save();
+   if(done)done();
  }
 }
 function drawMaraWorld(){
