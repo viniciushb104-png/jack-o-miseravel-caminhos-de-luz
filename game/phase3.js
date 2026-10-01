@@ -645,6 +645,28 @@ function finishBoss(){
  save();
 }
 
+function resumeFinaleAfterReload(){
+ if(!bossComplete||finalePlayed)return false;
+ // Se o jogador saiu depois da libertação do Arquivista, mas antes do fim do
+ // epílogo, o save contém bossComplete=true e finalePlayed=false.
+ // Retomamos a partir do primeiro diálogo pós-boss sem refazer a batalha.
+ endingSequenceActive=true;
+ bossActive=false;
+ p.vx=0;p.vy=0;
+ fadeMusicTo("motherTree",.52,700);
+ banner("A PRIMEIRA FOLHA CAIU");
+ say("A lanterna retomou a última lembrança do Bosque.");
+ setTimeout(()=>{
+   if(finalePlayed)return;
+   dialogue.open(story.finale.epilogue,()=>{
+     dialogue.open(story.finale.jackRevelation,()=>{
+       dialogue.open(story.finale.finalExchange,showPhase3Complete);
+     });
+   });
+ },500);
+ return true;
+}
+
 function drawCycleFailures(){
  if(!archiveSolved||bossComplete)return;
  // O caminho final mostra o problema antes da Árvore-Mãe explicá-lo:
@@ -1312,6 +1334,7 @@ startGameBtn.onclick=()=>{
  ui.intro.hidden=true;running=true;last=performance.now();requestAnimationFrame(loop);
  setTimeout(()=>{
    if(finalePlayed){if(phase3CompleteRoot)phase3CompleteRoot.hidden=false;return}
+   if(bossComplete){resumeFinaleAfterReload();return}
    if(!introLorePlayed){introLorePlayed=true;dialogue.open(opening,()=>{say("A lanterna iluminou algo que não existe mais. Pressione F para revelar memórias do caminho.");save()})}
  },420);
 };
