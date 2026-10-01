@@ -16,7 +16,7 @@ repeating-linear-gradient(115deg,transparent 0 80px,rgba(149,109,64,.025) 81px 8
 .card{position:relative;z-index:2;width:min(760px,92vw);padding:42px 34px;text-align:center;border:1px solid #826a45;outline:1px solid #293b32;outline-offset:-9px;background:linear-gradient(180deg,rgba(17,25,25,.97),rgba(7,13,14,.99));box-shadow:0 30px 100px #000}
 small{display:block;color:#b99b65;letter-spacing:.2em;font-weight:700}h1{margin:12px 0 8px;font-family:"Cinzel","Copperplate",Georgia,serif;color:#f0d392;letter-spacing:.08em;font-size:clamp(1.8rem,5vw,3rem)}h2{margin:0 0 22px;color:#9eaf99;font-weight:400;font-size:1rem;letter-spacing:.12em}
 p{max-width:600px;margin:0 auto 20px;line-height:1.7;color:#d7d7c3}blockquote{margin:22px auto;padding:14px;border-left:2px solid #967647;border-right:2px solid #967647;color:#efdca8;font-style:italic}
-.actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:26px}.actions a{padding:12px 18px;min-width:210px;border:1px solid #a8844b;color:#f0d18b;text-decoration:none;font-family:"Cinzel","Copperplate",Georgia,serif;font-weight:700;background:#13231b}.actions a:hover{background:#203428}
+.journey-item{display:none;width:max-content;max-width:100%;margin:18px auto 0;padding:8px 14px;border:1px solid #806b43;background:rgba(40,53,39,.55);color:#efd28a;font-size:.82rem;letter-spacing:.08em}.journey-item.visible{display:block}.actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:26px}.actions a{padding:12px 18px;min-width:210px;border:1px solid #a8844b;color:#f0d18b;text-decoration:none;font-family:"Cinzel","Copperplate",Georgia,serif;font-weight:700;background:#13231b}.actions a:hover{background:#203428}
 </style>
 </head>
 <body>
@@ -27,10 +27,23 @@ p{max-width:600px;margin:0 auto 20px;line-height:1.7;color:#d7d7c3}blockquote{ma
   <h2>O PRÓXIMO CAMINHO FOI DESBLOQUEADO</h2>
   <p>Além do Bosque das Memórias, uma estrada que não aparecia antes começa a atravessar a névoa. A chave de Mara reage à lanterna de Jack, mas este Halloween ainda está sendo construído.</p>
   <blockquote>“Toda estrada guarda os passos de alguém.”</blockquote>
+  <div id="maraKeyItem" class="journey-item">✦ ITEM DA JORNADA · CHAVE DE MADEIRA DE MARA</div>
   <div class="actions">
     <a href="../index.html#fases">⌂ VOLTAR ÀS FASES</a>
     <a href="phase3.html?replay=1&new=1">↻ REVISITAR O BOSQUE</a>
   </div>
 </main>
+<script>
+(()=>{
+  const ITEM_KEY="jack-item-mara-wood-key";
+  // Migração para jogadores que concluíram Halloween III antes do item persistente existir.
+  if(localStorage.getItem("jack-phase3-complete")==="yes"&&localStorage.getItem(ITEM_KEY)!=="yes"){
+    localStorage.setItem(ITEM_KEY,"yes");
+  }
+  if(localStorage.getItem(ITEM_KEY)==="yes"){
+    document.getElementById("maraKeyItem")?.classList.add("visible");
+  }
+})();
+</script>
 </body>
 </html>
