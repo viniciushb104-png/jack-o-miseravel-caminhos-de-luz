@@ -46,6 +46,8 @@ let memoryLight=0,memoryPulse=0,playerLife=Math.max(1,Math.min(3,Number(loadedSa
 let activeCheckpoint=loadedSave?.activeCheckpoint||localStorage.getItem(CHECKPOINT_KEY)||"";
 let maraSpriteSheet=null,maraRunSheet=null,forestBackground=null,motherTreeBackground=null;
 const motherTreeSprites={idle:null,awakened:null,corrupted:null,restored:null};
+const motherTreeFragments=[];
+let motherTreeFragmentCurrent=-1,motherTreeFragmentPrevious=-1,motherTreeFragmentBlend=1;
 const archivistSprites={base:[],attacks:[],faces:[],voices:[],heart:[],release:[]};
 let maraRun={active:false,x:2275,targetX:2275,groundY:590,onDone:null};
 let maraMet=!!loadedSave?.maraMet;
@@ -205,6 +207,21 @@ const motherTreeSpriteReady=Promise.allSettled([
  img("../assets/phase3/mother-tree/mother-tree-corrupted.png").then(im=>{motherTreeSprites.corrupted=im;return im}),
  img("../assets/phase3/mother-tree/mother-tree-restored.png").then(im=>{motherTreeSprites.restored=im;return im})
 ]);
+
+const motherTreeFragmentFiles=[
+ "mother-tree-fragment-01-mara-archive.png",
+ "mother-tree-fragment-02-mara-roots.png",
+ "mother-tree-fragment-03-mara-letters.png",
+ "mother-tree-fragment-04-memory-portraits.png",
+ "mother-tree-fragment-05-lake-of-voices.png",
+ "mother-tree-fragment-06-jack-pumpkin.png"
+];
+// Carrega desde o início, mas não bloqueia o preloader: estes fragmentos só são usados perto do fim da fase.
+motherTreeFragmentFiles.forEach((file,i)=>{
+ img("../assets/game/phase3/mother-tree/fragments/"+file)
+   .then(im=>{motherTreeFragments[i]=im})
+   .catch(()=>{motherTreeFragments[i]=null});
+});
 
 const archivistVisualSets=[
  ["base","archivist-base-"],
@@ -812,6 +829,114 @@ function tryInteract(){
  say("Nada aqui respondeu ao toque.");
 }
 
+function motherTreeFragmentTarget(){
+ if(!dialogue.active||dialogue.lines!==story.dialogues.motherTree)return -1;
+ const i=dialogue.index;
+ // Mara: arquivo, cartas e raízes.
+ if(i>=6&&i<=7)return 0;
+ if(i>=8&&i<=12)return 2;
+ if(i>=13&&i<=17)return 1;
+ // Bosque: rostos guardados e vozes repetidas.
+ if(i>=18&&i<=21)return 3;
+ if(i>=22&&i<=24)return 4;
+ // A memória intrusa: Jack, sua abóbora e um caminho que ele evita lembrar.
+ if(i>=25&&i<=29)return 5;
+ return -1;
+}
+
+function updateMotherTreeFragmentState(dt){
+ const target=motherTreeFragmentTarget();
+ if(target!==motherTreeFragmentCurrent){
+   motherTreeFragmentPrevious=motherTreeFragmentCurrent;
+   motherTreeFragmentCurrent=target;
+   motherTreeFragmentBlend=0;
+ }
+ motherTreeFragmentBlend=Math.min(1,motherTreeFragmentBlend+dt*2.8);
+}
+
+function drawFragmentImage(im,cx,cy,targetH,alpha,rotation=0){
+ if(!im||alpha<=0)return;
+ const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+ const dh=targetH,dw=iw*(dh/ih);
+ x.save();
+ x.translate(cx,cy);
+ x.rotate(rotation);
+ x.globalAlpha=alpha;
+ x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";
+ x.shadowColor="rgba(243,190,70,.62)";
+ x.shadowBlur=24;
+ x.drawImage(im,-dw/2,-dh/2,dw,dh);
+ x.restore();
+}
+
+function drawMotherTreeFragments(){
+ if(!dialogue.active||dialogue.lines!==story.dialogues.motherTree)return;
+ const target=motherTreeFragmentCurrent;
+ if(target<0&&motherTreeFragmentPrevious<0)return;
+
+ const t=p.anim;
+ x.save();
+ // Escurece delicadamente o mundo para as lembranças parecerem projetadas pela Árvore.
+ const shade=x.createRadialGradient(W*.60,H*.36,80,W*.60,H*.36,650);
+ shade.addColorStop(0,"rgba(38,28,14,.08)");
+ shade.addColorStop(1,"rgba(2,7,5,.48)");
+ x.fillStyle=shade;x.fillRect(0,0,W,H);
+
+ const blend=motherTreeFragmentBlend;
+ if(motherTreeFragmentPrevious>=0&&motherTreeFragmentPrevious!==target){
+   drawFragmentImage(
+     motherTreeFragments[motherTreeFragmentPrevious],
+     W*.61,H*.37,430*(1-blend*.08),
+     Math.max(0,(1-blend)*.72),
+     Math.sin(t*.7)*.012
+   );
+ }
+
+ if(target>=0){
+   const isJack=target===5;
+   if(!isJack){
+     // Pequenos estilhaços acumulados: o passado de Mara literalmente cerca a conversa.
+     const minis=[
+       [0,W*.18,H*.27,185,-.055],
+       [1,W*.34,H*.18,150,.045],
+       [2,W*.84,H*.23,165,.06],
+       [3,W*.91,H*.48,145,-.05],
+       [4,W*.18,H*.52,155,.04]
+     ];
+     minis.forEach(([id,cx,cy,h,r])=>{
+       if(id===target||!motherTreeFragments[id])return;
+       const a=.13+Math.sin(t*1.4+id)*.025;
+       drawFragmentImage(motherTreeFragments[id],cx,cy+Math.sin(t*.9+id)*5,h,a,r);
+     });
+   }else{
+     // O fragmento de Jack interrompe a sequência: os demais recuam e a luz pulsa.
+     const flash=.08+.08*Math.max(0,Math.sin(t*4.8));
+     x.fillStyle="rgba(238,177,65,"+flash+")";x.fillRect(0,0,W,H);
+   }
+
+   const bob=Math.sin(t*.85)*5;
+   drawFragmentImage(
+     motherTreeFragments[target],
+     W*.62,H*.36+bob,
+     isJack?515:475,
+     .82*blend,
+     Math.sin(t*.62)*.009
+   );
+
+   // Partículas de memória sem criar assets extras.
+   x.globalCompositeOperation="screen";
+   for(let i=0;i<18;i++){
+     const a=t*.28+i*.87,r=170+(i%6)*31;
+     const px=W*.62+Math.cos(a)*r,py=H*.35+Math.sin(a*1.17)*r*.42;
+     const radius=1.2+(i%3)*.8;
+     x.globalAlpha=.18+.18*Math.sin(t*1.5+i)*.5+.09;
+     x.fillStyle=isJack?"#ffd36c":"#e8c879";
+     x.beginPath();x.arc(px,py,radius,0,Math.PI*2);x.fill();
+   }
+ }
+ x.restore();
+}
+
 function updateNarrativeTriggers(){
  if(dialogue.active||endingSequenceActive)return;
 
@@ -868,6 +993,7 @@ function useMemoryLight(){
 }
 
 function update(dt){
+ updateMotherTreeFragmentState(dt);
  bossReleaseT=Math.max(0,bossReleaseT-dt);
  if(endingSequenceActive&&!dialogue.active){
    p.vx=0;p.vy=0;p.anim+=dt;
@@ -1036,7 +1162,7 @@ function drawMemoryLight(){
 }
 
 function draw(){
- drawBackdrop();drawLeaves();drawWorld();drawJack();drawMemoryLight();
+ drawBackdrop();drawLeaves();drawWorld();drawJack();drawMemoryLight();drawMotherTreeFragments();
 }
 
 function bindHold(id,key){const b=document.getElementById(id);["pointerdown","pointerup","pointercancel","pointerleave"].forEach(ev=>b.addEventListener(ev,()=>input[key]=ev==="pointerdown"))}
