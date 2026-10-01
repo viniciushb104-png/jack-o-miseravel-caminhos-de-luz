@@ -4,7 +4,7 @@ const ui={obj:document.querySelector("#objective strong"),health:document.getEle
 const phase3CompleteRoot=document.getElementById("phase3Complete"),phase3ReplayBtn=document.getElementById("phase3Replay"),phase3MenuBtn=document.getElementById("phase3Menu"),phase3NextBtn=document.getElementById("phase3Next");
 const dialogueRoot=document.getElementById("dialogue"),dialogue=new window.DialogueSystem(dialogueRoot);
 const journey=window.JackJourney||null,urlParams=new URLSearchParams(location.search),journeyMode=urlParams.get("journey")==="1",replayMode=urlParams.get("replay")==="1",forceNewRun=urlParams.get("new")==="1";
-const SAVE_KEY="jack-phase3-save",CHECKPOINT_KEY="jack-phase3-checkpoint";
+const SAVE_KEY="jack-phase3-save",CHECKPOINT_KEY="jack-phase3-checkpoint",MARA_WOOD_KEY="jack-item-mara-wood-key";
 const phase3Music={
  forest:new Audio("../assets/phase3/audio/music/phase3-memory-forest-theme.mp3"),
  motherTree:new Audio("../assets/phase3/audio/music/phase3-mother-tree-theme.mp3"),
@@ -605,9 +605,17 @@ function advanceBossWithLight(){
  }
  return false;
 }
+function grantMaraWoodKey(announce=false){
+ const firstTime=localStorage.getItem(MARA_WOOD_KEY)!=="yes";
+ localStorage.setItem(MARA_WOOD_KEY,"yes");
+ if(firstTime&&announce)banner("ITEM DA JORNADA — CHAVE DE MADEIRA DE MARA");
+ return firstTime;
+}
 function unlockPhase3(){
  const firstClear=localStorage.getItem("jack-phase3-complete")!=="yes";
  localStorage.setItem("jack-phase3-complete","yes");
+ // Compatibilidade: concluir a Fase 3 significa que Mara entregou a chave.
+ grantMaraWoodKey(false);
  if(firstClear)localStorage.setItem("jack-phase3-clear-count",String(Number(localStorage.getItem("jack-phase3-clear-count")||0)+1));
  return firstClear;
 }
@@ -636,6 +644,7 @@ function finishBoss(){
    // O silêncio depois do boss é parte da resolução: nenhuma fala por alguns instantes.
    setTimeout(()=>{
      dialogue.open(story.finale.epilogue,()=>{
+       grantMaraWoodKey(true);
        dialogue.open(story.finale.jackRevelation,()=>{
          dialogue.open(story.finale.finalExchange,showPhase3Complete);
        });
@@ -659,6 +668,7 @@ function resumeFinaleAfterReload(){
  setTimeout(()=>{
    if(finalePlayed)return;
    dialogue.open(story.finale.epilogue,()=>{
+     grantMaraWoodKey(true);
      dialogue.open(story.finale.jackRevelation,()=>{
        dialogue.open(story.finale.finalExchange,showPhase3Complete);
      });
@@ -1372,7 +1382,7 @@ startGameBtn.onclick=()=>{
  fadeMusicTo(bossActive&&!bossComplete?"archivist":(motherTreeScene||bossComplete?"motherTree":"forest"),.56,700);
  ui.intro.hidden=true;running=true;last=performance.now();requestAnimationFrame(loop);
  setTimeout(()=>{
-   if(finalePlayed){if(phase3CompleteRoot)phase3CompleteRoot.hidden=false;return}
+   if(finalePlayed){grantMaraWoodKey(false);if(phase3CompleteRoot)phase3CompleteRoot.hidden=false;return}
    if(bossComplete){resumeFinaleAfterReload();return}
    if(!introLorePlayed){introLorePlayed=true;dialogue.open(opening,()=>{say("A lanterna iluminou algo que não existe mais. Pressione F para revelar memórias do caminho.");save()})}
  },420);
