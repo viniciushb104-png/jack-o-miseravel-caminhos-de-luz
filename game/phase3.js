@@ -118,6 +118,18 @@ let maraBossX=Number.isFinite(loadedSave?.maraBossX)?loadedSave.maraBossX:6700;
 let bossCooldown=0,bossPulse=0,bossReleaseT=0;
 let endingSequenceActive=false;
 const bossFacePositions=[6780,7010,7270],bossRootPositions=[6795,6915,7005];
+
+// Raízes-Selo do Arquivista — assets reais do Ato III.
+const bossRootSealSprites={
+ closed:[null,null,null],
+ lit:[null,null,null],
+ dissolve:[null,null,null],
+ fx:{burst:null,dust:null,leaves:null}
+};
+let bossRootSealLoadStarted=false;
+let bossRootSealAnim={active:false,index:-1,t:0};
+const BOSS_ROOT_SEAL_TIMING={lit:.38,dissolve:1.02,release:.42,total:1.82};
+
 let gateMessageCooldown=0;
 const p={x:Number.isFinite(loadedSave?.x)?loadedSave.x:120,y:Number.isFinite(loadedSave?.y)?loadedSave.y:470,w:46,h:86,vx:0,vy:0,dir:loadedSave?.dir===-1?-1:1,on:false,coyote:0,buffer:0,anim:0,attack:0};
 
@@ -375,6 +387,28 @@ Promise.allSettled(
  // Item permanente de Mara. Carrega sem bloquear o início da fase.
 img("../assets/game/phase3/items/mara-wood-key.png").then(im=>{maraWoodKeyImage=im}).catch(()=>{});
 img("../assets/game/phase3/items/mara-wood-key-glow.png").then(im=>{maraWoodKeyGlowImage=im}).catch(()=>{});
+
+function ensureBossRootSealAssets(){
+ if(bossRootSealLoadStarted)return;
+ bossRootSealLoadStarted=true;
+ const base="../assets/game/phase3/boss/archivist/root-seals/";
+ for(let i=0;i<3;i++){
+   const n=String(i+1).padStart(2,"0");
+   img(base+"closed/archivist-root-seal-"+n+"-closed.png")
+     .then(im=>{bossRootSealSprites.closed[i]=im}).catch(()=>{});
+   img(base+"lit/archivist-root-seal-"+n+"-lit.png")
+     .then(im=>{bossRootSealSprites.lit[i]=im}).catch(()=>{});
+   img(base+"dissolve/archivist-root-seal-dissolve-"+n+".png")
+     .then(im=>{bossRootSealSprites.dissolve[i]=im}).catch(()=>{});
+ }
+ img(base+"fx/archivist-root-seal-fx-01-light-burst.png")
+   .then(im=>{bossRootSealSprites.fx.burst=im}).catch(()=>{});
+ img(base+"fx/archivist-root-seal-fx-02-golden-dust.png")
+   .then(im=>{bossRootSealSprites.fx.dust=im}).catch(()=>{});
+ img(base+"fx/archivist-root-seal-fx-03-leaf-release.png")
+   .then(im=>{bossRootSealSprites.fx.leaves=im}).catch(()=>{});
+}
+
 window.__PHASE_ASSETS_READY=Promise.allSettled([
  jackStartupReady,dialogueAssetsReady,maraSpriteReady,maraRunReady,forestBackgroundReady,motherTreeBackgroundReady,motherTreeSpriteReady,archivistVisualsReady,phase3DialogueFrameReady,memoryLeavesReady,phase3PlatformsReady
 ]).then(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
@@ -794,10 +828,167 @@ function activateVoice(i){
  });
 }
 
+function drawBossRootSealImage(im,cx,groundY,alpha=1,glow=0){
+ if(!im||alpha<=0)return false;
+ const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+ // Os PNGs são monumentais; no gameplay viram lacres estreitos, como galhos
+ // comprimidos pela força do Arquivista entre Jack e Mara.
+ const dh=318,dw=150;
+ x.save();
+ x.globalAlpha=alpha;
+ x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";
+ if(glow>0){
+   x.shadowColor="rgba(255,201,83,"+(0.38+glow*.42)+")";
+   x.shadowBlur=14+glow*24;
+ }
+ x.drawImage(im,cx-dw/2,groundY-dh+4,dw,dh);
+ x.restore();
+ return true;
+}
+
+function drawBossRootSealFx(im,cx,cy,size,alpha,rotation=0){
+ if(!im||alpha<=0)return;
+ const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+ const dh=size,dw=iw*(dh/ih);
+ x.save();
+ x.translate(cx,cy);
+ x.rotate(rotation);
+ x.globalAlpha=alpha;
+ x.globalCompositeOperation="screen";
+ x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";
+ x.shadowColor="rgba(255,210,112,.65)";
+ x.shadowBlur=24;
+ x.drawImage(im,-dw/2,-dh/2,dw,dh);
+ x.restore();
+}
+
+function drawBossRootSealFallback(z,lit=false){
+ x.save();x.translate(z,0);
+ x.strokeStyle=lit?"#e1b75c":"#6f4d31";
+ x.lineCap="round";
+ if(lit){x.shadowColor="rgba(244,195,80,.7)";x.shadowBlur=18}
+ for(let k=-2;k<=2;k++){
+   x.lineWidth=10-Math.abs(k);
+   x.beginPath();x.moveTo(k*9,590);x.quadraticCurveTo(k*18-18,520,k*8,425);x.stroke();
+ }
+ x.fillStyle=lit?"#f2d17d":"#d5b66b";
+ x.beginPath();x.arc(0,420,6,0,Math.PI*2);x.fill();
+ x.restore();
+}
+
+function drawBossRootSeals(){
+ if(!bossActive||bossAct!==3||bossComplete)return;
+ ensureBossRootSealAssets();
+
+ for(let i=bossStep;i<bossRootPositions.length;i++){
+   const z=bossRootPositions[i];
+   const active=bossRootSealAnim.active&&bossRootSealAnim.index===i;
+
+   if(!active){
+     if(!drawBossRootSealImage(bossRootSealSprites.closed[i],z,590,.96,0)){
+       drawBossRootSealFallback(z,false);
+     }
+     continue;
+   }
+
+   const t=bossRootSealAnim.t;
+   if(t<BOSS_ROOT_SEAL_TIMING.lit){
+     const q=Math.max(0,Math.min(1,t/BOSS_ROOT_SEAL_TIMING.lit));
+     const im=bossRootSealSprites.lit[i]||bossRootSealSprites.closed[i];
+     if(!drawBossRootSealImage(im,z,590,.96,.45+.55*q))drawBossRootSealFallback(z,true);
+     drawBossRootSealFx(
+       bossRootSealSprites.fx.burst,z,428,
+       170+q*85,
+       .22+q*.62,
+       p.anim*.07
+     );
+     continue;
+   }
+
+   const dissolveElapsed=t-BOSS_ROOT_SEAL_TIMING.lit;
+   if(dissolveElapsed<BOSS_ROOT_SEAL_TIMING.dissolve){
+     const q=Math.max(0,Math.min(.999,dissolveElapsed/BOSS_ROOT_SEAL_TIMING.dissolve));
+     const frame=Math.min(2,Math.floor(q*3));
+     const im=bossRootSealSprites.dissolve[frame]||bossRootSealSprites.lit[i]||bossRootSealSprites.closed[i];
+     const fade=1-Math.max(0,(q-.76)/.24)*.46;
+     if(!drawBossRootSealImage(im,z,590,fade,.9))drawBossRootSealFallback(z,true);
+
+     drawBossRootSealFx(
+       bossRootSealSprites.fx.dust,z,430,
+       235+q*85,
+       .28+q*.48,
+       -p.anim*.055
+     );
+     if(q>.45){
+       drawBossRootSealFx(
+         bossRootSealSprites.fx.leaves,z,420,
+         210+(q-.45)*120,
+         Math.min(.82,(q-.45)*1.35),
+         p.anim*.035
+       );
+     }
+     continue;
+   }
+
+   const releaseElapsed=dissolveElapsed-BOSS_ROOT_SEAL_TIMING.dissolve;
+   const q=Math.max(0,Math.min(1,releaseElapsed/BOSS_ROOT_SEAL_TIMING.release));
+   drawBossRootSealFx(
+     bossRootSealSprites.fx.dust,z,425,
+     320+q*80,
+     (1-q)*.62,
+     -p.anim*.06
+   );
+   drawBossRootSealFx(
+     bossRootSealSprites.fx.leaves,z,405,
+     300+q*95,
+     (1-q)*.84,
+     p.anim*.045
+   );
+ }
+}
+
+function beginBossRootSealPurification(index){
+ if(bossRootSealAnim.active)return false;
+ if(index<0||index>=bossRootPositions.length)return false;
+ ensureBossRootSealAssets();
+ bossRootSealAnim={active:true,index,t:0};
+ bossPulse=1.9;memoryPulse=1.25;
+ banner("RAIZ-SELO "+(index+1)+" — A LUZ ENTROU NAS FISSURAS");
+ return true;
+}
+
+function updateBossRootSealAnimation(dt){
+ if(!bossRootSealAnim.active)return;
+ bossRootSealAnim.t+=dt;
+ if(bossRootSealAnim.t<BOSS_ROOT_SEAL_TIMING.total)return;
+
+ const resolvedIndex=bossRootSealAnim.index;
+ bossRootSealAnim={active:false,index:-1,t:0};
+
+ // Só agora a barreira deixa de existir também para a colisão.
+ if(bossAct!==3||bossStep!==resolvedIndex||bossComplete)return;
+ bossStep++;
+ bossPulse=1.35;memoryPulse=1.05;
+
+ const targets=[6815,6935,7025];
+ const target=targets[Math.min(targets.length-1,resolvedIndex)];
+ banner("RAIZ-SELO PURIFICADA — "+bossStep+"/"+bossRootPositions.length);
+ say("A corrupção se desfez em luz e folhas. Mara pode avançar.");
+
+ startMaraRun(maraBossX,target,()=>{
+   maraBossX=target;
+   banner("MARA AVANÇOU — "+bossStep+"/"+bossRootPositions.length);
+   save();
+ });
+ save();
+}
+
 function startBoss(){
  if(bossActive||bossComplete)return;
+ ensureBossRootSealAssets();
  fadeMusicTo("archivist",.64,760);
  bossActive=true;bossAct=1;bossStep=0;bossPulse=1.6;bossFirstStrike=false;bossFacesSeen=[false,false,false];maraBossX=6700;p.vx=0;
+ bossRootSealAnim={active:false,index:-1,t:0};
  banner(story.boss.name+" — "+story.boss.acts[0].title);
  say("A ordem ganhou corpo. Tente usar a Luz no Arquivista.");
  save();
@@ -854,9 +1045,11 @@ function advanceBossWithLight(){
      p.vx=0;
      dialogue.open(story.dialogues.bossAct2Solved,()=>{
        bossAct=3;bossStep=0;maraBossX=6700;
+       bossRootSealAnim={active:false,index:-1,t:0};
+       ensureBossRootSealAssets();
        dialogue.open(story.dialogues.bossAct3,()=>{
          banner(story.boss.acts[2].title);
-         say("Abra caminho para Mara: aproxime-se da raiz que bloqueia a passagem e use F.");
+         say("Abra caminho para Mara: aproxime-se da Raiz-Selo corrompida e use F.");
          save();
        });
      });
@@ -865,15 +1058,12 @@ function advanceBossWithLight(){
  }
 
  if(bossAct===3){
+   if(bossRootSealAnim.active){say("A Luz ainda está desfazendo a Raiz-Selo.");return true}
    if(maraRun.active){say("Mara está avançando. Mantenha o caminho aberto.");return true}
    if(bossStep>=bossRootPositions.length){say("O coração da ordem está exposto. Aproxime-se e pressione E.");return true}
    const rootX=bossRootPositions[bossStep];
-   if(Math.abs(rootX-pc)>150){say("A Luz precisa alcançar a raiz que bloqueia Mara.");return true}
-   bossStep++;
-   bossPulse=1.7;memoryPulse=1.1;
-   const targets=[6815,6935,7025],target=targets[Math.min(targets.length-1,bossStep-1)];
-   startMaraRun(maraBossX,target,()=>{maraBossX=target;banner("MARA AVANÇOU — "+bossStep+"/"+bossRootPositions.length);save()});
-   say("A raiz soltou uma memória. Mara pode avançar.");
+   if(Math.abs(rootX-pc)>150){say("A Luz precisa alcançar a Raiz-Selo que bloqueia Mara.");return true}
+   beginBossRootSealPurification(bossStep);
    save();return true;
  }
  return false;
@@ -1221,12 +1411,8 @@ function drawMotherTreeAndBoss(){
  }
 
  if(bossActive&&bossAct===3){
-   for(let i=bossStep;i<bossRootPositions.length;i++){
-     const z=bossRootPositions[i];x.save();x.translate(z,0);x.strokeStyle="#6f4d31";x.lineCap="round";
-     for(let k=-2;k<=2;k++){x.lineWidth=10-Math.abs(k);x.beginPath();x.moveTo(k*9,590);x.quadraticCurveTo(k*18-18,520,k*8,425);x.stroke()}
-     x.fillStyle="#d5b66b";x.beginPath();x.arc(0,420,5,0,Math.PI*2);x.fill();x.restore();
-   }
-   if(bossStep>=bossRootPositions.length){
+   drawBossRootSeals();
+   if(bossStep>=bossRootPositions.length&&!bossRootSealAnim.active){
      x.save();x.translate(treeX,0);x.shadowColor="rgba(246,216,130,.8)";x.shadowBlur=36;
      x.strokeStyle="#f0d58d";x.lineWidth=4;x.beginPath();x.arc(0,397,42+Math.sin(p.anim*3)*5,0,Math.PI*2);x.stroke();x.restore();
    }
@@ -1239,7 +1425,7 @@ function tryInteract(){
  const pc=p.x+p.w/2,m=maraWorldState();
 
  if(bossActive&&bossAct===3){
-   if(bossStep<bossRootPositions.length){say("Ainda há raízes entre Mara e o coração. Use a Luz para abrir o caminho.");return}
+   if(bossStep<bossRootPositions.length){say("Ainda há Raízes-Selo entre Mara e o coração. Use a Luz para purificar o caminho.");return}
    finishBoss();return;
  }
 
@@ -1445,6 +1631,7 @@ function updateNarrativeTriggers(){
  if(archiveSolved&&approachTreePlayed&&!motherTreeScene&&p.x>6500){
    motherTreeScene=true;p.vx=0;maraBossX=6680;
    ensureMotherTreeSuspendedMemories();
+   ensureBossRootSealAssets();
    fadeMusicTo("motherTree",.56,1100);
    banner("ÁRVORE-MÃE — O CORAÇÃO DAS RAÍZES");
    dialogue.open(story.dialogues.motherTree,()=>{
@@ -1487,6 +1674,7 @@ function useMemoryLight(){
 function update(dt){
  if((maraMet||p.x>2180)&&!portraitPuzzleAssetsLoadStarted)ensurePortraitPuzzleAssets();
  updateRootGateAnimations(dt);
+ updateBossRootSealAnimation(dt);
  updateMotherTreeFragmentState(dt);
  if((p.x>5550||motherTreeScene)&&!motherTreeSuspendedLoadStarted)ensureMotherTreeSuspendedMemories();
  bossReleaseT=Math.max(0,bossReleaseT-dt);
@@ -1548,6 +1736,7 @@ function update(dt){
  if(bossActive&&p.x+p.w>7540){p.x=7540-p.w;p.vx=Math.min(0,p.vx)}
  if(bossActive&&bossAct===3&&bossStep<bossRootPositions.length){
    const rootX=bossRootPositions[bossStep];
+   // A colisão só some quando a animação termina e bossStep avança.
    if(p.x+p.w>rootX-16){p.x=rootX-16-p.w;p.vx=Math.min(0,p.vx)}
  }
 
