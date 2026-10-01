@@ -1218,6 +1218,52 @@ button:focus-visible{outline:3px solid #fff3b0;outline-offset:4px}
   background:linear-gradient(180deg,rgba(24,35,68,.32),rgba(27,15,8,.24),rgba(7,9,14,.95));
 }
 
+/* Arte final desbloqueável — Halloween III */
+.memory-trophy--phase3 .memory-trophy-art{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:
+    radial-gradient(circle at 50% 46%,rgba(224,164,65,.18),transparent 42%),
+    radial-gradient(circle at 50% 80%,rgba(104,67,30,.20),transparent 44%),
+    linear-gradient(180deg,#101018 0%,#090b12 58%,#05070b 100%);
+}
+.memory-trophy--phase3 .memory-trophy-art img{
+  width:100%;
+  height:100%;
+  padding:8px 16px 5px;
+  object-fit:contain;
+  object-position:center center;
+  transform:scale(.96);
+  filter:saturate(1.02) contrast(1.03) brightness(.96) drop-shadow(0 10px 18px rgba(0,0,0,.38));
+}
+.memory-trophy--phase3.is-unlocked .memory-trophy-art{
+  box-shadow:
+    inset 0 0 34px rgba(235,173,69,.14),
+    inset 0 -16px 38px rgba(87,49,18,.16);
+}
+.memory-trophy--phase3.is-unlocked:hover .memory-trophy-art img{
+  transform:scale(.985);
+}
+.memory-trophy--phase3.is-unlocked .memory-trophy-art::before,
+.memory-trophy--phase3.is-unlocked .memory-trophy-art::after{
+  color:#ffd576;
+  text-shadow:0 0 13px rgba(255,173,55,.72);
+}
+.memory-trophy--phase3.is-unlocked .memory-trophy-copy{
+  background:
+    linear-gradient(180deg,rgba(64,39,15,.24),rgba(18,24,17,.20),rgba(7,9,14,.96));
+}
+@media (max-width:760px){
+  .memory-trophy--phase3 .memory-trophy-art img{
+    padding:6px 10px 4px;
+    transform:scale(.97);
+  }
+  .memory-trophy--phase3.is-unlocked:hover .memory-trophy-art img{
+    transform:scale(.985);
+  }
+}
+
 .memories-music-toggle{
   margin-top:.75rem;
   display:inline-flex;
