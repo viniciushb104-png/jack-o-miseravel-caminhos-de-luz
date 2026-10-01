@@ -153,6 +153,7 @@ const checkpoints=[
 ];
 
 const memoryLeafImages=[];
+let maraWoodKeyImage=null,maraWoodKeyGlowImage=null;
 const leaves=Array.from({length:46},(_,i)=>({
  sx:Math.random()*W,sy:Math.random()*H,
  speed:18+Math.random()*46,drift:(Math.random()-.5)*26,
@@ -304,6 +305,9 @@ const phase3DialogueFrameReady=img("../assets/game/phase3/ui/phase3-dialogue-fra
 const memoryLeavesReady=Promise.all(
  Array.from({length:6},(_,i)=>img("../assets/game/phase3/fx/memory-leaves/memory-leaf-"+String(i+1).padStart(2,"0")+".png"))
 ).then(images=>{memoryLeafImages.splice(0,memoryLeafImages.length,...images);return images}).catch(()=>[]);
+ // Item permanente de Mara. Carrega sem bloquear o início da fase.
+img("../assets/game/phase3/items/mara-wood-key.png").then(im=>{maraWoodKeyImage=im}).catch(()=>{});
+img("../assets/game/phase3/items/mara-wood-key-glow.png").then(im=>{maraWoodKeyGlowImage=im}).catch(()=>{});
 window.__PHASE_ASSETS_READY=Promise.allSettled([
  jackStartupReady,dialogueAssetsReady,maraSpriteReady,maraRunReady,forestBackgroundReady,motherTreeBackgroundReady,motherTreeSpriteReady,archivistVisualsReady,phase3DialogueFrameReady,memoryLeavesReady
 ]).then(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
@@ -454,7 +458,21 @@ function drawArchivePuzzleWorld(){
    x.fillStyle=active?"#d7c37d":"#786c4f";
    if(i===0){x.fillRect(-27,442,54,36);x.strokeRect(-27,442,54,36)}
    if(i===1){x.beginPath();x.arc(0,455,25,0,Math.PI*2);x.fill();x.strokeRect(-7,420,14,25)}
-   if(i===2){x.beginPath();x.arc(-8,451,13,0,Math.PI*2);x.stroke();x.fillRect(4,447,34,8);x.fillRect(28,447,7,18)}
+   if(i===2){
+     const keyIm=(memoryLight>0&&maraWoodKeyGlowImage)||maraWoodKeyImage;
+     if(keyIm){
+       const iw=keyIm.naturalWidth||keyIm.width,ih=keyIm.naturalHeight||keyIm.height;
+       const dh=112,dw=iw*(dh/ih);
+       x.save();
+       x.globalAlpha=archiveSeen[2]?1:.9;
+       x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";
+       if(memoryLight>0){x.shadowColor="rgba(241,205,102,.85)";x.shadowBlur=28}
+       x.drawImage(keyIm,-dw/2,392,dw,dh);
+       x.restore();
+     }else{
+       x.beginPath();x.arc(-8,451,13,0,Math.PI*2);x.stroke();x.fillRect(4,447,34,8);x.fillRect(28,447,7,18);
+     }
+   }
    x.shadowBlur=0;x.fillStyle="#efe0ad";x.font="700 11px Georgia";x.textAlign="center";x.fillText(["CARTA","MELODIA","CHAVE"][i],0,515);
    x.restore();
  });
