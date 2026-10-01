@@ -812,14 +812,52 @@ function drawMotherTreeAndBoss(){
  drawMotherTreeSuspendedMemories(treeX,groundY,"front");
 
  if(bossPrelude&&!bossActive&&!bossComplete){
-   // Durante o diálogo de nascimento, nomes, cartas e retratos convergem para o centro.
+   // Durante o nascimento do Arquivista, as Memórias Suspensas reais convergem
+   // para o centro. Isso substitui os antigos quadrados-placeholder.
+   ensureMotherTreeSuspendedMemories();
+   const t=p.anim;
+   const relicIds=[0,1,2,3,4,5,6,7,0,4];
+
    x.save();x.translate(treeX,360);
-   for(let i=0;i<10;i++){
-     const a=p.anim*(.35+(i%3)*.08)+i*(Math.PI*2/10),r=95+(i%4)*24;
-     const px=Math.cos(a)*r,py=Math.sin(a)*r*.62;
-     x.save();x.translate(px,py);x.rotate(-a*.45);
-     x.fillStyle=i%2?"rgba(210,185,119,.72)":"rgba(90,67,43,.82)";
-     x.strokeStyle="#b69658";x.lineWidth=2;x.fillRect(-24,-13,48,26);x.strokeRect(-24,-13,48,26);x.restore();
+   relicIds.forEach((imageId,i)=>{
+     const im=motherTreeSuspendedMemories[imageId];
+     if(!im)return;
+
+     const a=t*(.34+(i%3)*.075)+i*(Math.PI*2/relicIds.length);
+     const r=96+(i%4)*25;
+     const px=Math.cos(a)*r;
+     const py=Math.sin(a)*r*.62;
+     const depth=(Math.sin(a)+1)/2;
+
+     const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+     const dh=(imageId===7?72:56)*(0.88+depth*.18);
+     const dw=iw*(dh/ih);
+
+     x.save();
+     x.translate(px,py);
+     x.rotate(-a*.22+Math.sin(t*.7+i)*.055);
+     x.globalAlpha=(imageId===7?.46:.68)*(0.78+depth*.22);
+     x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";
+     x.shadowColor=imageId===7?"rgba(255,192,72,.72)":"rgba(232,182,79,.42)";
+     x.shadowBlur=imageId===7?22:12;
+     x.drawImage(im,-dw/2,-dh/2,dw,dh);
+     x.restore();
+   });
+
+   // A espiral dourada dá a sensação de que as lembranças estão sendo puxadas
+   // pela ordem antiga de Mara, sem encobrir a Árvore-Mãe.
+   const swirl=motherTreeSuspendedMemories[8];
+   if(swirl){
+     const iw=swirl.naturalWidth||swirl.width,ih=swirl.naturalHeight||swirl.height;
+     const dh=250,dw=iw*(dh/ih);
+     x.save();
+     x.rotate(-t*.12);
+     x.globalAlpha=.12+.035*Math.sin(t*2.2);
+     x.globalCompositeOperation="screen";
+     x.shadowColor="rgba(246,196,91,.34)";
+     x.shadowBlur=20;
+     x.drawImage(swirl,-dw/2,-dh/2,dw,dh);
+     x.restore();
    }
    x.restore();
  }
