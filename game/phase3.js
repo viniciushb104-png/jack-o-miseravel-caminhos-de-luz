@@ -90,7 +90,7 @@ let maraSettledX=Number.isFinite(loadedSave?.maraSettledX)
  : (loadedSave?.motherTreeScene||loadedSave?.approachTreePlayed?6680
    : loadedSave?.archiveSolved?6380
    : loadedSave?.voicesSolved?5575
-   : loadedSave?.portraitsSolved?4020
+   : loadedSave?.portraitsSolved?4140
    : loadedSave?.maraMet?2700
    : 2275);
 let maraMet=!!loadedSave?.maraMet;
@@ -99,6 +99,8 @@ let portraitChoices=Array.isArray(loadedSave?.portraitChoices)&&loadedSave.portr
 let portraitRevealed=Array.isArray(loadedSave?.portraitRevealed)&&loadedSave.portraitRevealed.length===3?loadedSave.portraitRevealed.slice(0,3).map(Boolean):(portraitsSolved?[true,true,true]:[false,false,false]);
 const portraitPulse=[0,0,0],portraitWrong=[0,0,0];
 let voicesSolved=!!loadedSave?.voicesSolved;
+// Migração dos saves anteriores ao novo pouso do Lago.
+if(portraitsSolved&&!voicesSolved&&maraSettledX>=3980&&maraSettledX<4100)maraSettledX=4140;
 let voiceStep=Math.max(0,Math.min(3,Number(loadedSave?.voiceStep)||0));
 let jackEchoPlayed=!!loadedSave?.jackEchoPlayed;
 let firstWhisperPlayed=!!loadedSave?.firstWhisperPlayed;
@@ -168,7 +170,10 @@ const memoryPlats=[
  {x:2390,y:525,w:145,h:24},
  {x:2550,y:480,w:145,h:24},
  {x:3680,y:505,w:180,h:24},
- {x:3880,y:460,w:170,h:24}
+ {x:3880,y:460,w:170,h:24},
+ // Apoio final antes do Lago: resolve o antigo pouso "no ar" da Mara
+ // e também dá ao Jack uma última lembrança para iluminar antes do chão firme.
+ {x:4030,y:525,w:115,h:24}
 ];
 const checkpoints=[
  {id:"threshold",x:2100,groundY:590,respawnX:2040,respawnY:504,name:"Árvore da Primeira Lembrança"},
@@ -479,7 +484,10 @@ const maraMemoryJumpSegments=[
  // Segundo abismo, antes do Lago das Vozes.
  {x1:3650,y1:590,x2:3770,y2:505,h:52},
  {x1:3770,y1:505,x2:3965,y2:460,h:48},
- {x1:3965,y1:460,x2:4110,y2:590,h:68}
+ // Novo pouso intermediário: a terceira plataforma fica claramente sob os pés.
+ {x1:3965,y1:460,x2:4085,y2:525,h:43},
+ // Último salto curto: da plataforma final para o chão firme do Lago.
+ {x1:4085,y1:525,x2:4140,y2:590,h:24}
 ];
 
 function maraAdvanceMotion(worldX){
@@ -894,7 +902,7 @@ function finishPortraitPuzzle(){
    memoryPulse=1.15;
    dialogue.open(story.dialogues.portraitMemoryProof,()=>{
      say("Mara ergueu a própria lanterna e seguiu em direção ao Lago das Vozes.");
-     startMaraRun(2275,4020,()=>{banner("MARA CHEGOU AO LAGO DAS VOZES");save()});
+     startMaraRun(2275,4140,()=>{banner("MARA POUSOU NO LAGO DAS VOZES");save()});
      save();
    });
  });
@@ -918,7 +926,7 @@ function activateVoice(i){
      maraJackSuspicionPlayed=true;
      dialogue.open(story.dialogues.maraStudiesJack,()=>{
        say("Mara correu para o Arquivo das Raízes.");
-       startMaraRun(4020,5575,()=>{banner("MARA CHEGOU AO ARQUIVO DAS RAÍZES");save()});
+       startMaraRun(4140,5575,()=>{banner("MARA CHEGOU AO ARQUIVO DAS RAÍZES");save()});
        save();
      });
    }),360);
