@@ -1337,6 +1337,7 @@ function drawWorld(){
  drawCycleFailures();
  drawRootGate(3740,portraitsSolved);
  drawRootGate(5200,voicesSolved);
+ drawRootGate(6000,archiveSolved);
  drawMotherTreeAndBoss();
  drawMaraWorld();
  x.restore();
