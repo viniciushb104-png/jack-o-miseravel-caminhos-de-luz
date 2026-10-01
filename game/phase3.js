@@ -7,11 +7,16 @@ const journey=window.JackJourney||null,urlParams=new URLSearchParams(location.se
 const SAVE_KEY="jack-phase3-save",CHECKPOINT_KEY="jack-phase3-checkpoint",MARA_WOOD_KEY="jack-item-mara-wood-key";
 const phase3Music={
  forest:new Audio("../assets/phase3/audio/music/phase3-memory-forest-theme.mp3"),
+ voices:new Audio("../assets/phase3/audio/music/phase3-aquilo-que-a-agua-guarda.mp3"),
  motherTree:new Audio("../assets/phase3/audio/music/phase3-mother-tree-theme.mp3"),
  archivist:new Audio("../assets/phase3/audio/music/phase3-archivist-theme.mp3")
 };
-Object.values(phase3Music).forEach(a=>{a.loop=true;a.preload="auto";a.volume=0});
-let activeMusic=null,musicFadeTimer=0;
+Object.entries(phase3Music).forEach(([name,a])=>{
+ a.loop=true;
+ a.preload=name==="voices"?"metadata":"auto";
+ a.volume=0;
+});
+let activeMusic=null,musicFadeTimer=0,voicesMusicPrimed=false;
 function fadeMusicTo(name,target=.58,duration=900){
  const next=phase3Music[name];if(!next||activeMusic===next)return;
  const prev=activeMusic;activeMusic=next;
@@ -31,6 +36,25 @@ function stopPhase3Music(){
  cancelAnimationFrame(musicFadeTimer);
  Object.values(phase3Music).forEach(a=>{a.pause();a.volume=0});
  activeMusic=null;
+}
+function primeVoicesMusic(){
+ if(voicesMusicPrimed)return;
+ voicesMusicPrimed=true;
+ const a=phase3Music.voices;
+ if(!a)return;
+ try{a.preload="auto";a.load()}catch(_){}
+}
+function syncPhase3Music(){
+ // O Lago das Vozes tem sua própria liturgia sonora. Ela permanece até Jack
+ // deixar a região, para que o acorde final sobreviva à solução do enigma.
+ if(bossActive&&!bossComplete){fadeMusicTo("archivist",.64,760);return}
+ if(motherTreeScene||bossComplete){fadeMusicTo("motherTree",.56,1100);return}
+ if(p.x>=4050&&p.x<5480&&!archiveSolved){
+   primeVoicesMusic();
+   fadeMusicTo("voices",.50,1450);
+   return;
+ }
+ fadeMusicTo("forest",.56,1150);
 }
 if(replayMode)journey?.beginReplay(3,[SAVE_KEY,CHECKPOINT_KEY]);
 if(forceNewRun){localStorage.removeItem(SAVE_KEY);localStorage.removeItem(CHECKPOINT_KEY)}
@@ -1922,6 +1946,8 @@ function useMemoryLight(){
 }
 
 function update(dt){
+ if((portraitsSolved||p.x>3400)&&!voicesMusicPrimed)primeVoicesMusic();
+ syncPhase3Music();
  if((maraMet||p.x>2180)&&!portraitPuzzleAssetsLoadStarted)ensurePortraitPuzzleAssets();
  if((portraitsSolved||p.x>3850)&&!voicePuzzleAssetsLoadStarted)ensureVoicePuzzleAssets();
  updateRootGateAnimations(dt);
@@ -2237,7 +2263,7 @@ if(loadedSave&&journeyMode&&!replayMode){
 }
 startGameBtn.onclick=()=>{
  if(journeyMode&&!replayMode)journey?.advanceTo(3);
- fadeMusicTo(bossActive&&!bossComplete?"archivist":(motherTreeScene||bossComplete?"motherTree":"forest"),.56,700);
+ syncPhase3Music();
  ui.intro.hidden=true;running=true;last=performance.now();requestAnimationFrame(loop);
  setTimeout(()=>{
    if(finalePlayed){grantMaraWoodKey(false);if(phase3CompleteRoot)phase3CompleteRoot.hidden=false;return}
