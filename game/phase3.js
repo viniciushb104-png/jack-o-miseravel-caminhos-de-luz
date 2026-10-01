@@ -167,6 +167,13 @@ const checkpoints=[
 const memoryLeafImages=[];
 const phase3PlatformImages=[null,null,null,null];
 const rootGateSprites=[null,null,null,null];
+const portraitPuzzleImages={
+ livia:{dormant:null,awakened:null,remembered:null},
+ tomas:{dormant:null,awakened:null,remembered:null},
+ celina:{dormant:null,awakened:null,remembered:null}
+};
+const portraitPuzzleBases={motherTree:null,archivist:null};
+let portraitPuzzleAssetsLoadStarted=false;
 const rootGateProgress={
  portraits:portraitsSolved?1:0,
  voices:voicesSolved?1:0,
@@ -331,6 +338,27 @@ const phase3PlatformsReady=Promise.all(
  return images;
 }).catch(()=>[]);
 
+function ensurePortraitPuzzleAssets(){
+ if(portraitPuzzleAssetsLoadStarted)return;
+ portraitPuzzleAssetsLoadStarted=true;
+ const jobs=[
+   ["livia","dormant","../assets/game/phase3/portrait-puzzle/livia/phase3-portrait-livia-01-dormant.png"],
+   ["livia","awakened","../assets/game/phase3/portrait-puzzle/livia/phase3-portrait-livia-02-awakened.png"],
+   ["livia","remembered","../assets/game/phase3/portrait-puzzle/livia/phase3-portrait-livia-03-remembered.png"],
+   ["tomas","dormant","../assets/game/phase3/portrait-puzzle/tomas/phase3-portrait-tomas-01-dormant.png"],
+   ["tomas","awakened","../assets/game/phase3/portrait-puzzle/tomas/phase3-portrait-tomas-02-awakened.png"],
+   ["tomas","remembered","../assets/game/phase3/portrait-puzzle/tomas/phase3-portrait-tomas-03-remembered.png"],
+   ["celina","dormant","../assets/game/phase3/portrait-puzzle/celina/phase3-portrait-celina-01-dormant.png"],
+   ["celina","awakened","../assets/game/phase3/portrait-puzzle/celina/phase3-portrait-celina-02-awakened.png"],
+   ["celina","remembered","../assets/game/phase3/portrait-puzzle/celina/phase3-portrait-celina-03-remembered.png"]
+ ];
+ jobs.forEach(([who,state,src])=>img(src).then(im=>{portraitPuzzleImages[who][state]=im}).catch(()=>{}));
+ img("../assets/game/phase3/portrait-puzzle/bases/phase3-portrait-base-mother-tree.png")
+   .then(im=>{portraitPuzzleBases.motherTree=im}).catch(()=>{});
+ img("../assets/game/phase3/portrait-puzzle/bases/phase3-portrait-base-archivist.png")
+   .then(im=>{portraitPuzzleBases.archivist=im}).catch(()=>{});
+}
+
 // Portões vivos do Bosque. Carregam em segundo plano para não pesar ainda mais
 // o preloader inicial; existe fallback procedural se algum PNG ainda não chegou.
 Promise.allSettled(
@@ -478,69 +506,135 @@ function drawPortraitMemoryGlyph(i,revealed,ok){
  x.restore();
 }
 
+function portraitKeyForIndex(i){
+ return ["livia","tomas","celina"][i]||"livia";
+}
+function portraitVisualState(i,q,names){
+ const selected=names[portraitChoices[i]];
+ if(portraitRevealed[i]&&selected===q.correct)return "remembered";
+ if(portraitRevealed[i])return "awakened";
+ return "dormant";
+}
+function drawPortraitSuspended(i,q,state){
+ const key=portraitKeyForIndex(i);
+ const art=portraitPuzzleImages[key]?.[state]||null;
+ const base=state==="remembered"?portraitPuzzleBases.motherTree:portraitPuzzleBases.archivist;
+ if(!art||!base)return false;
+
+ const biw=base.naturalWidth||base.width,bih=base.naturalHeight||base.height;
+ const aiw=art.naturalWidth||art.width,aih=art.naturalHeight||art.height;
+
+ // Calibração para os três altares caberem lado a lado entre x=2700 e x=3680.
+ const baseH=352,baseW=biw*(baseH/bih);
+ const baseY=590-baseH;
+ const artH=214,artW=aiw*(artH/aih);
+ const hangY=292+Math.sin(p.anim*1.1+i*.8)*1.7;
+ const artX=-artW/2;
+
+ x.save();
+ x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";
+
+ // Base/altar atrás do retrato.
+ x.drawImage(base,-baseW/2,baseY,baseW,baseH);
+
+ // Duas pequenas correntes orgânicas fazem o quadro parecer realmente pendurado.
+ const hookY=baseY+62,hookSpread=Math.min(42,artW*.25);
+ x.strokeStyle=state==="remembered"?"rgba(224,190,102,.82)":"rgba(132,103,70,.82)";
+ x.lineWidth=2.2;
+ for(const side of [-1,1]){
+   const hx=side*hookSpread;
+   x.beginPath();x.moveTo(hx,hookY);
+   for(let s=0;s<4;s++){
+     const yy=hookY+s*10,xx=hx+Math.sin(p.anim*1.2+s+i)*1.2;
+     x.lineTo(xx,yy+9);
+   }
+   x.stroke();
+ }
+
+ // Retrato por cima da base.
+ if(state==="awakened"){
+   x.shadowColor="rgba(238,204,106,.52)";x.shadowBlur=14;
+ }else if(state==="remembered"){
+   x.shadowColor="rgba(244,219,129,.78)";x.shadowBlur=22;
+ }
+ x.drawImage(art,artX,hangY,artW,artH);
+ x.shadowBlur=0;
+
+ // O texto entra na placa que já existe dentro da própria arte.
+ const selected=story.portraitPuzzle.names[portraitChoices[i]];
+ const label=state==="dormant"?"NOME ESQUECIDO":selected;
+ const labelY=hangY+artH*.842;
+ x.fillStyle=state==="remembered"?"#fff0b3":(state==="awakened"?"#f2dda8":"#9b8c70");
+ x.font="700 9px Georgia";x.textAlign="center";x.textBaseline="middle";
+ x.shadowColor="rgba(0,0,0,.85)";x.shadowBlur=3;
+ x.fillText(label,0,labelY);
+ x.shadowBlur=0;
+
+ x.restore();
+ return true;
+}
+
 function drawPortraitPuzzleWorld(){
  if(!maraMet)return;
+ ensurePortraitPuzzleAssets();
  const names=story.portraitPuzzle.names;
+
  story.portraitPuzzle.entries.forEach((q,i)=>{
    const selected=names[portraitChoices[i]],ok=selected===q.correct,revealed=portraitRevealed[i],lit=memoryLight>0;
+   const state=portraitVisualState(i,q,names);
    const shake=portraitWrong[i]>0?Math.sin(p.anim*42+i)*5*portraitWrong[i]:0;
    const pulse=Math.min(1,portraitPulse[i]);
    const sway=Math.sin(p.anim*1.25+i*.8)*1.5;
 
    x.save();x.translate(q.x+shake,sway);
 
-   // O retrato desperto permanece levemente vivo mesmo depois da lanterna apagar.
+   // Aura: a memória adormecida quase não respira; awakened e remembered permanecem vivas.
    if(lit||revealed||ok){
-     const radius=105+pulse*22+Math.sin(p.anim*2+i)*5;
-     const glow=x.createRadialGradient(0,410,8,0,410,radius);
-     const glowAlpha=ok?.48:(revealed?.28:.18);
-     glow.addColorStop(0,"rgba(240,215,126,"+(glowAlpha+pulse*.18)+")");
+     const radius=132+pulse*24+Math.sin(p.anim*2+i)*5;
+     const glow=x.createRadialGradient(0,402,8,0,402,radius);
+     const glowAlpha=ok?.45:(revealed?.27:.15);
+     glow.addColorStop(0,"rgba(240,215,126,"+(glowAlpha+pulse*.17)+")");
      glow.addColorStop(1,"rgba(104,148,89,0)");
-     x.fillStyle=glow;x.beginPath();x.arc(0,410,radius,0,Math.PI*2);x.fill();
+     x.fillStyle=glow;x.beginPath();x.arc(0,402,radius,0,Math.PI*2);x.fill();
    }
 
-   // Raízes-moldura.
-   x.strokeStyle=ok?"#d6ca77":(revealed?"#a8874a":"#705838");x.lineWidth=7;
-   x.beginPath();x.moveTo(-58,535);x.quadraticCurveTo(-82,445,-48,360);x.quadraticCurveTo(0,325,48,360);x.quadraticCurveTo(82,445,58,535);x.stroke();
+   const artReady=drawPortraitSuspended(i,q,state);
 
-   // Interior: quase morto antes de F, memória ativa depois.
-   x.fillStyle=revealed?"rgba(18,29,20,.94)":"rgba(8,13,10,.96)";x.fillRect(-48,365,96,122);
-   x.strokeStyle=ok?"#efd47e":(lit||revealed?"#c9aa61":"#5d5038");x.lineWidth=4;x.strokeRect(-48,365,96,122);
+   // Fallback procedural: se algum PNG ainda estiver carregando, o puzzle continua legível e jogável.
+   if(!artReady){
+     x.strokeStyle=ok?"#d6ca77":(revealed?"#a8874a":"#705838");x.lineWidth=7;
+     x.beginPath();x.moveTo(-58,535);x.quadraticCurveTo(-82,445,-48,360);x.quadraticCurveTo(0,325,48,360);x.quadraticCurveTo(82,445,58,535);x.stroke();
+     x.fillStyle=revealed?"rgba(18,29,20,.94)":"rgba(8,13,10,.96)";x.fillRect(-48,365,96,122);
+     x.strokeStyle=ok?"#efd47e":(lit||revealed?"#c9aa61":"#5d5038");x.lineWidth=4;x.strokeRect(-48,365,96,122);
+     x.save();x.translate(0,422);drawPortraitMemoryGlyph(i,revealed,ok);x.restore();
+     x.fillStyle=ok?"#29452a":(revealed?"#2d2719":"#1b1712");x.fillRect(-78,500,156,34);
+     x.strokeStyle=ok?"#bfd17b":(revealed?"#a7864f":"#655339");x.lineWidth=2;x.strokeRect(-78,500,156,34);
+     x.fillStyle=revealed?"#f5dfaa":"#8d8064";x.font="700 12px Georgia";x.textAlign="center";x.textBaseline="middle";
+     x.fillText(revealed?selected:"NOME ESQUECIDO",0,517);
+   }
 
-   x.save();x.translate(0,422);
-   drawPortraitMemoryGlyph(i,revealed,ok);
-   x.restore();
-
-   // Pequenas partículas de memória giram em torno de um retrato revelado.
+   // Partículas independentes da arte reforçam que a memória está sendo reanimada pela lanterna.
    if(revealed){
-     for(let k=0;k<6;k++){
-       const a=p.anim*.75+k*Math.PI/3+i*.7,r=49+(k%2)*9;
-       x.globalAlpha=.32+.18*Math.sin(p.anim*2+k);
+     const particleY=405;
+     for(let k=0;k<7;k++){
+       const a=p.anim*.72+k*Math.PI/3.5+i*.7,r=72+(k%2)*14;
+       x.globalAlpha=.25+.18*Math.sin(p.anim*2+k);
        x.fillStyle=ok?"#f3dc87":"#cab570";
-       x.beginPath();x.arc(Math.cos(a)*r,420+Math.sin(a)*r*.72,1.8+(k%2),0,Math.PI*2);x.fill();
+       x.beginPath();x.arc(Math.cos(a)*r,particleY+Math.sin(a)*r*.62,1.6+(k%2),0,Math.PI*2);x.fill();
      }
      x.globalAlpha=1;
-   }else{
-     // Um véu de raízes finas comunica que o quadro ainda está “adormecido”.
-     x.strokeStyle="rgba(95,72,46,.72)";x.lineWidth=3;
-     for(let k=-2;k<=2;k++){
-       x.beginPath();x.moveTo(k*17-7,370);x.quadraticCurveTo(k*11+15,420,k*15-5,482);x.stroke();
-     }
    }
 
-   // Placa.
-   x.fillStyle=ok?"#29452a":(revealed?"#2d2719":"#1b1712");x.fillRect(-78,500,156,34);
-   x.strokeStyle=ok?"#bfd17b":(revealed?"#a7864f":"#655339");x.lineWidth=2;x.strokeRect(-78,500,156,34);
-   x.fillStyle=revealed?"#f5dfaa":"#8d8064";x.font="700 12px Georgia";x.textAlign="center";x.textBaseline="middle";
-   x.fillText(revealed?selected:"NOME ESQUECIDO",0,517);
-
+   // Instrução fica junto ao pedestal, sem cobrir a placa artística do retrato.
+   x.textAlign="center";x.textBaseline="middle";
    if(ok){
-     x.fillStyle="#efd67d";x.font="700 10px Georgia";x.fillText("LEMBRADO",0,548);
+     x.fillStyle="#efd67d";x.font="700 10px Georgia";x.fillText("LEMBRADO",0,566);
    }else if(revealed){
-     x.fillStyle="#a99a72";x.font="italic 9px Georgia";x.fillText("E · trocar nome",0,548);
+     x.fillStyle="#c2af80";x.font="italic 9px Georgia";x.fillText("E · trocar nome",0,566);
    }else{
-     x.fillStyle="#8e9c7c";x.font="italic 9px Georgia";x.fillText("F · despertar memória",0,548);
+     x.fillStyle="#96a889";x.font="italic 9px Georgia";x.fillText("F · despertar memória",0,566);
    }
+
    x.restore();
  });
 }
@@ -1385,6 +1479,7 @@ function useMemoryLight(){
 }
 
 function update(dt){
+ if((maraMet||p.x>2180)&&!portraitPuzzleAssetsLoadStarted)ensurePortraitPuzzleAssets();
  updateRootGateAnimations(dt);
  updateMotherTreeFragmentState(dt);
  if((p.x>5550||motherTreeScene)&&!motherTreeSuspendedLoadStarted)ensureMotherTreeSuspendedMemories();
