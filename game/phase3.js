@@ -1251,6 +1251,8 @@ function updateBossRootSealAnimation(dt){
 
 function startBoss(){
  if(bossActive||bossComplete)return;
+ ensurePortraitPuzzleAssets();
+ ensureVoicePuzzleAssets();
  ensureBossRootSealAssets();
  fadeMusicTo("archivist",.64,760);
  bossActive=true;bossAct=1;bossStep=0;bossPulse=1.6;bossFirstStrike=false;bossFacesSeen=[false,false,false];maraBossX=6700;p.vx=0;
@@ -1520,6 +1522,190 @@ function drawMotherTreeSuspendedMemories(treeX,groundY,layer="back"){
  });
 }
 
+function drawBossCapturedPortrait(i,worldX,released){
+ ensurePortraitPuzzleAssets();
+ const key=["livia","tomas","celina"][i]||"livia";
+ const art=portraitPuzzleImages[key]?.remembered||portraitPuzzleImages[key]?.awakened||portraitPuzzleImages[key]?.dormant;
+ const base=portraitPuzzleBases.archivist;
+ const names=["LÍVIA VALE","TOMÁS BRIAR","CELINA MOUR"];
+ const t=p.anim;
+
+ x.save();
+ x.translate(worldX,0);
+
+ // A ordem do Arquivista tenta transformar uma lembrança humana em peça de arquivo.
+ const aura=x.createRadialGradient(0,430,8,0,430,released?108:94);
+ aura.addColorStop(0,released?"rgba(242,214,126,.34)":"rgba(116,70,105,.26)");
+ aura.addColorStop(1,"rgba(35,24,31,0)");
+ x.fillStyle=aura;x.beginPath();x.arc(0,430,released?108:94,0,Math.PI*2);x.fill();
+
+ // Reutiliza a base do Arquivista do Bosque, agora reduzida e dominada por raízes.
+ if(base){
+   const iw=base.naturalWidth||base.width,ih=base.naturalHeight||base.height;
+   const dh=250,dw=iw*(dh/ih);
+   x.save();
+   x.globalAlpha=released?.72:.93;
+   x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";
+   x.filter=released?"brightness(1.02) saturate(.95)":"brightness(.68) saturate(.72) hue-rotate(300deg)";
+   x.drawImage(base,-dw/2,590-dh+6,dw,dh);
+   x.restore();
+ }
+
+ if(art){
+   const iw=art.naturalWidth||art.width,ih=art.naturalHeight||art.height;
+   const dh=152,dw=iw*(dh/ih);
+   const bob=Math.sin(t*1.15+i*.9)*1.8;
+   const dy=348+bob;
+
+   x.save();
+   x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";
+   if(released){
+     x.shadowColor="rgba(246,218,131,.82)";
+     x.shadowBlur=24+Math.sin(t*2.2+i)*4;
+     x.filter="brightness(1.08) saturate(1.05)";
+   }else{
+     x.shadowColor="rgba(86,44,76,.72)";
+     x.shadowBlur=18;
+     x.filter="grayscale(.45) sepia(.18) hue-rotate(285deg) brightness(.58) saturate(.72)";
+   }
+   x.drawImage(art,-dw/2,dy,dw,dh);
+   x.restore();
+
+   if(!released){
+     // Raízes atravessam o retrato sem apagá-lo: o rosto continua reconhecível,
+     // mas claramente foi convertido em propriedade do Arquivista.
+     x.save();
+     x.strokeStyle="rgba(74,48,39,.94)";
+     x.lineCap="round";
+     for(let r=0;r<5;r++){
+       const y=dy+18+r*26;
+       x.lineWidth=4.8-(r%2)*1.1;
+       x.beginPath();
+       x.moveTo(-dw*.43,y+Math.sin(t+r)*4);
+       x.quadraticCurveTo(-dw*.12,y-13+(r%2)*23,dw*.08,y+3);
+       x.quadraticCurveTo(dw*.27,y+14,dw*.43,y-5);
+       x.stroke();
+     }
+     x.restore();
+   }else{
+     // Depois do reconhecimento, as raízes se desfazem em pequenas fagulhas.
+     x.save();
+     for(let k=0;k<9;k++){
+       const a=t*.55+k*.73+i*.8,r=50+(k%3)*13;
+       x.globalAlpha=.26+.22*Math.sin(t*1.8+k)*.5+.11;
+       x.fillStyle="#f0d889";
+       x.beginPath();x.arc(Math.cos(a)*r,425+Math.sin(a*1.23)*r*.5,1.4+(k%2),0,Math.PI*2);x.fill();
+     }
+     x.restore();
+   }
+ }else{
+   // Fallback enquanto os PNGs chegam.
+   x.fillStyle=released?"rgba(226,202,128,.34)":"rgba(31,22,28,.88)";
+   x.fillRect(-42,376,84,108);
+   x.strokeStyle=released?"#e3ca82":"#725446";x.lineWidth=4;x.strokeRect(-42,376,84,108);
+ }
+
+ x.textAlign="center";x.textBaseline="middle";
+ x.fillStyle=released?"#f4dfa2":"#c8b18a";
+ x.font="700 10px Georgia";
+ x.fillText(names[i],0,546);
+ x.fillStyle=released?"#efd67d":"#9c8876";
+ x.font="italic 9px Georgia";
+ x.fillText(released?"ROSTO RECONHECIDO":"MEMÓRIA APRISIONADA",0,562);
+ x.restore();
+}
+
+function drawBossCapturedEcho(i,worldX,recognized){
+ ensureVoicePuzzleAssets();
+ const state=recognized?"aligned":"awakened";
+ const echo=voicePuzzleEchoes[i]?.[state]||voicePuzzleEchoes[i]?.awakened||voicePuzzleEchoes[i]?.dormant;
+ const base=voicePuzzleBases[i];
+ const treeX=7040,t=p.anim;
+
+ x.save();
+ x.translate(worldX,0);
+
+ // Antes de ser reconhecido, o Eco continua preso à ordem por fios escuros.
+ if(!recognized){
+   x.save();
+   x.strokeStyle="rgba(86,53,78,.62)";
+   x.lineWidth=2.6;
+   x.shadowColor="rgba(95,46,86,.35)";x.shadowBlur=10;
+   for(const off of [-18,18]){
+     x.beginPath();
+     x.moveTo(off,392);
+     x.quadraticCurveTo((treeX-worldX)*.46,330+off*.45,treeX-worldX,360);
+     x.stroke();
+   }
+   x.restore();
+ }
+
+ const aura=x.createRadialGradient(0,410,8,0,410,recognized?102:86);
+ aura.addColorStop(0,recognized?"rgba(242,218,140,.34)":"rgba(119,104,164,.23)");
+ aura.addColorStop(1,"rgba(52,43,76,0)");
+ x.fillStyle=aura;x.beginPath();x.arc(0,410,recognized?102:86,0,Math.PI*2);x.fill();
+
+ if(base){
+   const iw=base.naturalWidth||base.width,ih=base.naturalHeight||base.height;
+   const dh=190,dw=iw*(dh/ih);
+   x.save();x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";
+   x.globalAlpha=recognized?.78:.88;
+   x.filter=recognized?"brightness(1.05) saturate(1.0)":"brightness(.66) saturate(.78) hue-rotate(285deg)";
+   x.drawImage(base,-dw/2,590-dh+5,dw,dh);
+   x.restore();
+ }
+
+ if(echo){
+   const iw=echo.naturalWidth||echo.width,ih=echo.naturalHeight||echo.height;
+   const dh=126,dw=iw*(dh/ih);
+   const bob=Math.sin(t*1.4+i*.92)*2.1;
+   x.save();x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";
+   if(recognized){
+     x.shadowColor="rgba(243,218,139,.86)";
+     x.shadowBlur=22+Math.sin(t*2.5+i)*4;
+     x.filter="brightness(1.08) saturate(1.05)";
+   }else{
+     x.shadowColor="rgba(104,74,144,.58)";
+     x.shadowBlur=16;
+     x.filter="brightness(.67) saturate(.78) hue-rotate(292deg)";
+   }
+   x.drawImage(echo,-dw/2,360-dh/2+bob,dw,dh);
+   x.restore();
+ }else{
+   x.fillStyle=recognized?"#eed58c":"#857ca7";
+   x.beginPath();x.arc(0,360,19,0,Math.PI*2);x.fill();
+ }
+
+ if(!recognized){
+   // Pequenas raízes fecham o Eco como uma gaiola, ecoando visualmente o Ato I.
+   x.save();x.strokeStyle="rgba(78,53,43,.86)";x.lineWidth=3.2;x.lineCap="round";
+   for(const side of [-1,1]){
+     x.beginPath();x.moveTo(side*35,468);
+     x.quadraticCurveTo(side*55,418,side*27,350);
+     x.quadraticCurveTo(side*13,322,side*7,304);
+     x.stroke();
+   }
+   x.restore();
+ }else{
+   // O Eco reconhecido deixa de ser possuído: uma trilha dourada sobe e se desfaz.
+   x.save();
+   x.strokeStyle="rgba(239,214,139,.52)";x.lineWidth=1.8;
+   x.beginPath();x.moveTo(0,330);x.quadraticCurveTo(12,292,-5,258);x.stroke();
+   for(let k=0;k<7;k++){
+     x.globalAlpha=.25+.22*Math.sin(t*2+k)*.5+.1;
+     x.fillStyle="#f1dc99";x.beginPath();
+     x.arc(Math.sin(t*.6+k)*18,280-k*9,1.3+(k%2),0,Math.PI*2);x.fill();
+   }
+   x.restore();
+ }
+
+ x.textAlign="center";x.textBaseline="middle";
+ x.fillStyle=recognized?"#f0dda0":"#b7aac1";
+ x.font=recognized?"700 9px Georgia":"italic 9px Georgia";
+ x.fillText(recognized?"ECO RECONHECIDO":"ECO APRISIONADO",0,548);
+ x.restore();
+}
+
 function drawMotherTreeAndBoss(){
  if(!motherTreeScene&&p.x<6000)return;
 
@@ -1658,22 +1844,15 @@ function drawMotherTreeAndBoss(){
    x.restore();
  }
  if(bossActive&&bossAct===1&&bossFirstStrike){
-   bossFacePositions.forEach((z,i)=>{
-     const seen=bossFacesSeen[i];
-     x.save();x.translate(z,0);
-     x.shadowColor=seen?"rgba(239,214,132,.62)":"rgba(95,74,49,.35)";x.shadowBlur=seen?22:8;
-     x.strokeStyle=seen?"#e3ca82":"#8a7048";x.lineWidth=4;x.strokeRect(-35,420,70,86);
-     x.fillStyle=seen?"rgba(225,201,128,.34)":"rgba(19,20,17,.72)";x.fillRect(-31,424,62,78);
-     x.fillStyle="#ead9a3";x.font="700 11px Georgia";x.textAlign="center";x.fillText(["LÍVIA","TOMÁS","CELINA"][i],0,530);x.restore();
-   });
+   bossFacePositions.forEach((z,i)=>drawBossCapturedPortrait(i,z,bossFacesSeen[i]));
  }
 
  if(bossActive&&bossAct===2){
-   [6960,7160,7360].forEach((z,i)=>{
-     x.save();x.translate(z,0);x.shadowColor="rgba(157,193,136,.42)";x.shadowBlur=16;
-     x.strokeStyle="#a4b887";x.lineWidth=4;x.beginPath();x.arc(0,505,34,0,Math.PI*2);x.stroke();
-     x.fillStyle="#ead792";x.font="700 15px Georgia";x.textAlign="center";x.fillText(["II","I","III"][i],0,510);x.restore();
-   });
+   // Mantém exatamente as três zonas usadas pela mecânica do boss:
+   // Eco 01 em 7160, Eco 02 em 6960, Eco 03 em 7360.
+   const bossVoiceZones=[7160,6960,7360];
+   const recognized=new Set([1,2,0].slice(0,bossStep));
+   bossVoiceZones.forEach((z,i)=>drawBossCapturedEcho(i,z,recognized.has(i)));
  }
 
  if(bossActive&&bossAct===3){
