@@ -120,6 +120,19 @@ window.PHASE4_STORY=Object.freeze({
     {speaker:"JACK",portrait:"jack",expression:2,text:"Não particularmente. Mas significa que ainda é seu."}
   ]),
 
+  bridgeNameGlitch:Object.freeze([
+    {speaker:"PEREGRINA",text:"Jack... essa placa acendeu quando você passou."},
+    {speaker:"JACK",portrait:"jack",expression:1,text:"Ela devia registrar quem atravessou."},
+    {speaker:"PEREGRINA",text:"Está tentando escrever alguma coisa."},
+    {speaker:"JACK",portrait:"jack",expression:3,text:"J..."},
+    {speaker:"PEREGRINA",text:"Sumiu."},
+    {speaker:"JACK",portrait:"jack",expression:1,text:"Tente outra vez."},
+    {speaker:"PEREGRINA",text:"Não fui eu."},
+    {speaker:"JACK",portrait:"jack",expression:5,text:"Eu sei."},
+    {speaker:"PEREGRINA",text:"A estrada também não consegue lembrar você?"},
+    {speaker:"JACK",portrait:"jack",expression:1,text:"Parece que ela está tentando esquecer a pessoa errada."}
+  ]),
+
   bridgeCrossed:Object.freeze([
     {speaker:"PEREGRINA",text:"Eu ainda estou com medo."},
     {speaker:"JACK",portrait:"jack",expression:1,text:"Ótimo."},
