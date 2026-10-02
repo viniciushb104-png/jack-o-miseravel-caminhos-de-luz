@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
   <meta name="theme-color" content="#07120d">
   <title>Halloween III — O Bosque das Memórias</title>
-  <link rel="stylesheet" href="phase3.css?v=7">
+  <link rel="stylesheet" href="phase3.css?v=8">
   <link rel="stylesheet" href="preloader.css?v=4">
 </head>
 <body>
@@ -27,6 +27,9 @@
     <a class="hud-btn" href="../index.html#fases">‹ MAPA</a>
     <div class="hud-title"><small>HALLOWEEN III</small><strong>O BOSQUE DAS MEMÓRIAS</strong></div>
     <div class="hud-box"><span>VIDA</span><b id="healthValue">♥ ♥ ♥</b></div>
+    <button id="musicToggle" class="hud-audio" type="button" aria-label="Silenciar música" aria-pressed="false">
+      <b>♫</b><span>MÚSICA</span>
+    </button>
   </header>
 
   <div id="objective" class="objective"><small>OBJETIVO</small><strong>Siga as folhas que caem para o céu.</strong></div>
@@ -87,7 +90,7 @@
 <script src="engine/dialogue.js?v=6"></script>
 <script src="data/phase1/jack-animations.js?v=1"></script>
 <script src="data/phase3/story.js?v=5"></script>
-<script src="phase3.js?v=40"></script>
+<script src="phase3.js?v=41"></script>
 <script>
 /* Failsafe: the intro must always be enterable even if phase3.js stops before binding its handler. */
 document.getElementById("startGame")?.addEventListener("click",function(){
