@@ -659,7 +659,7 @@ function jackFrame(){
 const PLATFORM_VISUAL_FOOT_OFFSETS=Object.freeze({
  "2a":6,
  "2b":7,
- "2c":8,
+ "2c":12,
  "2d":9,
  "2e":7,
  "2f":14,
@@ -969,7 +969,9 @@ function drawPilgrim(){
  const px=pilgrimMet?pilgrimX:2580;
  const feet=pilgrimMet?pilgrimFeetY:590;
  const jump=pilgrimMode==="jump";
- const footFix=jump?0:visualFootOffsetAt(px,feet,42)+2;
+ const support=jump?null:supportPlatformAt(px,feet,48);
+ const extraField=support?.artGroup==="2c"?2:0;
+ const footFix=jump?0:platformVisualFootOffset(support)+2+extraField;
 
  const selection=pilgrimSpriteSelection();
  const im=pilgrimGameplaySprites[selection.index];
@@ -1016,9 +1018,9 @@ function pilgrimFollowTarget(){
  if(!pilgrimMet)return 2580;
  if(!tracesSolved){
    const revealed=story.traces.filter((_,i)=>traces[i]);
-   if(!revealed.length)return 3230;
+   if(!revealed.length)return 3310;
    const furthest=Math.max(...revealed.map(t=>t.x));
-   return Math.max(3230,Math.min(4180,furthest-155));
+   return Math.max(3310,Math.min(4260,furthest-115));
  }
  if(!pilgrimBridgeDone&&p.x<6100){
    if(prototypeEndPlayed&&!archiveSolved){
