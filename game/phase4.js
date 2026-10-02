@@ -29,6 +29,7 @@ let playerLife=Math.max(1,Math.min(3,Number(saveData?.playerLife)||3)),memoryLig
 let activeCheckpoint=saveData?.activeCheckpoint||localStorage.getItem(CHECKPOINT_KEY)||"";
 let introPlayed=!!saveData?.introPlayed,doorOpened=!!saveData?.doorOpened,pilgrimMet=!!saveData?.pilgrimMet,tracesSolved=!!saveData?.tracesSolved,prototypeEndPlayed=!!saveData?.prototypeEndPlayed,arenaReached=!!saveData?.arenaReached;
 let bridgeFearPlayed=!!saveData?.bridgeFearPlayed,bridgeCrossedPlayed=!!saveData?.bridgeCrossedPlayed,stolenPlazaPlayed=!!saveData?.stolenPlazaPlayed,collectorApproachPlayed=!!saveData?.collectorApproachPlayed,arenaEdgePlayed=!!saveData?.arenaEdgePlayed;
+let bridgeNameGlitchPlayed=!!saveData?.bridgeNameGlitchPlayed,bridgeFogClock=Number(saveData?.bridgeFogClock)||0;
 let traces=Array.isArray(saveData?.traces)?saveData.traces.slice(0,3).map(Boolean):[false,false,false];
 const traceRevealFx=[0,0,0];
 const hadArchiveState=Array.isArray(saveData?.archiveEvidence);
@@ -83,13 +84,13 @@ const platforms=[
  {x:5290,y:420,w:190,h:26,kind:"archive"},
  {x:5650,y:485,w:220,h:26,kind:"archive"},
 
- // 5 — Ponte dos Ninguém: primeiro trecho realmente exigente de plataforma.
+ // 5 — Ponte dos Ninguém: plataformas estáveis + trechos que a névoa tenta apagar.
  {x:6070,y:590,w:360,h:130,kind:"bridge"},
- {x:6500,y:520,w:170,h:24,kind:"bridge"},
- {x:6760,y:455,w:180,h:24,kind:"bridge"},
- {x:7040,y:515,w:190,h:24,kind:"bridge"},
- {x:7340,y:440,w:170,h:24,kind:"bridge"},
- {x:7600,y:505,w:210,h:24,kind:"bridge"},
+ {x:6500,y:520,w:170,h:24,kind:"bridge",bridgeStable:true},
+ {x:6760,y:455,w:180,h:24,kind:"bridge",unstable:true,bridgeId:"bridge-a",phaseOffset:0,lightTimer:0},
+ {x:7040,y:515,w:190,h:24,kind:"bridge",unstable:true,bridgeId:"bridge-b",phaseOffset:1.7,lightTimer:0},
+ {x:7340,y:440,w:170,h:24,kind:"bridge",bridgeStable:true},
+ {x:7600,y:505,w:210,h:24,kind:"bridge",unstable:true,bridgeId:"bridge-c",phaseOffset:3.15,lightTimer:0},
 
  // 6 — Praça dos Nomes Roubados: área larga para encontros em grupo.
  {x:7900,y:590,w:930,h:130,kind:"plaza"},
@@ -268,7 +269,7 @@ function save(){
  if(!journeyMode||replayMode||!journey?.isActive()||journey.currentPhase()!==4)return;
  localStorage.setItem(SAVE_KEY,JSON.stringify({
    x:p.x,y:p.y,dir:p.dir,playerLife,activeCheckpoint,introPlayed,doorOpened,pilgrimMet,traces:[...traces],tracesSolved,prototypeEndPlayed,arenaReached,
-   bridgeFearPlayed,bridgeCrossedPlayed,stolenPlazaPlayed,collectorApproachPlayed,arenaEdgePlayed,
+   bridgeFearPlayed,bridgeCrossedPlayed,bridgeNameGlitchPlayed,stolenPlazaPlayed,collectorApproachPlayed,arenaEdgePlayed,bridgeFogClock,
    pilgrimX,pilgrimBridgeDone,archiveEvidence:[...archiveEvidence],archiveSolved,deadEnemies:deadEnemies(),savedAt:Date.now()
  }));
 }
@@ -406,9 +407,47 @@ function drawBackdrop(){
  for(let i=0;i<11;i++){const y=420+i*20+Math.sin(p.anim*.3+i)*6;ctx.fillRect(0,y,W,2)}
  ctx.restore();
 }
+function bridgePlatformPhase(q){
+ if(!q?.unstable)return 0;
+ const cycle=5.6;
+ return (bridgeFogClock+(q.phaseOffset||0))%cycle;
+}
+function bridgePlatformSolid(q){
+ if(!q?.unstable)return true;
+ if((q.lightTimer||0)>0)return true;
+ return bridgePlatformPhase(q)<4.18;
+}
+function bridgePlatformAlpha(q){
+ if(!q?.unstable)return 1;
+ if((q.lightTimer||0)>0)return 1;
+ const ph=bridgePlatformPhase(q);
+ if(ph<3.15)return 1;
+ if(ph<4.18)return Math.max(.25,1-(ph-3.15)/1.03*.72);
+ return .08;
+}
+function bridgePlatformWarning(q){
+ return !!q?.unstable&&(q.lightTimer||0)<=0&&bridgePlatformPhase(q)>=3.15&&bridgePlatformPhase(q)<4.18;
+}
+function stabilizeBridgePlatforms(pc,pcy){
+ if(!bridgeFearPlayed||p.x<6200||p.x>7900)return 0;
+ let count=0;
+ for(const q of platforms){
+   if(!q.unstable)continue;
+   const qx=q.x+q.w/2,qy=q.y;
+   if(Math.hypot(qx-pc,(qy-pcy)*.75)<=245){
+     q.lightTimer=Math.max(q.lightTimer||0,4.35);
+     count++;
+   }
+ }
+ if(count){memoryPulse=Math.max(memoryPulse,.9)}
+ return count;
+}
 function drawRoad(){
  ctx.save();ctx.translate(-cam,0);
  for(const q of platforms){
+   const alpha=bridgePlatformAlpha(q);
+   if(alpha<=.03)continue;
+   ctx.save();ctx.globalAlpha=alpha;
    const palette={
      road:["#30291f","#847052"],ledge:["#40382d","#9b865d"],
      village:["#332f27","#847457"],traces:["#342d23","#8d7750"],
@@ -416,15 +455,28 @@ function drawRoad(){
      plaza:["#34322d","#7d735e"],collector:["#242522","#655b49"],
      arena:["#201f1d","#8b714b"]
    }[q.kind]||["#30291f","#847052"];
+
+   if(q.unstable&&(q.lightTimer||0)>0){
+     ctx.shadowColor="rgba(236,204,112,.8)";ctx.shadowBlur=18;
+   }else if(bridgePlatformWarning(q)){
+     ctx.shadowColor="rgba(190,184,166,.5)";ctx.shadowBlur=10;
+   }
+
    ctx.fillStyle=palette[0];ctx.fillRect(q.x,q.y,q.w,q.h);
-   ctx.fillStyle=palette[1];ctx.fillRect(q.x,q.y,q.w,5);
+   ctx.fillStyle=q.unstable&&(q.lightTimer||0)>0?"#d7b96d":palette[1];ctx.fillRect(q.x,q.y,q.w,5);
+
    if(q.h>100){
      ctx.strokeStyle="rgba(25,22,18,.7)";ctx.lineWidth=3;
      for(let xx=q.x+45;xx<q.x+q.w;xx+=95){ctx.beginPath();ctx.moveTo(xx,q.y+8);ctx.lineTo(xx-18,q.y+42);ctx.stroke()}
    }else if(q.kind==="bridge"){
-     ctx.strokeStyle="rgba(181,146,84,.3)";ctx.lineWidth=2;
+     ctx.strokeStyle=q.unstable?"rgba(207,191,150,.48)":"rgba(181,146,84,.3)";ctx.lineWidth=2;
      for(let xx=q.x+24;xx<q.x+q.w;xx+=42){ctx.beginPath();ctx.moveTo(xx,q.y);ctx.lineTo(xx,q.y+q.h);ctx.stroke()}
+     if(q.unstable){
+       ctx.setLineDash([7,7]);ctx.strokeStyle="rgba(222,214,191,.4)";
+       ctx.strokeRect(q.x+3,q.y+3,q.w-6,q.h-6);ctx.setLineDash([]);
+     }
    }
+   ctx.restore();
  }
  ctx.restore();
 }
@@ -909,6 +961,49 @@ function drawArchiveEvidence(){
  ctx.restore();
 }
 
+function drawNobodyBridgeFog(){
+ if(!bridgeFearPlayed)return;
+ ctx.save();ctx.translate(-cam,0);
+
+ // Fog moves horizontally and thickens around the unstable bridge segments.
+ for(let i=0;i<7;i++){
+   const y=405+i*24+Math.sin(p.anim*.8+i)*8;
+   const drift=((bridgeFogClock*42+i*91)%420)-210;
+   const g=ctx.createLinearGradient(6200+drift,y,7870+drift,y);
+   g.addColorStop(0,"rgba(184,187,177,0)");
+   g.addColorStop(.22,"rgba(184,187,177,.08)");
+   g.addColorStop(.6,"rgba(184,187,177,.16)");
+   g.addColorStop(1,"rgba(184,187,177,0)");
+   ctx.fillStyle=g;ctx.fillRect(6100,y,1800,30);
+ }
+
+ for(const q of platforms){
+   if(!q.unstable)continue;
+   const a=1-bridgePlatformAlpha(q);
+   if(a<=.08)continue;
+   ctx.fillStyle="rgba(203,205,195,"+Math.min(.34,a*.38)+")";
+   ctx.fillRect(q.x-24,q.y-20,q.w+48,55);
+ }
+ ctx.restore();
+}
+function drawBridgeIdentityPlate(){
+ if(!bridgeCrossedPlayed&&!bridgeNameGlitchPlayed)return;
+ const x=7830,y=512;
+ ctx.save();ctx.translate(x-cam,y);
+ ctx.strokeStyle="#5f533f";ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(0,78);ctx.lineTo(0,0);ctx.stroke();
+ ctx.fillStyle="#302f2b";ctx.fillRect(-68,-33,136,42);
+ ctx.strokeStyle="rgba(143,119,77,.8)";ctx.lineWidth=2;ctx.strokeRect(-68,-33,136,42);
+ ctx.textAlign="center";
+ if(bridgeNameGlitchPlayed){
+   ctx.fillStyle="rgba(224,196,115,.85)";ctx.font="700 10px Georgia";
+   const blink=Math.floor(p.anim*1.8)%3;
+   ctx.fillText(blink===0?"J...":(blink===1?"J":""),0,-8);
+ }else{
+   ctx.fillStyle="rgba(169,155,124,.45)";ctx.font="italic 9px Georgia";ctx.fillText("QUEM PASSOU?",0,-8);
+ }
+ ctx.restore();
+}
+
 function drawPhase4SkeletonLandmarks(){
  ctx.save();ctx.translate(-cam,0);
 
@@ -961,7 +1056,7 @@ function drawPhase4SkeletonLandmarks(){
 }
 
 function drawWorld(){
- drawRoad();drawPhase4SkeletonLandmarks();drawSigns();drawDoor();drawArchiveEvidence();
+ drawRoad();drawPhase4SkeletonLandmarks();drawSigns();drawDoor();drawArchiveEvidence();drawNobodyBridgeFog();drawBridgeIdentityPlate();
  checkpoints.forEach(drawCheckpoint);
  drawPilgrim();drawTraces();enemies.forEach(drawEnemy);
  if(prototypeEndPlayed){
@@ -1029,6 +1124,8 @@ function useLight(){
  markPlayerAction();
  p.attack=.48;memoryLight=2.4;memoryPulse=.55;
  const pc=p.x+p.w/2;
+ const pcy=p.y+p.h*.48;
+ const bridgeLit=stabilizeBridgePlatforms(pc,pcy);
 
  if(pilgrimMet&&!tracesSolved){
    let hit=-1,best=999;
@@ -1057,7 +1154,6 @@ function useLight(){
  }
 
  let target=null,best=999;
- const pcy=p.y+p.h*.48;
  for(const e of enemies){
    if(!enemyCanBeHit(e))continue;
    const dx=(e.x+e.w/2)-pc,dy=(e.y+e.h/2)-pcy;
@@ -1066,6 +1162,10 @@ function useLight(){
  }
  if(target){
    if(hitEnemy(target,1,pc)){save();return}
+ }
+ if(bridgeLit){
+   say(bridgeLit>1?"A Luz firmou várias partes da ponte por alguns segundos.":"A Luz firmou a plataforma contra a névoa.");
+   return;
  }
  say("A luz encontra marcas... mas nenhuma responde daqui.");
 }
@@ -1288,6 +1388,8 @@ function update(dt){
  memoryLight=Math.max(0,memoryLight-dt);memoryPulse=Math.max(0,memoryPulse-dt);p.attack=Math.max(0,p.attack-dt);p.inv=Math.max(0,p.inv-dt);gateMsg=Math.max(0,gateMsg-dt);
  for(let i=0;i<traceRevealFx.length;i++)traceRevealFx[i]=Math.max(0,traceRevealFx[i]-dt);
  for(let i=0;i<archiveRevealFx.length;i++)archiveRevealFx[i]=Math.max(0,archiveRevealFx[i]-dt);
+ if(bridgeFearPlayed&&!bridgeCrossedPlayed)bridgeFogClock+=dt;
+ for(const q of platforms)if(q.unstable&&q.lightTimer>0)q.lightTimer=Math.max(0,q.lightTimer-dt);
  updateEnemies(dt);
  updatePilgrim(dt);
  p.coyote=p.on?.12:Math.max(0,p.coyote-dt);
@@ -1312,8 +1414,23 @@ function update(dt){
  }
 
  p.y+=p.vy*dt;p.on=false;
- for(const q of platforms){if(p.x+p.w>q.x&&p.x<q.x+q.w&&oldY+p.h<=q.y+8&&p.y+p.h>=q.y&&p.vy>=0){p.y=q.y-p.h;p.vy=0;p.on=true}}
- if(p.y>780){playerLife--;syncHud();if(playerLife<=0)respawn("A estrada tentou apagar Jack.");else{const cp=checkpoints.find(q=>q.id===activeCheckpoint);p.x=cp?cp.respawnX:110;p.y=cp?cp.respawnY:470;p.vx=p.vy=0;say("Um passo desapareceu na névoa. "+playerLife+"/3.")}}
+ for(const q of platforms){
+   if(!bridgePlatformSolid(q))continue;
+   if(p.x+p.w>q.x&&p.x<q.x+q.w&&oldY+p.h<=q.y+8&&p.y+p.h>=q.y&&p.vy>=0){
+     p.y=q.y-p.h;p.vy=0;p.on=true;
+   }
+ }
+ if(p.y>780){
+   playerLife--;syncHud();
+   const wasBridge=p.x>6200&&p.x<7900;
+   if(playerLife<=0)respawn(wasBridge?"A Ponte dos Ninguém apagou o chão — mas o checkpoint guardou a travessia.":"A estrada tentou apagar Jack.");
+   else{
+     const cp=checkpoints.find(q=>q.id===activeCheckpoint);
+     p.x=cp?cp.respawnX:110;p.y=cp?cp.respawnY:470;p.vx=p.vy=0;
+     if(wasBridge){bridgeFogClock=0;for(const q of platforms)if(q.unstable)q.lightTimer=0}
+     say((wasBridge?"A névoa apagou a plataforma sob Jack. ":"Um passo desapareceu na névoa. ")+playerLife+"/3.");
+   }
+ }
  updateCheckpoint();
  if(!pilgrimMet&&doorOpened&&p.x>2400){
    pilgrimMet=true;pilgrimX=2580;pilgrimFeetY=590;p.vx=0;
@@ -1324,7 +1441,13 @@ function update(dt){
  }else if(archiveSolved&&!bridgeFearPlayed&&p.x>6070){
    bridgeFearPlayed=true;p.vx=0;
    dialogue.open(story.bridgeFear,()=>{pilgrimX=Math.min(pilgrimX,6250);banner("PONTE DOS NINGUÉM");say("Ela não perdeu o medo. Mesmo assim, vai atravessar.");save()})
- }else if(pilgrimBridgeDone&&!bridgeCrossedPlayed&&p.x>7950){
+ }else if(pilgrimBridgeDone&&!bridgeNameGlitchPlayed&&p.x>7950){
+   bridgeNameGlitchPlayed=true;p.vx=0;
+   dialogue.open(story.bridgeNameGlitch,()=>{
+     banner("A ESTRADA NÃO ESCREVEU O NOME DE JACK");
+     memoryPulse=1.15;save();
+   })
+ }else if(bridgeNameGlitchPlayed&&!bridgeCrossedPlayed&&p.x>8010){
    bridgeCrossedPlayed=true;p.vx=0;
    dialogue.open(story.bridgeCrossed,()=>{banner("UM MEDO TAMBÉM É UM RASTRO");save()})
  }else if(bridgeCrossedPlayed&&!stolenPlazaPlayed&&p.x>8170){
@@ -1357,7 +1480,9 @@ function update(dt){
      ?"ARQUIVO RASURADO: as três provas apontam para a estrada adiante."
      :"ARQUIVO RASURADO: derrote os guardiões e use E nas provas. Evidências "+found+"/3.";
  }
- else if(p.x<7900)ui.obj.textContent="PONTE DOS NINGUÉM: atravesse o abismo. A Peregrina fará a própria travessia quando Jack abrir distância.";
+ else if(p.x<7900){
+   ui.obj.textContent="PONTE DOS NINGUÉM: a névoa apaga plataformas. Use F para firmá-las enquanto desvia dos Corvos.";
+ }
  else if(p.x<9300)ui.obj.textContent="PRAÇA DOS NOMES ROUBADOS: avance entre as placas enquanto a Peregrina tenta reconhecer o que foi tirado.";
  else if(p.x<10600)ui.obj.textContent="CASA DO COLETOR: siga com a Peregrina até a entrada da arena.";
  else ui.obj.textContent="ARENA DO COLETOR: a Peregrina espera do lado de fora. O confronto ainda será construído.";
