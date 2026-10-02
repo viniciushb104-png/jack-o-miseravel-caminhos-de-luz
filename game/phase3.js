@@ -237,6 +237,16 @@ const voicePuzzleEchoes=[
 const voicePuzzleCore={dormant:null,awakened:null};
 let voicePuzzleAssetsLoadStarted=false;
 
+const voiceLakeImages={
+ shoreline:null,
+ reflections:null,
+ mist:null,
+ ripples:[null,null,null]
+};
+let voiceLakeAssetsLoadStarted=false;
+const voiceLakeRipplePulse=[0,0,0];
+let voiceLakeCoreRipple=0;
+
 const archivePuzzleAltars=[null,null,null];
 const archivePuzzleItems={letter:null,musicbox:null,questionPlaque:null,release:[null,null,null]};
 let archivePuzzleAssetsLoadStarted=false;
@@ -446,6 +456,24 @@ function ensureVoicePuzzleAssets(){
    .then(im=>{voicePuzzleCore.dormant=im}).catch(()=>{});
  img("../assets/game/phase3/voice-puzzle/core/phase3-voice-core-awakened.png")
    .then(im=>{voicePuzzleCore.awakened=im}).catch(()=>{});
+}
+
+function ensureVoiceLakeAssets(){
+ if(voiceLakeAssetsLoadStarted)return;
+ voiceLakeAssetsLoadStarted=true;
+
+ img("../assets/game/phase3/voice-lake/foreground/phase3-voice-lake-shoreline.png")
+   .then(im=>{voiceLakeImages.shoreline=im}).catch(()=>{});
+ img("../assets/game/phase3/voice-lake/overlays/phase3-voice-lake-reflections.png")
+   .then(im=>{voiceLakeImages.reflections=im}).catch(()=>{});
+ img("../assets/game/phase3/voice-lake/overlays/phase3-voice-lake-mist.png")
+   .then(im=>{voiceLakeImages.mist=im}).catch(()=>{});
+
+ for(let i=0;i<3;i++){
+   const n=String(i+1).padStart(2,"0");
+   img("../assets/game/phase3/voice-lake/ripples/phase3-voice-lake-ripple-"+n+".png")
+     .then(im=>{voiceLakeImages.ripples[i]=im}).catch(()=>{});
+ }
 }
 
 function ensureArchivePuzzleAssets(){
@@ -890,9 +918,152 @@ function drawVoiceImage(im,cx,cy,targetH,alpha=1,glow=0,bob=0){
  return true;
 }
 
+function drawVoiceLakeImage(im,cx,cy,targetW,alpha=1,offsetY=0){
+ if(!im||alpha<=0)return false;
+ const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+ const dw=targetW,dh=ih*(dw/iw);
+ x.save();
+ x.globalAlpha=alpha;
+ x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";
+ x.drawImage(im,cx-dw/2,cy-dh/2+offsetY,dw,dh);
+ x.restore();
+ return true;
+}
+
+function drawVoiceLakeBase(){
+ const left=4245,right=5130,cx=(left+right)/2,w=right-left;
+ const t=p.anim;
+
+ // Profundidade escura sob a água: mantém o lago legível mesmo antes dos PNGs carregarem.
+ x.save();
+ const water=x.createLinearGradient(0,385,0,580);
+ water.addColorStop(0,"rgba(52,42,86,.04)");
+ water.addColorStop(.28,"rgba(42,34,76,.20)");
+ water.addColorStop(.68,"rgba(18,22,49,.38)");
+ water.addColorStop(1,"rgba(8,15,25,.14)");
+ x.fillStyle=water;
+ x.beginPath();x.ellipse(cx,495,w*.49,100,0,0,Math.PI*2);x.fill();
+
+ // Linha de horizonte encantada bem sutil.
+ x.globalAlpha=.16+.035*Math.sin(t*1.35);
+ x.strokeStyle="rgba(217,191,126,.58)";x.lineWidth=1.5;
+ x.beginPath();x.moveTo(left+55,454);x.quadraticCurveTo(cx,439,right-55,454);x.stroke();
+ x.restore();
+
+ // Reflexos ficam sob a margem, para parecerem realmente parte da superfície.
+ if(voiceLakeImages.reflections){
+   drawVoiceLakeImage(
+     voiceLakeImages.reflections,
+     cx,
+     482,
+     w+80,
+     .68+.08*Math.sin(t*1.08)
+   );
+ }
+
+ if(voiceLakeImages.shoreline){
+   drawVoiceLakeImage(
+     voiceLakeImages.shoreline,
+     cx,
+     500,
+     w+110,
+     .98
+   );
+ }else{
+   // Fallback de margem orgânica.
+   x.save();x.strokeStyle="rgba(77,91,78,.65)";x.lineWidth=4;
+   x.beginPath();x.moveTo(left,532);
+   x.quadraticCurveTo(left+100,505,left+190,525);
+   x.moveTo(right-190,525);x.quadraticCurveTo(right-100,505,right,532);
+   x.stroke();x.restore();
+ }
+}
+
+function drawVoiceLakeRippleSprite(im,cx,cy,width,alpha){
+ if(!im||alpha<=0)return false;
+ const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+ const dw=width,dh=ih*(dw/iw);
+ x.save();
+ x.globalAlpha=alpha;
+ x.globalCompositeOperation="screen";
+ x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";
+ x.shadowColor="rgba(219,187,255,.38)";x.shadowBlur=14;
+ x.drawImage(im,cx-dw/2,cy-dh/2,dw,dh);
+ x.restore();
+ return true;
+}
+
+function drawVoiceLakeProceduralRipple(cx,cy,power,seed=0){
+ if(power<=0)return;
+ const q=Math.max(0,Math.min(1.8,power));
+ const expand=1+(1-Math.min(1,q))*.18;
+ x.save();
+ x.globalCompositeOperation="screen";
+ x.translate(cx,cy);
+ for(let r=0;r<3;r++){
+   const phase=p.anim*2.1+seed*.8+r*.75;
+   const grow=(r*18)+(1-Math.min(1,q))*28;
+   x.globalAlpha=Math.max(0,.10+q*.16-r*.025);
+   x.strokeStyle=r===1?"rgba(244,205,120,.82)":"rgba(164,142,236,.78)";
+   x.lineWidth=1.6+r*.45;
+   x.shadowColor=r===1?"rgba(245,195,92,.45)":"rgba(157,130,235,.42)";
+   x.shadowBlur=9;
+   x.beginPath();
+   x.ellipse(
+     0,0,
+     (38+grow)*expand+Math.sin(phase)*2.5,
+     (10+grow*.24)*expand+Math.cos(phase)*1.2,
+     0,0,Math.PI*2
+   );
+   x.stroke();
+ }
+ x.restore();
+}
+
+function drawVoiceLakeRipples(coreX){
+ const entries=story.voicePuzzle.entries;
+
+ for(let i=0;i<3;i++){
+   const power=voiceLakeRipplePulse[i];
+   if(power<=0)continue;
+   const q=entries[i];
+   const sprite=voiceLakeImages.ripples[Math.min(2,Math.max(0,Math.floor((1-Math.min(1,power))*3)))];
+   const width=118+Math.min(1.5,power)*58;
+   if(!drawVoiceLakeRippleSprite(sprite,q.x,493,width,.30+Math.min(1,power)*.48)){
+     drawVoiceLakeProceduralRipple(q.x,493,power,i);
+   }
+ }
+
+ if(voiceLakeCoreRipple>0){
+   const power=voiceLakeCoreRipple;
+   const sprite=voiceLakeImages.ripples[2]||voiceLakeImages.ripples[1]||voiceLakeImages.ripples[0];
+   if(!drawVoiceLakeRippleSprite(sprite,coreX,456,175+Math.min(1.8,power)*54,.32+Math.min(1,power)*.44)){
+     drawVoiceLakeProceduralRipple(coreX,456,power,4);
+   }
+ }
+}
+
+function drawVoiceLakeMist(){
+ if(!voiceLakeImages.mist)return;
+ const left=4245,right=5130,cx=(left+right)/2,w=right-left;
+ x.save();
+ x.globalCompositeOperation="screen";
+ x.restore();
+ drawVoiceLakeImage(
+   voiceLakeImages.mist,
+   cx,
+   505,
+   w+125,
+   .42+.065*Math.sin(p.anim*.82),
+   Math.sin(p.anim*.48)*2
+ );
+}
+
 function drawVoicePuzzleWorld(){
  if(!portraitsSolved)return;
  ensureVoicePuzzleAssets();
+ ensureVoiceLakeAssets();
+ drawVoiceLakeBase();
 
  const order=story.voicePuzzle.order;
  const aligned=new Set(voicesSolved?[0,1,2]:order.slice(0,voiceStep));
@@ -900,6 +1071,9 @@ function drawVoicePuzzleWorld(){
  const coreAwake=voicesSolved;
  const coreIm=coreAwake?voicePuzzleCore.awakened:voicePuzzleCore.dormant;
  const coreGlow=(voiceStep/3)*.65+Math.min(1,voiceCorePulse)*.45+(coreAwake?.55:0);
+
+ // A água reage antes dos próprios Ecos: a memória chega à superfície primeiro.
+ drawVoiceLakeRipples(coreX);
 
  // Núcleo do Lago: fica acima dos três Ecos e recebe fios de memória
  // conforme a verdadeira frase de Mara é recomposta.
@@ -970,6 +1144,8 @@ function drawVoicePuzzleWorld(){
    }
    x.restore();
  });
+
+ drawVoiceLakeMist();
 
  if(coreAwake){
    x.save();x.textAlign="center";x.textBaseline="middle";
@@ -1263,15 +1439,20 @@ function activateVoice(i){
  const expected=story.voicePuzzle.order[voiceStep];
  if(i!==expected){
    voiceStep=0;voiceWrong[i]=1;voiceCorePulse=.45;
+   voiceLakeRipplePulse[i]=Math.max(voiceLakeRipplePulse[i],.9);
+   voiceLakeCoreRipple=Math.max(voiceLakeCoreRipple,.38);
    banner("AS VOZES SE EMBARALHARAM");
    say("A frase se perdeu na água. Os Ecos continuam despertos — reorganize a sequência.");save();return;
  }
  voiceStep++;
  voicePulse[i]=1.45;voiceCorePulse=.95;
+ voiceLakeRipplePulse[i]=1.55;voiceLakeCoreRipple=.92;
  say("Fragmento "+voiceStep+"/3 — "+story.voicePuzzle.entries[i].fragment);
  if(voiceStep<story.voicePuzzle.order.length){save();return}
 
  voicesSolved=true;voiceAwakened=[true,true,true];voiceCorePulse=1.8;
+ voiceLakeRipplePulse[0]=1.35;voiceLakeRipplePulse[1]=1.55;voiceLakeRipplePulse[2]=1.45;
+ voiceLakeCoreRipple=1.9;
  banner("MEMÓRIA RECONSTRUÍDA — A VOZ DE MARA");p.vx=0;memoryPulse=1.1;save();
  dialogue.open(story.dialogues.voicesSolved,()=>{
    jackEchoPlayed=true;memoryPulse=1.2;banner("UMA MEMÓRIA QUE NÃO PERTENCE AO BOSQUE");
@@ -2330,6 +2511,8 @@ function useMemoryLight(){
      voiceAwakened[hit.i]=true;
      voicePulse[hit.i]=first?1.45:.9;
      voiceCorePulse=Math.max(voiceCorePulse,first?.55:.32);
+     voiceLakeRipplePulse[hit.i]=first?1.35:.85;
+     voiceLakeCoreRipple=Math.max(voiceLakeCoreRipple,first?.48:.28);
      if(first)banner("ECO DESPERTO — UMA VOZ VOLTOU À SUPERFÍCIE");
      say('Eco — “'+hit.q.fragment+'”');
      save();return;
@@ -2343,6 +2526,7 @@ function update(dt){
  syncPhase3Music();
  if((maraMet||p.x>2180)&&!portraitPuzzleAssetsLoadStarted)ensurePortraitPuzzleAssets();
  if((portraitsSolved||p.x>3850)&&!voicePuzzleAssetsLoadStarted)ensureVoicePuzzleAssets();
+ if((portraitsSolved||p.x>3850)&&!voiceLakeAssetsLoadStarted)ensureVoiceLakeAssets();
  if((voicesSolved||p.x>5200)&&!archivePuzzleAssetsLoadStarted)ensureArchivePuzzleAssets();
  updateRootGateAnimations(dt);
  updateBossRootSealAnimation(dt);
@@ -2376,8 +2560,10 @@ function update(dt){
    portraitWrong[i]=Math.max(0,portraitWrong[i]-dt*2.6);
    voicePulse[i]=Math.max(0,voicePulse[i]-dt*1.75);
    voiceWrong[i]=Math.max(0,voiceWrong[i]-dt*2.8);
+   voiceLakeRipplePulse[i]=Math.max(0,voiceLakeRipplePulse[i]-dt*1.1);
  }
  voiceCorePulse=Math.max(0,voiceCorePulse-dt*1.35);
+ voiceLakeCoreRipple=Math.max(0,voiceLakeCoreRipple-dt*.95);
  gateMessageCooldown=Math.max(0,gateMessageCooldown-dt);bossCooldown=Math.max(0,bossCooldown-dt);bossPulse=Math.max(0,bossPulse-dt);
  updateMaraRun(dt);
 
