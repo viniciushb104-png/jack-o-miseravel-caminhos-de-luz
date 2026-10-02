@@ -304,7 +304,7 @@ function updateCheckpoint(){
  }
 }
 
-function img(src){return new Promise((r,j)=>{const i=new Image();i.onload=()=>r(i);i.onerror=j;i.src=src+"?v=phase3-1"})}
+function img(src){return new Promise((r,j)=>{const i=new Image();i.onload=()=>r(i);i.onerror=j;i.src=src+"?v=phase3-2"})}
 function buildCleanJackFrame(image,frame,eraseRects=[]){
  const cfg=window.JACK_ANIMATIONS,cell=cfg?.cell||320,cols=cfg?.cols||8,cv=document.createElement("canvas");cv.width=cell;cv.height=cell;
  const cx=cv.getContext("2d"),col=frame%cols,row=Math.floor(frame/cols);cx.drawImage(image,col*cell,row*cell,cell,cell,0,0,cell,cell);eraseRects.forEach(r=>cx.clearRect(...r));return cv;
