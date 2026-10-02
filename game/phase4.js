@@ -109,13 +109,47 @@ const checkpoints=[
 
 const ENEMY_ARCHETYPES=Object.freeze({
  eraser:Object.freeze({
-   label:"RASURADOR",
-   width:58,height:58,
-   patrolSpeed:38,chaseSpeed:112,
-   detectRange:410,loseRange:590,attackRange:66,
+   label:"RASURADOR",defeatMessage:"A tinta virou cinza. O rastro permaneceu.",
+   hitMessage:"A Luz abriu fissuras na rasura.",
+   width:58,height:58,patrolSpeed:38,chaseSpeed:112,attackSpeed:175,
+   detectRange:410,loseRange:590,attackRange:66,lightRange:205,
    alertTime:.22,idleTime:.7,patrolTime:2.2,
    attackWindup:.34,attackActive:.15,attackRecover:.62,
-   attackCooldown:.82,hitTime:.28,dissolveTime:.78
+   attackCooldown:.82,hitTime:.28,dissolveTime:.78,
+   knockbackX:260,knockbackY:-310
+ }),
+ ashHound:Object.freeze({
+   label:"CÃO DE CINZA",defeatMessage:"O corpo se rompeu em cinza morna e desapareceu no vento.",
+   hitMessage:"A Luz incendiou as rachaduras de cinza.",
+   width:76,height:46,patrolSpeed:62,chaseSpeed:188,attackSpeed:315,
+   detectRange:525,loseRange:760,attackRange:82,lightRange:220,
+   alertTime:.16,idleTime:.42,patrolTime:1.55,
+   attackWindup:.22,attackActive:.19,attackRecover:.48,
+   attackCooldown:.68,hitTime:.22,dissolveTime:.66,
+   knockbackX:340,knockbackY:-285
+ }),
+ hollow:Object.freeze({
+   label:"PEREGRINO OCO",defeatMessage:"As roupas caíram vazias. O pó dentro delas não tinha nome.",
+   hitMessage:"A Luz atravessou o vazio sob as roupas.",
+   revealMessage:"A lanterna revelou um vazio sob as vestes. Agora a Luz pode alcançá-lo.",
+   width:68,height:96,patrolSpeed:24,chaseSpeed:58,attackSpeed:112,
+   detectRange:345,loseRange:480,attackRange:78,lightRange:210,
+   alertTime:.42,idleTime:1.0,patrolTime:2.8,
+   attackWindup:.68,attackActive:.24,attackRecover:.9,
+   attackCooldown:1.2,hitTime:.38,dissolveTime:.95,
+   knockbackX:215,knockbackY:-385,
+   needsReveal:true,revealTime:2.8
+ }),
+ crow:Object.freeze({
+   label:"CORVO DO ESQUECIMENTO",defeatMessage:"O corvo se rasgou em penas de papel e letras sem dono.",
+   hitMessage:"A Luz atravessou as penas de papel.",
+   width:62,height:44,patrolSpeed:78,chaseSpeed:138,diveSpeed:355,
+   detectRange:520,loseRange:760,attackRange:175,lightRange:245,
+   alertTime:.2,idleTime:.5,patrolTime:1.8,
+   attackWindup:.3,attackActive:.42,attackRecover:.65,
+   attackCooldown:.92,hitTime:.24,dissolveTime:.72,
+   knockbackX:230,knockbackY:-250,
+   flying:true
  })
 });
 const savedDeadEnemies=new Set(Array.isArray(saveData?.deadEnemies)?saveData.deadEnemies:[]);
@@ -125,21 +159,25 @@ function createEnemy(id,kind,x,y,options={}){
  if(!cfg)throw new Error("Arquétipo de inimigo desconhecido: "+kind);
  const defeated=savedDeadEnemies.has(id);
  const dir=options.dir===-1?-1:1;
+ const hp=Math.max(1,Number(options.hp)||2);
  return {
    id,kind,label:cfg.label,
    x,y,w:cfg.width,h:cfg.height,
-   spawnX:x,spawnY:y,
+   spawnX:x,spawnY:y,homeY:y,
    minX:Number.isFinite(options.minX)?options.minX:x-150,
    maxX:Number.isFinite(options.maxX)?options.maxX:x+150,
-   hp:Math.max(1,Number(options.hp)||2),
-   maxHp:Math.max(1,Number(options.hp)||2),
-   dir,vx:0,
+   minY:Number.isFinite(options.minY)?options.minY:y-70,
+   maxY:Number.isFinite(options.maxY)?options.maxY:y+70,
+   hp,maxHp:hp,
+   dir,vx:0,vy:0,
    state:defeated?"dead":"idle",
    stateTimer:defeated?0:.35+(x%5)*.07,
    attackCooldown:0,attackHit:false,
+   attackTargetX:x,attackTargetY:y,
    alive:!defeated,defeated,
    alpha:defeated?0:1,
    hitFlash:0,
+   exposedTimer:cfg.needsReveal&&options.exposed?cfg.revealTime:0,
    cfg
  };
 }
@@ -153,35 +191,60 @@ function enemyCanBeHit(e){
 function defeatEnemy(e,sourceX){
  if(e.defeated)return;
  e.defeated=true;e.alive=false;e.alpha=1;
- e.vx=(e.x<sourceX?-1:1)*150;
+ e.vx=(e.x<sourceX?-1:1)*(e.kind==="crow"?95:150);
+ e.vy=e.kind==="crow"?-70:0;
  setEnemyState(e,"dissolve",e.cfg.dissolveTime);
  banner(e.label+" DISSIPADO");
- say("A tinta virou cinza. O rastro permaneceu.");
+ say(e.cfg.defeatMessage);
  save();
 }
 function hitEnemy(e,damage,sourceX){
  if(!enemyCanBeHit(e))return false;
+
+ // O Peregrino Oco exige duas decisões: primeiro revelar o vazio, depois feri-lo.
+ if(e.cfg.needsReveal&&e.exposedTimer<=0){
+   e.exposedTimer=e.cfg.revealTime;
+   e.hitFlash=.18;memoryPulse=1.05;
+   e.vx=(e.x<sourceX?-1:1)*55;
+   say(e.cfg.revealMessage);
+   return true;
+ }
+
  e.hp=Math.max(0,e.hp-Math.max(1,damage||1));
  e.hitFlash=.22;
- e.vx=(e.x<sourceX?-1:1)*190;
+ e.vx=(e.x<sourceX?-1:1)*(e.kind==="crow"?120:190);
  memoryPulse=.9;
  if(e.hp<=0)defeatEnemy(e,sourceX);
  else{
    setEnemyState(e,"hit",e.cfg.hitTime);
-   say("A Luz abriu fissuras na rasura. "+e.hp+"/"+e.maxHp);
+   say(e.cfg.hitMessage+" "+e.hp+"/"+e.maxHp);
  }
  return true;
 }
 
 const enemies=[
- createEnemy("eraser-1","eraser",1510,522,{hp:2,dir:-1,minX:1180,maxX:1930}),
- createEnemy("eraser-2","eraser",4990,522,{hp:2,dir:1,minX:4810,maxX:5250}),
- createEnemy("eraser-3","eraser",5450,522,{hp:3,dir:-1,minX:5260,maxX:5630}),
- createEnemy("eraser-4","eraser",5750,522,{hp:3,dir:1,minX:5640,maxX:5880}),
- createEnemy("eraser-5","eraser",8310,522,{hp:3,dir:-1,minX:7960,maxX:8750}),
- createEnemy("eraser-6","eraser",9780,522,{hp:4,dir:-1,minX:9650,maxX:9970})
-]
+ // Estrada — apresentação simples do Rasurador.
+ createEnemy("eraser-1","eraser",1510,532,{hp:2,dir:-1,minX:1180,maxX:1930}),
 
+ // Arquivo Rasurado — combinação de grupo, velocidade e defesa.
+ createEnemy("eraser-2","eraser",4990,532,{hp:2,dir:1,minX:4810,maxX:5220}),
+ createEnemy("hollow-1","hollow",5450,494,{hp:4,dir:-1,minX:5280,maxX:5600}),
+ createEnemy("hound-1","ashHound",5750,544,{hp:3,dir:1,minX:5630,maxX:5890}),
+
+ // Ponte dos Ninguém — ameaça aérea enquanto o jogador plataforma.
+ createEnemy("crow-1","crow",6690,315,{hp:2,dir:1,minX:6380,maxX:7190,minY:250,maxY:400}),
+ createEnemy("crow-2","crow",7440,285,{hp:2,dir:-1,minX:7040,maxX:7790,minY:230,maxY:390}),
+
+ // Praça — arena mista para testar leitura entre famílias.
+ createEnemy("eraser-3","eraser",8070,532,{hp:3,dir:1,minX:7960,maxX:8270}),
+ createEnemy("hound-2","ashHound",8420,544,{hp:3,dir:-1,minX:8270,maxX:8580}),
+ createEnemy("hollow-2","hollow",8700,494,{hp:5,dir:-1,minX:8580,maxX:8780}),
+
+ // Aproximação do Coletor — pressão física antes da arena.
+ createEnemy("hound-3","ashHound",9210,544,{hp:4,dir:1,minX:8980,maxX:9440}),
+ createEnemy("hollow-3","hollow",9780,494,{hp:5,dir:-1,minX:9640,maxX:9980}),
+ createEnemy("crow-3","crow",10280,305,{hp:3,dir:-1,minX:10160,maxX:10540,minY:245,maxY:390})
+]
 function say(t){ui.msg.textContent=t;ui.msg.classList.add("show");clearTimeout(say.t);say.t=setTimeout(()=>ui.msg.classList.remove("show"),2600)}
 function banner(t){ui.banner.textContent=t;ui.banner.classList.add("show");clearTimeout(banner.t);banner.t=setTimeout(()=>ui.banner.classList.remove("show"),1900)}
 function syncHud(){ui.health.textContent="♥ ".repeat(playerLife).trim()||"♡"}
@@ -214,12 +277,18 @@ function respawn(msg){
  resetPilgrimAfterRespawn();
  if(msg)say(msg);save();
 }
-function hurtPlayer(sourceX){
+function hurtPlayer(sourceX,forceX=260,forceY=-310,sourceKind=""){
  if(p.inv>0)return;
  markPlayerAction();
- playerLife--;syncHud();p.inv=1.15;p.vy=-310;p.vx=(p.x<sourceX?-1:1)*260;
+ playerLife--;syncHud();p.inv=1.15;p.vy=forceY;p.vx=(p.x<sourceX?-1:1)*forceX;
+ if(sourceKind==="crow")memoryLight=0;
  if(playerLife<=0)respawn("A estrada apagou seus passos — mas a lanterna lembrou o caminho.");
- else say("A cinza mordeu a luz. "+playerLife+"/3.");
+ else{
+   const msg=sourceKind==="crow"?"O Corvo roubou o brilho da lanterna. ":
+     sourceKind==="ashHound"?"O Cão de Cinza atravessou a guarda de Jack. ":
+     sourceKind==="hollow"?"O golpe do Peregrino Oco parecia vir de dentro das roupas. ":"A rasura mordeu a luz. ";
+   say(msg+playerLife+"/3.");
+ }
 }
 function updateCheckpoint(){
  const pc=p.x+p.w/2,feet=p.y+p.h;
@@ -431,7 +500,7 @@ function drawPilgrim(){
 
 function pilgrimDangerNearby(){
  if(!pilgrimMet||pilgrimBridge.active)return false;
- return enemies.some(e=>!e.defeated&&e.state!=="dead"&&e.state!=="dissolve"&&Math.abs((e.x+e.w/2)-pilgrimX)<235&&Math.abs(p.x-pilgrimX)<620);
+ return enemies.some(e=>!e.defeated&&e.state!=="dead"&&e.state!=="dissolve"&&Math.abs((e.x+e.w/2)-pilgrimX)<260&&Math.abs(p.x-pilgrimX)<650);
 }
 function pilgrimFollowTarget(){
  if(!pilgrimMet)return 2580;
@@ -506,88 +575,133 @@ function drawTraces(){
  });
  ctx.restore();
 }
-function drawEnemy(e){
- if(e.state==="dead")return;
- const ex=e.x-cam,cy=e.y+e.h/2;
- const state=e.state;
- const dissolve=state==="dissolve";
- const attack=state==="attack";
- const alert=state==="alert";
- const hit=state==="hit";
- const move=state==="patrol"||state==="chase";
- const speedStretch=state==="chase"?1.08:(attack?1.16:1);
- const wobAmp=move?4.5:2.2;
- const wob=Math.sin(p.anim*(state==="chase"?11:7)+e.spawnX)*wobAmp;
- const pulse=.5+.5*Math.sin(p.anim*5+e.spawnX*.01);
-
- ctx.save();
- ctx.translate(ex+e.w/2,cy);
- ctx.globalAlpha=Math.max(0,Math.min(1,e.alpha));
- if(e.dir<0)ctx.scale(-1,1);
-
- // Estado de alerta: leitura clara antes da perseguição.
- if(alert){
-   ctx.save();ctx.scale(e.dir<0?-1:1,1);
-   ctx.strokeStyle="rgba(225,193,111,"+(.45+pulse*.35)+")";ctx.lineWidth=3;
-   ctx.beginPath();ctx.arc(0,-3,43+pulse*4,0,Math.PI*2);ctx.stroke();
-   ctx.fillStyle="#e5c06d";ctx.font="700 22px Georgia";ctx.textAlign="center";ctx.fillText("!",0,-45);
-   ctx.restore();
- }
-
- // Telegráfico de ataque: alonga o corpo na direção do bote.
- if(attack){
-   ctx.fillStyle="rgba(215,183,102,.12)";
-   ctx.beginPath();ctx.moveTo(20,-24);ctx.lineTo(78,0);ctx.lineTo(20,24);ctx.closePath();ctx.fill();
- }
-
- ctx.scale(speedStretch,attack?.92:1);
- ctx.shadowColor=hit?"rgba(247,222,159,.95)":"rgba(0,0,0,.8)";
- ctx.shadowBlur=hit?22:12;
- ctx.fillStyle=hit&&e.hitFlash>0?"#847a62":"#111311";
+function drawEraserEnemy(e){
+ const wob=Math.sin(p.anim*(e.state==="chase"?11:7)+e.spawnX)*4;
+ ctx.shadowColor=e.hitFlash>0?"rgba(247,222,159,.95)":"rgba(0,0,0,.8)";
+ ctx.shadowBlur=e.hitFlash>0?22:12;
+ ctx.fillStyle=e.hitFlash>0?"#847a62":"#111311";
  ctx.beginPath();
  for(let i=0;i<18;i++){
-   const a=i*Math.PI*2/18;
-   const r=28+(i%2?8:0)+Math.sin(p.anim*5+i)*3;
+   const a=i*Math.PI*2/18,r=28+(i%2?8:0)+Math.sin(p.anim*5+i)*3;
    const px=Math.cos(a)*r,py=Math.sin(a)*r*.8;
    if(i===0)ctx.moveTo(px,py+wob);else ctx.lineTo(px,py+wob);
  }
  ctx.closePath();ctx.fill();
-
  ctx.strokeStyle="#776f5a";ctx.lineWidth=3;
- for(let i=0;i<4;i++){
-   ctx.beginPath();ctx.moveTo(-18+i*12,18);ctx.lineTo(-34+i*20,38+wob*.15);ctx.stroke();
- }
-
- ctx.fillStyle=alert||state==="chase"||attack?"#f0cc6f":"#d6b968";
+ for(let i=0;i<4;i++){ctx.beginPath();ctx.moveTo(-18+i*12,18);ctx.lineTo(-34+i*20,38+wob*.15);ctx.stroke()}
+ ctx.fillStyle=e.state==="alert"||e.state==="chase"||e.state==="attack"?"#f0cc6f":"#d6b968";
  ctx.beginPath();ctx.arc(-8,-5,3,0,Math.PI*2);ctx.arc(8,-5,3,0,Math.PI*2);ctx.fill();
+}
+function drawAshHoundEnemy(e){
+ const run=e.state==="chase"||e.state==="attack";
+ const stride=Math.sin(p.anim*(run?15:7))*10;
+ const crouch=e.state==="attack"?7:0;
+ ctx.shadowColor=e.hitFlash>0?"rgba(244,211,139,.9)":"rgba(0,0,0,.75)";
+ ctx.shadowBlur=e.hitFlash>0?20:10;
+ ctx.fillStyle=e.hitFlash>0?"#8a806d":"#35332f";
+ ctx.beginPath();ctx.ellipse(2,crouch,34,18,0,0,Math.PI*2);ctx.fill();
+ ctx.beginPath();ctx.moveTo(27,-8+crouch);ctx.lineTo(48,-20+crouch);ctx.lineTo(45,4+crouch);ctx.closePath();ctx.fill();
+ ctx.fillStyle="#1b1c1a";
+ ctx.beginPath();ctx.moveTo(30,-17+crouch);ctx.lineTo(39,-35+crouch);ctx.lineTo(43,-15+crouch);ctx.fill();
+ ctx.beginPath();ctx.moveTo(16,-19+crouch);ctx.lineTo(22,-34+crouch);ctx.lineTo(29,-16+crouch);ctx.fill();
+ ctx.strokeStyle="#80735d";ctx.lineWidth=6;ctx.lineCap="round";
+ for(const [x0,phase] of [[-22,1],[-7,-1],[15,-1],[28,1]]){
+   ctx.beginPath();ctx.moveTo(x0,11+crouch);ctx.lineTo(x0+stride*.35*phase,31);ctx.stroke();
+ }
+ ctx.strokeStyle="#615a4c";ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(-30,0);ctx.quadraticCurveTo(-48,-14-stride*.2,-52,-3);ctx.stroke();
+ ctx.fillStyle="#e0bd68";ctx.beginPath();ctx.arc(35,-10+crouch,3,0,Math.PI*2);ctx.fill();
+ // Cinza escapando do dorso.
+ ctx.fillStyle="rgba(171,164,145,.35)";
+ for(let i=0;i<4;i++){const yy=-24-i*7-Math.sin(p.anim*3+i)*4;ctx.beginPath();ctx.arc(-18+i*11,yy,3+i*.4,0,Math.PI*2);ctx.fill()}
+}
+function drawHollowEnemy(e){
+ const exposed=e.exposedTimer>0;
+ const sway=Math.sin(p.anim*2.5+e.spawnX)*3;
+ ctx.shadowColor=e.hitFlash>0?"rgba(247,224,162,.95)":(exposed?"rgba(229,194,104,.55)":"rgba(0,0,0,.75)");
+ ctx.shadowBlur=e.hitFlash>0?22:(exposed?18:10);
+ ctx.fillStyle=e.hitFlash>0?"#756f61":"#292b29";
+ ctx.beginPath();ctx.moveTo(-18,-38+sway);ctx.quadraticCurveTo(-38,0,-30,45);ctx.lineTo(-18,54);ctx.lineTo(18,54);ctx.lineTo(30,45);ctx.quadraticCurveTo(38,0,18,-38+sway);ctx.closePath();ctx.fill();
+ ctx.fillStyle="#111412";ctx.beginPath();ctx.ellipse(0,-45+sway,23,28,0,0,Math.PI*2);ctx.fill();
+ ctx.strokeStyle="#665f51";ctx.lineWidth=5;
+ ctx.beginPath();ctx.moveTo(-22,-8);ctx.lineTo(-38,31);ctx.stroke();
+ ctx.beginPath();ctx.moveTo(22,-8);ctx.lineTo(38,31);ctx.stroke();
+ if(exposed){
+   const pulse=.5+.5*Math.sin(p.anim*5);
+   ctx.strokeStyle="rgba(238,204,111,"+(.55+pulse*.3)+")";ctx.lineWidth=3;
+   ctx.beginPath();ctx.ellipse(0,2,17,30,0,0,Math.PI*2);ctx.stroke();
+   ctx.fillStyle="rgba(236,205,117,.15)";ctx.beginPath();ctx.ellipse(0,2,13,25,0,0,Math.PI*2);ctx.fill();
+ }else{
+   ctx.fillStyle="rgba(4,5,5,.92)";ctx.beginPath();ctx.ellipse(0,1,14,28,0,0,Math.PI*2);ctx.fill();
+ }
+}
+function drawCrowEnemy(e){
+ const flap=Math.sin(p.anim*(e.state==="attack"?19:11)+e.spawnX)*13;
+ ctx.shadowColor=e.hitFlash>0?"rgba(247,221,149,.9)":"rgba(0,0,0,.75)";
+ ctx.shadowBlur=e.hitFlash>0?18:9;
+ ctx.fillStyle=e.hitFlash>0?"#77705e":"#171918";
+ ctx.beginPath();ctx.ellipse(0,0,18,11,0,0,Math.PI*2);ctx.fill();
+ ctx.beginPath();ctx.moveTo(-8,-2);ctx.lineTo(-38,-10-flap);ctx.lineTo(-19,10);ctx.closePath();ctx.fill();
+ ctx.beginPath();ctx.moveTo(8,-2);ctx.lineTo(38,-10-flap);ctx.lineTo(19,10);ctx.closePath();ctx.fill();
+ ctx.beginPath();ctx.moveTo(12,-4);ctx.lineTo(32,0);ctx.lineTo(14,6);ctx.closePath();ctx.fill();
+ ctx.fillStyle="#a89056";ctx.beginPath();ctx.moveTo(18,-2);ctx.lineTo(30,2);ctx.lineTo(18,5);ctx.closePath();ctx.fill();
+ ctx.fillStyle="#e5c66e";ctx.beginPath();ctx.arc(10,-5,2.5,0,Math.PI*2);ctx.fill();
+ // Penas parecem pedaços de papel.
+ ctx.strokeStyle="rgba(164,151,119,.45)";ctx.lineWidth=1.5;
+ ctx.beginPath();ctx.moveTo(-30,-8-flap);ctx.lineTo(-18,-1);ctx.moveTo(30,-8-flap);ctx.lineTo(18,-1);ctx.stroke();
+}
+function drawEnemyDissolve(e){
+ ctx.save();
+ ctx.globalAlpha=Math.max(.1,e.alpha);
+ const dust=e.kind==="crow"?"#9f957e":(e.kind==="ashHound"?"#8f897b":(e.kind==="hollow"?"#aaa18d":"#b8a77f"));
+ ctx.fillStyle=dust;
+ for(let i=0;i<10;i++){
+   const a=i*.71+p.anim*(e.kind==="crow"?3.4:2.1),rr=22+(1-e.alpha)*58;
+   const yy=Math.sin(a)*rr-(1-e.alpha)*28;
+   ctx.save();ctx.translate(Math.cos(a)*rr,yy);ctx.rotate(a*.4);ctx.fillRect(-2,-3,4,e.kind==="crow"?8:5);ctx.restore();
+ }
+ ctx.restore();
+}
+function drawEnemy(e){
+ if(e.state==="dead")return;
+ const ex=e.x-cam,cy=e.y+e.h/2,state=e.state;
+ const attack=state==="attack",alert=state==="alert";
 
- // Dissolução procedural provisória: futuramente será substituída pelos PNGs.
- if(dissolve){
-   ctx.save();ctx.globalAlpha=Math.max(.12,e.alpha);
-   ctx.fillStyle="#b8a77f";
-   for(let i=0;i<8;i++){
-     const a=i*.8+p.anim*2.1,rr=24+(1-e.alpha)*52;
-     ctx.fillRect(Math.cos(a)*rr-2,Math.sin(a)*rr-2,4,4);
-   }
-   ctx.restore();
+ ctx.save();ctx.translate(ex+e.w/2,cy);ctx.globalAlpha=Math.max(0,Math.min(1,e.alpha));
+ if(e.dir<0)ctx.scale(-1,1);
+
+ if(alert){
+   ctx.strokeStyle="rgba(225,193,111,.72)";ctx.lineWidth=3;
+   ctx.beginPath();ctx.arc(0,-4,Math.max(e.w,e.h)*.58,0,Math.PI*2);ctx.stroke();
+   ctx.fillStyle="#e5c06d";ctx.font="700 21px Georgia";ctx.textAlign="center";
+   ctx.save();if(e.dir<0)ctx.scale(-1,1);ctx.fillText("!",0,-Math.max(38,e.h*.64));ctx.restore();
+ }
+ if(attack&&e.kind!=="crow"){
+   ctx.fillStyle="rgba(215,183,102,.12)";
+   ctx.beginPath();ctx.moveTo(e.w*.25,-22);ctx.lineTo(e.w*.82,0);ctx.lineTo(e.w*.25,22);ctx.closePath();ctx.fill();
  }
 
+ if(e.kind==="ashHound")drawAshHoundEnemy(e);
+ else if(e.kind==="hollow")drawHollowEnemy(e);
+ else if(e.kind==="crow")drawCrowEnemy(e);
+ else drawEraserEnemy(e);
+
+ if(state==="dissolve")drawEnemyDissolve(e);
  ctx.restore();
 
- // Nome + estado ficam pequenos para podermos depurar o comportamento nesta fase protótipo.
- if(!dissolve){
+ if(state!=="dissolve"){
    ctx.save();ctx.textAlign="center";
-   ctx.fillStyle="#b9aa89";ctx.font="700 9px Georgia";
-   ctx.fillText(e.label,ex+e.w/2,e.y-12);
+   ctx.fillStyle="#b9aa89";ctx.font="700 9px Georgia";ctx.fillText(e.label,ex+e.w/2,e.y-14);
    const stateLabel={
      idle:"à espreita",patrol:"patrulha",alert:"percebeu Jack",
-     chase:"perseguindo",attack:"atacando",hit:"atingido"
+     chase:e.kind==="crow"?"circulando":"perseguindo",attack:e.kind==="crow"?"mergulho":"atacando",hit:"atingido"
    }[state]||state;
-   ctx.fillStyle="rgba(196,184,150,.65)";ctx.font="italic 8px Georgia";
-   ctx.fillText(stateLabel,ex+e.w/2,e.y-1);
+   ctx.fillStyle="rgba(196,184,150,.65)";ctx.font="italic 8px Georgia";ctx.fillText(stateLabel,ex+e.w/2,e.y-3);
 
+   if(e.cfg.needsReveal&&e.exposedTimer>0){
+     ctx.fillStyle="#ddc576";ctx.font="700 8px Georgia";ctx.fillText("EXPOSTO",ex+e.w/2,e.y+e.h+14);
+   }
    if(e.hp<e.maxHp){
-     const bw=46,bx=ex+e.w/2-bw/2,by=e.y-27;
+     const bw=46,bx=ex+e.w/2-bw/2,by=e.y-29;
      ctx.fillStyle="rgba(0,0,0,.55)";ctx.fillRect(bx,by,bw,4);
      ctx.fillStyle="#d6b968";ctx.fillRect(bx,by,bw*(e.hp/e.maxHp),4);
    }
@@ -697,12 +811,14 @@ function useLight(){
  }
 
  let target=null,best=999;
+ const pcy=p.y+p.h*.48;
  for(const e of enemies){
    if(!enemyCanBeHit(e))continue;
-   const d=Math.abs((e.x+e.w/2)-pc);
-   if(d<best){best=d;target=e}
+   const dx=(e.x+e.w/2)-pc,dy=(e.y+e.h/2)-pcy;
+   const d=Math.hypot(dx,dy*.72);
+   if(d<best&&d<=e.cfg.lightRange){best=d;target=e}
  }
- if(target&&best<205){
+ if(target){
    if(hitEnemy(target,1,pc)){save();return}
  }
  say("A luz encontra marcas... mas nenhuma responde daqui.");
@@ -711,39 +827,21 @@ function useLight(){
 function updateEnemyPatrol(e,dt,pc){
  const cfg=e.cfg,ec=e.x+e.w/2,d=pc-ec,ad=Math.abs(d);
  if(ad<=cfg.detectRange){
-   e.dir=Math.sign(d)||e.dir;
-   e.vx*=.45;
-   setEnemyState(e,"alert",cfg.alertTime);
-   return;
+   e.dir=Math.sign(d)||e.dir;e.vx*=.45;setEnemyState(e,"alert",cfg.alertTime);return;
  }
  e.stateTimer=Math.max(0,e.stateTimer-dt);
  e.vx+=(e.dir*cfg.patrolSpeed-e.vx)*Math.min(1,dt*5);
  e.x+=e.vx*dt;
-
  if(e.x<=e.minX){e.x=e.minX;e.dir=1;e.vx=Math.abs(e.vx)}
  if(e.x>=e.maxX){e.x=e.maxX;e.dir=-1;e.vx=-Math.abs(e.vx)}
- if(e.stateTimer<=0){
-   e.vx*=.35;
-   setEnemyState(e,"idle",cfg.idleTime);
- }
+ if(e.stateTimer<=0){e.vx*=.35;setEnemyState(e,"idle",cfg.idleTime)}
 }
-function updateEnemyState(e,dt,pc){
- const cfg=e.cfg;
- e.attackCooldown=Math.max(0,e.attackCooldown-dt);
- e.hitFlash=Math.max(0,e.hitFlash-dt);
-
- if(e.state==="dead")return;
-
- if(e.state==="dissolve"){
-   e.stateTimer=Math.max(0,e.stateTimer-dt);
-   e.vx*=Math.max(0,1-dt*5);
-   e.x+=e.vx*dt;
-   e.alpha=e.cfg.dissolveTime>0?e.stateTimer/e.cfg.dissolveTime:0;
-   if(e.stateTimer<=0){e.state="dead";e.alpha=0;e.vx=0}
-   return;
- }
-
- const ec=e.x+e.w/2,d=pc-ec,ad=Math.abs(d);
+function enemyHitsPlayer(e,extraX=10,extraY=105){
+ const pc=p.x+p.w/2,ec=e.x+e.w/2;
+ return Math.abs(pc-ec)<e.cfg.attackRange+extraX&&Math.abs((p.y+p.h)-(e.y+e.h))<extraY;
+}
+function updateGroundEnemyState(e,dt,pc){
+ const cfg=e.cfg,ec=e.x+e.w/2,d=pc-ec,ad=Math.abs(d);
 
  if(e.state==="hit"){
    e.stateTimer=Math.max(0,e.stateTimer-dt);
@@ -761,20 +859,13 @@ function updateEnemyState(e,dt,pc){
    e.stateTimer=Math.max(0,e.stateTimer-dt);
    const elapsed=total-e.stateTimer;
    e.vx*=Math.max(0,1-dt*8);
-
-   // Durante a janela ativa, o Rasurador dá um pequeno bote.
    if(elapsed>=cfg.attackWindup&&elapsed<cfg.attackWindup+cfg.attackActive){
-     e.vx=e.dir*175;
-     e.x+=e.vx*dt;
-     const nowCenter=e.x+e.w/2;
-     const close=Math.abs(pc-nowCenter)<cfg.attackRange+10;
-     const vertical=Math.abs((p.y+p.h)-(e.y+e.h))<105;
-     if(!e.attackHit&&close&&vertical){
+     e.vx=e.dir*(cfg.attackSpeed||175);e.x+=e.vx*dt;
+     if(!e.attackHit&&enemyHitsPlayer(e)){
        e.attackHit=true;
-       hurtPlayer(nowCenter);
+       hurtPlayer(e.x+e.w/2,cfg.knockbackX,cfg.knockbackY,e.kind);
      }
    }
-
    e.x=Math.max(e.minX,Math.min(e.maxX,e.x));
    if(e.stateTimer<=0){
      e.attackCooldown=cfg.attackCooldown;
@@ -785,8 +876,7 @@ function updateEnemyState(e,dt,pc){
  }
 
  if(e.state==="alert"){
-   e.stateTimer=Math.max(0,e.stateTimer-dt);
-   e.vx*=Math.max(0,1-dt*8);
+   e.stateTimer=Math.max(0,e.stateTimer-dt);e.vx*=Math.max(0,1-dt*8);
    if(ad>cfg.loseRange){setEnemyState(e,"idle",cfg.idleTime);return}
    e.dir=Math.sign(d)||e.dir;
    if(e.stateTimer<=0)setEnemyState(e,"chase");
@@ -794,16 +884,13 @@ function updateEnemyState(e,dt,pc){
  }
 
  if(e.state==="chase"){
-   if(ad>cfg.loseRange){
-     setEnemyState(e,"patrol",cfg.patrolTime);return;
-   }
+   if(ad>cfg.loseRange){setEnemyState(e,"patrol",cfg.patrolTime);return}
    e.dir=Math.sign(d)||e.dir;
    if(ad<=cfg.attackRange&&e.attackCooldown<=0){
      e.vx=0;e.attackHit=false;
-     setEnemyState(e,"attack",cfg.attackWindup+cfg.attackActive+cfg.attackRecover);
-     return;
+     setEnemyState(e,"attack",cfg.attackWindup+cfg.attackActive+cfg.attackRecover);return;
    }
-   e.vx+=(e.dir*cfg.chaseSpeed-e.vx)*Math.min(1,dt*7);
+   e.vx+=(e.dir*cfg.chaseSpeed-e.vx)*Math.min(1,dt*(e.kind==="ashHound"?9:6));
    e.x+=e.vx*dt;
    if(e.x<=e.minX){e.x=e.minX;e.vx=0}
    if(e.x>=e.maxX){e.x=e.maxX;e.vx=0}
@@ -811,21 +898,122 @@ function updateEnemyState(e,dt,pc){
  }
 
  if(e.state==="idle"){
-   e.stateTimer=Math.max(0,e.stateTimer-dt);
-   e.vx*=Math.max(0,1-dt*6);
-   if(ad<=cfg.detectRange){
-     e.dir=Math.sign(d)||e.dir;
-     setEnemyState(e,"alert",cfg.alertTime);return;
-   }
+   e.stateTimer=Math.max(0,e.stateTimer-dt);e.vx*=Math.max(0,1-dt*6);
+   if(ad<=cfg.detectRange){e.dir=Math.sign(d)||e.dir;setEnemyState(e,"alert",cfg.alertTime);return}
    if(e.stateTimer<=0){
-     // Alternância determinística mantém a patrulha orgânica sem depender de random.
      if(((Math.floor(p.anim)+Math.floor(e.spawnX/100))&1)===0)e.dir*=-1;
      setEnemyState(e,"patrol",cfg.patrolTime);
    }
    return;
  }
 
+ if(e.state==="patrol"){updateEnemyPatrol(e,dt,pc);return}
  setEnemyState(e,"idle",cfg.idleTime);
+}
+function updateCrowEnemyState(e,dt,pc){
+ const cfg=e.cfg,ec=e.x+e.w/2,d=pc-ec,ad=Math.abs(d);
+ const playerCy=p.y+p.h*.45;
+ const hoverY=Math.max(e.minY,Math.min(e.maxY,e.homeY+Math.sin(p.anim*2.4+e.spawnX*.01)*24));
+
+ if(e.state==="hit"){
+   e.stateTimer=Math.max(0,e.stateTimer-dt);
+   e.x+=e.vx*dt;e.y+=e.vy*dt;
+   e.vx*=Math.max(0,1-dt*7);e.vy*=Math.max(0,1-dt*6);
+   if(e.stateTimer<=0)setEnemyState(e,ad<=cfg.loseRange?"chase":"patrol",cfg.patrolTime);
+   return;
+ }
+
+ if(e.state==="attack"){
+   const total=cfg.attackWindup+cfg.attackActive+cfg.attackRecover;
+   e.stateTimer=Math.max(0,e.stateTimer-dt);
+   const elapsed=total-e.stateTimer;
+
+   if(elapsed<cfg.attackWindup){
+     e.y+=(Math.max(e.minY,e.homeY-45)-e.y)*Math.min(1,dt*7);
+     e.x-=e.dir*45*dt;
+   }else if(elapsed<cfg.attackWindup+cfg.attackActive){
+     const tx=e.attackTargetX,ty=e.attackTargetY;
+     const dx=tx-(e.x+e.w/2),dy=ty-(e.y+e.h/2),len=Math.max(1,Math.hypot(dx,dy));
+     e.vx=dx/len*cfg.diveSpeed;e.vy=dy/len*cfg.diveSpeed;
+     e.x+=e.vx*dt;e.y+=e.vy*dt;
+     const near=Math.abs((p.x+p.w/2)-(e.x+e.w/2))<58&&Math.abs(playerCy-(e.y+e.h/2))<65;
+     if(!e.attackHit&&near){
+       e.attackHit=true;
+       hurtPlayer(e.x+e.w/2,cfg.knockbackX,cfg.knockbackY,"crow");
+     }
+   }else{
+     e.x+=e.vx*dt*.35;
+     e.y+=(hoverY-e.y)*Math.min(1,dt*7);
+     e.vx*=Math.max(0,1-dt*4);
+   }
+
+   e.x=Math.max(e.minX,Math.min(e.maxX,e.x));
+   if(e.stateTimer<=0){
+     e.attackCooldown=cfg.attackCooldown;e.vy=0;
+     setEnemyState(e,ad<=cfg.loseRange?"chase":"patrol",cfg.patrolTime);
+   }
+   return;
+ }
+
+ if(e.state==="alert"){
+   e.stateTimer=Math.max(0,e.stateTimer-dt);
+   e.dir=Math.sign(d)||e.dir;
+   e.y+=(Math.max(e.minY,e.homeY-28)-e.y)*Math.min(1,dt*6);
+   if(ad>cfg.loseRange){setEnemyState(e,"patrol",cfg.patrolTime);return}
+   if(e.stateTimer<=0)setEnemyState(e,"chase");
+   return;
+ }
+
+ if(e.state==="chase"){
+   if(ad>cfg.loseRange){setEnemyState(e,"patrol",cfg.patrolTime);return}
+   e.dir=Math.sign(d)||e.dir;
+   const desiredX=Math.max(e.minX,Math.min(e.maxX,p.x-e.dir*115));
+   const desiredY=Math.max(e.minY,Math.min(e.maxY,p.y-135));
+   e.x+=(desiredX-e.x)*Math.min(1,dt*2.7);
+   e.y+=(desiredY-e.y)*Math.min(1,dt*3.2);
+   if(ad<=cfg.attackRange&&e.attackCooldown<=0){
+     e.attackTargetX=p.x+p.w/2+e.dir*22;
+     e.attackTargetY=playerCy+26;
+     e.attackHit=false;
+     setEnemyState(e,"attack",cfg.attackWindup+cfg.attackActive+cfg.attackRecover);
+   }
+   return;
+ }
+
+ if(e.state==="idle"){
+   e.stateTimer=Math.max(0,e.stateTimer-dt);
+   e.y+=(hoverY-e.y)*Math.min(1,dt*3);
+   if(ad<=cfg.detectRange){e.dir=Math.sign(d)||e.dir;setEnemyState(e,"alert",cfg.alertTime);return}
+   if(e.stateTimer<=0)setEnemyState(e,"patrol",cfg.patrolTime);
+   return;
+ }
+
+ // Patrulha aérea.
+ e.stateTimer=Math.max(0,e.stateTimer-dt);
+ e.x+=e.dir*cfg.patrolSpeed*dt;
+ e.y+=(hoverY-e.y)*Math.min(1,dt*4);
+ if(e.x<=e.minX){e.x=e.minX;e.dir=1}
+ if(e.x>=e.maxX){e.x=e.maxX;e.dir=-1}
+ if(ad<=cfg.detectRange){e.dir=Math.sign(d)||e.dir;setEnemyState(e,"alert",cfg.alertTime);return}
+ if(e.stateTimer<=0)setEnemyState(e,"idle",cfg.idleTime);
+}
+function updateEnemyState(e,dt,pc){
+ const cfg=e.cfg;
+ e.attackCooldown=Math.max(0,e.attackCooldown-dt);
+ e.hitFlash=Math.max(0,e.hitFlash-dt);
+ e.exposedTimer=Math.max(0,e.exposedTimer-dt);
+
+ if(e.state==="dead")return;
+ if(e.state==="dissolve"){
+   e.stateTimer=Math.max(0,e.stateTimer-dt);
+   e.vx*=Math.max(0,1-dt*5);e.vy*=Math.max(0,1-dt*5);
+   e.x+=e.vx*dt;e.y+=e.vy*dt;
+   e.alpha=cfg.dissolveTime>0?e.stateTimer/cfg.dissolveTime:0;
+   if(e.stateTimer<=0){e.state="dead";e.alpha=0;e.vx=e.vy=0}
+   return;
+ }
+ if(cfg.flying){updateCrowEnemyState(e,dt,pc);return}
+ updateGroundEnemyState(e,dt,pc);
 }
 function updateEnemies(dt){
  const pc=p.x+p.w/2;
