@@ -370,6 +370,46 @@ function updateCheckpoint(){
 }
 
 function img(src){return new Promise((r,j)=>{const im=new Image();im.onload=()=>r(im);im.onerror=j;im.src=src+"?v=phase4-1"})}
+
+const PHASE4_BACKGROUND_FILES=Object.freeze([
+ "../assets/game/phase4/backgrounds/phase4-bg-01-nonexistent-door.png",
+ "../assets/game/phase4/backgrounds/phase4-bg-02-signless-road.png",
+ "../assets/game/phase4/backgrounds/phase4-bg-03-nameless-village.png",
+ "../assets/game/phase4/backgrounds/phase4-bg-04-footprint-field.png",
+ "../assets/game/phase4/backgrounds/phase4-bg-05-erased-archive.png",
+ "../assets/game/phase4/backgrounds/phase4-bg-06-nobody-bridge.png",
+ "../assets/game/phase4/backgrounds/phase4-bg-07-stolen-names-plaza.png",
+ "../assets/game/phase4/backgrounds/phase4-bg-08-collector-house.png",
+ "../assets/game/phase4/backgrounds/phase4-bg-09-collector-arena.png"
+]);
+const phase4BackgroundImages=Array(PHASE4_BACKGROUND_FILES.length).fill(null);
+const phase4BackgroundPromises=Array(PHASE4_BACKGROUND_FILES.length).fill(null);
+const phase4BackgroundFailed=Array(PHASE4_BACKGROUND_FILES.length).fill(false);
+
+function phase4BackgroundIndex(x){
+ let idx=0;
+ for(let i=0;i<story.sections.length;i++)if(x>=story.sections[i].x)idx=i;
+ return Math.max(0,Math.min(PHASE4_BACKGROUND_FILES.length-1,idx));
+}
+function ensurePhase4Background(index){
+ if(index<0||index>=PHASE4_BACKGROUND_FILES.length)return Promise.resolve(null);
+ if(phase4BackgroundImages[index])return Promise.resolve(phase4BackgroundImages[index]);
+ if(phase4BackgroundFailed[index])return Promise.resolve(null);
+ if(phase4BackgroundPromises[index])return phase4BackgroundPromises[index];
+ phase4BackgroundPromises[index]=img(PHASE4_BACKGROUND_FILES[index])
+   .then(im=>{phase4BackgroundImages[index]=im;return im})
+   .catch(()=>{phase4BackgroundFailed[index]=true;return null});
+ return phase4BackgroundPromises[index];
+}
+function warmPhase4Backgrounds(x){
+ const idx=phase4BackgroundIndex(x);
+ ensurePhase4Background(idx);
+ ensurePhase4Background(idx+1);
+ if(idx>0&&x-story.sections[idx].x<360)ensurePhase4Background(idx-1);
+}
+function hasPhase4BackgroundAt(x){
+ return !!phase4BackgroundImages[phase4BackgroundIndex(x)];
+}
 function buildCleanJackFrame(image,frame,eraseRects=[]){
  const cfg=window.JACK_ANIMATIONS,cell=cfg?.cell||320,cols=cfg?.cols||8;
  const cv=document.createElement("canvas");cv.width=cell;cv.height=cell;
@@ -403,7 +443,12 @@ const keyReady=img("../assets/game/phase3/items/mara-wood-key-glow.png").then(im
 const jackPortraitFiles=["jack-00-neutral.png","jack-01-serious.png","jack-02-smirk.png","jack-03-surprised.png","jack-04-determined.png","jack-05-resolved.png"];
 const jackPortraitReady=Promise.allSettled(jackPortraitFiles.map(f=>img("../assets/game/phase1/portraits-hd/"+f))).then(rs=>rs.map(r=>r.status==="fulfilled"?r.value:null));
 const dialogueReady=jackPortraitReady.then(frames=>dialogue.setAssets({jack:{frames}}));
-window.__PHASE_ASSETS_READY=Promise.allSettled([jackReady,keyReady,dialogueReady]);
+const initialBackgroundIndex=phase4BackgroundIndex(p.x);
+const backgroundReady=Promise.allSettled([
+ ensurePhase4Background(initialBackgroundIndex),
+ ensurePhase4Background(initialBackgroundIndex+1)
+]);
+window.__PHASE_ASSETS_READY=Promise.allSettled([jackReady,keyReady,dialogueReady,backgroundReady]);
 
 function jackFrame(){
  const a=window.JACK_ANIMATIONS?.animations;if(!a)return 0;
@@ -448,7 +493,7 @@ function drawJack(){
  ctx.restore();
 }
 
-function drawBackdrop(){
+function drawProceduralBackdrop(){
  const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,"#111513");g.addColorStop(.48,"#1c211c");g.addColorStop(1,"#31291e");ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
  const par=(cam*.09)%430;
  ctx.save();ctx.globalAlpha=.75;ctx.fillStyle="#0b0e0c";
@@ -462,6 +507,54 @@ function drawBackdrop(){
  ctx.save();ctx.globalAlpha=.12;ctx.fillStyle="#ddd4bc";
  for(let i=0;i<11;i++){const y=420+i*20+Math.sin(p.anim*.3+i)*6;ctx.fillRect(0,y,W,2)}
  ctx.restore();
+}
+function drawPhase4BackgroundCover(im,alpha,index){
+ if(!im||alpha<=0)return;
+ const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+ if(!iw||!ih)return;
+ const scale=Math.max(W/iw,H/ih)*1.045;
+ const dw=iw*scale,dh=ih*scale;
+ const start=story.sections[index]?.x||0;
+ const end=story.sections[index+1]?.x||WORLD;
+ const progress=Math.max(0,Math.min(1,(p.x-start)/Math.max(1,end-start)));
+ const pan=(progress-.5)*Math.max(0,dw-W)*.72;
+ const dx=(W-dw)/2-pan,dy=(H-dh)/2-16;
+ ctx.save();
+ ctx.globalAlpha=alpha;
+ ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";
+ ctx.drawImage(im,dx,dy,dw,dh);
+ ctx.restore();
+}
+function drawBackdrop(){
+ const idx=phase4BackgroundIndex(p.x);
+ warmPhase4Backgrounds(p.x);
+ const current=phase4BackgroundImages[idx];
+
+ if(!current){
+   drawProceduralBackdrop();
+   return;
+ }
+
+ ctx.fillStyle="#0c100e";ctx.fillRect(0,0,W,H);
+ drawPhase4BackgroundCover(current,1,idx);
+
+ // Crossfade nos últimos metros de cada área para a troca não parecer um corte seco.
+ const nextBoundary=story.sections[idx+1]?.x;
+ const next=phase4BackgroundImages[idx+1];
+ if(nextBoundary&&next){
+   const fadeStart=nextBoundary-190;
+   const t=Math.max(0,Math.min(1,(p.x-fadeStart)/190));
+   if(t>0)drawPhase4BackgroundCover(next,t,idx+1);
+ }
+
+ // Tratamento comum mantém Jack, a névoa e a UI legíveis sobre fundos mais claros.
+ ctx.fillStyle="rgba(7,10,9,.16)";ctx.fillRect(0,0,W,H);
+ const vignette=ctx.createRadialGradient(W*.5,H*.46,H*.22,W*.5,H*.5,W*.72);
+ vignette.addColorStop(0,"rgba(0,0,0,0)");vignette.addColorStop(1,"rgba(0,0,0,.27)");
+ ctx.fillStyle=vignette;ctx.fillRect(0,0,W,H);
+ const fog=ctx.createLinearGradient(0,365,0,H);
+ fog.addColorStop(0,"rgba(185,185,165,0)");fog.addColorStop(1,"rgba(176,166,140,.13)");
+ ctx.fillStyle=fog;ctx.fillRect(0,350,W,370);
 }
 function bridgePlatformPhase(q){
  if(!q?.unstable)return 0;
@@ -1645,7 +1738,9 @@ function drawPhase4SkeletonLandmarks(){
 }
 
 function drawWorld(){
- drawRoad();drawPhase4SkeletonLandmarks();drawSigns();drawDoor();drawArchiveEvidence();drawNobodyBridgeFog();drawBridgeIdentityPlate();drawStolenNamesPlaza();drawCollectorGlimpse();
+ drawRoad();
+ if(!hasPhase4BackgroundAt(p.x))drawPhase4SkeletonLandmarks();
+ drawSigns();drawDoor();drawArchiveEvidence();drawNobodyBridgeFog();drawBridgeIdentityPlate();drawStolenNamesPlaza();drawCollectorGlimpse();
  checkpoints.forEach(drawCheckpoint);
  drawPilgrim();drawTraces();enemies.forEach(drawEnemy);drawCollectorBoss();drawPhase4Epilogue();
  if(prototypeEndPlayed){
@@ -2122,7 +2217,7 @@ function update(dt){
  }
 
  cam+=(Math.max(0,Math.min(WORLD-W,p.x-W*.34))-cam)*Math.min(1,dt*5);
- let si=0;for(let i=0;i<story.sections.length;i++)if(p.x>=story.sections[i].x)si=i;if(si!==section){section=si;banner(story.sections[si].name)}
+ let si=0;for(let i=0;i<story.sections.length;i++)if(p.x>=story.sections[i].x)si=i;if(si!==section){section=si;warmPhase4Backgrounds(p.x);banner(story.sections[si].name)}
  if(!doorOpened)ui.obj.textContent="A chave de Mara reage à parede. Aproxime-se e pressione E.";
  else if(!pilgrimMet)ui.obj.textContent="Atravesse a Estrada sem Placas e encontre quem ainda espera.";
  else if(!tracesSolved){
