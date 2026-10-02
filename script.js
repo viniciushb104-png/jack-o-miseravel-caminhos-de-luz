@@ -11,6 +11,85 @@
   const MAIN_THEME_VOLUME = .46;
   const journey = window.JackJourney || null;
   journey?.restoreReplay();
+
+  // Abertura de estúdio: usa os primeiros segundos para aquecer o menu
+  // e carregar recursos essenciais sem segurar o jogador indefinidamente.
+  const studioSplash = document.getElementById('studioSplash');
+  const studioIntroAudio = new Audio('assets/audio/branding/asas-do-medo-games-intro.mp3');
+  studioIntroAudio.preload = 'auto';
+  studioIntroAudio.volume = .72;
+  let studioSplashActive = !!studioSplash;
+  const studioSplashSeenKey = 'jack-asas-do-medo-splash-seen';
+
+  function studioWait(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  function studioWarmImage(src) {
+    return new Promise(resolve => {
+      const img = new Image();
+      img.onload = img.onerror = () => resolve();
+      img.src = src;
+    });
+  }
+
+  function studioWarmAudio(audio, timeout = 1600) {
+    return new Promise(resolve => {
+      let done = false;
+      const finish = () => {
+        if (done) return;
+        done = true;
+        audio.removeEventListener('canplaythrough', finish);
+        audio.removeEventListener('loadeddata', finish);
+        audio.removeEventListener('error', finish);
+        resolve();
+      };
+      audio.addEventListener('canplaythrough', finish, { once:true });
+      audio.addEventListener('loadeddata', finish, { once:true });
+      audio.addEventListener('error', finish, { once:true });
+      try { audio.load(); } catch (_) { finish(); }
+      setTimeout(finish, timeout);
+    });
+  }
+
+  async function runStudioSplash() {
+    if (!studioSplash) {
+      studioSplashActive = false;
+      return;
+    }
+
+    const alreadySeen = sessionStorage.getItem(studioSplashSeenKey) === '1';
+    const minimumTime = alreadySeen ? 1450 : 3400;
+
+    // Tenta a vinheta; se o navegador bloquear autoplay, a abertura segue normalmente.
+    studioIntroAudio.currentTime = 0;
+    studioIntroAudio.play().catch(() => {});
+
+    const warmups = [
+      studioWait(minimumTime),
+      studioWarmImage('assets/images/menu/menu-poster.webp'),
+      studioWarmAudio(mainThemeAudio, 1500)
+    ];
+
+    if (video) {
+      try { video.load(); } catch (_) {}
+    }
+
+    await Promise.race([
+      Promise.allSettled(warmups),
+      studioWait(6000)
+    ]);
+
+    studioIntroAudio.pause();
+    sessionStorage.setItem(studioSplashSeenKey, '1');
+    studioSplash.classList.add('is-leaving');
+
+    setTimeout(() => {
+      studioSplash.remove();
+      studioSplashActive = false;
+      if (hero.style.display !== 'none' && menuMusicEnabled) playMainTheme();
+    }, 780);
+  }
   let menuMusicEnabled = localStorage.getItem('jack-menu-music-muted') !== '1';
   let mainThemeFadeToken = 0;
 
@@ -288,7 +367,7 @@
   }
 
   function playMainTheme() {
-    if (!menuMusicEnabled || hero.style.display === 'none') return;
+    if (studioSplashActive || !menuMusicEnabled || hero.style.display === 'none') return;
     ++mainThemeFadeToken;
     mainThemeAudio.volume = Math.min(mainThemeAudio.volume, .04);
     mainThemeAudio.play().then(() => {
@@ -775,6 +854,8 @@
 
   window.addEventListener('storage', refreshSoundtrackUnlocks);
   refreshSoundtrackUnlocks();
+
+  runStudioSplash();
 
   const initial = location.hash.replace('#', '');
   if (initial && initial !== 'inicio' && document.getElementById(initial)) {
