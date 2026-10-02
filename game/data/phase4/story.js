@@ -49,12 +49,64 @@ window.PHASE4_STORY=Object.freeze({
   ]),
 
   prototypeEnd:Object.freeze([
-    {speaker:"PEREGRINA",text:"As placas adiante foram arrancadas."},
-    {speaker:"JACK",portrait:"jack",expression:1,text:"Então isso não foi esquecimento."},
-    {speaker:"PEREGRINA",text:"Alguém levou os nomes."},
-    {speaker:"JACK",portrait:"jack",expression:4,text:"Ótimo. Finalmente um problema que parece disposto a me bater de volta."},
-    {speaker:"???",text:"NOMES NÃO DEVEM DESAPARECER."},
-    {speaker:"JACK",portrait:"jack",expression:1,text:"Conheço esse tipo de frase. Nunca acaba bem."}
+    {speaker:"PEREGRINA",text:"As placas daqui estão vazias."},
+    {speaker:"JACK",portrait:"jack",expression:1,text:"Não vazias. Mexidas."},
+    {speaker:"PEREGRINA",text:"Você vê diferença?"},
+    {speaker:"JACK",portrait:"jack",expression:1,text:"Esquecimento costuma deixar ausência. Isto deixou marcas."},
+    {speaker:"PEREGRINA",text:"Então procuramos as marcas."},
+    {speaker:"JACK",portrait:"jack",expression:4,text:"E, com sorte, descobrimos quem teve tanto trabalho para escondê-las."}
+  ]),
+
+  archiveEvidence:Object.freeze([
+    Object.freeze({
+      x:5005,title:"PROVA I · O RECORTE",short:"RECORTE",
+      prompt:"E · EXAMINAR PÁGINA RECORTADA",
+      text:"A página está inteira, exceto pela faixa exata onde deveria estar o nome.",
+      dialogue:Object.freeze([
+        {speaker:"PEREGRINA",text:"O resto da página continua aqui."},
+        {speaker:"JACK",portrait:"jack",expression:1,text:"Data, endereço, observações... tudo."},
+        {speaker:"PEREGRINA",text:"Menos o nome."},
+        {speaker:"JACK",portrait:"jack",expression:5,text:"Esquecimento não usa régua."},
+        {speaker:"PEREGRINA",text:"Alguém recortou só o que identificava a pessoa."}
+      ])
+    }),
+    Object.freeze({
+      x:5380,title:"PROVA II · AS MARCAS",short:"PLACAS",
+      prompt:"E · EXAMINAR SUPORTES VAZIOS",
+      text:"Os suportes ainda têm parafusos tortos e contornos limpos onde placas foram arrancadas.",
+      dialogue:Object.freeze([
+        {speaker:"PEREGRINA",text:"Há dezenas de espaços iguais."},
+        {speaker:"JACK",portrait:"jack",expression:1,text:"E os parafusos foram forçados para fora."},
+        {speaker:"PEREGRINA",text:"Por que alguém levaria placas sem levar os registros?"},
+        {speaker:"JACK",portrait:"jack",expression:1,text:"Porque não queria apagar histórias."},
+        {speaker:"PEREGRINA",text:"Queria os nomes."}
+      ])
+    }),
+    Object.freeze({
+      x:5760,title:"PROVA III · O INVENTÁRIO",short:"INVENTÁRIO",
+      prompt:"E · EXAMINAR INVENTÁRIO",
+      text:"Um inventário enumera nomes removidos como itens recebidos. Nenhum deles está marcado como destruído.",
+      dialogue:Object.freeze([
+        {speaker:"PEREGRINA",text:"Isto diz 'recebido'."},
+        {speaker:"JACK",portrait:"jack",expression:1,text:"Não 'apagado'. Não 'perdido'."},
+        {speaker:"PEREGRINA",text:"Recebido por quem?"},
+        {speaker:"???",text:"NOMES NÃO DEVEM DESAPARECER."},
+        {speaker:"JACK",portrait:"jack",expression:4,text:"Ah. Então alguém resolveu guardá-los."},
+        {speaker:"PEREGRINA",text:"Sem perguntar a ninguém."}
+      ])
+    })
+  ]),
+
+  archiveSolved:Object.freeze([
+    {speaker:"PEREGRINA",text:"Primeiro recortaram os nomes. Depois arrancaram as placas. Depois registraram a chegada deles."},
+    {speaker:"JACK",portrait:"jack",expression:1,text:"Isto não é um lugar que esqueceu."},
+    {speaker:"PEREGRINA",text:"É um lugar de onde alguém está recolhendo nomes."},
+    {speaker:"JACK",portrait:"jack",expression:5,text:"E levando todos para a mesma direção."},
+    {speaker:"PEREGRINA",text:"A estrada depois do arquivo."},
+    {speaker:"JACK",portrait:"jack",expression:2,text:"Ótimo. Agora temos um ladrão, uma trilha e péssimas intenções."},
+    {speaker:"???",text:"NENHUM NOME SERÁ PERDIDO."},
+    {speaker:"JACK",portrait:"jack",expression:1,text:"Isso não soa como ameaça."},
+    {speaker:"PEREGRINA",text:"Talvez seja pior. Soa como justificativa."}
   ]),
 
   bridgeFear:Object.freeze([
