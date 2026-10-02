@@ -144,6 +144,9 @@ let motherTreeScene=!!loadedSave?.motherTreeScene;
 let archiveSolved=!!loadedSave?.archiveSolved;
 let archiveChoice=Math.max(0,Math.min(2,Number(loadedSave?.archiveChoice)||0));
 let archiveSeen=Array.isArray(loadedSave?.archiveSeen)?loadedSave.archiveSeen.slice(0,3).map(Boolean):[false,false,false];
+let archiveReadyToRelease=!!loadedSave?.archiveReadyToRelease||(!archiveSolved&&archiveSeen.every(Boolean));
+let archiveReleasedIndex=Number.isInteger(loadedSave?.archiveReleasedIndex)?Math.max(-1,Math.min(2,loadedSave.archiveReleasedIndex)):-1;
+const archiveReleaseFx={active:false,target:-1,t:0,frame:0,alpha:0};
 let bossPrelude=!!loadedSave?.bossPrelude;
 let bossActive=!!loadedSave?.bossActive,bossAct=Math.max(0,Math.min(3,Number(loadedSave?.bossAct)||0)),bossStep=Math.max(0,Number(loadedSave?.bossStep)||0),bossComplete=!!loadedSave?.bossComplete,finalePlayed=!!loadedSave?.finalePlayed;
 let bossFirstStrike=!!loadedSave?.bossFirstStrike;
@@ -234,6 +237,11 @@ const voicePuzzleEchoes=[
 const voicePuzzleCore={dormant:null,awakened:null};
 let voicePuzzleAssetsLoadStarted=false;
 
+const archivePuzzleAltars=[null,null,null];
+const archivePuzzleItems={letter:null,musicbox:null,questionPlaque:null,release:[null,null,null]};
+let archivePuzzleAssetsLoadStarted=false;
+const archivePositions=[5500,5705,5910];
+
 const rootGateProgress={
  portraits:portraitsSolved?1:0,
  voices:voicesSolved?1:0,
@@ -258,7 +266,7 @@ function save(){
    x:p.x,y:p.y,dir:p.dir,playerLife,activeCheckpoint,introLorePlayed,
    maraMet,portraitsSolved,portraitChoices:[...portraitChoices],portraitRevealed:[...portraitRevealed],
    voicesSolved,voiceStep,voiceAwakened:[...voiceAwakened],jackEchoPlayed,firstWhisperPlayed,portraitMemoryProofPlayed,maraJackSuspicionPlayed,archiveKeyReactionPlayed,approachTreePlayed,motherTreeScene,
-   archiveSolved,archiveChoice,archiveSeen:[...archiveSeen],bossPrelude,bossActive,bossAct,bossStep,bossComplete,finalePlayed,bossFirstStrike,bossFacesSeen:[...bossFacesSeen],maraBossX,maraSettledX,savedAt:Date.now()
+   archiveSolved,archiveChoice,archiveSeen:[...archiveSeen],archiveReadyToRelease,archiveReleasedIndex,bossPrelude,bossActive,bossAct,bossStep,bossComplete,finalePlayed,bossFirstStrike,bossFacesSeen:[...bossFacesSeen],maraBossX,maraSettledX,savedAt:Date.now()
  }));
 }
 function respawn(msg){
@@ -438,6 +446,28 @@ function ensureVoicePuzzleAssets(){
    .then(im=>{voicePuzzleCore.dormant=im}).catch(()=>{});
  img("../assets/game/phase3/voice-puzzle/core/phase3-voice-core-awakened.png")
    .then(im=>{voicePuzzleCore.awakened=im}).catch(()=>{});
+}
+
+function ensureArchivePuzzleAssets(){
+ if(archivePuzzleAssetsLoadStarted)return;
+ archivePuzzleAssetsLoadStarted=true;
+
+ for(let i=0;i<3;i++){
+   const n=String(i+1).padStart(2,"0");
+   img("../assets/game/phase3/archive-puzzle/altars/phase3-archive-altar-"+n+".png")
+     .then(im=>{archivePuzzleAltars[i]=im}).catch(()=>{});
+ }
+ img("../assets/game/phase3/archive-puzzle/items/phase3-archive-letter.png")
+   .then(im=>{archivePuzzleItems.letter=im}).catch(()=>{});
+ img("../assets/game/phase3/archive-puzzle/items/phase3-archive-musicbox.png")
+   .then(im=>{archivePuzzleItems.musicbox=im}).catch(()=>{});
+ img("../assets/game/phase3/archive-puzzle/ui/phase3-archive-question-plaque.png")
+   .then(im=>{archivePuzzleItems.questionPlaque=im}).catch(()=>{});
+ for(let i=0;i<3;i++){
+   const n=String(i+1).padStart(2,"0");
+   img("../assets/game/phase3/archive-puzzle/release/phase3-archive-release-"+n+".png")
+     .then(im=>{archivePuzzleItems.release[i]=im}).catch(()=>{});
+ }
 }
 
 // Portões vivos do Bosque. Carregam em segundo plano para não pesar ainda mais
@@ -949,40 +979,202 @@ function drawVoicePuzzleWorld(){
  }
 }
 
-function drawArchivePuzzleWorld(){
- if(!voicesSolved||archiveSolved)return;
- const items=story.archivePuzzle.entries;
- const xs=[5525,5705,5885];
- items.forEach((it,i)=>{
-   const px=xs[i],active=archiveChoice===i;
-   x.save();x.translate(px,0);
-   if(active){x.shadowColor="rgba(231,202,113,.65)";x.shadowBlur=20}
-   x.strokeStyle=active?"#d8bd72":"#796344";x.lineWidth=4;
-   x.beginPath();x.moveTo(0,590);x.quadraticCurveTo(-20,535,0,475);x.stroke();
-   x.fillStyle=active?"#d7c37d":"#786c4f";
-   if(i===0){x.fillRect(-27,442,54,36);x.strokeRect(-27,442,54,36)}
-   if(i===1){x.beginPath();x.arc(0,455,25,0,Math.PI*2);x.fill();x.strokeRect(-7,420,14,25)}
-   if(i===2){
-     const keyIm=(memoryLight>0&&maraWoodKeyGlowImage)||maraWoodKeyImage;
-     if(keyIm){
-       const iw=keyIm.naturalWidth||keyIm.width,ih=keyIm.naturalHeight||keyIm.height;
-       const dh=112,dw=iw*(dh/ih);
-       x.save();
-       x.globalAlpha=archiveSeen[2]?1:.9;
-       x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";
-       if(memoryLight>0){x.shadowColor="rgba(241,205,102,.85)";x.shadowBlur=28}
-       x.drawImage(keyIm,-dw/2,392,dw,dh);
-       x.restore();
-     }else{
-       x.beginPath();x.arc(-8,451,13,0,Math.PI*2);x.stroke();x.fillRect(4,447,34,8);x.fillRect(28,447,7,18);
-     }
-   }
-   x.shadowBlur=0;x.fillStyle="#efe0ad";x.font="700 11px Georgia";x.textAlign="center";x.fillText(["CARTA","MELODIA","CHAVE"][i],0,515);
-   x.restore();
- });
- x.save();x.fillStyle="rgba(10,14,11,.78)";x.fillRect(5460,330,500,58);x.strokeStyle="#8f784b";x.strokeRect(5460,330,500,58);
- x.fillStyle="#ead9a3";x.font="italic 17px Georgia";x.textAlign="center";x.fillText(story.archivePuzzle.prompt,5710,365);x.restore();
+function drawArchiveImage(im,cx,cy,targetH,alpha=1,glow=0,bob=0){
+ if(!im||alpha<=0)return false;
+ const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+ const dh=targetH,dw=iw*(dh/ih);
+ x.save();
+ x.globalAlpha=alpha;
+ x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";
+ if(glow>0){
+   x.shadowColor="rgba(242,207,116,"+(0.30+glow*.42)+")";
+   x.shadowBlur=10+glow*22;
+ }
+ x.drawImage(im,cx-dw/2,cy-dh/2+bob,dw,dh);
+ x.restore();
+ return true;
 }
+
+function drawArchiveQuestionPlaque(){
+ const im=archivePuzzleItems.questionPlaque;
+ const cx=5705,cy=215;
+
+ if(im){
+   const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+   // A arte foi criada em 4:3 com grande respiro transparente.
+   // Recortamos a faixa útil para ela funcionar como placa horizontal no gameplay.
+   const sx=0,sy=ih*.18,sw=iw,sh=ih*.64;
+   const dw=510,dh=dw*(sh/sw);
+   x.save();
+   x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";
+   x.shadowColor="rgba(211,164,75,.26)";x.shadowBlur=14;
+   x.drawImage(im,sx,sy,sw,sh,cx-dw/2,cy-dh/2,dw,dh);
+   x.restore();
+ }else{
+   x.save();x.fillStyle="rgba(10,14,11,.82)";x.strokeStyle="#8f784b";x.lineWidth=2;
+   x.fillRect(cx-250,cy-46,500,92);x.strokeRect(cx-250,cy-46,500,92);x.restore();
+ }
+
+ x.save();
+ x.fillStyle="#4a3523";
+ x.shadowColor="rgba(255,235,178,.46)";x.shadowBlur=2;
+ x.font="700 15px Georgia";x.textAlign="center";x.textBaseline="middle";
+ x.fillText("QUAL DESTAS LEMBRANÇAS",cx,cy-11);
+ x.fillText("DEVE SER ESQUECIDA?",cx,cy+12);
+ x.restore();
+}
+
+function archiveItemImage(i,glowing=false){
+ if(i===0)return archivePuzzleItems.letter;
+ if(i===1)return archivePuzzleItems.musicbox;
+ if(i===2)return (glowing&&maraWoodKeyGlowImage)||maraWoodKeyImage;
+ return null;
+}
+
+function drawArchiveRelic(i,worldX,focused,selected){
+ const altar=archivePuzzleAltars[i];
+ const releasing=archiveReleaseFx.active&&archiveReleaseFx.target===i;
+ const t=p.anim;
+ const bob=Math.sin(t*1.18+i*.82)*1.6;
+ const seen=archiveSeen[i];
+
+ x.save();
+ x.translate(worldX,0);
+
+ const auraR=releasing?124:(focused||selected?102:82);
+ const aura=x.createRadialGradient(0,430,8,0,430,auraR);
+ aura.addColorStop(0,releasing?"rgba(246,220,132,.42)":(selected?"rgba(220,188,103,.27)":(seen?"rgba(148,133,94,.18)":"rgba(84,96,79,.10)")));
+ aura.addColorStop(1,"rgba(39,30,23,0)");
+ x.fillStyle=aura;x.beginPath();x.arc(0,430,auraR,0,Math.PI*2);x.fill();
+
+ if(altar){
+   const iw=altar.naturalWidth||altar.width,ih=altar.naturalHeight||altar.height;
+   const dh=212,dw=iw*(dh/ih);
+   x.save();x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";
+   x.globalAlpha=releasing?.52:1;
+   if(selected||releasing){x.shadowColor="rgba(226,190,100,.38)";x.shadowBlur=releasing?20:10}
+   x.drawImage(altar,-dw/2,590-dh+5,dw,dh);
+   x.restore();
+ }else{
+   x.save();x.strokeStyle=selected?"#d8bd72":"#796344";x.lineWidth=5;
+   x.beginPath();x.moveTo(0,585);x.quadraticCurveTo(-28,515,0,458);x.stroke();x.restore();
+ }
+
+ const item=archiveItemImage(i,seen||memoryLight>0);
+ if(item){
+   const ih=i===0?100:(i===1?106:100);
+   const alpha=releasing?Math.max(.18,1-archiveReleaseFx.t*.42):(seen?1:.72);
+   archiveDrawArchiveItem:
+   {
+     const iw=item.naturalWidth||item.width,srcH=item.naturalHeight||item.height;
+     const dw=iw*(ih/srcH);
+     x.save();x.globalAlpha=alpha;x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";
+     if(selected||seen){
+       x.shadowColor=i===2?"rgba(244,208,100,.76)":"rgba(228,195,111,.52)";
+       x.shadowBlur=selected?20:12;
+     }
+     x.drawImage(item,-dw/2,420-ih/2+bob,dw,ih);
+     x.restore();
+   }
+ }else{
+   x.fillStyle=selected?"#d7c37d":"#786c4f";x.beginPath();x.arc(0,420,18,0,Math.PI*2);x.fill();
+ }
+
+ // Foco do jogador: círculo orgânico e discreto, sem parecer menu.
+ if(focused&&!releasing){
+   x.save();x.globalAlpha=.58+.14*Math.sin(t*2.8+i);
+   x.strokeStyle=archiveReadyToRelease?"#f0d27c":"#bea66d";x.lineWidth=2.2;
+   x.beginPath();x.ellipse(0,420,58,68,0,0,Math.PI*2);x.stroke();x.restore();
+ }
+
+ if(releasing){
+   const fx=archivePuzzleItems.release[archiveReleaseFx.frame];
+   if(fx){
+     const iw=fx.naturalWidth||fx.width,ih=fx.naturalHeight||fx.height;
+     const dh=242,dw=iw*(dh/ih);
+     x.save();
+     x.globalAlpha=archiveReleaseFx.alpha;
+     x.globalCompositeOperation="screen";
+     x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";
+     x.shadowColor="rgba(250,222,133,.78)";x.shadowBlur=26;
+     x.drawImage(fx,-dw/2,442-dh/2,dw,dh);
+     x.restore();
+   }
+ }
+
+ const labels=["CARTA","CAIXA DE MÚSICA","CHAVE"];
+ x.textAlign="center";x.textBaseline="middle";
+ x.fillStyle=releasing?"#f6dfa0":(seen?"#e8d59f":"#9e9277");
+ x.font="700 10px Georgia";x.fillText(labels[i],0,548);
+
+ x.font="italic 9px Georgia";
+ if(releasing){
+   x.fillStyle="#f0d67d";x.fillText("DEIXANDO IR",0,564);
+ }else if(archiveReadyToRelease&&focused){
+   x.fillStyle="#efd47f";x.fillText("E · DEIXAR IR",0,564);
+ }else if(focused){
+   x.fillStyle="#c8b98e";x.fillText(seen?"E · recordar":"E · examinar",0,564);
+ }else if(seen){
+   x.fillStyle="#9ea083";x.fillText("MEMÓRIA OUVIDA",0,564);
+ }
+ x.restore();
+}
+
+function drawArchivePuzzleWorld(){
+ if(!voicesSolved||(archiveSolved&&!archiveReleaseFx.active))return;
+ ensureArchivePuzzleAssets();
+ drawArchiveQuestionPlaque();
+
+ const pc=p.x+p.w/2;
+ let focused=-1,best=Infinity;
+ archivePositions.forEach((z,i)=>{const d=Math.abs(z-pc);if(d<145&&d<best){focused=i;best=d}});
+
+ archivePositions.forEach((z,i)=>{
+   drawArchiveRelic(i,z,focused===i,archiveChoice===i&&archiveSeen[i]);
+ });
+}
+
+function beginArchiveRelease(index){
+ if(archiveReleaseFx.active||archiveSolved)return false;
+ ensureArchivePuzzleAssets();
+ archiveChoice=index;
+ archiveReleaseFx.active=true;
+ archiveReleaseFx.target=index;
+ archiveReleaseFx.t=0;
+ archiveReleaseFx.frame=0;
+ archiveReleaseFx.alpha=1;
+ memoryPulse=Math.max(memoryPulse,1.25);
+ banner("DEIXAR IR — SEM APAGAR");
+ save();
+ return true;
+}
+
+function updateArchiveReleaseFx(dt){
+ if(!archiveReleaseFx.active)return;
+ archiveReleaseFx.t+=dt;
+ const t=archiveReleaseFx.t;
+ archiveReleaseFx.frame=t<.58?0:(t<1.28?1:2);
+ archiveReleaseFx.alpha=t<1.55?1:Math.max(0,1-(t-1.55)/.72);
+ memoryPulse=Math.max(memoryPulse,.28);
+
+ if(t<2.27)return;
+
+ const released=archiveReleaseFx.target;
+ archiveReleaseFx.active=false;
+ archiveReleaseFx.target=-1;
+ archiveReleaseFx.alpha=0;
+ archiveReleasedIndex=released;
+ archiveReadyToRelease=false;
+ archiveSolved=true;
+ memoryPulse=1.35;
+ p.vx=0;
+
+ banner("MEMÓRIA NÃO APAGADA — LIBERTADA");
+ say("As raízes soltaram o caminho para a Árvore-Mãe.");
+ startMaraRun(5575,6380,()=>save());
+ save();
+}
+
 function updateRootGateAnimations(dt){
  const targets={
    portraits:portraitsSolved?1:0,
@@ -1874,30 +2066,52 @@ function tryInteract(){
    finishBoss();return;
  }
 
- if(voicesSolved&&!archiveSolved&&pc>5440&&pc<5980){
-   const xs=[5525,5705,5885],near=xs.map((z,i)=>({i,d:Math.abs(z-pc)})).sort((a,b)=>a.d-b.d)[0];
-   archiveChoice=near.i;archiveSeen[near.i]=true;
+ if(voicesSolved&&!archiveSolved&&pc>5410&&pc<6000){
+   if(archiveReleaseFx.active){
+     say("As raízes estão soltando a lembrança. Deixe a Luz terminar o movimento.");
+     return;
+   }
+
+   const near=archivePositions.map((z,i)=>({i,d:Math.abs(z-pc)})).sort((a,b)=>a.d-b.d)[0];
+   if(near.d>155){say("Aproxime-se de um dos relicários do Arquivo.");return}
+
+   archiveChoice=near.i;
    const item=story.archivePuzzle.entries[near.i];
+
+   // Depois que as três lembranças foram compreendidas, E deixa de significar
+   // "escolher o que apagar" e passa a executar a resposta de Jack: DEIXAR IR.
+   if(archiveReadyToRelease){
+     p.vx=0;
+     dialogue.open(story.dialogues.archiveSolved,()=>{
+       beginArchiveRelease(near.i);
+     });
+     save();return;
+   }
+
+   const first=!archiveSeen[near.i];
+   archiveSeen[near.i]=true;
+
+   const afterExamined=()=>{
+     if(archiveSeen.every(Boolean)){
+       archiveReadyToRelease=true;
+       banner("A PERGUNTA ESTÁ ERRADA");
+       say("As três memórias foram ouvidas. Volte a um relicário e pressione E para responder.");
+     }else{
+       say(item.title+" — "+item.memory+" ("+archiveSeen.filter(Boolean).length+"/3 lembranças ouvidas)");
+     }
+     save();
+   };
 
    if(near.i===2&&!archiveKeyReactionPlayed){
      archiveKeyReactionPlayed=true;p.vx=0;
-     dialogue.open(story.dialogues.archiveKey,()=>{say(item.title+" — "+item.memory);save()});
+     dialogue.open(story.dialogues.archiveKey,afterExamined);
      save();return;
    }
 
-   if(!archiveSeen.every(Boolean)){
-     say(item.title+" — "+item.memory+" ("+archiveSeen.filter(Boolean).length+"/3 lembranças ouvidas)");
-     save();return;
-   }
-
-   p.vx=0;archiveSolved=true;banner("MEMÓRIA NÃO APAGADA — LIBERTADA");
-   dialogue.open(story.dialogues.archiveSolved,()=>{
-     say("As raízes soltaram o caminho para a Árvore-Mãe.");
-     startMaraRun(5575,6380,()=>save());save();
-   });
-   save();return;
+   if(first)banner("RELICÁRIO DESPERTO — "+item.title.toUpperCase());
+   afterExamined();
+   return;
  }
-
  if(!maraRun.active&&Math.abs(pc-m.x)<120){
    if(!maraMet){
      maraMet=true;p.vx=0;
@@ -2129,8 +2343,10 @@ function update(dt){
  syncPhase3Music();
  if((maraMet||p.x>2180)&&!portraitPuzzleAssetsLoadStarted)ensurePortraitPuzzleAssets();
  if((portraitsSolved||p.x>3850)&&!voicePuzzleAssetsLoadStarted)ensureVoicePuzzleAssets();
+ if((voicesSolved||p.x>5200)&&!archivePuzzleAssetsLoadStarted)ensureArchivePuzzleAssets();
  updateRootGateAnimations(dt);
  updateBossRootSealAnimation(dt);
+ updateArchiveReleaseFx(dt);
  updateMotherTreeFragmentState(dt);
  if((p.x>5550||motherTreeScene)&&!motherTreeSuspendedLoadStarted)ensureMotherTreeSuspendedMemories();
  bossReleaseT=Math.max(0,bossReleaseT-dt);
@@ -2226,7 +2442,7 @@ function update(dt){
  else if(!maraMet&&p.x>=1480)ui.obj.textContent="Siga as folhas até a mulher que espera junto às raízes.";
  else if(maraMet&&!portraitsSolved&&p.x>=2500)ui.obj.textContent="BOSQUE DOS RETRATOS: F desperta a lembrança. Leia a história e use E para devolver o nome correto.";
  else if(portraitsSolved&&!voicesSolved&&p.x>=3900)ui.obj.textContent="LAGO DAS VOZES: F desperta cada Eco. Escute os fragmentos e use E para reconstruir a voz de Mara na ordem correta.";
- else if(voicesSolved&&!archiveSolved)ui.obj.textContent="Arquivo das Raízes: examine carta, melodia e chave com E. Nenhuma precisa ser apagada.";
+ else if(voicesSolved&&!archiveSolved)ui.obj.textContent=archiveReadyToRelease?"ARQUIVO DAS RAÍZES: a pergunta estava errada. Aproxime-se de um relicário e use E para DEIXAR IR.":"ARQUIVO DAS RAÍZES: examine carta, caixa de música e chave com E. Escute as três antes de responder.";
  else if(archiveSolved&&!approachTreePlayed)ui.obj.textContent="Siga Mara. Observe o que acontece com as coisas que tentam terminar.";
  else if(archiveSolved&&!motherTreeScene)ui.obj.textContent="O ciclo está quebrado. Alcance a Árvore-Mãe.";
  else if(bossPrelude&&!bossActive&&!bossComplete)ui.obj.textContent="As memórias estão se reunindo. A antiga ordem de Mara ganhou forma.";
