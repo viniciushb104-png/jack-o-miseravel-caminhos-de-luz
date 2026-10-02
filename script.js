@@ -180,8 +180,8 @@
       const status = chapterFour.querySelector('[data-phase-status]');
       const arrow = chapterFour.querySelector('[data-phase-arrow]');
       if (unlocked) {
-        chapterFour.href = './game/phase4.html';
-        if (status) status.textContent = 'Desbloqueada · próxima fase em preparação';
+        chapterFour.href = './game/phase4.html?replay=1&new=1';
+        if (status) status.textContent = 'Desbloqueada · protótipo jogável';
         if (arrow) arrow.textContent = '›';
       } else {
         chapterFour.removeAttribute('href');
