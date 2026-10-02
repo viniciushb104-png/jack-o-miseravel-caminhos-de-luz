@@ -1439,3 +1439,33 @@ button:focus-visible{outline:3px solid #fff3b0;outline-offset:4px}
   .studio-splash__loading,
   .studio-splash__dots{opacity:1;transform:none}
 }
+
+.studio-splash__start{
+  margin-top:.8rem;
+  min-width:min(82vw,300px);
+  min-height:46px;
+  padding:.72rem 1rem;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:.65rem;
+  border:1px solid rgba(224,190,255,.54);
+  border-radius:5px;
+  color:#efe5f8;
+  background:linear-gradient(180deg,rgba(39,22,52,.92),rgba(13,9,18,.96));
+  box-shadow:inset 0 0 0 2px rgba(255,255,255,.035),0 0 22px rgba(137,74,184,.18),0 12px 32px rgba(0,0,0,.34);
+  font:700 .68rem/1.1 Georgia,serif;
+  letter-spacing:.12em;
+  cursor:pointer;
+  opacity:0;
+  transform:translateY(5px);
+  transition:opacity .35s ease,transform .35s ease,border-color .25s ease,box-shadow .25s ease;
+}
+.studio-splash__start:not([hidden]){opacity:1;transform:translateY(0)}
+.studio-splash__start:hover,
+.studio-splash__start:focus-visible{
+  border-color:rgba(239,211,255,.9);
+  box-shadow:inset 0 0 0 2px rgba(255,255,255,.045),0 0 28px rgba(166,97,219,.34),0 12px 32px rgba(0,0,0,.38);
+  outline:none;
+}
+.studio-splash__start span{font-size:.82rem;color:#d9b8f4}
