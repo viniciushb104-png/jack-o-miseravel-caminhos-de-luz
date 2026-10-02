@@ -28,7 +28,11 @@ window.PHASE4_STORY=Object.freeze({
     {speaker:"PEREGRINA",text:"E se ele não estiver mais aqui?"},
     {speaker:"JACK",portrait:"jack",expression:5,text:"Tudo deixa algum rastro."},
     {speaker:"PEREGRINA",text:"Você acredita nisso?"},
-    {speaker:"JACK",portrait:"jack",expression:1,text:"Preciso acreditar em alguma coisa."}
+    {speaker:"JACK",portrait:"jack",expression:1,text:"Preciso acreditar em alguma coisa."},
+    {speaker:"PEREGRINA",text:"Então eu vou com você."},
+    {speaker:"JACK",portrait:"jack",expression:2,text:"Tem certeza? Eu costumo encontrar problemas."},
+    {speaker:"PEREGRINA",text:"Ficar parada também não está me devolvendo nada."},
+    {speaker:"JACK",portrait:"jack",expression:5,text:"Essa parte eu entendo."}
   ]),
 
   tracesSolved:Object.freeze([
@@ -47,6 +51,53 @@ window.PHASE4_STORY=Object.freeze({
     {speaker:"JACK",portrait:"jack",expression:4,text:"Ótimo. Finalmente um problema que parece disposto a me bater de volta."},
     {speaker:"???",text:"NOMES NÃO DEVEM DESAPARECER."},
     {speaker:"JACK",portrait:"jack",expression:1,text:"Conheço esse tipo de frase. Nunca acaba bem."}
+  ]),
+
+  bridgeFear:Object.freeze([
+    {speaker:"PEREGRINA",text:"Eu não gosto dessa ponte."},
+    {speaker:"JACK",portrait:"jack",expression:2,text:"Ela também não parece gostar de nós."},
+    {speaker:"PEREGRINA",text:"Não. É a altura."},
+    {speaker:"JACK",portrait:"jack",expression:1,text:"Você lembra que tinha medo?"},
+    {speaker:"PEREGRINA",text:"Meu corpo lembra."},
+    {speaker:"JACK",portrait:"jack",expression:5,text:"Medo também é um rastro."},
+    {speaker:"PEREGRINA",text:"Isso deveria me consolar?"},
+    {speaker:"JACK",portrait:"jack",expression:2,text:"Não particularmente. Mas significa que ainda é seu."}
+  ]),
+
+  bridgeCrossed:Object.freeze([
+    {speaker:"PEREGRINA",text:"Eu ainda estou com medo."},
+    {speaker:"JACK",portrait:"jack",expression:1,text:"Ótimo."},
+    {speaker:"PEREGRINA",text:"Ótimo?"},
+    {speaker:"JACK",portrait:"jack",expression:5,text:"Você teve medo e atravessou mesmo assim. Eu guardaria essa parte."},
+    {speaker:"PEREGRINA",text:"Talvez eu tenha feito isso antes."},
+    {speaker:"JACK",portrait:"jack",expression:2,text:"Então seus pés lembram mais de você do que as placas."}
+  ]),
+
+  stolenPlaza:Object.freeze([
+    {speaker:"PEREGRINA",text:"Essas placas... todas parecem familiares."},
+    {speaker:"JACK",portrait:"jack",expression:1,text:"Porque alguém fez questão de arrancar o que estava escrito nelas."},
+    {speaker:"PEREGRINA",text:"E se uma delas for minha?"},
+    {speaker:"JACK",portrait:"jack",expression:5,text:"Então seu nome está aqui."},
+    {speaker:"PEREGRINA",text:"E eu?"},
+    {speaker:"JACK",portrait:"jack",expression:1,text:"Você está aqui comigo. Não confunda as duas coisas."}
+  ]),
+
+  collectorApproach:Object.freeze([
+    {speaker:"PEREGRINA",text:"Se ele tiver meu nome..."},
+    {speaker:"JACK",portrait:"jack",expression:1,text:"Você decide o que fazer com ele."},
+    {speaker:"PEREGRINA",text:"E se eu quiser de volta?"},
+    {speaker:"JACK",portrait:"jack",expression:4,text:"Então pegamos de volta."},
+    {speaker:"PEREGRINA",text:"E se eu descobrir que não preciso dele?"},
+    {speaker:"JACK",portrait:"jack",expression:5,text:"Então continuamos andando."}
+  ]),
+
+  arenaEdge:Object.freeze([
+    {speaker:"PEREGRINA",text:"Você vai entrar sozinho?"},
+    {speaker:"JACK",portrait:"jack",expression:1,text:"Só até descobrir o que existe lá dentro."},
+    {speaker:"PEREGRINA",text:"Isso é o que pessoas imprudentes dizem antes de fazer alguma coisa imprudente."},
+    {speaker:"JACK",portrait:"jack",expression:2,text:"Ótimo. Você está recuperando o senso crítico."},
+    {speaker:"PEREGRINA",text:"Jack."},
+    {speaker:"JACK",portrait:"jack",expression:5,text:"Eu volto."}
   ]),
 
   traces:Object.freeze([
