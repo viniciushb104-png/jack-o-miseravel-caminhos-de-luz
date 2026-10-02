@@ -32,7 +32,7 @@ let bridgeFearPlayed=!!saveData?.bridgeFearPlayed,bridgeCrossedPlayed=!!saveData
 let bridgeNameGlitchPlayed=!!saveData?.bridgeNameGlitchPlayed,bridgeFogClock=Number(saveData?.bridgeFogClock)||0;
 const hadPlazaState=Array.isArray(saveData?.plazaEchoes);
 let plazaEchoes=hadPlazaState?saveData.plazaEchoes.slice(0,3).map(Boolean):[false,false,false];
-let plazaSolved=!!saveData?.plazaSolved,collectorGlimpsePlayed=!!saveData?.collectorGlimpsePlayed,collectorGlimpseTimer=0;
+let plazaSolved=!!saveData?.plazaSolved,collectorGlimpsePlayed=!!saveData?.collectorGlimpsePlayed,collectorGlimpseTimer=0,collectorGlimpseQueued=false;
 if(!hadPlazaState&&Number(saveData?.x||0)>=9300){
  plazaEchoes=[true,true,true];plazaSolved=true;collectorGlimpsePlayed=true;
 }
@@ -1220,6 +1220,19 @@ function drawMemoryLight(){
  ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,cy,230,0,Math.PI*2);ctx.fill();
 }
 
+function playCollectorGlimpse(delay=0){
+ if(collectorGlimpsePlayed||collectorGlimpseQueued)return;
+ collectorGlimpseQueued=true;collectorGlimpseTimer=6.5;p.vx=0;save();
+ setTimeout(()=>{
+   if(collectorGlimpsePlayed){collectorGlimpseQueued=false;return}
+   dialogue.open(story.collectorGlimpse,()=>{
+     collectorGlimpsePlayed=true;collectorGlimpseQueued=false;
+     banner("O COLETOR OBSERVA DA ESTRADA");
+     collectorGlimpseTimer=Math.max(collectorGlimpseTimer,3.8);save();
+   });
+ },delay);
+}
+
 function openDoor(){
  if(doorOpened)return;
  const pc=p.x+p.w/2;if(Math.abs(pc-860)>125){say("A chave está reagindo a alguma coisa na parede.");return}
@@ -1333,11 +1346,7 @@ function useLight(){
          plazaSolved=true;memoryPulse=1.55;save();
          setTimeout(()=>dialogue.open(story.plazaSolved,()=>{
            banner("NOMES NÃO SÃO PESSOAS");
-           collectorGlimpsePlayed=true;collectorGlimpseTimer=6.5;save();
-           setTimeout(()=>dialogue.open(story.collectorGlimpse,()=>{
-             banner("O COLETOR OBSERVA DA ESTRADA");
-             collectorGlimpseTimer=Math.max(collectorGlimpseTimer,3.8);save();
-           }),260);
+           playCollectorGlimpse(260);
          }),230);
        }
      });
@@ -1641,12 +1650,14 @@ function update(dt){
  }else if(bridgeNameGlitchPlayed&&!bridgeCrossedPlayed&&p.x>8010){
    bridgeCrossedPlayed=true;p.vx=0;
    dialogue.open(story.bridgeCrossed,()=>{banner("UM MEDO TAMBÉM É UM RASTRO");save()})
- }else if(bridgeCrossedPlayed&&!stolenPlazaPlayed&&p.x>8170){
+ }else if(bridgeCrossedPlayed&&!stolenPlazaPlayed&&p.x>8040){
    stolenPlazaPlayed=true;p.vx=0;
    dialogue.open(story.stolenPlaza,()=>{
      banner("PRAÇA DOS NOMES ROUBADOS");
      say("A Luz consegue alcançar as vozes depois que seus guardiões forem dissipados.");save();
    })
+ }else if(plazaSolved&&stolenPlazaPlayed&&!collectorGlimpsePlayed&&!collectorGlimpseQueued&&p.x>8500){
+   playCollectorGlimpse();
  }else if(plazaSolved&&!collectorApproachPlayed&&p.x>9340){
    collectorApproachPlayed=true;p.vx=0;
    dialogue.open(story.collectorApproach,()=>{banner("CASA DO COLETOR");save()})
