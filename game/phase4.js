@@ -201,7 +201,7 @@ function drawEnemy(e){
 }
 function drawWorld(){
  drawRoad();drawSigns();drawDoor();
- ctx.save();ctx.translate(-cam,0);checkpoints.forEach(drawCheckpoint);ctx.restore();
+ checkpoints.forEach(drawCheckpoint);
  drawPilgrim();drawTraces();enemies.forEach(drawEnemy);
  if(tracesSolved){
    ctx.save();ctx.translate(4660-cam,0);ctx.strokeStyle="#d6bd7a";ctx.lineWidth=2;ctx.globalAlpha=.55;ctx.beginPath();ctx.moveTo(0,590);ctx.lineTo(0,370);ctx.stroke();ctx.fillStyle="#e6cd8a";ctx.font="italic 11px Georgia";ctx.textAlign="center";ctx.fillText("alguém arrancou os nomes daqui",0,345);ctx.restore();
