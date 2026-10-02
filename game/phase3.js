@@ -252,6 +252,13 @@ const archivePuzzleItems={letter:null,musicbox:null,questionPlaque:null,release:
 let archivePuzzleAssetsLoadStarted=false;
 const archivePositions=[5500,5705,5910];
 
+const cycleFailureImages={
+ flower:[null,null,null],
+ letter:[null,null,null],
+ leaf:[null,null,null]
+};
+let cycleFailureAssetsLoadStarted=false;
+
 const rootGateProgress={
  portraits:portraitsSolved?1:0,
  voices:voicesSolved?1:0,
@@ -496,6 +503,26 @@ function ensureArchivePuzzleAssets(){
    img("../assets/game/phase3/archive-puzzle/release/phase3-archive-release-"+n+".png")
      .then(im=>{archivePuzzleItems.release[i]=im}).catch(()=>{});
  }
+}
+
+function ensureCycleFailureAssets(){
+ if(cycleFailureAssetsLoadStarted)return;
+ cycleFailureAssetsLoadStarted=true;
+
+ const jobs=[
+   ["flower",0,"../assets/game/phase3/cycle-failures/flower/phase3-cycle-flower-01-bloom.png"],
+   ["flower",1,"../assets/game/phase3/cycle-failures/flower/phase3-cycle-flower-02-wilt.png"],
+   ["flower",2,"../assets/game/phase3/cycle-failures/flower/phase3-cycle-flower-03-return.png"],
+   ["letter",0,"../assets/game/phase3/cycle-failures/letter/phase3-cycle-letter-01-writing.png"],
+   ["letter",1,"../assets/game/phase3/cycle-failures/letter/phase3-cycle-letter-02-almost-goodbye.png"],
+   ["letter",2,"../assets/game/phase3/cycle-failures/letter/phase3-cycle-letter-03-reset.png"],
+   ["leaf",0,"../assets/game/phase3/cycle-failures/leaf/phase3-cycle-leaf-01-fall.png"],
+   ["leaf",1,"../assets/game/phase3/cycle-failures/leaf/phase3-cycle-leaf-02-hover.png"],
+   ["leaf",2,"../assets/game/phase3/cycle-failures/leaf/phase3-cycle-leaf-03-pulled-upward.png"]
+ ];
+ jobs.forEach(([kind,index,src])=>{
+   img(src).then(im=>{cycleFailureImages[kind][index]=im}).catch(()=>{});
+ });
 }
 
 // Portões vivos do Bosque. Carregam em segundo plano para não pesar ainda mais
@@ -1781,30 +1808,128 @@ function resumeFinaleAfterReload(){
  return true;
 }
 
+function drawCycleFailureImage(im,cx,cy,targetH,opts={}){
+ if(!im)return false;
+ const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+ const dh=targetH,dw=iw*(dh/ih);
+ x.save();
+ x.globalAlpha=opts.alpha??1;
+ x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";
+ if(opts.glow){
+   x.shadowColor=opts.glow;
+   x.shadowBlur=opts.blur??16;
+ }
+ if(opts.rotate){
+   x.translate(cx,cy+(opts.bob||0));
+   x.rotate(opts.rotate);
+   x.drawImage(im,-dw/2,-dh/2,dw,dh);
+ }else{
+   x.drawImage(im,cx-dw/2,cy-dh/2+(opts.bob||0),dw,dh);
+ }
+ x.restore();
+ return true;
+}
+
+function drawCycleFailureAura(cx,cy,r,strength=.22){
+ x.save();
+ const g=x.createRadialGradient(cx,cy,4,cx,cy,r);
+ g.addColorStop(0,"rgba(229,190,102,"+strength+")");
+ g.addColorStop(.52,"rgba(160,118,80,"+(strength*.36)+")");
+ g.addColorStop(1,"rgba(70,54,45,0)");
+ x.fillStyle=g;x.beginPath();x.arc(cx,cy,r,0,Math.PI*2);x.fill();
+ x.restore();
+}
+
 function drawCycleFailures(){
  if(!archiveSolved||bossComplete)return;
- // O caminho final mostra o problema antes da Árvore-Mãe explicá-lo:
- // flor, carta e folha tentam concluir seus ciclos e são puxadas de volta.
+ ensureCycleFailureAssets();
+
+ // Três ciclos quebrados aparecem antes da explicação da Árvore-Mãe.
+ // Cada um usa um relógio diferente para evitar o aspecto de sprites sincronizados.
  const t=p.anim;
- x.save();
- x.translate(6260,0);
- const flowerPhase=(Math.sin(t*2.4)+1)/2;
- x.strokeStyle="#6f845d";x.lineWidth=4;x.beginPath();x.moveTo(0,590);x.lineTo(0,520);x.stroke();
- x.fillStyle="rgba(202,165,102,"+(0.35+flowerPhase*.65)+")";
- for(let i=0;i<6;i++){const a=i*Math.PI/3;x.beginPath();x.ellipse(Math.cos(a)*15,510+Math.sin(a)*10,10,5,a,0,Math.PI*2);x.fill()}
- x.fillStyle="#d6c18b";x.font="italic 12px Georgia";x.textAlign="center";x.fillText("floresce · murcha · volta",0,620);
+ const flowerX=6260,letterX=6430,leafX=6600;
 
- x.translate(170,0);
- x.fillStyle="rgba(225,211,166,.82)";x.fillRect(-42,450,84,62);
- x.fillStyle="#574a34";x.font="12px Georgia";x.textAlign="left";
- const letters="ADEUS".slice(0,1+Math.floor((t*2)%5));
- x.fillText(letters,-31,482);
- x.fillStyle="#d6c18b";x.textAlign="center";x.fillText("a despedida nunca termina",0,620);
+ // ---- FLOR: floresce -> murcha -> tenta retornar ----
+ const flowerCycle=t%4.2;
+ const flowerFrame=flowerCycle<1.55?0:(flowerCycle<2.85?1:2);
+ const flower=cycleFailureImages.flower[flowerFrame];
+ const flowerBob=Math.sin(t*1.18)*1.6;
+ drawCycleFailureAura(flowerX,448,88,flowerFrame===0?.25:(flowerFrame===1?.10:.20));
+ if(!drawCycleFailureImage(
+   flower,flowerX,455,122,
+   {
+     bob:flowerBob,
+     glow:flowerFrame===1?"rgba(139,94,68,.25)":"rgba(239,193,94,.44)",
+     blur:flowerFrame===1?8:18
+   }
+ )){
+   // Fallback mínimo, apenas enquanto o PNG carrega.
+   x.save();x.strokeStyle="#6f845d";x.lineWidth=4;
+   x.beginPath();x.moveTo(flowerX,590);x.lineTo(flowerX,510);x.stroke();
+   x.fillStyle="#caa566";x.beginPath();x.arc(flowerX,500,18,0,Math.PI*2);x.fill();x.restore();
+ }
 
- x.translate(170,0);
- const leafY=500-Math.abs(Math.sin(t*1.8))*70;
- x.save();x.translate(0,leafY);x.rotate(t*.7);x.fillStyle="#c18b43";x.beginPath();x.ellipse(0,0,12,22,.35,0,Math.PI*2);x.fill();x.restore();
- x.fillStyle="#d6c18b";x.textAlign="center";x.fillText("a folha tenta cair",0,620);
+ // ---- CARTA: escrita -> quase despedida -> texto é puxado de volta ----
+ const letterCycle=(t+.65)%4.8;
+ const letterFrame=letterCycle<1.75?0:(letterCycle<3.30?1:2);
+ const letter=cycleFailureImages.letter[letterFrame];
+ const letterPulse=letterFrame===1?1+Math.sin(t*2.1)*.012:1;
+ drawCycleFailureAura(letterX,444,92,letterFrame===1?.18:.15);
+ if(letter){
+   const iw=letter.naturalWidth||letter.width,ih=letter.naturalHeight||letter.height;
+   const dh=126*letterPulse,dw=iw*(dh/ih);
+   x.save();
+   x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";
+   x.shadowColor=letterFrame===2?"rgba(244,196,85,.45)":"rgba(210,178,116,.30)";
+   x.shadowBlur=letterFrame===2?18:10;
+   x.drawImage(letter,letterX-dw/2,447-dh/2+Math.sin(t*.82+.5)*1.2,dw,dh);
+   x.restore();
+ }else{
+   x.save();x.fillStyle="rgba(225,211,166,.82)";
+   x.fillRect(letterX-42,415,84,62);x.restore();
+ }
+
+ // ---- FOLHA: cai -> hesita -> é puxada para cima ----
+ const leafCycle=(t+1.15)%3.9;
+ let leafFrame=0,leafTravel=0,leafRot=0;
+ if(leafCycle<1.35){
+   leafFrame=0;
+   const q=leafCycle/1.35;
+   leafTravel=-26+q*52;              // realmente cai
+   leafRot=-.10+q*.18;
+ }else if(leafCycle<2.15){
+   leafFrame=1;
+   const q=(leafCycle-1.35)/.80;
+   leafTravel=26+Math.sin(q*Math.PI)*2; // hesita no ponto mais baixo
+   leafRot=.08+Math.sin(q*Math.PI)*.025;
+ }else{
+   leafFrame=2;
+   const q=(leafCycle-2.15)/1.75;
+   const eased=1-Math.pow(1-q,2);
+   leafTravel=26-eased*66;           // força invisível puxa para cima
+   leafRot=.08-eased*.18;
+ }
+ const leaf=cycleFailureImages.leaf[leafFrame];
+ drawCycleFailureAura(leafX,448+leafTravel*.18,78,leafFrame===2?.24:.13);
+ if(!drawCycleFailureImage(
+   leaf,leafX,448+leafTravel,94,
+   {
+     rotate:leafRot,
+     glow:leafFrame===2?"rgba(245,193,79,.52)":"rgba(196,151,83,.25)",
+     blur:leafFrame===2?18:10
+   }
+ )){
+   x.save();x.translate(leafX,448+leafTravel);x.rotate(leafRot);
+   x.fillStyle="#c18b43";x.beginPath();x.ellipse(0,0,12,22,.35,0,Math.PI*2);x.fill();x.restore();
+ }
+
+ // Legendas viram sussurros poéticos, não instruções de debug.
+ x.save();x.textAlign="center";x.textBaseline="middle";
+ x.font="italic 10px Georgia";
+ x.fillStyle="rgba(222,209,173,.78)";
+ x.fillText("floresce · murcha · retorna",flowerX,575);
+ x.fillText("a despedida quase termina",letterX,575);
+ x.fillText("cai · hesita · volta",leafX,575);
  x.restore();
 }
 
@@ -2528,6 +2653,7 @@ function update(dt){
  if((portraitsSolved||p.x>3850)&&!voicePuzzleAssetsLoadStarted)ensureVoicePuzzleAssets();
  if((portraitsSolved||p.x>3850)&&!voiceLakeAssetsLoadStarted)ensureVoiceLakeAssets();
  if((voicesSolved||p.x>5200)&&!archivePuzzleAssetsLoadStarted)ensureArchivePuzzleAssets();
+ if((archiveSolved||p.x>6000)&&!cycleFailureAssetsLoadStarted)ensureCycleFailureAssets();
  updateRootGateAnimations(dt);
  updateBossRootSealAnimation(dt);
  updateArchiveReleaseFx(dt);
