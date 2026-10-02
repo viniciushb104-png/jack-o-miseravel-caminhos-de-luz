@@ -6,9 +6,23 @@
   <meta name="theme-color" content="#07101f">
   <meta name="description" content="Jack o Miserável — Caminhos de Luz. Uma aventura narrativa de Halloween em estética 16-bit.">
   <title>Jack o Miserável — Caminhos de Luz</title>
-  <link rel="stylesheet" href="styles.css?v=15"><link rel="stylesheet" href="game/preloader.css?v=3">
+  <link rel="preload" href="assets/branding/asas-do-medo-games.png" as="image">
+  <link rel="preload" href="assets/audio/branding/asas-do-medo-games-intro.mp3" as="audio" type="audio/mpeg">
+  <link rel="preload" href="assets/images/menu/menu-poster.webp" as="image">
+  <link rel="stylesheet" href="styles.css?v=16"><link rel="stylesheet" href="game/preloader.css?v=3">
 </head>
-<body><section id="journeyTransitionLoader" class="journey-transition" aria-label="Abrindo caminho"><div class="loader-vignette"></div><div class="loader-card"><div class="loader-title">CAMINHOS DE LUZ</div><div class="loader-jack run"></div><div class="loader-track"><div class="loader-fill" style="width:72%"></div></div><div class="loader-copy"><span data-loader-message>PREPARANDO A JORNADA...</span><strong></strong></div></div><div class="loader-flash"></div></section>
+<body>
+  <section id="studioSplash" class="studio-splash" aria-label="Asas do Medo Games" aria-live="polite">
+    <div class="studio-splash__mist" aria-hidden="true"></div>
+    <div class="studio-splash__inner">
+      <div class="studio-splash__logo-wrap">
+        <img class="studio-splash__logo" src="assets/branding/asas-do-medo-games.png" alt="Asas do Medo Games">
+        <span class="studio-splash__shine" aria-hidden="true"></span>
+      </div>
+      <p class="studio-splash__loading">Carregando a jornada</p>
+      <div class="studio-splash__dots" aria-hidden="true"><i></i><i></i><i></i></div>
+    </div>
+  </section><section id="journeyTransitionLoader" class="journey-transition" aria-label="Abrindo caminho"><div class="loader-vignette"></div><div class="loader-card"><div class="loader-title">CAMINHOS DE LUZ</div><div class="loader-jack run"></div><div class="loader-track"><div class="loader-fill" style="width:72%"></div></div><div class="loader-copy"><span data-loader-message>PREPARANDO A JORNADA...</span><strong></strong></div></div><div class="loader-flash"></div></section>
   <div class="scanlines" aria-hidden="true"></div>
 
   <main class="site-shell">
