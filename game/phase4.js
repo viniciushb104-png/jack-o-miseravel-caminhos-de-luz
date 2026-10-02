@@ -39,6 +39,20 @@ if(!hadPlazaState&&Number(saveData?.x||0)>=9300){
 if(plazaEchoes.every(Boolean))plazaSolved=true;
 const plazaEchoFx=[0,0,0];
 const plazaEchoGuards=["eraser-3","hound-2","hollow-2"];
+
+// Coletor — boss em três atos. Progresso principal persiste; projéteis e partículas são transitórios.
+const hadBossState=Object.prototype.hasOwnProperty.call(saveData||{},"bossStarted");
+let bossStarted=!!saveData?.bossStarted,bossResolved=!!saveData?.bossResolved;
+let bossAct=Math.max(1,Math.min(3,Number(saveData?.bossAct)||1));
+let bossArmor=Math.max(0,Math.min(5,Number.isFinite(saveData?.bossArmor)?saveData.bossArmor:5));
+let bossHp=Math.max(0,Math.min(5,Number.isFinite(saveData?.bossHp)?saveData.bossHp:5));
+let bossX=Number.isFinite(saveData?.bossX)?saveData.bossX:10935,bossDir=-1;
+let bossState=bossResolved?"resolved":(bossAct===3?"exhausted":"idle");
+let bossStateTimer=0,bossAttackClock=.9,bossInv=0,bossAttackHit=false;
+let bossProjectiles=[],bossReleasedPlates=[];
+if(!hadBossState&&arenaReached){arenaReached=false;bossStarted=false}
+if(bossResolved){bossStarted=true;bossAct=3;bossArmor=0;bossHp=0}
+
 let traces=Array.isArray(saveData?.traces)?saveData.traces.slice(0,3).map(Boolean):[false,false,false];
 const traceRevealFx=[0,0,0];
 const hadArchiveState=Array.isArray(saveData?.archiveEvidence);
@@ -115,8 +129,10 @@ const platforms=[
  {x:10150,y:590,w:420,h:130,kind:"collector"},
  {x:10220,y:470,w:170,h:26,kind:"collector"},
 
- // 8 — Arena provisória do Coletor.
- {x:10670,y:590,w:580,h:130,kind:"arena"}
+ // 8 — Arena do Coletor. O chão principal permanece; plataformas altas quebram no Ato II.
+ {x:10670,y:590,w:580,h:130,kind:"arena"},
+ {x:10755,y:475,w:135,h:22,kind:"arena",bossBreakable:true,broken:false},
+ {x:11010,y:430,w:150,h:22,kind:"arena",bossBreakable:true,broken:false}
 ]
 
 const checkpoints=[
@@ -281,6 +297,7 @@ function save(){
    x:p.x,y:p.y,dir:p.dir,playerLife,activeCheckpoint,introPlayed,doorOpened,pilgrimMet,traces:[...traces],tracesSolved,prototypeEndPlayed,arenaReached,
    bridgeFearPlayed,bridgeCrossedPlayed,bridgeNameGlitchPlayed,stolenPlazaPlayed,collectorApproachPlayed,arenaEdgePlayed,bridgeFogClock,
    plazaEchoes:[...plazaEchoes],plazaSolved,collectorGlimpsePlayed,
+   bossStarted,bossResolved,bossAct,bossArmor,bossHp,bossX,
    pilgrimX,pilgrimBridgeDone,archiveEvidence:[...archiveEvidence],archiveSolved,deadEnemies:deadEnemies(),savedAt:Date.now()
  }));
 }
@@ -299,10 +316,19 @@ function resetPilgrimAfterRespawn(){
  if(activeCheckpoint==="village"){pilgrimX=2860;return}
  pilgrimX=2580;
 }
+function resetCollectorAct(){
+ if(!bossStarted||bossResolved)return;
+ bossProjectiles=[];bossReleasedPlates=[];bossInv=0;bossAttackHit=false;bossStateTimer=0;bossX=10935;bossDir=-1;
+ for(const q of platforms)if(q.bossBreakable)q.broken=false;
+ if(bossAct===1){bossArmor=5;bossHp=5;bossState="idle";bossAttackClock=.8}
+ else if(bossAct===2){bossArmor=0;bossHp=5;bossState="idle";bossAttackClock=.7}
+ else{bossArmor=0;bossHp=0;bossState="exhausted"}
+}
 function respawn(msg){
  const cp=checkpoints.find(q=>q.id===activeCheckpoint);
  p.x=cp?cp.respawnX:110;p.y=cp?cp.respawnY:470;p.vx=p.vy=0;p.on=false;p.inv=1.2;playerLife=3;syncHud();
  resetPilgrimAfterRespawn();
+ if(bossStarted&&!bossResolved)resetCollectorAct();
  if(msg)say(msg);save();
 }
 function hurtPlayer(sourceX,forceX=260,forceY=-310,sourceKind=""){
@@ -314,7 +340,8 @@ function hurtPlayer(sourceX,forceX=260,forceY=-310,sourceKind=""){
  else{
    const msg=sourceKind==="crow"?"O Corvo roubou o brilho da lanterna. ":
      sourceKind==="ashHound"?"O Cão de Cinza atravessou a guarda de Jack. ":
-     sourceKind==="hollow"?"O golpe do Peregrino Oco parecia vir de dentro das roupas. ":"A rasura mordeu a luz. ";
+     sourceKind==="hollow"?"O golpe do Peregrino Oco parecia vir de dentro das roupas. ":
+     sourceKind==="collector"?"O Coletor empurrou Jack com o peso dos nomes roubados. ":"A rasura mordeu a luz. ";
    say(msg+playerLife+"/3.");
  }
 }
@@ -461,6 +488,7 @@ function stabilizeBridgePlatforms(pc,pcy){
 function drawRoad(){
  ctx.save();ctx.translate(-cam,0);
  for(const q of platforms){
+   if(q.broken)continue;
    const alpha=bridgePlatformAlpha(q);
    if(alpha<=.03)continue;
    ctx.save();ctx.globalAlpha=alpha;
@@ -1153,6 +1181,270 @@ function drawCollectorGlimpse(){
  ctx.restore();
 }
 
+function releaseCollectorPlate(index){
+ const angles=[-2.35,-1.9,-1.35,-.85,-.35];
+ const a=angles[Math.max(0,Math.min(angles.length-1,index))];
+ bossReleasedPlates.push({
+   x:bossX+(index%2?28:-28),y:430+index*13,
+   vx:Math.cos(a)*145,vy:Math.sin(a)*145-55,
+   rot:(index%2?1:-1)*.8,life:2.6,maxLife:2.6
+ });
+}
+function spawnCollectorNameProjectile(){
+ const sx=bossX+(bossDir<0?-48:48),sy=bossAct===1?405:455;
+ const tx=p.x+p.w/2,ty=p.y+p.h*.48;
+ const dx=tx-sx,dy=ty-sy,len=Math.max(1,Math.hypot(dx,dy));
+ const speed=255;
+ bossProjectiles.push({x:sx,y:sy,vx:dx/len*speed,vy:dy/len*speed,w:42,h:16,life:4.2,rot:0,dead:false});
+}
+function updateCollectorParticles(dt){
+ for(const r of bossReleasedPlates){
+   r.life-=dt;r.vy+=160*dt;r.x+=r.vx*dt;r.y+=r.vy*dt;r.rot+=dt*(r.vx<0?-1.5:1.5);
+ }
+ bossReleasedPlates=bossReleasedPlates.filter(r=>r.life>0);
+ for(const pr of bossProjectiles){
+   if(pr.dead)continue;
+   pr.life-=dt;pr.x+=pr.vx*dt;pr.y+=pr.vy*dt;pr.rot+=dt*2.8;
+   const hitX=Math.abs((p.x+p.w/2)-pr.x)<p.w*.55+pr.w*.5;
+   const hitY=Math.abs((p.y+p.h*.5)-pr.y)<p.h*.48+pr.h*.5;
+   if(hitX&&hitY&&p.inv<=0){
+     pr.dead=true;hurtPlayer(pr.x,285,-325,"collector");
+   }
+   if(pr.x<10570||pr.x>11320||pr.y<170||pr.y>690)pr.dead=true;
+ }
+ bossProjectiles=bossProjectiles.filter(pr=>!pr.dead&&pr.life>0);
+}
+function breakCollectorPlatforms(){
+ for(const q of platforms){
+   if(!q.bossBreakable||q.broken)continue;
+   const bx=bossX,half=62;
+   if(bx+half>q.x&&bx-half<q.x+q.w&&q.y>390){
+     q.broken=true;
+     memoryPulse=Math.max(memoryPulse,.45);
+   }
+ }
+}
+function startCollectorBoss(){
+ if(bossStarted||bossResolved)return;
+ bossStarted=true;arenaReached=true;bossAct=1;bossArmor=5;bossHp=5;bossX=10935;bossDir=-1;
+ bossState="intro";bossStateTimer=0;bossAttackClock=1.05;bossProjectiles=[];bossReleasedPlates=[];
+ for(const q of platforms)if(q.bossBreakable)q.broken=false;
+ p.vx=0;save();
+ dialogue.open(story.collectorBossIntro,()=>{
+   bossState="idle";bossAttackClock=.75;
+   banner("ATO I · OS NOMES ROUBADOS");
+   say("Use F perto do Coletor para libertar as placas da armadura.");save();
+ });
+}
+function beginCollectorActTwo(){
+ bossAct=2;bossArmor=0;bossHp=5;bossX=10935;bossDir=-1;bossState="idle";bossStateTimer=0;bossAttackClock=.7;bossInv=.3;
+ bossProjectiles=[];
+ for(const q of platforms)if(q.bossBreakable)q.broken=false;
+ banner("ATO II · O HOMEM SOB OS NOMES");
+ say("Sem a armadura, o Coletor ficou menor — e muito mais rápido.");save();
+}
+function finishCollectorArmor(){
+ if(bossState==="transition"||bossAct!==1)return;
+ bossState="transition";bossProjectiles=[];p.vx=0;save();
+ dialogue.open(story.collectorArmorBreak,()=>{
+   setTimeout(()=>dialogue.open(story.collectorActTwo,()=>beginCollectorActTwo()),220);
+ });
+}
+function finishCollectorPhysical(){
+ if(bossAct!==2)return;
+ bossAct=3;bossHp=0;bossState="exhausted";bossStateTimer=0;bossProjectiles=[];bossInv=0;p.vx=0;
+ bossX=Math.max(10880,Math.min(11030,bossX));
+ save();
+ dialogue.open(story.collectorExhausted,()=>{
+   banner("ATO III · RECONHECER");
+   say("A Luz não precisa feri-lo. Aproxime-se e pressione E.");save();
+ });
+}
+function recognizeCollector(){
+ if(!bossStarted||bossResolved||bossAct!==3)return false;
+ const pc=p.x+p.w/2;
+ if(Math.abs(pc-bossX)>175){say("Jack precisa se aproximar do Coletor.");return true}
+ p.vx=0;bossState="recognized";
+ dialogue.open(story.collectorRecognized,()=>{
+   bossResolved=true;bossState="resolved";bossProjectiles=[];memoryPulse=1.8;
+   banner("O COLETOR FOI RECONHECIDO");
+   say("O confronto terminou sem apagar quem estava por baixo dos nomes.");
+   save();
+   setTimeout(()=>{if(ui.prototype)ui.prototype.hidden=false},650);
+ });
+ return true;
+}
+function tryLightCollector(pc,pcy){
+ if(!bossStarted||bossResolved)return false;
+ const dx=bossX-pc,dy=(bossAct===3?500:440)-pcy;
+ const d=Math.hypot(dx,dy*.7);
+
+ if(bossAct===3){
+   if(d<245){say("Não há mais armadura para arrancar. Talvez outro gesto.");return true}
+   return false;
+ }
+ if(bossState==="intro"||bossState==="transition")return d<330;
+ if(bossInv>0)return d<330;
+
+ if(bossAct===1&&d<315){
+   bossInv=.52;memoryPulse=1.25;
+   const released=5-bossArmor;
+   releaseCollectorPlate(released);
+   bossArmor=Math.max(0,bossArmor-1);
+   banner("NOME LIBERADO · "+(5-bossArmor)+"/5");
+   if(bossArmor<=0)finishCollectorArmor();
+   else say("Uma placa se soltou. O Coletor ficou um pouco menor.");
+   save();return true;
+ }
+ if(bossAct===2&&d<245){
+   bossInv=.3;bossHp=Math.max(0,bossHp-1);memoryPulse=1.0;
+   bossX=Math.max(10770,Math.min(11125,bossX+(bossX<pc?-34:34)));
+   banner("LUZ · "+bossHp+"/5");
+   if(bossHp<=0)finishCollectorPhysical();
+   else say("A Luz atravessou o que restou da coleção.");
+   save();return true;
+ }
+ return false;
+}
+function updateCollectorBoss(dt){
+ updateCollectorParticles(dt);
+ bossInv=Math.max(0,bossInv-dt);
+ if(!bossStarted||bossResolved||dialogue.active)return;
+
+ if(bossAct===1){
+   bossDir=(p.x+p.w/2)<bossX?-1:1;
+   if(bossState==="idle"){
+     bossAttackClock-=dt;
+     if(bossAttackClock<=0){
+       spawnCollectorNameProjectile();
+       bossAttackClock=1.05+(bossArmor*.06);
+     }
+   }
+   return;
+ }
+
+ if(bossAct===2){
+   const pc=p.x+p.w/2;
+   if(bossState==="idle"){
+     bossDir=pc<bossX?-1:1;
+     bossX+=bossDir*42*dt;
+     bossX=Math.max(10755,Math.min(11145,bossX));
+     bossAttackClock-=dt;
+     if(bossAttackClock<=0){
+       bossState="windup";bossStateTimer=.38;bossDir=pc<bossX?-1:1;bossAttackHit=false;
+     }
+   }else if(bossState==="windup"){
+     bossStateTimer-=dt;
+     if(bossStateTimer<=0){bossState="dash";bossStateTimer=.58}
+   }else if(bossState==="dash"){
+     bossStateTimer-=dt;bossX+=bossDir*430*dt;
+     breakCollectorPlatforms();
+     const close=Math.abs(pc-bossX)<74&&Math.abs((p.y+p.h)-590)<150;
+     if(close&&!bossAttackHit){
+       bossAttackHit=true;hurtPlayer(bossX,355,-355,"collector");
+     }
+     if(bossX<=10725||bossX>=11175||bossStateTimer<=0){
+       bossX=Math.max(10725,Math.min(11175,bossX));
+       bossState="recover";bossStateTimer=.5;
+     }
+   }else if(bossState==="recover"){
+     bossStateTimer-=dt;
+     if(bossStateTimer<=0){bossState="idle";bossAttackClock=.72}
+   }
+ }
+}
+function drawCollectorBoss(){
+ if(!bossStarted)return;
+ const sx=bossX-cam;
+ const act=bossAct;
+ const resolved=bossResolved;
+ const exhausted=act===3||resolved;
+ const bodyH=act===1?205:(act===2?154:112);
+ const bodyW=act===1?132:(act===2?96:82);
+ const feet=590;
+ const top=feet-bodyH;
+ const flash=bossInv>0&&Math.floor(bossInv*18)%2===0;
+
+ ctx.save();ctx.translate(sx,0);
+ ctx.globalAlpha=resolved?.68:1;
+ ctx.shadowColor=flash?"rgba(242,213,139,.9)":"rgba(0,0,0,.88)";
+ ctx.shadowBlur=flash?25:16;
+
+ // Shadow.
+ ctx.fillStyle="rgba(0,0,0,.28)";ctx.beginPath();ctx.ellipse(0,feet+2,bodyW*.5,8,0,0,Math.PI*2);ctx.fill();
+
+ // Body gets visibly smaller as the names are released.
+ ctx.fillStyle=flash?"#6c6657":"#121411";
+ if(exhausted){
+   ctx.beginPath();ctx.ellipse(0,feet-55,bodyW*.45,55,0,0,Math.PI*2);ctx.fill();
+   ctx.fillRect(-bodyW*.28,feet-80,bodyW*.56,70);
+ }else{
+   ctx.beginPath();ctx.moveTo(-bodyW*.5,feet);ctx.lineTo(-bodyW*.38,top+55);
+   ctx.quadraticCurveTo(-bodyW*.25,top,0,top-18);
+   ctx.quadraticCurveTo(bodyW*.25,top,bodyW*.38,top+55);ctx.lineTo(bodyW*.5,feet);ctx.closePath();ctx.fill();
+ }
+
+ // Face remains unreadable.
+ ctx.fillStyle="#060807";ctx.beginPath();ctx.ellipse(0,exhausted?feet-94:top+28,act===1?31:25,act===1?40:32,0,0,Math.PI*2);ctx.fill();
+
+ if(act===1){
+   const platePos=[[-40,top+76,.08],[32,top+88,-.06],[-28,top+120,-.04],[38,top+133,.07],[0,top+164,.02]];
+   const visible=Math.max(0,bossArmor);
+   for(let i=0;i<visible;i++)drawStolenNamePlate(platePos[i][0],platePos[i][1],64,21,.98,platePos[i][2]);
+   ctx.strokeStyle="rgba(139,118,76,.62)";ctx.lineWidth=3;
+   ctx.beginPath();ctx.moveTo(-48,top+62);ctx.lineTo(-75,feet-20);ctx.moveTo(48,top+62);ctx.lineTo(75,feet-20);ctx.stroke();
+ }else if(act===2){
+   // Thin arms and forward lean make the second act look faster.
+   const lean=bossState==="windup"?-bossDir*10:(bossState==="dash"?bossDir*18:0);
+   ctx.strokeStyle="#171a16";ctx.lineWidth=14;ctx.lineCap="round";
+   ctx.beginPath();ctx.moveTo(-28+lean,top+62);ctx.lineTo(-58+lean,feet-36);ctx.stroke();
+   ctx.beginPath();ctx.moveTo(28+lean,top+62);ctx.lineTo(58+lean,feet-36);ctx.stroke();
+   if(bossState==="windup"){
+     ctx.strokeStyle="rgba(239,205,119,.72)";ctx.lineWidth=3;
+     ctx.beginPath();ctx.arc(0,feet-80,70,0,Math.PI*2);ctx.stroke();
+   }
+ }else{
+   ctx.strokeStyle="rgba(156,143,111,.55)";ctx.lineWidth=4;
+   ctx.beginPath();ctx.moveTo(-22,feet-57);ctx.lineTo(-38,feet-16);ctx.moveTo(22,feet-57);ctx.lineTo(38,feet-16);ctx.stroke();
+ }
+
+ // E prompt only when violence is over.
+ if(act===3&&!resolved){
+   ctx.fillStyle="rgba(242,218,154,.95)";ctx.font="700 11px Georgia";ctx.textAlign="center";
+   ctx.fillText("E · RECONHECER",0,top-42);
+ }
+ if(resolved){
+   ctx.fillStyle="rgba(229,207,149,.78)";ctx.font="italic 10px Georgia";ctx.textAlign="center";
+   ctx.fillText("RECONHECIDO",0,top-34);
+ }
+
+ ctx.restore();
+
+ // Released labels fly away instead of vanishing into the boss.
+ for(const r of bossReleasedPlates){
+   const a=Math.max(0,r.life/r.maxLife);
+   drawStolenNamePlate(r.x-cam,r.y,62,20,a,r.rot);
+ }
+
+ // Nameplate projectiles.
+ for(const pr of bossProjectiles){
+   drawStolenNamePlate(pr.x-cam,pr.y,pr.w,pr.h,.9,pr.rot);
+ }
+
+ // Boss HUD.
+ if(!resolved){
+   ctx.save();
+   ctx.textAlign="center";ctx.fillStyle="rgba(12,13,12,.78)";ctx.fillRect(W/2-205,102,410,52);
+   ctx.strokeStyle="rgba(181,151,91,.65)";ctx.lineWidth=2;ctx.strokeRect(W/2-205,102,410,52);
+   ctx.fillStyle="#dfc27a";ctx.font="700 12px Georgia";
+   ctx.fillText("O COLETOR DE NOMES · ATO "+act,W/2,122);
+   const val=act===1?bossArmor:(act===2?bossHp:1),max=act===1?5:(act===2?5:1);
+   ctx.fillStyle="rgba(255,255,255,.10)";ctx.fillRect(W/2-160,134,320,8);
+   ctx.fillStyle="#c6aa68";ctx.fillRect(W/2-160,134,320*(val/max),8);
+   ctx.restore();
+ }
+}
+
 function drawPhase4SkeletonLandmarks(){
  ctx.save();ctx.translate(-cam,0);
 
@@ -1207,7 +1499,7 @@ function drawPhase4SkeletonLandmarks(){
 function drawWorld(){
  drawRoad();drawPhase4SkeletonLandmarks();drawSigns();drawDoor();drawArchiveEvidence();drawNobodyBridgeFog();drawBridgeIdentityPlate();drawStolenNamesPlaza();drawCollectorGlimpse();
  checkpoints.forEach(drawCheckpoint);
- drawPilgrim();drawTraces();enemies.forEach(drawEnemy);
+ drawPilgrim();drawTraces();enemies.forEach(drawEnemy);drawCollectorBoss();
  if(prototypeEndPlayed){
    ctx.save();ctx.translate(4660-cam,0);ctx.strokeStyle="#d6bd7a";ctx.lineWidth=2;ctx.globalAlpha=.55;ctx.beginPath();ctx.moveTo(0,590);ctx.lineTo(0,370);ctx.stroke();ctx.fillStyle="#e6cd8a";ctx.font="italic 11px Georgia";ctx.textAlign="center";
    ctx.fillText(archiveSolved?"os nomes não sumiram — foram levados":"há marcas de remoção no arquivo",0,345);ctx.restore();
@@ -1243,6 +1535,9 @@ function interact(){
  if(!running||dialogue.active)return;
  markPlayerAction();
  const pc=p.x+p.w/2;
+ if(bossStarted&&!bossResolved&&bossAct===3){
+   if(recognizeCollector())return;
+ }
  if(!doorOpened&&pc<1050){openDoor();return}
  if(doorOpened&&!pilgrimMet&&Math.abs(pc-2580)<130){
    pilgrimMet=true;pilgrimX=2580;pilgrimFeetY=590;p.vx=0;
@@ -1288,6 +1583,7 @@ function useLight(){
  const pc=p.x+p.w/2;
  const pcy=p.y+p.h*.48;
  const bridgeLit=stabilizeBridgePlatforms(pc,pcy);
+ if(tryLightCollector(pc,pcy))return;
 
  if(pilgrimMet&&!tracesSolved){
    let hit=-1,best=999;
@@ -1583,6 +1879,7 @@ function update(dt){
  for(const q of platforms)if(q.unstable&&q.lightTimer>0)q.lightTimer=Math.max(0,q.lightTimer-dt);
  for(let i=0;i<plazaEchoFx.length;i++)plazaEchoFx[i]=Math.max(0,plazaEchoFx[i]-dt);
  collectorGlimpseTimer=Math.max(0,collectorGlimpseTimer-dt);
+ updateCollectorBoss(dt);
  updateEnemies(dt);
  updatePilgrim(dt);
  p.coyote=p.on?.12:Math.max(0,p.coyote-dt);
@@ -1612,10 +1909,14 @@ function update(dt){
      say("As placas fecham a saída. Ainda há vozes separadas de seus nomes. "+heard+"/3.");gateMsg=2;
    }
  }
+ if(bossStarted&&!bossResolved&&p.x>10640&&p.x<10685){
+   p.x=10685;p.vx=Math.max(0,p.vx);
+   if(gateMsg<=0){say("A arena fechou atrás de Jack.");gateMsg=1.6}
+ }
 
  p.y+=p.vy*dt;p.on=false;
  for(const q of platforms){
-   if(!bridgePlatformSolid(q))continue;
+   if(q.broken||!bridgePlatformSolid(q))continue;
    if(p.x+p.w>q.x&&p.x<q.x+q.w&&oldY+p.h<=q.y+8&&p.y+p.h>=q.y&&p.vy>=0){
      p.y=q.y-p.h;p.vy=0;p.on=true;
    }
@@ -1664,11 +1965,8 @@ function update(dt){
  }else if(collectorApproachPlayed&&!arenaEdgePlayed&&p.x>10420){
    arenaEdgePlayed=true;p.vx=0;
    dialogue.open(story.arenaEdge,()=>{pilgrimX=Math.min(pilgrimX,10535);banner("DIANTE DA CASA DO COLETOR");save()})
- }else if(arenaEdgePlayed&&!arenaReached&&p.x>10720){
-   arenaReached=true;p.vx=0;banner("ARENA DO COLETOR");
-   say("A Peregrina ficou à entrada. O próximo passo será construir o confronto e sua participação nele.");
-   setTimeout(()=>{if(ui.prototype)ui.prototype.hidden=false},650);
-   save();
+ }else if(arenaEdgePlayed&&!bossStarted&&!bossResolved&&p.x>10720){
+   startCollectorBoss();
  }
 
  cam+=(Math.max(0,Math.min(WORLD-W,p.x-W*.34))-cam)*Math.min(1,dt*5);
@@ -1697,7 +1995,11 @@ function update(dt){
        :"PRAÇA DOS NOMES ROUBADOS: derrote os guardiões e use F para ouvir os ecos. Vozes "+heard+"/3.");
  }
  else if(p.x<10600)ui.obj.textContent="CASA DO COLETOR: siga com a Peregrina até a entrada da arena.";
- else ui.obj.textContent="ARENA DO COLETOR: a Peregrina espera do lado de fora. O confronto ainda será construído.";
+ else if(!bossStarted)ui.obj.textContent="ARENA DO COLETOR: entre e descubra o que existe sob a coleção de nomes.";
+ else if(bossResolved)ui.obj.textContent="ARENA DO COLETOR: o confronto terminou. O Coletor ainda existe sem possuir os nomes.";
+ else if(bossAct===1)ui.obj.textContent="ATO I: use F perto do Coletor para libertar 5 placas da armadura. "+(5-bossArmor)+"/5.";
+ else if(bossAct===2)ui.obj.textContent="ATO II: desvie das investidas, cuidado com as plataformas quebradas e alcance o Coletor com F. "+bossHp+"/5.";
+ else ui.obj.textContent="ATO III: não há mais nada para destruir. Aproxime-se e pressione E · RECONHECER.";
  p.anim+=dt;saveClock+=dt;if(saveClock>2.4){saveClock=0;save()}
 }
 let saveClock=0;
