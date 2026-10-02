@@ -611,6 +611,15 @@ const keyReady=img("../assets/game/phase3/items/mara-wood-key-glow.png").then(im
 const jackPortraitFiles=["jack-00-neutral.png","jack-01-serious.png","jack-02-smirk.png","jack-03-surprised.png","jack-04-determined.png","jack-05-resolved.png"];
 const jackPortraitReady=Promise.allSettled(jackPortraitFiles.map(f=>img("../assets/game/phase1/portraits-hd/"+f))).then(rs=>rs.map(r=>r.status==="fulfilled"?r.value:null));
 
+const pilgrimGameplayFiles=Array.from({length:13},(_,i)=>"peregrina-sprite-"+String(i+1).padStart(2,"0")+".png");
+let pilgrimGameplaySprites=Array(13).fill(null);
+const pilgrimGameplayReady=Promise.allSettled(
+ pilgrimGameplayFiles.map(f=>img("../assets/game/phase4/npc/peregrina/gameplay/"+f))
+).then(rs=>{
+ pilgrimGameplaySprites=rs.map(r=>r.status==="fulfilled"?r.value:null);
+ return pilgrimGameplaySprites;
+});
+
 const pilgrimPortraitFiles=[
  "pilgrim-dialogue-01-calm.png",
  "pilgrim-dialogue-02-serious.png",
@@ -637,7 +646,7 @@ const backgroundReady=Promise.allSettled([
 ]);
 const initialPlatformRule=platformArtRuleAt(p.x);
 const platformReady=Promise.allSettled((PHASE4_PLATFORM_ART_FILES[initialPlatformRule.group]||[]).map((_,i)=>ensurePlatformArt(initialPlatformRule.group,i)));
-window.__PHASE_ASSETS_READY=Promise.allSettled([jackReady,keyReady,dialogueReady,backgroundReady,platformReady]);
+window.__PHASE_ASSETS_READY=Promise.allSettled([jackReady,keyReady,dialogueReady,pilgrimGameplayReady,backgroundReady,platformReady]);
 
 function jackFrame(){
  const a=window.JACK_ANIMATIONS?.animations;if(!a)return 0;
@@ -905,25 +914,78 @@ function drawCheckpoint(cp){
  if(lit){ctx.shadowColor="#e8bd59";ctx.shadowBlur=16;ctx.fillStyle="#f1d384";ctx.font="700 9px Georgia";ctx.textAlign="center";ctx.fillText("VOCÊ PASSOU",0,-95)}
  ctx.restore();
 }
+function pilgrimSpriteSelection(){
+ const moving=pilgrimMode==="walk"||pilgrimMode==="run";
+ if(pilgrimMode==="guard")return {index:9,baseLeft:true,scale:1.02};
+ if(pilgrimMode==="jump"){
+   const seq=[5,6,7,8];
+   const idx=seq[Math.floor(p.anim*10)%seq.length];
+   return {index:idx,baseLeft:true,scale:1.04};
+ }
+ if(moving){
+   const seq=[5,6,7,8];
+   const fps=pilgrimMode==="run"?11:7;
+   const idx=seq[Math.floor(p.anim*fps)%seq.length];
+   return {index:idx,baseLeft:true,scale:pilgrimMode==="run"?1.04:1.0};
+ }
+ if(bossResolved&&epilogueStep===2)return {index:10,baseLeft:false,scale:1.0};
+ if(bossResolved&&epilogueStep===3)return {index:10,baseLeft:false,scale:1.02};
+ if(bossResolved&&epilogueStep===4)return {index:12,baseLeft:false,scale:1.0};
+ if(stolenPlazaPlayed&&!plazaSolved)return {index:0,baseLeft:false,scale:1.0};
+ return {index:0,baseLeft:false,scale:1.0};
+}
+function drawPilgrimSprite(im,px,feet,footFix,selection){
+ const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+ if(!iw||!ih)return false;
+ const targetH=158*(selection.scale||1);
+ const targetW=iw*(targetH/ih);
+ const sx=px-cam;
+ const groundY=feet+footFix;
+ const dx=sx-targetW/2,dy=groundY-targetH;
+ const facesLeft=!!selection.baseLeft;
+ const shouldFlip=facesLeft?(pilgrimDir>0):(pilgrimDir<0);
+
+ drawGroundShadow(sx,groundY+1,pilgrimMode==="guard"?24:21,4,.24);
+ ctx.save();
+ ctx.globalAlpha=.98;
+ ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";
+ if(shouldFlip){
+   ctx.translate(dx+targetW,0);ctx.scale(-1,1);ctx.drawImage(im,0,dy,targetW,targetH);
+ }else{
+   ctx.drawImage(im,dx,dy,targetW,targetH);
+ }
+ ctx.restore();
+
+ ctx.save();
+ ctx.fillStyle="#d2bd84";ctx.font="700 9px Georgia";ctx.textAlign="center";
+ ctx.shadowColor="rgba(0,0,0,.9)";ctx.shadowBlur=4;
+ ctx.fillText(pilgrimMet?"PEREGRINA":"???",sx,dy-7);
+ ctx.restore();
+ return true;
+}
+
 function drawPilgrim(){
  if(!doorOpened)return;
  const px=pilgrimMet?pilgrimX:2580;
  const feet=pilgrimMet?pilgrimFeetY:590;
+ const jump=pilgrimMode==="jump";
+ const footFix=jump?0:visualFootOffsetAt(px,feet,42)+2;
+
+ const selection=pilgrimSpriteSelection();
+ const im=pilgrimGameplaySprites[selection.index];
+ if(im&&drawPilgrimSprite(im,px,feet,footFix,selection))return;
+
+ // Fallback procedural para a fase nunca quebrar caso algum PNG falhe.
  const sx=px-cam;
  const moving=pilgrimMode==="walk"||pilgrimMode==="run";
  const phase=p.anim*(pilgrimMode==="run"?10:6);
  const stride=moving?Math.sin(phase)*14:0;
  const bob=moving?Math.abs(Math.sin(phase))*3:Math.sin(p.anim*1.8)*1.3;
- const jump=pilgrimMode==="jump";
  const guard=pilgrimMode==="guard";
  const lean=jump?pilgrimDir*7:(pilgrimMode==="run"?pilgrimDir*4:(guard?-pilgrimDir*3:0));
- const footFix=jump?0:visualFootOffsetAt(px,feet,42)+2;
- const visualFeet=feet+footFix;
 
  ctx.save();ctx.translate(sx+lean,footFix);ctx.globalAlpha=.94;
- if(!jump){
-   drawGroundShadow(0,feet+1,22,4,.24);
- }
+ if(!jump)drawGroundShadow(0,feet+1,22,4,.24);
 
  ctx.strokeStyle="#766a54";ctx.lineWidth=6;ctx.lineCap="round";
  if(jump){
@@ -938,18 +1000,6 @@ function drawPilgrim(){
  ctx.fillStyle=guard?"#343936":"#414743";
  ctx.beginPath();ctx.moveTo(0,bodyY-28);ctx.quadraticCurveTo(-34,bodyY+4,-31,bodyY+64);ctx.lineTo(-18,feet-62);ctx.lineTo(18,feet-62);ctx.lineTo(31,bodyY+64);ctx.quadraticCurveTo(34,bodyY+4,0,bodyY-28);ctx.fill();
  ctx.strokeStyle="#625c4d";ctx.lineWidth=2;ctx.stroke();
-
- ctx.strokeStyle="#82745a";ctx.lineWidth=5;
- if(guard){
-   ctx.beginPath();ctx.moveTo(-20,bodyY+5);ctx.lineTo(-34,bodyY+30);ctx.stroke();
-   ctx.beginPath();ctx.moveTo(20,bodyY+5);ctx.lineTo(10,bodyY+35);ctx.stroke();
- }else if(jump){
-   ctx.beginPath();ctx.moveTo(-20,bodyY+4);ctx.lineTo(-34,bodyY-8);ctx.stroke();
-   ctx.beginPath();ctx.moveTo(20,bodyY+4);ctx.lineTo(35,bodyY-7);ctx.stroke();
- }else{
-   ctx.beginPath();ctx.moveTo(-20,bodyY+5);ctx.lineTo(-28-stride*.45,bodyY+34);ctx.stroke();
-   ctx.beginPath();ctx.moveTo(20,bodyY+5);ctx.lineTo(28+stride*.45,bodyY+34);ctx.stroke();
- }
 
  ctx.fillStyle="#171a19";ctx.beginPath();ctx.arc(0,bodyY-43,25,0,Math.PI*2);ctx.fill();
  ctx.fillStyle="rgba(206,194,164,.5)";ctx.beginPath();ctx.ellipse(0,bodyY-38,11,14,0,0,Math.PI*2);ctx.fill();
