@@ -22,7 +22,7 @@ if(forceNew){localStorage.removeItem(SAVE_KEY);localStorage.removeItem(CHECKPOIN
 let saveData=null;if(journeyMode&&!replayMode){try{saveData=JSON.parse(localStorage.getItem(SAVE_KEY)||"null")}catch(_){saveData=null}}
 
 const input={left:false,right:false,down:false,run:false,jump:false};
-let running=false,last=performance.now(),cam=0,section=-1,jack=null,keyImg=null;
+let running=false,last=performance.now(),cam=0,section=-1,jack=null,keyImg=null,jackFrameOverrides={};
 let idleTime=0,waitSitFrame=0,waitSitClock=0,waitSitActive=false,waitSitImages=[];
 let lastPlayerAction=performance.now();
 let playerLife=Math.max(1,Math.min(3,Number(saveData?.playerLife)||3)),memoryLight=0,memoryPulse=0,gateMsg=0;
@@ -99,7 +99,31 @@ function updateCheckpoint(){
 }
 
 function img(src){return new Promise((r,j)=>{const im=new Image();im.onload=()=>r(im);im.onerror=j;im.src=src+"?v=phase4-1"})}
-const jackReady=img("../assets/game/phase1/sprites-hd/jack-atlas-hd.png").then(im=>jack=im).catch(()=>{});
+function buildCleanJackFrame(image,frame,eraseRects=[]){
+ const cfg=window.JACK_ANIMATIONS,cell=cfg?.cell||320,cols=cfg?.cols||8;
+ const cv=document.createElement("canvas");cv.width=cell;cv.height=cell;
+ const cx=cv.getContext("2d"),col=frame%cols,row=Math.floor(frame/cols);
+ cx.drawImage(image,col*cell,row*cell,cell,cell,0,0,cell,cell);
+ eraseRects.forEach(r=>cx.clearRect(...r));
+ return cv;
+}
+function buildJackFrameOverrides(image){
+ // Correção oficial já usada nas outras fases:
+ // 25 remove resíduo lateral; 26 remove o pé/boot fantasma sobre a cabeça.
+ return {
+   25:buildCleanJackFrame(image,25,[
+     [260,0,60,320]
+   ]),
+   26:buildCleanJackFrame(image,26,[
+     [126,0,76,82],
+     [126,82,54,30],
+     [202,0,28,32]
+   ])
+ };
+}
+const jackReady=img("../assets/game/phase1/sprites-hd/jack-atlas-hd.png")
+ .then(im=>{jack=im;jackFrameOverrides=buildJackFrameOverrides(im);return im})
+ .catch(()=>{});
 // Mesma animação oficial de descanso usada nas fases anteriores.
 // É opcional e não bloqueia o carregamento inicial da Fase 4.
 const waitSitFiles=Array.from({length:11},(_,i)=>"../assets/sprites/jack/wait-sit/jack-wait-"+String(i+1).padStart(2,"0")+".png");
@@ -140,9 +164,16 @@ function drawJack(){
  }
  if(p.on){ctx.save();ctx.globalAlpha=.2;ctx.fillStyle="#000";ctx.beginPath();ctx.ellipse(p.x-cam+p.w/2,p.y+p.h+1,18,3,0,0,Math.PI*2);ctx.fill();ctx.restore()}
  if(!jack){ctx.fillStyle="#eee";ctx.fillRect(p.x-cam,p.y,p.w,p.h);return}
- const cfg=window.JACK_ANIMATIONS||{},idx=jackFrame(),cell=cfg.cell||320,cols=cfg.cols||8,sx=(idx%cols)*cell,sy=Math.floor(idx/cols)*cell,rw=190,rh=190,dx=p.x-cam+p.w/2-rw/2,dy=p.y+p.h/2-132;
- ctx.save();ctx.globalAlpha=p.inv>0&&Math.floor(p.inv*12)%2?.42:1;ctx.imageSmoothingEnabled=true;
- if(p.dir<0){ctx.translate(dx+rw,0);ctx.scale(-1,1);ctx.drawImage(jack,sx,sy,cell,cell,0,dy,rw,rh)}else ctx.drawImage(jack,sx,sy,cell,cell,dx,dy,rw,rh);
+ const cfg=window.JACK_ANIMATIONS||{},idx=jackFrame(),cell=cfg.cell||320,cols=cfg.cols||8,sx=(idx%cols)*cell,sy=Math.floor(idx/cols)*cell,rw=190,rh=190,dx=p.x-cam+p.w/2-rw/2,dy=p.y+p.h/2-132,clean=jackFrameOverrides[idx];
+ ctx.save();ctx.globalAlpha=p.inv>0&&Math.floor(p.inv*12)%2?.42:1;ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";
+ if(p.dir<0){
+   ctx.translate(dx+rw,0);ctx.scale(-1,1);
+   if(clean)ctx.drawImage(clean,0,0,clean.width,clean.height,0,dy,rw,rh);
+   else ctx.drawImage(jack,sx,sy,cell,cell,0,dy,rw,rh);
+ }else{
+   if(clean)ctx.drawImage(clean,0,0,clean.width,clean.height,dx,dy,rw,rh);
+   else ctx.drawImage(jack,sx,sy,cell,cell,dx,dy,rw,rh);
+ }
  ctx.restore();
 }
 
