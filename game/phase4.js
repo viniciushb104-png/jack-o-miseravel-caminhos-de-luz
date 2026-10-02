@@ -28,9 +28,23 @@ let lastPlayerAction=performance.now();
 let playerLife=Math.max(1,Math.min(3,Number(saveData?.playerLife)||3)),memoryLight=0,memoryPulse=0,gateMsg=0;
 let activeCheckpoint=saveData?.activeCheckpoint||localStorage.getItem(CHECKPOINT_KEY)||"";
 let introPlayed=!!saveData?.introPlayed,doorOpened=!!saveData?.doorOpened,pilgrimMet=!!saveData?.pilgrimMet,tracesSolved=!!saveData?.tracesSolved,prototypeEndPlayed=!!saveData?.prototypeEndPlayed,arenaReached=!!saveData?.arenaReached;
+let bridgeFearPlayed=!!saveData?.bridgeFearPlayed,bridgeCrossedPlayed=!!saveData?.bridgeCrossedPlayed,stolenPlazaPlayed=!!saveData?.stolenPlazaPlayed,collectorApproachPlayed=!!saveData?.collectorApproachPlayed,arenaEdgePlayed=!!saveData?.arenaEdgePlayed;
 let traces=Array.isArray(saveData?.traces)?saveData.traces.slice(0,3).map(Boolean):[false,false,false];
 
 const p={x:Number.isFinite(saveData?.x)?saveData.x:110,y:Number.isFinite(saveData?.y)?saveData.y:470,w:46,h:86,vx:0,vy:0,dir:saveData?.dir===-1?-1:1,on:false,coyote:0,buffer:0,anim:0,attack:0,inv:0};
+
+// Peregrina — companheira narrativa. Antes dos sprites definitivos, o protótipo
+// já possui posição, distância de seguimento, espera, corrida e travessia própria.
+let pilgrimBridgeDone=!!saveData?.pilgrimBridgeDone||Number(saveData?.x||0)>=7900;
+let pilgrimX=Number.isFinite(saveData?.pilgrimX)?saveData.pilgrimX:
+ (arenaReached?10530:collectorApproachPlayed?9950:stolenPlazaPlayed?8300:pilgrimBridgeDone?8040:prototypeEndPlayed?4850:tracesSolved?4680:2580);
+if(!pilgrimBridgeDone&&pilgrimX>6350)pilgrimX=6250;
+let pilgrimFeetY=590,pilgrimDir=1,pilgrimMode="wait",pilgrimMoveSpeed=0;
+const pilgrimBridge={active:false,segment:0,t:0};
+const pilgrimBridgeWaypoints=[
+ {x:6250,y:590},{x:6580,y:520},{x:6850,y:455},{x:7135,y:515},
+ {x:7425,y:440},{x:7705,y:505},{x:8010,y:590}
+];
 
 const platforms=[
  // 1 — Porta / começo da estrada.
@@ -113,12 +127,26 @@ function markPlayerAction(){
 function save(){
  if(!journeyMode||replayMode||!journey?.isActive()||journey.currentPhase()!==4)return;
  localStorage.setItem(SAVE_KEY,JSON.stringify({
-   x:p.x,y:p.y,dir:p.dir,playerLife,activeCheckpoint,introPlayed,doorOpened,pilgrimMet,traces:[...traces],tracesSolved,prototypeEndPlayed,arenaReached,deadEnemies:deadEnemies(),savedAt:Date.now()
+   x:p.x,y:p.y,dir:p.dir,playerLife,activeCheckpoint,introPlayed,doorOpened,pilgrimMet,traces:[...traces],tracesSolved,prototypeEndPlayed,arenaReached,
+   bridgeFearPlayed,bridgeCrossedPlayed,stolenPlazaPlayed,collectorApproachPlayed,arenaEdgePlayed,
+   pilgrimX,pilgrimBridgeDone,deadEnemies:deadEnemies(),savedAt:Date.now()
  }));
+}
+function resetPilgrimAfterRespawn(){
+ if(!pilgrimMet)return;
+ pilgrimBridge.active=false;pilgrimFeetY=590;pilgrimMode="wait";
+ if(activeCheckpoint==="collector"){pilgrimBridgeDone=true;pilgrimX=9820;return}
+ if(activeCheckpoint==="plaza"){pilgrimBridgeDone=true;pilgrimX=8030;return}
+ if(activeCheckpoint==="archive"){pilgrimBridgeDone=false;pilgrimX=5850;return}
+ if(activeCheckpoint==="traces"){pilgrimX=tracesSolved?4660:3230;return}
+ if(activeCheckpoint==="village"){pilgrimX=2860;return}
+ pilgrimX=2580;
 }
 function respawn(msg){
  const cp=checkpoints.find(q=>q.id===activeCheckpoint);
- p.x=cp?cp.respawnX:110;p.y=cp?cp.respawnY:470;p.vx=p.vy=0;p.on=false;p.inv=1.2;playerLife=3;syncHud();if(msg)say(msg);save();
+ p.x=cp?cp.respawnX:110;p.y=cp?cp.respawnY:470;p.vx=p.vy=0;p.on=false;p.inv=1.2;playerLife=3;syncHud();
+ resetPilgrimAfterRespawn();
+ if(msg)say(msg);save();
 }
 function hurtPlayer(sourceX){
  if(p.inv>0)return;
@@ -286,13 +314,120 @@ function drawCheckpoint(cp){
 }
 function drawPilgrim(){
  if(!doorOpened)return;
- const px=2580-cam;
- ctx.save();ctx.translate(px,0);
- ctx.globalAlpha=.92;ctx.fillStyle="#3e4440";ctx.beginPath();ctx.ellipse(0,455,34,60,0,0,Math.PI*2);ctx.fill();
- ctx.fillStyle="#181b1a";ctx.beginPath();ctx.arc(0,384,24,0,Math.PI*2);ctx.fill();
- ctx.strokeStyle="#756a54";ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(-18,500);ctx.lineTo(-24,580);ctx.moveTo(18,500);ctx.lineTo(25,580);ctx.stroke();
- ctx.fillStyle="#a89570";ctx.font="italic 12px Georgia";ctx.textAlign="center";ctx.fillText(pilgrimMet?"PEREGRINA":"???",0,350);
+ const px=pilgrimMet?pilgrimX:2580;
+ const feet=pilgrimMet?pilgrimFeetY:590;
+ const sx=px-cam;
+ const moving=pilgrimMode==="walk"||pilgrimMode==="run";
+ const phase=p.anim*(pilgrimMode==="run"?10:6);
+ const stride=moving?Math.sin(phase)*14:0;
+ const bob=moving?Math.abs(Math.sin(phase))*3:Math.sin(p.anim*1.8)*1.3;
+ const jump=pilgrimMode==="jump";
+ const guard=pilgrimMode==="guard";
+ const lean=jump?pilgrimDir*7:(pilgrimMode==="run"?pilgrimDir*4:(guard?-pilgrimDir*3:0));
+
+ ctx.save();ctx.translate(sx+lean,0);ctx.globalAlpha=.94;
+ if(!jump){
+   ctx.fillStyle="rgba(0,0,0,.24)";ctx.beginPath();ctx.ellipse(0,feet+1,22,4,0,0,Math.PI*2);ctx.fill();
+ }
+
+ ctx.strokeStyle="#766a54";ctx.lineWidth=6;ctx.lineCap="round";
+ if(jump){
+   ctx.beginPath();ctx.moveTo(-10,feet-56);ctx.lineTo(-25,feet-28);ctx.lineTo(-8,feet-18);ctx.stroke();
+   ctx.beginPath();ctx.moveTo(10,feet-56);ctx.lineTo(24,feet-35);ctx.lineTo(12,feet-20);ctx.stroke();
+ }else{
+   ctx.beginPath();ctx.moveTo(-10,feet-70+bob);ctx.lineTo(-12+stride,feet-28);ctx.lineTo(-18+stride*.55,feet-2);ctx.stroke();
+   ctx.beginPath();ctx.moveTo(10,feet-70+bob);ctx.lineTo(12-stride,feet-28);ctx.lineTo(18-stride*.55,feet-2);ctx.stroke();
+ }
+
+ const bodyY=feet-106+bob;
+ ctx.fillStyle=guard?"#343936":"#414743";
+ ctx.beginPath();ctx.moveTo(0,bodyY-28);ctx.quadraticCurveTo(-34,bodyY+4,-31,bodyY+64);ctx.lineTo(-18,feet-62);ctx.lineTo(18,feet-62);ctx.lineTo(31,bodyY+64);ctx.quadraticCurveTo(34,bodyY+4,0,bodyY-28);ctx.fill();
+ ctx.strokeStyle="#625c4d";ctx.lineWidth=2;ctx.stroke();
+
+ ctx.strokeStyle="#82745a";ctx.lineWidth=5;
+ if(guard){
+   ctx.beginPath();ctx.moveTo(-20,bodyY+5);ctx.lineTo(-34,bodyY+30);ctx.stroke();
+   ctx.beginPath();ctx.moveTo(20,bodyY+5);ctx.lineTo(10,bodyY+35);ctx.stroke();
+ }else if(jump){
+   ctx.beginPath();ctx.moveTo(-20,bodyY+4);ctx.lineTo(-34,bodyY-8);ctx.stroke();
+   ctx.beginPath();ctx.moveTo(20,bodyY+4);ctx.lineTo(35,bodyY-7);ctx.stroke();
+ }else{
+   ctx.beginPath();ctx.moveTo(-20,bodyY+5);ctx.lineTo(-28-stride*.45,bodyY+34);ctx.stroke();
+   ctx.beginPath();ctx.moveTo(20,bodyY+5);ctx.lineTo(28+stride*.45,bodyY+34);ctx.stroke();
+ }
+
+ ctx.fillStyle="#171a19";ctx.beginPath();ctx.arc(0,bodyY-43,25,0,Math.PI*2);ctx.fill();
+ ctx.fillStyle="rgba(206,194,164,.5)";ctx.beginPath();ctx.ellipse(0,bodyY-38,11,14,0,0,Math.PI*2);ctx.fill();
+ ctx.fillStyle="#aa9976";ctx.font="italic 12px Georgia";ctx.textAlign="center";
+ ctx.fillText(pilgrimMet?"PEREGRINA":"???",0,bodyY-82);
  ctx.restore();
+}
+
+function pilgrimDangerNearby(){
+ if(!pilgrimMet||pilgrimBridge.active)return false;
+ return enemies.some(e=>e.alive&&Math.abs((e.x+e.w/2)-pilgrimX)<235&&Math.abs(p.x-pilgrimX)<620);
+}
+function pilgrimFollowTarget(){
+ if(!pilgrimMet)return 2580;
+ if(!tracesSolved)return 3230;
+ if(!pilgrimBridgeDone&&p.x<6100)return Math.max(3320,Math.min(5920,p.x-155));
+ if(!pilgrimBridgeDone)return 6250;
+ if(p.x<9300)return Math.max(8010,Math.min(8840,p.x-165));
+ if(p.x<10600)return Math.max(8950,Math.min(10480,p.x-175));
+ return 10535;
+}
+function startPilgrimBridge(){
+ if(pilgrimBridge.active||pilgrimBridgeDone)return;
+ pilgrimBridge.active=true;pilgrimBridge.segment=0;pilgrimBridge.t=0;
+ pilgrimX=pilgrimBridgeWaypoints[0].x;pilgrimFeetY=pilgrimBridgeWaypoints[0].y;
+ pilgrimMode="jump";pilgrimDir=1;
+}
+function updatePilgrimBridge(dt){
+ if(!pilgrimBridge.active)return;
+ const a=pilgrimBridgeWaypoints[pilgrimBridge.segment];
+ const b=pilgrimBridgeWaypoints[pilgrimBridge.segment+1];
+ if(!a||!b){
+   pilgrimBridge.active=false;pilgrimBridgeDone=true;pilgrimX=8010;pilgrimFeetY=590;pilgrimMode="wait";save();return;
+ }
+ const dist=Math.hypot(b.x-a.x,(b.y-a.y)*.6);
+ const duration=Math.max(.48,dist/315);
+ pilgrimBridge.t=Math.min(1,pilgrimBridge.t+dt/duration);
+ const t=pilgrimBridge.t,e=t*t*(3-2*t);
+ pilgrimX=a.x+(b.x-a.x)*e;
+ const baseY=a.y+(b.y-a.y)*e;
+ const arc=60+Math.min(34,Math.abs(b.y-a.y)*.24);
+ pilgrimFeetY=baseY-Math.sin(Math.PI*t)*arc;
+ pilgrimDir=Math.sign(b.x-a.x)||1;pilgrimMode="jump";
+ if(t>=1){
+   pilgrimX=b.x;pilgrimFeetY=b.y;pilgrimBridge.segment++;pilgrimBridge.t=0;
+   if(pilgrimBridge.segment>=pilgrimBridgeWaypoints.length-1){
+     pilgrimBridge.active=false;pilgrimBridgeDone=true;pilgrimX=8010;pilgrimFeetY=590;pilgrimMode="wait";
+     banner("A PEREGRINA ATRAVESSOU");save();
+   }
+ }
+}
+function updatePilgrim(dt){
+ if(!pilgrimMet)return;
+ if(pilgrimBridge.active){updatePilgrimBridge(dt);return}
+ if(!pilgrimBridgeDone&&bridgeFearPlayed&&p.x>6420&&Math.abs(pilgrimX-6250)<42){
+   startPilgrimBridge();return;
+ }
+
+ const target=pilgrimFollowTarget();
+ if(pilgrimDangerNearby()){
+   pilgrimMode="guard";pilgrimMoveSpeed=0;pilgrimFeetY=590;return;
+ }
+
+ const delta=target-pilgrimX,ad=Math.abs(delta);
+ if(ad<12){
+   pilgrimX=target;pilgrimFeetY=590;pilgrimMode="wait";pilgrimMoveSpeed=0;return;
+ }
+
+ pilgrimDir=Math.sign(delta)||pilgrimDir;
+ pilgrimMoveSpeed=ad>290?255:165;
+ pilgrimMode=pilgrimMoveSpeed>210?"run":"walk";
+ pilgrimX+=pilgrimDir*Math.min(ad,pilgrimMoveSpeed*dt);
+ pilgrimFeetY=590;
 }
 function drawTraces(){
  ctx.save();ctx.translate(-cam,0);
@@ -396,7 +531,8 @@ function interact(){
  const pc=p.x+p.w/2;
  if(!doorOpened&&pc<1050){openDoor();return}
  if(doorOpened&&!pilgrimMet&&Math.abs(pc-2580)<130){
-   pilgrimMet=true;p.vx=0;dialogue.open(story.pilgrimMeeting,()=>{banner("POVOADO SEM NOMES");say("A Peregrina não lembra o nome. Procure rastros do que ela fez.");save()});return;
+   pilgrimMet=true;pilgrimX=2580;pilgrimFeetY=590;p.vx=0;
+   dialogue.open(story.pilgrimMeeting,()=>{banner("POVOADO SEM NOMES");say("A Peregrina seguirá Jack, mas não atravessará o mundo como uma sombra colada nele.");save()});return;
  }
  if(tracesSolved&&!prototypeEndPlayed&&pc>4660){
    prototypeEndPlayed=true;p.vx=0;dialogue.open(story.prototypeEnd,()=>{banner("ARQUIVO RASURADO");save()});return;
@@ -464,6 +600,7 @@ function update(dt){
  }
  memoryLight=Math.max(0,memoryLight-dt);memoryPulse=Math.max(0,memoryPulse-dt);p.attack=Math.max(0,p.attack-dt);p.inv=Math.max(0,p.inv-dt);gateMsg=Math.max(0,gateMsg-dt);
  updateEnemies(dt);
+ updatePilgrim(dt);
  p.coyote=p.on?.12:Math.max(0,p.coyote-dt);
  if(input.jump){p.buffer=.13;input.jump=false}else p.buffer=Math.max(0,p.buffer-dt);
  const speed=input.down?86:(input.run?330:225),dir=(input.right?1:0)-(input.left?1:0);p.vx+=((dir*speed)-p.vx)*Math.min(1,dt*12);if(dir)p.dir=dir;
@@ -473,19 +610,39 @@ function update(dt){
  if(!doorOpened&&p.x+p.w>930){p.x=930-p.w;p.vx=Math.min(0,p.vx);if(gateMsg<=0){say("A parede não tem porta. A chave de Mara está reagindo.");gateMsg=2}}
  if(!pilgrimMet&&p.x+p.w>3130){p.x=3130-p.w;p.vx=Math.min(0,p.vx);if(gateMsg<=0){say("A estrada se perde na névoa. Há alguém esperando no povoado.");gateMsg=2}}
  if(pilgrimMet&&!tracesSolved&&p.x+p.w>4660){p.x=4660-p.w;p.vx=Math.min(0,p.vx);if(gateMsg<=0){say("As pegadas terminam aqui. Três rastros ainda precisam ser iluminados.");gateMsg=2}}
+ if(bridgeFearPlayed&&!pilgrimBridgeDone&&p.x+p.w>7945){
+   p.x=7945-p.w;p.vx=Math.min(0,p.vx);
+   if(gateMsg<=0){say("A Peregrina ainda está atravessando. Jack espera que ela encontre o próprio passo.");gateMsg=1.8}
+ }
 
  p.y+=p.vy*dt;p.on=false;
  for(const q of platforms){if(p.x+p.w>q.x&&p.x<q.x+q.w&&oldY+p.h<=q.y+8&&p.y+p.h>=q.y&&p.vy>=0){p.y=q.y-p.h;p.vy=0;p.on=true}}
  if(p.y>780){playerLife--;syncHud();if(playerLife<=0)respawn("A estrada tentou apagar Jack.");else{const cp=checkpoints.find(q=>q.id===activeCheckpoint);p.x=cp?cp.respawnX:110;p.y=cp?cp.respawnY:470;p.vx=p.vy=0;say("Um passo desapareceu na névoa. "+playerLife+"/3.")}}
  updateCheckpoint();
- if(!pilgrimMet&&doorOpened&&p.x>2400){pilgrimMet=true;p.vx=0;dialogue.open(story.pilgrimMeeting,()=>{banner("POVOADO SEM NOMES");say("Procure rastros da Peregrina com F.");save()})}
- if(tracesSolved&&!prototypeEndPlayed&&p.x>4700){
+ if(!pilgrimMet&&doorOpened&&p.x>2400){
+   pilgrimMet=true;pilgrimX=2580;pilgrimFeetY=590;p.vx=0;
+   dialogue.open(story.pilgrimMeeting,()=>{banner("POVOADO SEM NOMES");say("A Peregrina seguirá Jack, mas vai esperar quando o caminho pedir outra coisa.");save()})
+ }else if(tracesSolved&&!prototypeEndPlayed&&p.x>4700){
    prototypeEndPlayed=true;p.vx=0;
-   dialogue.open(story.prototypeEnd,()=>{banner("ARQUIVO RASURADO");say("A estrada continua. Agora há sinais de que alguém está escolhendo o que deve desaparecer.");save()})
- }
- if(!arenaReached&&p.x>10720){
+   dialogue.open(story.prototypeEnd,()=>{banner("ARQUIVO RASURADO");say("A Peregrina volta a acompanhar Jack pelos registros arrancados.");save()})
+ }else if(prototypeEndPlayed&&!bridgeFearPlayed&&p.x>6070){
+   bridgeFearPlayed=true;p.vx=0;
+   dialogue.open(story.bridgeFear,()=>{pilgrimX=Math.min(pilgrimX,6250);banner("PONTE DOS NINGUÉM");say("Ela não perdeu o medo. Mesmo assim, vai atravessar.");save()})
+ }else if(pilgrimBridgeDone&&!bridgeCrossedPlayed&&p.x>7950){
+   bridgeCrossedPlayed=true;p.vx=0;
+   dialogue.open(story.bridgeCrossed,()=>{banner("UM MEDO TAMBÉM É UM RASTRO");save()})
+ }else if(bridgeCrossedPlayed&&!stolenPlazaPlayed&&p.x>8170){
+   stolenPlazaPlayed=true;p.vx=0;
+   dialogue.open(story.stolenPlaza,()=>{banner("PRAÇA DOS NOMES ROUBADOS");save()})
+ }else if(stolenPlazaPlayed&&!collectorApproachPlayed&&p.x>9340){
+   collectorApproachPlayed=true;p.vx=0;
+   dialogue.open(story.collectorApproach,()=>{banner("CASA DO COLETOR");save()})
+ }else if(collectorApproachPlayed&&!arenaEdgePlayed&&p.x>10420){
+   arenaEdgePlayed=true;p.vx=0;
+   dialogue.open(story.arenaEdge,()=>{pilgrimX=Math.min(pilgrimX,10535);banner("DIANTE DA CASA DO COLETOR");save()})
+ }else if(arenaEdgePlayed&&!arenaReached&&p.x>10720){
    arenaReached=true;p.vx=0;banner("ARENA DO COLETOR");
-   say("A espinha dorsal da Fase 4 chega até aqui. O próximo passo será dar vida aos encontros deste caminho.");
+   say("A Peregrina ficou à entrada. O próximo passo será construir o confronto e sua participação nele.");
    setTimeout(()=>{if(ui.prototype)ui.prototype.hidden=false},650);
    save();
  }
@@ -495,11 +652,11 @@ function update(dt){
  if(!doorOpened)ui.obj.textContent="A chave de Mara reage à parede. Aproxime-se e pressione E.";
  else if(!pilgrimMet)ui.obj.textContent="Atravesse a Estrada sem Placas e encontre quem ainda espera.";
  else if(!tracesSolved)ui.obj.textContent="CAMPO DAS PEGADAS: use F para revelar três rastros da Peregrina.";
- else if(p.x<6100)ui.obj.textContent="ARQUIVO RASURADO: avance entre os registros arrancados e descubra quem levou os nomes.";
- else if(p.x<7900)ui.obj.textContent="PONTE DOS NINGUÉM: atravesse o abismo usando corrida, salto e as plataformas suspensas.";
- else if(p.x<9300)ui.obj.textContent="PRAÇA DOS NOMES ROUBADOS: atravesse o espaço onde os nomes foram reunidos.";
- else if(p.x<10600)ui.obj.textContent="CASA DO COLETOR: suba pela aproximação e alcance o coração da construção.";
- else ui.obj.textContent="ARENA DO COLETOR: o espaço do confronto final está pronto para receber o boss.";
+ else if(p.x<6100)ui.obj.textContent="ARQUIVO RASURADO: avance entre os registros arrancados. A Peregrina seguirá atrás quando o caminho estiver seguro.";
+ else if(p.x<7900)ui.obj.textContent="PONTE DOS NINGUÉM: atravesse o abismo. A Peregrina fará a própria travessia quando Jack abrir distância.";
+ else if(p.x<9300)ui.obj.textContent="PRAÇA DOS NOMES ROUBADOS: avance entre as placas enquanto a Peregrina tenta reconhecer o que foi tirado.";
+ else if(p.x<10600)ui.obj.textContent="CASA DO COLETOR: siga com a Peregrina até a entrada da arena.";
+ else ui.obj.textContent="ARENA DO COLETOR: a Peregrina espera do lado de fora. O confronto ainda será construído.";
  p.anim+=dt;saveClock+=dt;if(saveClock>2.4){saveClock=0;save()}
 }
 let saveClock=0;
