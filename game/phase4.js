@@ -147,6 +147,28 @@ const platforms=[
  {x:11010,y:430,w:150,h:22,kind:"arena",bossBreakable:true,broken:false}
 ]
 
+const PLATFORM_ART_LAYOUT=Object.freeze([
+ {min:0,max:2140,group:"2a",indices:[0,1,2,3,4]},
+ {min:2140,max:3240,group:"2b",indices:[0,1,2]},
+ {min:3240,max:4760,group:"2c",indices:[0,1,2,3,4]},
+ {min:4760,max:6070,group:"2d",indices:[0,1,2,3]},
+ {min:6070,max:7900,group:"2e",indices:[0,1,2,3,4,5]},
+ {min:7900,max:8940,group:"2f",indices:[0,1,2]},
+ {min:8940,max:10670,group:"2g",indices:[0,1,2,3,4,5,0]},
+ {min:10670,max:Infinity,group:"2h",indices:[1,3,4]}
+]);
+for(const rule of PLATFORM_ART_LAYOUT){
+ const qs=platforms.filter(q=>q.x>=rule.min&&q.x<rule.max);
+ qs.forEach((q,i)=>{
+   q.artGroup=rule.group;
+   q.artIndex=rule.indices[Math.min(i,rule.indices.length-1)]??0;
+ });
+}
+// Arena: peças 01 e 03 são as versões quebradas das duas plataformas altas.
+const arenaArtPlatforms=platforms.filter(q=>q.artGroup==="2h");
+if(arenaArtPlatforms[1])arenaArtPlatforms[1].brokenArtIndex=0;
+if(arenaArtPlatforms[2])arenaArtPlatforms[2].brokenArtIndex=2;
+
 const checkpoints=[
  {id:"road",x:1870,groundY:590,respawnX:1800,respawnY:504,name:"Marco sem inscrição"},
  {id:"village",x:2910,groundY:590,respawnX:2840,respawnY:504,name:"Marco do Povoado"},
@@ -382,6 +404,152 @@ const PHASE4_BACKGROUND_FILES=Object.freeze([
  "../assets/game/phase4/backgrounds/phase4-bg-08-collector-house.png",
  "../assets/game/phase4/backgrounds/phase4-bg-09-collector-arena.png"
 ]);
+const PHASE4_PLATFORM_ART_FILES=Object.freeze({
+ "2a":Object.freeze([
+  "../assets/game/phase4/platforms/2A-estrada-porta/phase4-2a-platform-01.png",
+  "../assets/game/phase4/platforms/2A-estrada-porta/phase4-2a-platform-02.png",
+  "../assets/game/phase4/platforms/2A-estrada-porta/phase4-2a-platform-03.png",
+  "../assets/game/phase4/platforms/2A-estrada-porta/phase4-2a-platform-04.png",
+  "../assets/game/phase4/platforms/2A-estrada-porta/phase4-2a-platform-05.png",
+  "../assets/game/phase4/platforms/2A-estrada-porta/phase4-2a-platform-06.png"
+ ]),
+ "2b":Object.freeze([
+  "../assets/game/phase4/platforms/2B-povoado-sem-nomes/phase4-2b-platform-01.png",
+  "../assets/game/phase4/platforms/2B-povoado-sem-nomes/phase4-2b-platform-02.png",
+  "../assets/game/phase4/platforms/2B-povoado-sem-nomes/phase4-2b-platform-03.png",
+  "../assets/game/phase4/platforms/2B-povoado-sem-nomes/phase4-2b-platform-04.png",
+  "../assets/game/phase4/platforms/2B-povoado-sem-nomes/phase4-2b-platform-05.png"
+ ]),
+ "2c":Object.freeze([
+  "../assets/game/phase4/platforms/2C-campo-das-pegadas/phase4-2c-platform-01.png",
+  "../assets/game/phase4/platforms/2C-campo-das-pegadas/phase4-2c-platform-02.png",
+  "../assets/game/phase4/platforms/2C-campo-das-pegadas/phase4-2c-platform-03.png",
+  "../assets/game/phase4/platforms/2C-campo-das-pegadas/phase4-2c-platform-04.png",
+  "../assets/game/phase4/platforms/2C-campo-das-pegadas/phase4-2c-platform-05.png",
+  "../assets/game/phase4/platforms/2C-campo-das-pegadas/phase4-2c-platform-06.png"
+ ]),
+ "2d":Object.freeze([
+  "../assets/game/phase4/platforms/2D-arquivo-rasurado/phase4-2d-platform-01.png",
+  "../assets/game/phase4/platforms/2D-arquivo-rasurado/phase4-2d-platform-02.png",
+  "../assets/game/phase4/platforms/2D-arquivo-rasurado/phase4-2d-platform-03.png",
+  "../assets/game/phase4/platforms/2D-arquivo-rasurado/phase4-2d-platform-04.png",
+  "../assets/game/phase4/platforms/2D-arquivo-rasurado/phase4-2d-platform-05.png",
+  "../assets/game/phase4/platforms/2D-arquivo-rasurado/phase4-2d-platform-06.png"
+ ]),
+ "2e":Object.freeze([
+  "../assets/game/phase4/platforms/2E-ponte-dos-ninguem/phase4-2e-platform-01.png",
+  "../assets/game/phase4/platforms/2E-ponte-dos-ninguem/phase4-2e-platform-02.png",
+  "../assets/game/phase4/platforms/2E-ponte-dos-ninguem/phase4-2e-platform-03.png",
+  "../assets/game/phase4/platforms/2E-ponte-dos-ninguem/phase4-2e-platform-04.png",
+  "../assets/game/phase4/platforms/2E-ponte-dos-ninguem/phase4-2e-platform-05.png",
+  "../assets/game/phase4/platforms/2E-ponte-dos-ninguem/phase4-2e-platform-06.png"
+ ]),
+ "2f":Object.freeze([
+  "../assets/game/phase4/platforms/2F-praca-dos-nomes-roubados/phase4-2f-platform-01.png",
+  "../assets/game/phase4/platforms/2F-praca-dos-nomes-roubados/phase4-2f-platform-02.png",
+  "../assets/game/phase4/platforms/2F-praca-dos-nomes-roubados/phase4-2f-platform-03.png",
+  "../assets/game/phase4/platforms/2F-praca-dos-nomes-roubados/phase4-2f-platform-04.png",
+  "../assets/game/phase4/platforms/2F-praca-dos-nomes-roubados/phase4-2f-platform-05.png",
+  "../assets/game/phase4/platforms/2F-praca-dos-nomes-roubados/phase4-2f-platform-06.png"
+ ]),
+ "2g":Object.freeze([
+  "../assets/game/phase4/platforms/2G-casa-do-coletor/phase4-2g-platform-01.png",
+  "../assets/game/phase4/platforms/2G-casa-do-coletor/phase4-2g-platform-02.png",
+  "../assets/game/phase4/platforms/2G-casa-do-coletor/phase4-2g-platform-03.png",
+  "../assets/game/phase4/platforms/2G-casa-do-coletor/phase4-2g-platform-04.png",
+  "../assets/game/phase4/platforms/2G-casa-do-coletor/phase4-2g-platform-05.png",
+  "../assets/game/phase4/platforms/2G-casa-do-coletor/phase4-2g-platform-06.png"
+ ]),
+ "2h":Object.freeze([
+  "../assets/game/phase4/platforms/2H-arena-do-coletor/phase4-2h-platform-01.png",
+  "../assets/game/phase4/platforms/2H-arena-do-coletor/phase4-2h-platform-02.png",
+  "../assets/game/phase4/platforms/2H-arena-do-coletor/phase4-2h-platform-03.png",
+  "../assets/game/phase4/platforms/2H-arena-do-coletor/phase4-2h-platform-04.png",
+  "../assets/game/phase4/platforms/2H-arena-do-coletor/phase4-2h-platform-05.png",
+  "../assets/game/phase4/platforms/2H-arena-do-coletor/phase4-2h-platform-06.png"
+ ])
+});
+const phase4PlatformImages=Object.create(null);
+const phase4PlatformPromises=Object.create(null);
+const phase4PlatformMeta=Object.create(null);
+
+function platformArtKey(group,index){return group+":"+index}
+function analyzePlatformSurface(im){
+ try{
+   const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+   if(!iw||!ih)return .34;
+   const sw=160,sh=Math.max(32,Math.round(ih*(sw/iw)));
+   const cv=document.createElement("canvas");cv.width=sw;cv.height=sh;
+   const cx=cv.getContext("2d",{willReadFrequently:true});
+   cx.clearRect(0,0,sw,sh);cx.drawImage(im,0,0,sw,sh);
+   const data=cx.getImageData(0,0,sw,sh).data;
+   const x0=Math.floor(sw*.08),x1=Math.floor(sw*.92),need=(x1-x0)*.46;
+   for(let y=1;y<sh-1;y++){
+     let filled=0;
+     for(let x=x0;x<x1;x++)if(data[(y*sw+x)*4+3]>70)filled++;
+     if(filled>=need)return Math.max(.08,Math.min(.72,y/sh));
+   }
+ }catch(e){}
+ return .34;
+}
+function ensurePlatformArt(group,index){
+ const files=PHASE4_PLATFORM_ART_FILES[group];
+ if(!files||index<0||index>=files.length)return Promise.resolve(null);
+ const key=platformArtKey(group,index);
+ if(phase4PlatformImages[key])return Promise.resolve(phase4PlatformImages[key]);
+ if(phase4PlatformPromises[key])return phase4PlatformPromises[key];
+ phase4PlatformPromises[key]=img(files[index])
+   .then(im=>{
+     phase4PlatformImages[key]=im;
+     phase4PlatformMeta[key]={surfaceRatio:analyzePlatformSurface(im)};
+     return im;
+   })
+   .catch(()=>null);
+ return phase4PlatformPromises[key];
+}
+function platformArtRuleAt(x){
+ return PLATFORM_ART_LAYOUT.find(r=>x>=r.min&&x<r.max)||PLATFORM_ART_LAYOUT[0];
+}
+function warmPlatformArt(x){
+ const rule=platformArtRuleAt(x);
+ const files=PHASE4_PLATFORM_ART_FILES[rule.group]||[];
+ files.forEach((_,i)=>ensurePlatformArt(rule.group,i));
+}
+function selectedPlatformArt(q){
+ let index=q.artIndex??0;
+ if(q.broken&&Number.isFinite(q.brokenArtIndex))index=q.brokenArtIndex;
+ // Praça resolvida usa o segundo trio de artes como variação pós-investigação.
+ if(q.artGroup==="2f"&&plazaSolved)index=Math.min(5,index+3);
+ // Epílogo usa a última arena intacta como acabamento final.
+ if(q.artGroup==="2h"&&phase4Complete&&!q.bossBreakable)index=4;
+ return {group:q.artGroup,index};
+}
+function drawPlatformArt(q,alpha){
+ const sel=selectedPlatformArt(q);
+ if(!sel.group)return false;
+ const key=platformArtKey(sel.group,sel.index);
+ const im=phase4PlatformImages[key];
+ if(!im){ensurePlatformArt(sel.group,sel.index);return false}
+ const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+ if(!iw||!ih)return false;
+ const meta=phase4PlatformMeta[key]||{surfaceRatio:.34};
+ const widthScale=q.h>100?1.035:1.12;
+ const dw=Math.max(40,q.w*widthScale),dh=ih*(dw/iw);
+ const dx=q.x+q.w/2-dw/2,dy=q.y-meta.surfaceRatio*dh;
+
+ ctx.save();
+ ctx.globalAlpha=alpha;
+ ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";
+ if(q.unstable&&(q.lightTimer||0)>0){
+   ctx.shadowColor="rgba(236,204,112,.88)";ctx.shadowBlur=22;
+ }else if(bridgePlatformWarning(q)){
+   ctx.shadowColor="rgba(204,199,180,.55)";ctx.shadowBlur=12;
+ }
+ ctx.drawImage(im,dx,dy,dw,dh);
+ ctx.restore();
+ return true;
+}
+
 const phase4BackgroundImages=Array(PHASE4_BACKGROUND_FILES.length).fill(null);
 const phase4BackgroundPromises=Array(PHASE4_BACKGROUND_FILES.length).fill(null);
 const phase4BackgroundFailed=Array(PHASE4_BACKGROUND_FILES.length).fill(false);
@@ -448,7 +616,9 @@ const backgroundReady=Promise.allSettled([
  ensurePhase4Background(initialBackgroundIndex),
  ensurePhase4Background(initialBackgroundIndex+1)
 ]);
-window.__PHASE_ASSETS_READY=Promise.allSettled([jackReady,keyReady,dialogueReady,backgroundReady]);
+const initialPlatformRule=platformArtRuleAt(p.x);
+const platformReady=Promise.allSettled((PHASE4_PLATFORM_ART_FILES[initialPlatformRule.group]||[]).map((_,i)=>ensurePlatformArt(initialPlatformRule.group,i)));
+window.__PHASE_ASSETS_READY=Promise.allSettled([jackReady,keyReady,dialogueReady,backgroundReady,platformReady]);
 
 function jackFrame(){
  const a=window.JACK_ANIMATIONS?.animations;if(!a)return 0;
@@ -592,43 +762,56 @@ function stabilizeBridgePlatforms(pc,pcy){
  return count;
 }
 function drawRoad(){
+ warmPlatformArt(p.x);
  ctx.save();ctx.translate(-cam,0);
  for(const q of platforms){
-   if(q.broken)continue;
-   const alpha=bridgePlatformAlpha(q);
+   const alpha=q.broken?1:bridgePlatformAlpha(q);
    if(alpha<=.03)continue;
-   ctx.save();
-   const artBehind=hasPhase4BackgroundAt(q.x);
-   ctx.globalAlpha=alpha*(artBehind?(q.h>100?.72:.9):1);
-   const palette={
-     road:["#30291f","#847052"],ledge:["#40382d","#9b865d"],
-     village:["#332f27","#847457"],traces:["#342d23","#8d7750"],
-     archive:["#272925","#6f6a55"],bridge:["#352c21","#9a7d4f"],
-     plaza:["#34322d","#7d735e"],collector:["#242522","#655b49"],
-     arena:["#201f1d","#8b714b"]
-   }[q.kind]||["#30291f","#847052"];
 
-   if(q.unstable&&(q.lightTimer||0)>0){
-     ctx.shadowColor="rgba(236,204,112,.8)";ctx.shadowBlur=18;
-   }else if(bridgePlatformWarning(q)){
-     ctx.shadowColor="rgba(190,184,166,.5)";ctx.shadowBlur=10;
-   }
+   const artDrawn=drawPlatformArt(q,alpha);
+   if(!artDrawn){
+     ctx.save();
+     const artBehind=hasPhase4BackgroundAt(q.x);
+     ctx.globalAlpha=alpha*(artBehind?(q.h>100?.72:.9):1);
+     const palette={
+       road:["#30291f","#847052"],ledge:["#40382d","#9b865d"],
+       village:["#332f27","#847457"],traces:["#342d23","#8d7750"],
+       archive:["#272925","#6f6a55"],bridge:["#352c21","#9a7d4f"],
+       plaza:["#34322d","#7d735e"],collector:["#242522","#655b49"],
+       arena:["#201f1d","#8b714b"]
+     }[q.kind]||["#30291f","#847052"];
 
-   ctx.fillStyle=palette[0];ctx.fillRect(q.x,q.y,q.w,q.h);
-   ctx.fillStyle=q.unstable&&(q.lightTimer||0)>0?"#d7b96d":palette[1];ctx.fillRect(q.x,q.y,q.w,5);
-
-   if(q.h>100){
-     ctx.strokeStyle="rgba(25,22,18,.7)";ctx.lineWidth=3;
-     for(let xx=q.x+45;xx<q.x+q.w;xx+=95){ctx.beginPath();ctx.moveTo(xx,q.y+8);ctx.lineTo(xx-18,q.y+42);ctx.stroke()}
-   }else if(q.kind==="bridge"){
-     ctx.strokeStyle=q.unstable?"rgba(207,191,150,.48)":"rgba(181,146,84,.3)";ctx.lineWidth=2;
-     for(let xx=q.x+24;xx<q.x+q.w;xx+=42){ctx.beginPath();ctx.moveTo(xx,q.y);ctx.lineTo(xx,q.y+q.h);ctx.stroke()}
-     if(q.unstable){
-       ctx.setLineDash([7,7]);ctx.strokeStyle="rgba(222,214,191,.4)";
-       ctx.strokeRect(q.x+3,q.y+3,q.w-6,q.h-6);ctx.setLineDash([]);
+     if(q.broken){
+       ctx.fillStyle="rgba(61,52,40,.9)";
+       ctx.fillRect(q.x,q.y+8,q.w*.32,18);
+       ctx.fillRect(q.x+q.w*.68,q.y+3,q.w*.32,18);
+       ctx.fillStyle="rgba(139,105,67,.72)";
+       for(let i=0;i<4;i++)ctx.fillRect(q.x+q.w*.38+i*12,q.y+10+i*7,9,7);
+     }else{
+       if(q.unstable&&(q.lightTimer||0)>0){
+         ctx.shadowColor="rgba(236,204,112,.8)";ctx.shadowBlur=18;
+       }else if(bridgePlatformWarning(q)){
+         ctx.shadowColor="rgba(190,184,166,.5)";ctx.shadowBlur=10;
+       }
+       ctx.fillStyle=palette[0];ctx.fillRect(q.x,q.y,q.w,q.h);
+       ctx.fillStyle=q.unstable&&(q.lightTimer||0)>0?"#d7b96d":palette[1];ctx.fillRect(q.x,q.y,q.w,5);
+       if(q.h>100){
+         ctx.strokeStyle="rgba(25,22,18,.7)";ctx.lineWidth=3;
+         for(let xx=q.x+45;xx<q.x+q.w;xx+=95){ctx.beginPath();ctx.moveTo(xx,q.y+8);ctx.lineTo(xx-18,q.y+42);ctx.stroke()}
+       }
      }
+     ctx.restore();
    }
-   ctx.restore();
+
+   // Gameplay readability stays above the sprite art.
+   if(!q.broken&&q.kind==="bridge"&&q.unstable){
+     ctx.save();
+     ctx.globalAlpha=Math.min(1,alpha+.15);
+     ctx.setLineDash([7,7]);
+     ctx.strokeStyle=(q.lightTimer||0)>0?"rgba(239,205,119,.88)":"rgba(222,214,191,.48)";
+     ctx.lineWidth=2;ctx.strokeRect(q.x+3,q.y+3,q.w-6,q.h-6);
+     ctx.setLineDash([]);ctx.restore();
+   }
  }
  ctx.restore();
 }
@@ -2221,7 +2404,7 @@ function update(dt){
  }
 
  cam+=(Math.max(0,Math.min(WORLD-W,p.x-W*.34))-cam)*Math.min(1,dt*5);
- let si=0;for(let i=0;i<story.sections.length;i++)if(p.x>=story.sections[i].x)si=i;if(si!==section){section=si;warmPhase4Backgrounds(p.x);banner(story.sections[si].name)}
+ let si=0;for(let i=0;i<story.sections.length;i++)if(p.x>=story.sections[i].x)si=i;if(si!==section){section=si;warmPhase4Backgrounds(p.x);warmPlatformArt(p.x);banner(story.sections[si].name)}
  if(!doorOpened)ui.obj.textContent="A chave de Mara reage à parede. Aproxime-se e pressione E.";
  else if(!pilgrimMet)ui.obj.textContent="Atravesse a Estrada sem Placas e encontre quem ainda espera.";
  else if(!tracesSolved){
