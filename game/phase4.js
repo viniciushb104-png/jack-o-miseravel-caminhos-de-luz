@@ -11,7 +11,8 @@ const ui={
 const dialogue=new window.DialogueSystem(document.getElementById("dialogue"));
 const story=window.PHASE4_STORY;if(!story)throw new Error("PHASE4_STORY não carregou.");
 const journey=window.JackJourney||null,url=new URLSearchParams(location.search),journeyMode=url.get("journey")==="1",replayMode=url.get("replay")==="1",forceNew=url.get("new")==="1";
-const SAVE_KEY="jack-phase4-save",CHECKPOINT_KEY="jack-phase4-checkpoint",MARA_KEY="jack-item-mara-wood-key";
+const SAVE_KEY="jack-phase4-save",CHECKPOINT_KEY="jack-phase4-checkpoint",MARA_KEY="jack-item-mara-wood-key",
+      BELL_KEY="jack-item-uninscribed-bell",COMPLETE_KEY="jack-phase4-complete",PHASE5_KEY="jack-phase5-unlocked";
 // Migração: jogadores que concluíram Halloween III antes da chave persistente
 // continuam podendo abrir a primeira passagem de Halloween IV.
 if(localStorage.getItem("jack-phase3-complete")==="yes"&&localStorage.getItem(MARA_KEY)!=="yes"){
@@ -52,6 +53,17 @@ let bossStateTimer=0,bossAttackClock=.9,bossInv=0,bossAttackHit=false;
 let bossProjectiles=[],bossReleasedPlates=[];
 if(!hadBossState&&arenaReached){arenaReached=false;bossStarted=false}
 if(bossResolved){bossStarted=true;bossAct=3;bossArmor=0;bossHp=0}
+
+// Epílogo da Fase 4.
+// 0 soltar nomes · 1 decisão · 2 sino · 3 promessa · 4 despedida · 5 concluído.
+let epilogueStep=Math.max(0,Math.min(5,Number(saveData?.epilogueStep)||0));
+let phase4Complete=!!saveData?.phase4Complete;
+let bellObtained=!!saveData?.bellObtained;
+let epilogueRunning=false,epilogueFxClock=0;
+if(phase4Complete){
+ bossResolved=true;bossStarted=true;bossAct=3;bossArmor=0;bossHp=0;bossState="resolved";
+ epilogueStep=5;bellObtained=true;
+}
 
 let traces=Array.isArray(saveData?.traces)?saveData.traces.slice(0,3).map(Boolean):[false,false,false];
 const traceRevealFx=[0,0,0];
@@ -298,6 +310,7 @@ function save(){
    bridgeFearPlayed,bridgeCrossedPlayed,bridgeNameGlitchPlayed,stolenPlazaPlayed,collectorApproachPlayed,arenaEdgePlayed,bridgeFogClock,
    plazaEchoes:[...plazaEchoes],plazaSolved,collectorGlimpsePlayed,
    bossStarted,bossResolved,bossAct,bossArmor,bossHp,bossX,
+   epilogueStep,phase4Complete,bellObtained,
    pilgrimX,pilgrimBridgeDone,archiveEvidence:[...archiveEvidence],archiveSolved,deadEnemies:deadEnemies(),savedAt:Date.now()
  }));
 }
@@ -635,6 +648,11 @@ function pilgrimFollowTarget(){
    return Math.max(8010,Math.min(8840,p.x-165));
  }
  if(p.x<10600)return Math.max(8950,Math.min(10480,p.x-175));
+ if(bossResolved){
+   if(epilogueStep<4)return 10765;
+   if(epilogueStep===4)return 10805;
+   return 11155;
+ }
  return 10535;
 }
 function startPilgrimBridge(){
@@ -1266,14 +1284,75 @@ function recognizeCollector(){
  if(Math.abs(pc-bossX)>175){say("Jack precisa se aproximar do Coletor.");return true}
  p.vx=0;bossState="recognized";
  dialogue.open(story.collectorRecognized,()=>{
-   bossResolved=true;bossState="resolved";bossProjectiles=[];memoryPulse=1.8;
+   bossResolved=true;bossState="resolved";bossProjectiles=[];memoryPulse=1.8;epilogueFxClock=7.5;
    banner("O COLETOR FOI RECONHECIDO");
    say("O confronto terminou sem apagar quem estava por baixo dos nomes.");
    save();
-   setTimeout(()=>{if(ui.prototype)ui.prototype.hidden=false},650);
+   setTimeout(()=>runPhase4Epilogue(),520);
  });
  return true;
 }
+function grantUninscribedBell(){
+ bellObtained=true;memoryPulse=Math.max(memoryPulse,1.45);
+ if(!replayMode)localStorage.setItem(BELL_KEY,"yes");
+ banner("ITEM · SINO SEM INSCRIÇÃO");
+ say("Um sino sem nome agora acompanha a lanterna de Jack.");
+ save();
+}
+function finishPhase4Progress(){
+ if(phase4Complete)return;
+ phase4Complete=true;epilogueStep=5;epilogueRunning=false;memoryPulse=2;
+ if(!replayMode){
+   localStorage.setItem(COMPLETE_KEY,"yes");
+   localStorage.setItem(PHASE5_KEY,"yes");
+   localStorage.setItem(BELL_KEY,"yes");
+   localStorage.setItem("jack-phase4-completed-at",String(Date.now()));
+   journey?.unlockPhase(5);
+ }
+ banner("HALLOWEEN IV CONCLUÍDO");
+ say("Ser esquecido não significa nunca ter existido.");
+ save();
+ setTimeout(()=>{if(ui.prototype)ui.prototype.hidden=false},700);
+}
+function playPhase4Epilogue(lines,step,bannerText,onDone){
+ epilogueRunning=true;epilogueStep=step;p.vx=0;
+ input.left=input.right=input.down=input.run=false;input.jump=false;
+ save();
+ dialogue.open(lines,()=>{
+   if(bannerText)banner(bannerText);
+   if(onDone)onDone();
+   epilogueStep=step+1;epilogueRunning=false;save();
+   setTimeout(()=>runPhase4Epilogue(),260);
+ });
+}
+function runPhase4Epilogue(){
+ if(!bossResolved||phase4Complete||epilogueRunning||dialogue.active)return;
+ if(epilogueStep===0){
+   epilogueFxClock=Math.max(epilogueFxClock,7.5);
+   playPhase4Epilogue(story.collectorRelease,0,"OS NOMES FORAM SOLTOS",()=>{
+     bossState="released";memoryPulse=1.25;
+   });return;
+ }
+ if(epilogueStep===1){
+   playPhase4Epilogue(story.pilgrimChoice,1,"ELA NÃO PRECISA ESPERAR PELO NOME",()=>{
+     pilgrimX=Math.max(pilgrimX,10740);memoryPulse=.9;
+   });return;
+ }
+ if(epilogueStep===2){
+   playPhase4Epilogue(story.bellGift,2,"SINO SEM INSCRIÇÃO",()=>grantUninscribedBell());return;
+ }
+ if(epilogueStep===3){
+   memoryPulse=1.35;
+   playPhase4Epilogue(story.jackPromiseMemory,3,"MEMÓRIA · EU VOLTO",()=>{
+     epilogueFxClock=Math.max(epilogueFxClock,5.5);
+   });return;
+ }
+ if(epilogueStep===4){
+   playPhase4Epilogue(story.phase4Farewell,4,"A ESTRADA CONTINUA",()=>finishPhase4Progress());return;
+ }
+ if(epilogueStep>=5)finishPhase4Progress();
+}
+
 function tryLightCollector(pc,pcy){
  if(!bossStarted||bossResolved)return false;
  const dx=bossX-pc,dy=(bossAct===3?500:440)-pcy;
@@ -1445,6 +1524,75 @@ function drawCollectorBoss(){
  }
 }
 
+function drawUninscribedBell(x,y,scale=1,alpha=1){
+ ctx.save();ctx.translate(x,y);ctx.scale(scale,scale);ctx.globalAlpha=alpha;
+ ctx.shadowColor="rgba(235,202,117,.75)";ctx.shadowBlur=14;
+ ctx.strokeStyle="#d7bb74";ctx.fillStyle="#554b38";ctx.lineWidth=3;
+ ctx.beginPath();ctx.moveTo(-15,8);ctx.quadraticCurveTo(-13,-17,0,-24);ctx.quadraticCurveTo(13,-17,15,8);ctx.lineTo(-15,8);ctx.fill();ctx.stroke();
+ ctx.beginPath();ctx.moveTo(-18,8);ctx.lineTo(18,8);ctx.stroke();
+ ctx.fillStyle="#d6b96e";ctx.beginPath();ctx.arc(0,13,5,0,Math.PI*2);ctx.fill();
+ ctx.strokeStyle="#9f895b";ctx.beginPath();ctx.arc(0,-27,6,Math.PI,Math.PI*2);ctx.stroke();
+ ctx.restore();
+}
+function drawPhase4Epilogue(){
+ if(!bossResolved)return;
+ ctx.save();ctx.translate(-cam,0);
+
+ // Names finally leave the Collector instead of remaining attached to him.
+ if(epilogueStep<=1||epilogueFxClock>0){
+   const strength=Math.min(1,.32+epilogueFxClock*.12);
+   for(let i=0;i<12;i++){
+     const travel=(p.anim*26+i*39)%310;
+     const x=10920+Math.sin(i*1.71+p.anim*.35)*105;
+     const y=545-travel;
+     const a=Math.max(0,Math.min(.78,strength*(1-travel/350)));
+     drawStolenNamePlate(x,y,54+(i%3)*7,18,a,(i%2?1:-1)*(.05+i*.012));
+   }
+ }
+
+ // The bell has no inscription, but it still has a function.
+ if(epilogueStep>=2&&epilogueStep<5){
+   const bx=10835,by=455+Math.sin(p.anim*2.2)*4;
+   const g=ctx.createRadialGradient(bx,by,8,bx,by,70);
+   g.addColorStop(0,"rgba(235,202,117,.22)");g.addColorStop(1,"rgba(235,202,117,0)");
+   ctx.fillStyle=g;ctx.beginPath();ctx.arc(bx,by,70,0,Math.PI*2);ctx.fill();
+   drawUninscribedBell(bx,by,1.05,.95);
+ }
+
+ // The recurring door returns only as memory: no handle, no destination revealed.
+ if(epilogueStep===3||epilogueStep===4){
+   const x=11105,y=312;
+   const pulse=.65+.2*Math.sin(p.anim*2);
+   ctx.strokeStyle="rgba(232,202,124,"+pulse+")";ctx.lineWidth=4;
+   ctx.shadowColor="#e1bd66";ctx.shadowBlur=22;
+   ctx.strokeRect(x-54,y,108,278);
+   ctx.setLineDash([7,7]);ctx.globalAlpha=.5;
+   ctx.strokeRect(x-42,y+15,84,248);ctx.setLineDash([]);
+   ctx.globalAlpha=.18;ctx.fillStyle="#e4c477";ctx.fillRect(x-50,y+4,100,270);
+   ctx.globalAlpha=.82;ctx.fillStyle="#e7cf91";ctx.font="italic 10px Georgia";ctx.textAlign="center";
+   ctx.fillText("uma porta que ainda não abre",x,y-18);
+ }
+
+ if(phase4Complete){
+   const g=ctx.createLinearGradient(10910,0,11250,0);
+   g.addColorStop(0,"rgba(228,197,117,0)");g.addColorStop(1,"rgba(228,197,117,.18)");
+   ctx.fillStyle=g;ctx.fillRect(10910,485,340,105);
+   ctx.fillStyle="rgba(235,211,151,.76)";ctx.font="italic 12px Georgia";ctx.textAlign="right";
+   ctx.fillText("a estrada continua",11210,548);
+ }
+ ctx.restore();
+
+ // Permanent-item reminder during the final beats.
+ if(bellObtained&&!phase4Complete){
+   ctx.save();ctx.fillStyle="rgba(12,13,12,.68)";ctx.fillRect(W-205,92,170,48);
+   drawUninscribedBell(W-181,116,.55,.9);
+   ctx.fillStyle="#dbc27f";ctx.font="700 9px Georgia";ctx.textAlign="left";
+   ctx.fillText("SINO SEM INSCRIÇÃO",W-155,113);
+   ctx.fillStyle="rgba(222,211,177,.72)";ctx.font="italic 8px Georgia";ctx.fillText("sem nome · ainda toca",W-155,128);
+   ctx.restore();
+ }
+}
+
 function drawPhase4SkeletonLandmarks(){
  ctx.save();ctx.translate(-cam,0);
 
@@ -1499,7 +1647,7 @@ function drawPhase4SkeletonLandmarks(){
 function drawWorld(){
  drawRoad();drawPhase4SkeletonLandmarks();drawSigns();drawDoor();drawArchiveEvidence();drawNobodyBridgeFog();drawBridgeIdentityPlate();drawStolenNamesPlaza();drawCollectorGlimpse();
  checkpoints.forEach(drawCheckpoint);
- drawPilgrim();drawTraces();enemies.forEach(drawEnemy);drawCollectorBoss();
+ drawPilgrim();drawTraces();enemies.forEach(drawEnemy);drawCollectorBoss();drawPhase4Epilogue();
  if(prototypeEndPlayed){
    ctx.save();ctx.translate(4660-cam,0);ctx.strokeStyle="#d6bd7a";ctx.lineWidth=2;ctx.globalAlpha=.55;ctx.beginPath();ctx.moveTo(0,590);ctx.lineTo(0,370);ctx.stroke();ctx.fillStyle="#e6cd8a";ctx.font="italic 11px Georgia";ctx.textAlign="center";
    ctx.fillText(archiveSolved?"os nomes não sumiram — foram levados":"há marcas de remoção no arquivo",0,345);ctx.restore();
@@ -1879,6 +2027,7 @@ function update(dt){
  for(const q of platforms)if(q.unstable&&q.lightTimer>0)q.lightTimer=Math.max(0,q.lightTimer-dt);
  for(let i=0;i<plazaEchoFx.length;i++)plazaEchoFx[i]=Math.max(0,plazaEchoFx[i]-dt);
  collectorGlimpseTimer=Math.max(0,collectorGlimpseTimer-dt);
+ epilogueFxClock=Math.max(0,epilogueFxClock-dt);
  updateCollectorBoss(dt);
  updateEnemies(dt);
  updatePilgrim(dt);
@@ -1933,6 +2082,7 @@ function update(dt){
    }
  }
  updateCheckpoint();
+ if(bossResolved&&!phase4Complete&&!epilogueRunning&&!dialogue.active)runPhase4Epilogue();
  if(!pilgrimMet&&doorOpened&&p.x>2400){
    pilgrimMet=true;pilgrimX=2580;pilgrimFeetY=590;p.vx=0;
    dialogue.open(story.pilgrimMeeting,()=>{banner("POVOADO SEM NOMES");say("A Peregrina seguirá Jack, mas vai esperar quando o caminho pedir outra coisa.");save()})
@@ -1996,7 +2146,17 @@ function update(dt){
  }
  else if(p.x<10600)ui.obj.textContent="CASA DO COLETOR: siga com a Peregrina até a entrada da arena.";
  else if(!bossStarted)ui.obj.textContent="ARENA DO COLETOR: entre e descubra o que existe sob a coleção de nomes.";
- else if(bossResolved)ui.obj.textContent="ARENA DO COLETOR: o confronto terminou. O Coletor ainda existe sem possuir os nomes.";
+ else if(phase4Complete)ui.obj.textContent="HALLOWEEN IV CONCLUÍDO: o Sino sem Inscrição acompanha Jack. A estrada continua.";
+ else if(bossResolved){
+   const epilogueObjective=[
+     "EPÍLOGO: o Coletor está soltando os nomes.",
+     "EPÍLOGO: a Peregrina decide se continuará esperando pelo próprio nome.",
+     "EPÍLOGO: receba o Sino sem Inscrição.",
+     "EPÍLOGO: a porta de Jack voltou a aparecer.",
+     "EPÍLOGO: escolha continuar pela estrada."
+   ][Math.min(4,epilogueStep)];
+   ui.obj.textContent=epilogueObjective;
+ }
  else if(bossAct===1)ui.obj.textContent="ATO I: use F perto do Coletor para libertar 5 placas da armadura. "+(5-bossArmor)+"/5.";
  else if(bossAct===2)ui.obj.textContent="ATO II: desvie das investidas, cuidado com as plataformas quebradas e alcance o Coletor com F. "+bossHp+"/5.";
  else ui.obj.textContent="ATO III: não há mais nada para destruir. Aproxime-se e pressione E · RECONHECER.";
@@ -2040,6 +2200,7 @@ addEventListener("keyup",e=>{
 document.getElementById("startGame").onclick=()=>{
  if(journeyMode&&!replayMode)journey?.advanceTo(4);
  ui.intro.hidden=true;running=true;last=performance.now();markPlayerAction();requestAnimationFrame(loop);
+ if(phase4Complete){setTimeout(()=>{if(ui.prototype)ui.prototype.hidden=false},420);return}
  if(!introPlayed){introPlayed=true;setTimeout(()=>dialogue.open(story.opening,()=>{say("A Chave de Madeira de Mara começou a aquecer.");save()}),300)}
 };
 document.getElementById("phase4Continue")?.addEventListener("click",()=>ui.prototype.hidden=true);
