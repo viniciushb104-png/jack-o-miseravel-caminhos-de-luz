@@ -115,6 +115,7 @@ const checkpoints=[
  {id:"village",x:2910,groundY:590,respawnX:2840,respawnY:504,name:"Marco do Povoado"},
  {id:"traces",x:4580,groundY:590,respawnX:4510,respawnY:504,name:"Marco das Pegadas"},
  {id:"archive",x:5750,groundY:590,respawnX:5680,respawnY:504,name:"Marco do Arquivo"},
+ {id:"bridge",x:6260,groundY:590,respawnX:6170,respawnY:504,name:"Marco da Ponte dos Ninguém"},
  {id:"plaza",x:8150,groundY:590,respawnX:8080,respawnY:504,name:"Marco da Praça"},
  {id:"collector",x:9950,groundY:590,respawnX:9880,respawnY:504,name:"Marco sem Nome"}
 ]
@@ -278,6 +279,11 @@ function resetPilgrimAfterRespawn(){
  pilgrimBridge.active=false;pilgrimFeetY=590;pilgrimMode="wait";
  if(activeCheckpoint==="collector"){pilgrimBridgeDone=true;pilgrimX=9820;return}
  if(activeCheckpoint==="plaza"){pilgrimBridgeDone=true;pilgrimX=8030;return}
+ if(activeCheckpoint==="bridge"){
+   pilgrimBridgeDone=false;pilgrimX=6250;pilgrimFeetY=590;bridgeFogClock=0;
+   for(const q of platforms)if(q.unstable)q.lightTimer=0;
+   return;
+ }
  if(activeCheckpoint==="archive"){pilgrimBridgeDone=false;pilgrimX=5850;return}
  if(activeCheckpoint==="traces"){pilgrimX=tracesSolved?4660:3230;return}
  if(activeCheckpoint==="village"){pilgrimX=2860;return}
