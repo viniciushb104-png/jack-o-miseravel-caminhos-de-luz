@@ -59,26 +59,56 @@
     }
 
     const alreadySeen = sessionStorage.getItem(studioSplashSeenKey) === '1';
-    const minimumTime = alreadySeen ? 1450 : 3400;
+    const minimumTime = alreadySeen ? 1450 : 3300;
+    const startButton = document.getElementById('studioSplashStart');
+    const loading = studioSplash.querySelector('.studio-splash__loading');
 
-    // Tenta a vinheta; se o navegador bloquear autoplay, a abertura segue normalmente.
-    studioIntroAudio.currentTime = 0;
-    studioIntroAudio.play().catch(() => {});
-
-    const warmups = [
-      studioWait(minimumTime),
+    // Aquecemos o menu enquanto a marca do estúdio está na tela.
+    const warmups = Promise.allSettled([
       studioWarmImage('assets/images/menu/menu-poster.webp'),
       studioWarmAudio(mainThemeAudio, 1500)
-    ];
+    ]);
 
     if (video) {
       try { video.load(); } catch (_) {}
     }
 
-    await Promise.race([
-      Promise.allSettled(warmups),
-      studioWait(6000)
+    // Áudio com som antes do primeiro gesto costuma ser bloqueado pelo navegador.
+    // Tentamos autoplay; se falhar, pedimos um único clique elegante na própria splash.
+    let introStarted = false;
+    studioIntroAudio.currentTime = 0;
+    try {
+      await studioIntroAudio.play();
+      introStarted = true;
+    } catch (_) {
+      if (startButton) {
+        if (loading) loading.textContent = 'Toque para despertar a vinheta';
+        startButton.hidden = false;
+
+        await new Promise(resolve => {
+          startButton.addEventListener('click', async () => {
+            startButton.disabled = true;
+            startButton.hidden = true;
+            if (loading) loading.textContent = 'Asas do Medo Games';
+            try {
+              studioIntroAudio.currentTime = 0;
+              await studioIntroAudio.play();
+              introStarted = true;
+            } catch (_) {
+              // Se o áudio falhar mesmo após o gesto, seguimos sem travar a entrada.
+            }
+            resolve();
+          }, { once:true });
+        });
+      }
+    }
+
+    await Promise.allSettled([
+      warmups,
+      studioWait(minimumTime)
     ]);
+
+    if (introStarted) await studioWait(120);
 
     studioIntroAudio.pause();
     sessionStorage.setItem(studioSplashSeenKey, '1');
