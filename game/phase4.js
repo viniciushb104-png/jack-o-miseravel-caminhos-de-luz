@@ -628,7 +628,45 @@ function jackFrame(){
  const sp=Math.abs(p.vx);if(sp>18){const seq=input.run&&sp>170?a.run:a.walk,fps=input.run?12:9;return seq[Math.floor(p.anim*fps)%seq.length]}
  return a.idle[Math.floor(p.anim*2.4)%a.idle.length];
 }
+const PLATFORM_VISUAL_FOOT_OFFSETS=Object.freeze({
+ "2a":6,
+ "2b":7,
+ "2c":8,
+ "2d":9,
+ "2e":7,
+ "2f":14,
+ "2g":11,
+ "2h":12
+});
+const ENEMY_VISUAL_FOOT_EXTRA=Object.freeze({
+ eraser:1,
+ ashHound:2,
+ hollow:3
+});
+function supportPlatformAt(cx,bottomY,tolerance=34){
+ let best=null,bestDist=Infinity;
+ for(const q of platforms){
+   if(q.broken||!bridgePlatformSolid(q))continue;
+   if(cx<q.x-8||cx>q.x+q.w+8)continue;
+   const d=Math.abs(bottomY-q.y);
+   if(d<=tolerance&&d<bestDist){best=q;bestDist=d}
+ }
+ return best;
+}
+function platformVisualFootOffset(q){
+ if(!q)return 0;
+ return PLATFORM_VISUAL_FOOT_OFFSETS[q.artGroup]||0;
+}
+function visualFootOffsetAt(cx,bottomY,tolerance=34){
+ return platformVisualFootOffset(supportPlatformAt(cx,bottomY,tolerance));
+}
+function drawGroundShadow(x,y,rx=18,ry=4,alpha=.22){
+ ctx.save();ctx.globalAlpha=alpha;ctx.fillStyle="#000";
+ ctx.beginPath();ctx.ellipse(x,y,rx,ry,0,0,Math.PI*2);ctx.fill();ctx.restore();
+}
+
 function drawJack(){
+ const footFix=p.on?visualFootOffsetAt(p.x+p.w/2,p.y+p.h,38):0;
  if(waitSitActive&&!dialogue.active){
    const im=waitSitImages[waitSitFrame];
    if(im){
@@ -637,8 +675,9 @@ function drawJack(){
      // Nos 06–11 ele ocupa menos área do PNG, então compensamos escala e baseline.
      const seated=waitSitFrame>=5;
      const targetH=seated?222:164,targetW=iw*(targetH/ih);
-     const groundY=p.y+p.h+(seated?22:2);
+     const groundY=p.y+p.h+footFix+(seated?22:2);
      const dx=p.x-cam+p.w/2-targetW/2,dy=groundY-targetH;
+     drawGroundShadow(p.x-cam+p.w/2,p.y+p.h+footFix+1,seated?23:18,seated?4:3,.2);
      ctx.save();
      ctx.globalAlpha=p.inv>0&&Math.floor(p.inv*12)%2?.42:1;
      ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";
@@ -648,9 +687,9 @@ function drawJack(){
      return;
    }
  }
- if(p.on){ctx.save();ctx.globalAlpha=.2;ctx.fillStyle="#000";ctx.beginPath();ctx.ellipse(p.x-cam+p.w/2,p.y+p.h+1,18,3,0,0,Math.PI*2);ctx.fill();ctx.restore()}
- if(!jack){ctx.fillStyle="#eee";ctx.fillRect(p.x-cam,p.y,p.w,p.h);return}
- const cfg=window.JACK_ANIMATIONS||{},idx=jackFrame(),cell=cfg.cell||320,cols=cfg.cols||8,sx=(idx%cols)*cell,sy=Math.floor(idx/cols)*cell,rw=190,rh=190,dx=p.x-cam+p.w/2-rw/2,dy=p.y+p.h/2-132,clean=jackFrameOverrides[idx];
+ if(p.on)drawGroundShadow(p.x-cam+p.w/2,p.y+p.h+footFix+1,18,3,.22);
+ if(!jack){ctx.fillStyle="#eee";ctx.fillRect(p.x-cam,p.y+footFix,p.w,p.h);return}
+ const cfg=window.JACK_ANIMATIONS||{},idx=jackFrame(),cell=cfg.cell||320,cols=cfg.cols||8,sx=(idx%cols)*cell,sy=Math.floor(idx/cols)*cell,rw=190,rh=190,dx=p.x-cam+p.w/2-rw/2,dy=p.y+p.h/2-132+footFix,clean=jackFrameOverrides[idx];
  ctx.save();ctx.globalAlpha=p.inv>0&&Math.floor(p.inv*12)%2?.42:1;ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";
  if(p.dir<0){
    ctx.translate(dx+rw,0);ctx.scale(-1,1);
@@ -859,10 +898,12 @@ function drawPilgrim(){
  const jump=pilgrimMode==="jump";
  const guard=pilgrimMode==="guard";
  const lean=jump?pilgrimDir*7:(pilgrimMode==="run"?pilgrimDir*4:(guard?-pilgrimDir*3:0));
+ const footFix=jump?0:visualFootOffsetAt(px,feet,42)+2;
+ const visualFeet=feet+footFix;
 
- ctx.save();ctx.translate(sx+lean,0);ctx.globalAlpha=.94;
+ ctx.save();ctx.translate(sx+lean,footFix);ctx.globalAlpha=.94;
  if(!jump){
-   ctx.fillStyle="rgba(0,0,0,.24)";ctx.beginPath();ctx.ellipse(0,feet+1,22,4,0,0,Math.PI*2);ctx.fill();
+   drawGroundShadow(0,feet+1,22,4,.24);
  }
 
  ctx.strokeStyle="#766a54";ctx.lineWidth=6;ctx.lineCap="round";
@@ -1187,9 +1228,13 @@ function drawEnemyDissolve(e){
 }
 function drawEnemy(e){
  if(e.state==="dead")return;
- const ex=e.x-cam,cy=e.y+e.h/2,state=e.state;
+ const grounded=!e.cfg.flying;
+ const baseFootFix=grounded?visualFootOffsetAt(e.x+e.w/2,e.y+e.h,44):0;
+ const footFix=grounded?baseFootFix+(ENEMY_VISUAL_FOOT_EXTRA[e.kind]||0):0;
+ const ex=e.x-cam,visualY=e.y+footFix,cy=visualY+e.h/2,state=e.state;
  const attack=state==="attack",alert=state==="alert";
 
+ if(grounded&&state!=="dissolve")drawGroundShadow(ex+e.w/2,e.y+e.h+footFix+1,e.kind==="ashHound"?25:20,e.kind==="ashHound"?4:3,.2);
  ctx.save();ctx.translate(ex+e.w/2,cy);ctx.globalAlpha=Math.max(0,Math.min(1,e.alpha));
  if(e.dir<0)ctx.scale(-1,1);
 
@@ -1214,18 +1259,18 @@ function drawEnemy(e){
 
  if(state!=="dissolve"){
    ctx.save();ctx.textAlign="center";
-   ctx.fillStyle="#b9aa89";ctx.font="700 9px Georgia";ctx.fillText(e.label,ex+e.w/2,e.y-14);
+   ctx.fillStyle="#b9aa89";ctx.font="700 9px Georgia";ctx.fillText(e.label,ex+e.w/2,visualY-14);
    const stateLabel={
      idle:"à espreita",patrol:"patrulha",alert:"percebeu Jack",
      chase:e.kind==="crow"?"circulando":"perseguindo",attack:e.kind==="crow"?"mergulho":"atacando",hit:"atingido"
    }[state]||state;
-   ctx.fillStyle="rgba(196,184,150,.65)";ctx.font="italic 8px Georgia";ctx.fillText(stateLabel,ex+e.w/2,e.y-3);
+   ctx.fillStyle="rgba(196,184,150,.65)";ctx.font="italic 8px Georgia";ctx.fillText(stateLabel,ex+e.w/2,visualY-3);
 
    if(e.cfg.needsReveal&&e.exposedTimer>0){
-     ctx.fillStyle="#ddc576";ctx.font="700 8px Georgia";ctx.fillText("EXPOSTO",ex+e.w/2,e.y+e.h+14);
+     ctx.fillStyle="#ddc576";ctx.font="700 8px Georgia";ctx.fillText("EXPOSTO",ex+e.w/2,visualY+e.h+14);
    }
    if(e.hp<e.maxHp){
-     const bw=46,bx=ex+e.w/2-bw/2,by=e.y-29;
+     const bw=46,bx=ex+e.w/2-bw/2,by=visualY-29;
      ctx.fillStyle="rgba(0,0,0,.55)";ctx.fillRect(bx,by,bw,4);
      ctx.fillStyle="#d6b968";ctx.fillRect(bx,by,bw*(e.hp/e.maxHp),4);
    }
