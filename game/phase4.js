@@ -37,6 +37,8 @@ let archiveSolved=!!saveData?.archiveSolved;
 if(!hadArchiveState&&prototypeEndPlayed&&Number(saveData?.x||0)>=6100){
  archiveEvidence=[true,true,true];archiveSolved=true;
 }
+// Se a terceira prova foi salva durante um diálogo, a dedução continua válida no reload.
+if(archiveEvidence.every(Boolean))archiveSolved=true;
 const archiveRevealFx=[0,0,0];
 const archiveEvidenceGuards=["eraser-2","hollow-1","hound-1"];
 
