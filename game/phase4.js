@@ -1909,7 +1909,7 @@ function update(dt){
      say("As placas fecham a saída. Ainda há vozes separadas de seus nomes. "+heard+"/3.");gateMsg=2;
    }
  }
- if(bossStarted&&!bossResolved&&p.x>10640&&p.x<10685){
+ if(bossStarted&&!bossResolved&&p.x>10480&&p.x<10685){
    p.x=10685;p.vx=Math.max(0,p.vx);
    if(gateMsg<=0){say("A arena fechou atrás de Jack.");gateMsg=1.6}
  }
