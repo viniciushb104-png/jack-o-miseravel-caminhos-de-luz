@@ -597,7 +597,9 @@ function drawRoad(){
    if(q.broken)continue;
    const alpha=bridgePlatformAlpha(q);
    if(alpha<=.03)continue;
-   ctx.save();ctx.globalAlpha=alpha;
+   ctx.save();
+   const artBehind=hasPhase4BackgroundAt(q.x);
+   ctx.globalAlpha=alpha*(artBehind?(q.h>100?.72:.9):1);
    const palette={
      road:["#30291f","#847052"],ledge:["#40382d","#9b865d"],
      village:["#332f27","#847457"],traces:["#342d23","#8d7750"],
@@ -647,7 +649,9 @@ function drawDoor(){
    return;
  }
  ctx.save();ctx.translate(xw-cam,0);
- ctx.fillStyle="#252721";ctx.fillRect(-90,280,180,310);ctx.strokeStyle="#62563d";ctx.strokeRect(-90,280,180,310);
+ if(!hasPhase4BackgroundAt(xw)){
+   ctx.fillStyle="#252721";ctx.fillRect(-90,280,180,310);ctx.strokeStyle="#62563d";ctx.strokeRect(-90,280,180,310);
+ }
  ctx.globalAlpha=.12+.08*Math.sin(p.anim*2);ctx.strokeStyle="#e5ca86";ctx.setLineDash([9,8]);ctx.lineWidth=3;ctx.strokeRect(-54,318,108,272);ctx.setLineDash([]);
  if(keyImg&&localStorage.getItem(MARA_KEY)==="yes"){const iw=keyImg.naturalWidth||keyImg.width,ih=keyImg.naturalHeight||keyImg.height,dh=72,dw=iw*(dh/ih);ctx.globalAlpha=.72+.18*Math.sin(p.anim*2.8);ctx.drawImage(keyImg,-dw/2,402,dw,dh)}
  ctx.restore();
