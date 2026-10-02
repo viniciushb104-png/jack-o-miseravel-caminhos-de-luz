@@ -36,10 +36,14 @@ window.PHASE4_STORY=Object.freeze({
   ]),
 
   tracesSolved:Object.freeze([
-    {speaker:"PEREGRINA",text:"Essas marcas... são minhas."},
-    {speaker:"JACK",portrait:"jack",expression:1,text:"Não dizem seu nome."},
-    {speaker:"PEREGRINA",text:"Eu voltei para buscar alguém."},
-    {speaker:"JACK",portrait:"jack",expression:5,text:"Isso parece uma coisa importante para lembrar."},
+    {speaker:"PEREGRINA",text:"Não é meu nome."},
+    {speaker:"JACK",portrait:"jack",expression:1,text:"Não."},
+    {speaker:"PEREGRINA",text:"Mas eu voltei. Ajudei alguém a atravessar... e depois voltei outra vez."},
+    {speaker:"JACK",portrait:"jack",expression:1,text:"Sozinha."},
+    {speaker:"PEREGRINA",text:"Eu estava com medo."},
+    {speaker:"JACK",portrait:"jack",expression:5,text:"E foi mesmo assim."},
+    {speaker:"PEREGRINA",text:"Então isso também era eu?"},
+    {speaker:"JACK",portrait:"jack",expression:5,text:"Era uma coisa que você fez. Às vezes é um lugar melhor para começar do que uma placa."},
     {speaker:"PEREGRINA",text:"Talvez eu não tenha perdido tudo."},
     {speaker:"JACK",portrait:"jack",expression:2,text:"Já é mais do que esta estrada queria deixar."}
   ]),
@@ -100,10 +104,41 @@ window.PHASE4_STORY=Object.freeze({
     {speaker:"JACK",portrait:"jack",expression:5,text:"Eu volto."}
   ]),
 
+  traceReveals:Object.freeze([
+    Object.freeze([
+      {speaker:"PEREGRINA",text:"Essas pegadas chegam até a vala..."},
+      {speaker:"JACK",portrait:"jack",expression:1,text:"E dão meia-volta."},
+      {speaker:"PEREGRINA",text:"Por quê?"},
+      {speaker:"JACK",portrait:"jack",expression:5,text:"Talvez quem deixou isso aqui tenha percebido que alguém ficou para trás."}
+    ]),
+    Object.freeze([
+      {speaker:"PEREGRINA",text:"Agora são duas pessoas."},
+      {speaker:"JACK",portrait:"jack",expression:1,text:"Uma delas mancava. A outra reduziu o passo."},
+      {speaker:"PEREGRINA",text:"Ela estava sustentando a pessoa ferida."},
+      {speaker:"JACK",portrait:"jack",expression:5,text:"Não precisamos do nome dela para saber disso."}
+    ]),
+    Object.freeze([
+      {speaker:"PEREGRINA",text:"A segunda trilha segue para longe..."},
+      {speaker:"JACK",portrait:"jack",expression:1,text:"Mas estas pegadas voltam."},
+      {speaker:"PEREGRINA",text:"Sozinhas."},
+      {speaker:"JACK",portrait:"jack",expression:5,text:"Mais fundas na lama. Mais cansadas. E na direção do perigo."},
+      {speaker:"PEREGRINA",text:"Eu conheço esse medo."}
+    ])
+  ]),
+
   traces:Object.freeze([
-    Object.freeze({x:3520,title:"Rastro I",text:"Pegadas param diante de uma vala... e voltam na direção contrária."}),
-    Object.freeze({x:3910,title:"Rastro II",text:"Duas trilhas seguem juntas por alguns metros. Uma delas estava mancando."}),
-    Object.freeze({x:4300,title:"Rastro III",text:"As mesmas pegadas retornam sozinhas, mais profundas na lama."})
+    Object.freeze({
+      x:3520,title:"Rastro I",memoryLabel:"VOLTOU",
+      text:"Pegadas chegam à vala, param... e retornam para buscar alguém que ficou para trás."
+    }),
+    Object.freeze({
+      x:3910,title:"Rastro II",memoryLabel:"AMPAROU",
+      text:"Duas trilhas seguem juntas. Uma manca; a outra reduz o passo e a sustenta."
+    }),
+    Object.freeze({
+      x:4300,title:"Rastro III",memoryLabel:"VOLTOU DE NOVO",
+      text:"A pessoa ferida segue para longe. As mesmas pegadas retornam sozinhas, mais profundas na lama."
+    })
   ]),
 
   sections:Object.freeze([
