@@ -30,6 +30,15 @@ let activeCheckpoint=saveData?.activeCheckpoint||localStorage.getItem(CHECKPOINT
 let introPlayed=!!saveData?.introPlayed,doorOpened=!!saveData?.doorOpened,pilgrimMet=!!saveData?.pilgrimMet,tracesSolved=!!saveData?.tracesSolved,prototypeEndPlayed=!!saveData?.prototypeEndPlayed,arenaReached=!!saveData?.arenaReached;
 let bridgeFearPlayed=!!saveData?.bridgeFearPlayed,bridgeCrossedPlayed=!!saveData?.bridgeCrossedPlayed,stolenPlazaPlayed=!!saveData?.stolenPlazaPlayed,collectorApproachPlayed=!!saveData?.collectorApproachPlayed,arenaEdgePlayed=!!saveData?.arenaEdgePlayed;
 let bridgeNameGlitchPlayed=!!saveData?.bridgeNameGlitchPlayed,bridgeFogClock=Number(saveData?.bridgeFogClock)||0;
+const hadPlazaState=Array.isArray(saveData?.plazaEchoes);
+let plazaEchoes=hadPlazaState?saveData.plazaEchoes.slice(0,3).map(Boolean):[false,false,false];
+let plazaSolved=!!saveData?.plazaSolved,collectorGlimpsePlayed=!!saveData?.collectorGlimpsePlayed,collectorGlimpseTimer=0;
+if(!hadPlazaState&&Number(saveData?.x||0)>=9300){
+ plazaEchoes=[true,true,true];plazaSolved=true;collectorGlimpsePlayed=true;
+}
+if(plazaEchoes.every(Boolean))plazaSolved=true;
+const plazaEchoFx=[0,0,0];
+const plazaEchoGuards=["eraser-3","hound-2","hollow-2"];
 let traces=Array.isArray(saveData?.traces)?saveData.traces.slice(0,3).map(Boolean):[false,false,false];
 const traceRevealFx=[0,0,0];
 const hadArchiveState=Array.isArray(saveData?.archiveEvidence);
@@ -271,6 +280,7 @@ function save(){
  localStorage.setItem(SAVE_KEY,JSON.stringify({
    x:p.x,y:p.y,dir:p.dir,playerLife,activeCheckpoint,introPlayed,doorOpened,pilgrimMet,traces:[...traces],tracesSolved,prototypeEndPlayed,arenaReached,
    bridgeFearPlayed,bridgeCrossedPlayed,bridgeNameGlitchPlayed,stolenPlazaPlayed,collectorApproachPlayed,arenaEdgePlayed,bridgeFogClock,
+   plazaEchoes:[...plazaEchoes],plazaSolved,collectorGlimpsePlayed,
    pilgrimX,pilgrimBridgeDone,archiveEvidence:[...archiveEvidence],archiveSolved,deadEnemies:deadEnemies(),savedAt:Date.now()
  }));
 }
@@ -588,7 +598,14 @@ function pilgrimFollowTarget(){
    return Math.max(3320,Math.min(5920,p.x-155));
  }
  if(!pilgrimBridgeDone)return 6250;
- if(p.x<9300)return Math.max(8010,Math.min(8840,p.x-165));
+ if(p.x<9300){
+   if(stolenPlazaPlayed&&!plazaSolved){
+     const found=plazaEchoes.filter(Boolean).length;
+     const holds=[8040,8240,8510,8760];
+     return holds[Math.min(found,holds.length-1)];
+   }
+   return Math.max(8010,Math.min(8840,p.x-165));
+ }
  if(p.x<10600)return Math.max(8950,Math.min(10480,p.x-175));
  return 10535;
 }
@@ -1010,6 +1027,132 @@ function drawBridgeIdentityPlate(){
  ctx.restore();
 }
 
+function plazaEchoGuardDefeated(i){
+ const id=plazaEchoGuards[i];
+ const e=enemies.find(v=>v.id===id);
+ return !e||e.defeated||e.state==="dead"||e.state==="dissolve";
+}
+function drawStolenNamePlate(x,y,w=74,h=24,alpha=.72,tilt=0){
+ ctx.save();ctx.translate(x,y);ctx.rotate(tilt);ctx.globalAlpha=alpha;
+ ctx.fillStyle="#302d27";ctx.strokeStyle="#8d7650";ctx.lineWidth=2;
+ ctx.fillRect(-w/2,-h/2,w,h);ctx.strokeRect(-w/2,-h/2,w,h);
+ ctx.fillStyle="rgba(210,188,134,.28)";
+ ctx.fillRect(-w*.32,-1,w*.64,2);
+ ctx.fillRect(-w*.24,5,w*.38,2);
+ ctx.restore();
+}
+function drawStolenNamesPlaza(){
+ if(!bridgeCrossedPlayed)return;
+ const pc=p.x+p.w/2;
+ ctx.save();ctx.translate(-cam,0);
+
+ // Suspended names: present as possessions, deliberately separated from voices.
+ const plateSeed=[
+   [8030,345,-.08],[8140,310,.06],[8260,365,-.04],[8385,300,.09],
+   [8510,350,-.07],[8625,315,.05],[8750,370,-.1],[8820,325,.08]
+ ];
+ plateSeed.forEach((a,i)=>{
+   const drift=plazaSolved&&collectorGlimpseTimer>0?Math.min(85,(6.5-collectorGlimpseTimer)*14):0;
+   const bob=Math.sin(p.anim*1.4+i)*5;
+   ctx.strokeStyle="rgba(103,88,61,.5)";ctx.lineWidth=1.5;
+   ctx.beginPath();ctx.moveTo(a[0]+drift,a[1]-72);ctx.lineTo(a[0]+drift,a[1]+bob-13);ctx.stroke();
+   drawStolenNamePlate(a[0]+drift,a[1]+bob,76,24,.72,a[2]);
+ });
+
+ // Three voice wells. The plaques above them never identify which voice belongs to whom.
+ story.plazaEchoes?.forEach((ev,i)=>{
+   const on=plazaEchoes[i],clear=plazaEchoGuardDefeated(i);
+   const x=ev.x,pulse=.5+.5*Math.sin(p.anim*2+i*.9),fx=Math.min(1,plazaEchoFx[i]/1.25);
+   ctx.save();ctx.translate(x,0);
+
+   ctx.strokeStyle=on?"rgba(232,201,116,.8)":"rgba(108,96,73,.55)";
+   ctx.lineWidth=2;
+   ctx.beginPath();ctx.ellipse(0,557,68,18,0,0,Math.PI*2);ctx.stroke();
+
+   const g=ctx.createRadialGradient(0,520,5,0,520,75);
+   g.addColorStop(0,on?"rgba(236,207,126,.28)":"rgba(185,179,159,.08)");
+   g.addColorStop(1,"rgba(200,190,160,0)");
+   ctx.fillStyle=g;ctx.beginPath();ctx.arc(0,520,75,0,Math.PI*2);ctx.fill();
+
+   // Voice wisps rise while the matching nameplate stays elsewhere.
+   const wispAlpha=on?.55:.13;
+   ctx.strokeStyle="rgba(231,220,185,"+wispAlpha+")";ctx.lineWidth=2;
+   for(let k=0;k<3;k++){
+     const yy=545-k*25-Math.sin(p.anim*1.8+k+i)*5;
+     ctx.beginPath();ctx.moveTo(-18+k*16,yy);
+     ctx.bezierCurveTo(-28+k*18,yy-16,14-k*9,yy-25,4+k*6,yy-42);ctx.stroke();
+   }
+
+   if(on){
+     ctx.fillStyle="rgba(240,216,151,.88)";ctx.font="700 9px Georgia";ctx.textAlign="center";
+     ctx.fillText(ev.short,0,456);
+     if(i===0)ctx.fillText("“...pão...”",0,482);
+     if(i===1)ctx.fillText("“...ria...”",0,482);
+     if(i===2)ctx.fillText("“...tempestade...”",0,482);
+   }else if(Math.abs(pc-x)<165){
+     ctx.fillStyle=clear?"rgba(240,221,166,.92)":"rgba(178,163,127,.72)";
+     ctx.font="700 9px Georgia";ctx.textAlign="center";
+     ctx.fillText(clear?"F · OUVIR O ECO":"O ECO ESTÁ SOB VIGILÂNCIA",0,456);
+   }
+
+   if(fx>0){
+     ctx.globalAlpha=fx*.6;ctx.strokeStyle="#efd18a";ctx.lineWidth=4;
+     ctx.beginPath();ctx.arc(0,520,72+(1-fx)*28,0,Math.PI*2);ctx.stroke();
+   }
+   ctx.restore();
+ });
+
+ // Barrier of confiscated nameplates blocks the road until all voices are heard.
+ if(stolenPlazaPlayed&&!plazaSolved){
+   const gx=8880;
+   ctx.strokeStyle="rgba(115,96,62,.75)";ctx.lineWidth=3;
+   for(let i=0;i<4;i++){
+     const yy=365+i*55;
+     ctx.beginPath();ctx.moveTo(gx-52,yy-38);ctx.lineTo(gx+52,yy+18);ctx.stroke();
+     drawStolenNamePlate(gx+(i%2?20:-20),yy,92,27,.88,(i%2?1:-1)*.08);
+   }
+   ctx.fillStyle="rgba(225,201,139,.75)";ctx.font="italic 10px Georgia";ctx.textAlign="center";
+   ctx.fillText("nomes sem vozes",gx,338);
+ }
+
+ ctx.restore();
+}
+function drawCollectorGlimpse(){
+ if(collectorGlimpseTimer<=0)return;
+ const x=9080,y=590;
+ const fade=Math.min(1,collectorGlimpseTimer/1.2);
+ ctx.save();ctx.translate(x-cam,y);ctx.globalAlpha=.78*fade;
+
+ // Only a partial silhouette: shoulders, one long hand, no readable face.
+ ctx.shadowColor="rgba(0,0,0,.9)";ctx.shadowBlur=22;
+ ctx.fillStyle="#111310";
+ ctx.beginPath();ctx.moveTo(-86,0);ctx.lineTo(-62,-176);ctx.quadraticCurveTo(-38,-246,0,-254);
+ ctx.quadraticCurveTo(38,-246,62,-176);ctx.lineTo(86,0);ctx.closePath();ctx.fill();
+ ctx.fillStyle="#070908";ctx.beginPath();ctx.ellipse(0,-225,31,40,0,0,Math.PI*2);ctx.fill();
+
+ // Long arm reaches toward a stolen plate.
+ ctx.strokeStyle="#151814";ctx.lineWidth=20;ctx.lineCap="round";
+ ctx.beginPath();ctx.moveTo(-48,-155);ctx.quadraticCurveTo(-105,-110,-125,-62);ctx.stroke();
+ ctx.lineWidth=7;for(let i=0;i<4;i++){
+   ctx.beginPath();ctx.moveTo(-124+i*3,-64);ctx.lineTo(-151+i*8,-44+i*3);ctx.stroke();
+ }
+
+ // Plates attached to the body without revealing any name.
+ const plates=[[-36,-170,.08],[31,-151,-.07],[-20,-111,-.04],[37,-82,.06]];
+ plates.forEach(v=>drawStolenNamePlate(v[0],v[1],58,19,.95,v[2]));
+
+ ctx.fillStyle="rgba(227,197,116,.72)";ctx.font="700 10px Georgia";ctx.textAlign="center";
+ ctx.fillText("???",0,-286);
+
+ // Fog cuts the silhouette so the full body is never readable.
+ const fog=ctx.createLinearGradient(0,-210,0,10);
+ fog.addColorStop(0,"rgba(184,184,166,0)");
+ fog.addColorStop(.72,"rgba(184,184,166,.10)");
+ fog.addColorStop(1,"rgba(184,184,166,.32)");
+ ctx.fillStyle=fog;ctx.fillRect(-165,-210,330,220);
+ ctx.restore();
+}
+
 function drawPhase4SkeletonLandmarks(){
  ctx.save();ctx.translate(-cam,0);
 
@@ -1062,7 +1205,7 @@ function drawPhase4SkeletonLandmarks(){
 }
 
 function drawWorld(){
- drawRoad();drawPhase4SkeletonLandmarks();drawSigns();drawDoor();drawArchiveEvidence();drawNobodyBridgeFog();drawBridgeIdentityPlate();
+ drawRoad();drawPhase4SkeletonLandmarks();drawSigns();drawDoor();drawArchiveEvidence();drawNobodyBridgeFog();drawBridgeIdentityPlate();drawStolenNamesPlaza();drawCollectorGlimpse();
  checkpoints.forEach(drawCheckpoint);
  drawPilgrim();drawTraces();enemies.forEach(drawEnemy);
  if(prototypeEndPlayed){
@@ -1169,6 +1312,39 @@ function useLight(){
  if(target){
    if(hitEnemy(target,1,pc)){save();return}
  }
+
+ if(stolenPlazaPlayed&&!plazaSolved&&story.plazaEchoes){
+   let idx=-1,bestEcho=999;
+   story.plazaEchoes.forEach((ev,i)=>{
+     const d=Math.abs(ev.x-pc);
+     if(!plazaEchoes[i]&&d<bestEcho){bestEcho=d;idx=i}
+   });
+   if(idx>=0&&bestEcho<175){
+     if(!plazaEchoGuardDefeated(idx)){
+       const guard=enemies.find(e=>e.id===plazaEchoGuards[idx]);
+       say((guard?.label||"A criatura")+" mantém esta voz presa sob a vigilância.");return;
+     }
+     plazaEchoes[idx]=true;plazaEchoFx[idx]=2.4;memoryPulse=1.3;p.vx=0;
+     const all=plazaEchoes.every(Boolean);
+     banner(story.plazaEchoes[idx].title);
+     dialogue.open(story.plazaEchoes[idx].dialogue,()=>{
+       say(story.plazaEchoes[idx].text);save();
+       if(all){
+         plazaSolved=true;memoryPulse=1.55;save();
+         setTimeout(()=>dialogue.open(story.plazaSolved,()=>{
+           banner("NOMES NÃO SÃO PESSOAS");
+           collectorGlimpsePlayed=true;collectorGlimpseTimer=6.5;save();
+           setTimeout(()=>dialogue.open(story.collectorGlimpse,()=>{
+             banner("O COLETOR OBSERVA DA ESTRADA");
+             collectorGlimpseTimer=Math.max(collectorGlimpseTimer,3.8);save();
+           }),260);
+         }),230);
+       }
+     });
+     save();return;
+   }
+ }
+
  if(bridgeLit){
    say(bridgeLit>1?"A Luz firmou várias partes da ponte por alguns segundos.":"A Luz firmou a plataforma contra a névoa.");
    return;
@@ -1396,6 +1572,8 @@ function update(dt){
  for(let i=0;i<archiveRevealFx.length;i++)archiveRevealFx[i]=Math.max(0,archiveRevealFx[i]-dt);
  if(bridgeFearPlayed&&!bridgeCrossedPlayed)bridgeFogClock+=dt;
  for(const q of platforms)if(q.unstable&&q.lightTimer>0)q.lightTimer=Math.max(0,q.lightTimer-dt);
+ for(let i=0;i<plazaEchoFx.length;i++)plazaEchoFx[i]=Math.max(0,plazaEchoFx[i]-dt);
+ collectorGlimpseTimer=Math.max(0,collectorGlimpseTimer-dt);
  updateEnemies(dt);
  updatePilgrim(dt);
  p.coyote=p.on?.12:Math.max(0,p.coyote-dt);
@@ -1417,6 +1595,13 @@ function update(dt){
  if(bridgeFearPlayed&&!pilgrimBridgeDone&&p.x+p.w>7945){
    p.x=7945-p.w;p.vx=Math.min(0,p.vx);
    if(gateMsg<=0){say("A Peregrina ainda está atravessando. Jack espera que ela encontre o próprio passo.");gateMsg=1.8}
+ }
+ if(stolenPlazaPlayed&&!plazaSolved&&p.x+p.w>8875){
+   p.x=8875-p.w;p.vx=Math.min(0,p.vx);
+   if(gateMsg<=0){
+     const heard=plazaEchoes.filter(Boolean).length;
+     say("As placas fecham a saída. Ainda há vozes separadas de seus nomes. "+heard+"/3.");gateMsg=2;
+   }
  }
 
  p.y+=p.vy*dt;p.on=false;
@@ -1458,8 +1643,11 @@ function update(dt){
    dialogue.open(story.bridgeCrossed,()=>{banner("UM MEDO TAMBÉM É UM RASTRO");save()})
  }else if(bridgeCrossedPlayed&&!stolenPlazaPlayed&&p.x>8170){
    stolenPlazaPlayed=true;p.vx=0;
-   dialogue.open(story.stolenPlaza,()=>{banner("PRAÇA DOS NOMES ROUBADOS");save()})
- }else if(stolenPlazaPlayed&&!collectorApproachPlayed&&p.x>9340){
+   dialogue.open(story.stolenPlaza,()=>{
+     banner("PRAÇA DOS NOMES ROUBADOS");
+     say("A Luz consegue alcançar as vozes depois que seus guardiões forem dissipados.");save();
+   })
+ }else if(plazaSolved&&!collectorApproachPlayed&&p.x>9340){
    collectorApproachPlayed=true;p.vx=0;
    dialogue.open(story.collectorApproach,()=>{banner("CASA DO COLETOR");save()})
  }else if(collectorApproachPlayed&&!arenaEdgePlayed&&p.x>10420){
@@ -1489,7 +1677,14 @@ function update(dt){
  else if(p.x<7900){
    ui.obj.textContent="PONTE DOS NINGUÉM: a névoa apaga plataformas. Use F para firmá-las enquanto desvia dos Corvos.";
  }
- else if(p.x<9300)ui.obj.textContent="PRAÇA DOS NOMES ROUBADOS: avance entre as placas enquanto a Peregrina tenta reconhecer o que foi tirado.";
+ else if(p.x<9300){
+   const heard=plazaEchoes.filter(Boolean).length;
+   ui.obj.textContent=!stolenPlazaPlayed
+     ?"PRAÇA DOS NOMES ROUBADOS: entre no círculo de placas."
+     :(plazaSolved
+       ?"PRAÇA DOS NOMES ROUBADOS: as vozes provaram que nome e pessoa foram separados. Siga a silhueta."
+       :"PRAÇA DOS NOMES ROUBADOS: derrote os guardiões e use F para ouvir os ecos. Vozes "+heard+"/3.");
+ }
  else if(p.x<10600)ui.obj.textContent="CASA DO COLETOR: siga com a Peregrina até a entrada da arena.";
  else ui.obj.textContent="ARENA DO COLETOR: a Peregrina espera do lado de fora. O confronto ainda será construído.";
  p.anim+=dt;saveClock+=dt;if(saveClock>2.4){saveClock=0;save()}
