@@ -30,6 +30,7 @@ let activeCheckpoint=saveData?.activeCheckpoint||localStorage.getItem(CHECKPOINT
 let introPlayed=!!saveData?.introPlayed,doorOpened=!!saveData?.doorOpened,pilgrimMet=!!saveData?.pilgrimMet,tracesSolved=!!saveData?.tracesSolved,prototypeEndPlayed=!!saveData?.prototypeEndPlayed,arenaReached=!!saveData?.arenaReached;
 let bridgeFearPlayed=!!saveData?.bridgeFearPlayed,bridgeCrossedPlayed=!!saveData?.bridgeCrossedPlayed,stolenPlazaPlayed=!!saveData?.stolenPlazaPlayed,collectorApproachPlayed=!!saveData?.collectorApproachPlayed,arenaEdgePlayed=!!saveData?.arenaEdgePlayed;
 let traces=Array.isArray(saveData?.traces)?saveData.traces.slice(0,3).map(Boolean):[false,false,false];
+const traceRevealFx=[0,0,0];
 
 const p={x:Number.isFinite(saveData?.x)?saveData.x:110,y:Number.isFinite(saveData?.y)?saveData.y:470,w:46,h:86,vx:0,vy:0,dir:saveData?.dir===-1?-1:1,on:false,coyote:0,buffer:0,anim:0,attack:0,inv:0};
 
@@ -504,7 +505,12 @@ function pilgrimDangerNearby(){
 }
 function pilgrimFollowTarget(){
  if(!pilgrimMet)return 2580;
- if(!tracesSolved)return 3230;
+ if(!tracesSolved){
+   const revealed=story.traces.filter((_,i)=>traces[i]);
+   if(!revealed.length)return 3230;
+   const furthest=Math.max(...revealed.map(t=>t.x));
+   return Math.max(3230,Math.min(4180,furthest-155));
+ }
  if(!pilgrimBridgeDone&&p.x<6100)return Math.max(3320,Math.min(5920,p.x-155));
  if(!pilgrimBridgeDone)return 6250;
  if(p.x<9300)return Math.max(8010,Math.min(8840,p.x-165));
@@ -564,15 +570,115 @@ function updatePilgrim(dt){
  pilgrimX+=pilgrimDir*Math.min(ad,pilgrimMoveSpeed*dt);
  pilgrimFeetY=590;
 }
+function drawTraceFoot(x,y,angle,alpha=1,scale=1){
+ ctx.save();ctx.translate(x,y);ctx.rotate(angle);ctx.scale(scale,scale);ctx.globalAlpha=alpha;
+ ctx.fillStyle="#e6cc83";
+ ctx.beginPath();ctx.ellipse(0,0,7,13,.08,0,Math.PI*2);ctx.fill();
+ ctx.beginPath();ctx.ellipse(7,-8,3.2,4.5,.35,0,Math.PI*2);ctx.fill();
+ ctx.restore();
+}
+function drawTraceFigure(x,y,opts={}){
+ const alpha=opts.alpha??.72,dir=opts.dir===-1?-1:1,lean=opts.lean||0,limp=!!opts.limp,phase=opts.phase||0;
+ const step=Math.sin(p.anim*3.2+phase)*4;
+ ctx.save();ctx.translate(x,y);ctx.scale(dir,1);ctx.rotate(lean);ctx.globalAlpha=alpha;
+ ctx.strokeStyle="#ecd48d";ctx.fillStyle="rgba(235,211,142,.14)";
+ ctx.shadowColor="rgba(236,204,118,.55)";ctx.shadowBlur=14;
+ ctx.lineWidth=4;ctx.lineCap="round";
+ ctx.beginPath();ctx.arc(0,-66,11,0,Math.PI*2);ctx.fill();ctx.stroke();
+ ctx.beginPath();ctx.moveTo(0,-54);ctx.lineTo(0,-20);ctx.stroke();
+ ctx.beginPath();ctx.moveTo(0,-43);ctx.lineTo(-16,-24+step*.2);ctx.moveTo(0,-43);ctx.lineTo(16,-28-step*.2);ctx.stroke();
+ ctx.beginPath();ctx.moveTo(0,-20);ctx.lineTo(-12,-1+(limp?7:step));ctx.moveTo(0,-20);ctx.lineTo(12,-1-(limp?2:step));ctx.stroke();
+ ctx.restore();
+}
+function drawTraceMemoryScene(i,t){
+ const on=traces[i];if(!on)return;
+ const burst=Math.min(1,traceRevealFx[i]/1.15);
+ const breathe=.76+.16*Math.sin(p.anim*1.7+i);
+ const alpha=Math.min(.92,.46+breathe*.25+burst*.25);
+ const baseX=t.x,baseY=500;
+
+ ctx.save();
+ // Halo that turns each clue into a readable "memory island".
+ const g=ctx.createRadialGradient(baseX,baseY-80,10,baseX,baseY-80,135);
+ g.addColorStop(0,"rgba(234,204,119,"+(alpha*.17)+")");
+ g.addColorStop(1,"rgba(234,204,119,0)");
+ ctx.fillStyle=g;ctx.beginPath();ctx.arc(baseX,baseY-80,135,0,Math.PI*2);ctx.fill();
+
+ ctx.strokeStyle="rgba(224,198,127,"+(alpha*.34)+")";ctx.lineWidth=2;
+ ctx.beginPath();ctx.arc(baseX,baseY-82,88+Math.sin(p.anim*1.4+i)*3,0,Math.PI*2);ctx.stroke();
+
+ if(i===0){
+   // I — ela chega à vala e decide voltar.
+   ctx.strokeStyle="rgba(126,111,78,.72)";ctx.lineWidth=4;
+   ctx.beginPath();ctx.moveTo(baseX+42,548);ctx.lineTo(baseX+70,524);ctx.lineTo(baseX+92,552);ctx.stroke();
+   drawTraceFigure(baseX+18,baseY-8,{alpha,dir:-1,lean:-.08,phase:.3});
+   ctx.strokeStyle="rgba(235,207,125,"+(alpha*.5)+")";ctx.lineWidth=2;
+   ctx.beginPath();ctx.moveTo(baseX+2,baseY-45);ctx.quadraticCurveTo(baseX-28,baseY-65,baseX-48,baseY-38);ctx.stroke();
+   ctx.beginPath();ctx.moveTo(baseX-48,baseY-38);ctx.lineTo(baseX-37,baseY-43);ctx.moveTo(baseX-48,baseY-38);ctx.lineTo(baseX-43,baseY-27);ctx.stroke();
+ }else if(i===1){
+   // II — duas pessoas; uma manca, a outra reduz o passo e sustenta.
+   drawTraceFigure(baseX-23,baseY-7,{alpha,dir:1,lean:.02,phase:.2});
+   drawTraceFigure(baseX+27,baseY-4,{alpha:alpha*.82,dir:1,lean:.15,limp:true,phase:1.1});
+   ctx.strokeStyle="rgba(236,209,131,"+(alpha*.72)+")";ctx.lineWidth=5;ctx.lineCap="round";
+   ctx.beginPath();ctx.moveTo(baseX-8,baseY-50);ctx.lineTo(baseX+19,baseY-45);ctx.stroke();
+ }else{
+   // III — a pessoa ferida segue para longe; ela volta sozinha ao perigo.
+   drawTraceFigure(baseX+42,baseY-10,{alpha:alpha*.4,dir:1,limp:true,phase:.8});
+   drawTraceFigure(baseX-26,baseY-7,{alpha,dir:-1,lean:-.05,phase:.1});
+   ctx.strokeStyle="rgba(235,207,125,"+(alpha*.52)+")";ctx.lineWidth=2;
+   ctx.beginPath();ctx.moveTo(baseX-3,baseY-42);ctx.lineTo(baseX-58,baseY-42);ctx.stroke();
+   ctx.beginPath();ctx.moveTo(baseX-58,baseY-42);ctx.lineTo(baseX-47,baseY-49);ctx.moveTo(baseX-58,baseY-42);ctx.lineTo(baseX-47,baseY-35);ctx.stroke();
+ }
+ ctx.restore();
+
+ ctx.save();ctx.textAlign="center";
+ ctx.fillStyle="rgba(243,220,154,"+(.68+burst*.2)+")";
+ ctx.font="700 10px Georgia";
+ ctx.fillText(t.memoryLabel||t.title,baseX,390);
+ ctx.restore();
+}
 function drawTraces(){
  ctx.save();ctx.translate(-cam,0);
+
+ // Ligação entre as descobertas: quando dois rastros existem, a história começa a "fechar".
+ for(let i=0;i<story.traces.length-1;i++){
+   if(!traces[i]||!traces[i+1])continue;
+   const a=story.traces[i],b=story.traces[i+1];
+   ctx.strokeStyle="rgba(229,199,119,.28)";ctx.lineWidth=2;ctx.setLineDash([6,8]);
+   ctx.beginPath();ctx.moveTo(a.x+55,546);ctx.quadraticCurveTo((a.x+b.x)/2,525,b.x-55,546);ctx.stroke();
+   ctx.setLineDash([]);
+ }
+
  story.traces.forEach((t,i)=>{
    const on=traces[i],pulse=.5+.5*Math.sin(p.anim*2+i);
-   ctx.save();ctx.translate(t.x,0);ctx.globalAlpha=on?.95:.2;ctx.fillStyle=on?"#e4c878":"#5f5746";
-   for(let k=0;k<5;k++){ctx.save();ctx.translate((k-2)*28,552-(k%2)*6);ctx.rotate((k%2?-.22:.18));ctx.beginPath();ctx.ellipse(0,0,8,15,0,0,Math.PI*2);ctx.fill();ctx.restore()}
-   if(on){ctx.strokeStyle="rgba(232,201,117,"+(.25+pulse*.25)+")";ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,548,54+pulse*5,0,Math.PI*2);ctx.stroke()}
-   ctx.restore();
+   const baseAlpha=on?.92:.18;
+
+   // Antes da revelação há só marcas quase apagadas.
+   for(let k=0;k<6;k++){
+     const side=k%2?-1:1;
+     drawTraceFoot(t.x+(k-2.5)*23,553-(k%2)*5,side*.2,baseAlpha,on?1:0.92);
+   }
+
+   if(on){
+     ctx.strokeStyle="rgba(232,201,117,"+(.22+pulse*.22)+")";ctx.lineWidth=2;
+     ctx.beginPath();ctx.arc(t.x,548,54+pulse*5,0,Math.PI*2);ctx.stroke();
+     drawTraceMemoryScene(i,t);
+   }else{
+     const pc=p.x+p.w/2;
+     if(Math.abs(pc-t.x)<190){
+       ctx.fillStyle="rgba(232,214,167,.82)";ctx.font="700 10px Georgia";ctx.textAlign="center";
+       ctx.fillText("F · ILUMINAR RASTRO",t.x,505);
+     }
+   }
  });
+
+ // Depois dos três, o Campo inteiro vira uma frase visual, não um checklist.
+ if(tracesSolved){
+   ctx.save();ctx.textAlign="center";
+   ctx.fillStyle="rgba(238,216,153,.78)";ctx.font="italic 12px Georgia";
+   ctx.fillText("Ela voltou. Amparou. E voltou outra vez.",3910,358);
+   ctx.restore();
+ }
  ctx.restore();
 }
 function drawEraserEnemy(e){
@@ -802,10 +908,26 @@ function useLight(){
 
  if(pilgrimMet&&!tracesSolved){
    let hit=-1,best=999;
-   story.traces.forEach((t,i)=>{const d=Math.abs(t.x-pc);if(!traces[i]&&d<best){best=d;hit=i}});
-   if(hit>=0&&best<170){
-     traces[hit]=true;memoryPulse=1.2;banner(story.traces[hit].title.toUpperCase());say(story.traces[hit].text);
-     if(traces.every(Boolean)){tracesSolved=true;p.vx=0;setTimeout(()=>dialogue.open(story.tracesSolved,()=>{banner("IDENTIDADE TAMBÉM É O QUE FAZEMOS");save()}),450)}
+   story.traces.forEach((t,i)=>{
+     const d=Math.abs(t.x-pc);
+     if(!traces[i]&&d<best){best=d;hit=i}
+   });
+   if(hit>=0&&best<175){
+     traces[hit]=true;traceRevealFx[hit]=2.25;memoryPulse=1.25;p.vx=0;
+     const justSolved=traces.every(Boolean);
+     if(justSolved)tracesSolved=true;
+     banner(story.traces[hit].title.toUpperCase());
+     const revealDialogue=story.traceReveals?.[hit]||[];
+     dialogue.open(revealDialogue,()=>{
+       say(story.traces[hit].text);
+       save();
+       if(justSolved){
+         setTimeout(()=>dialogue.open(story.tracesSolved,()=>{
+           banner("IDENTIDADE TAMBÉM É O QUE FAZEMOS");
+           memoryPulse=1.4;save();
+         }),220);
+       }
+     });
      save();return;
    }
  }
@@ -1040,6 +1162,7 @@ function update(dt){
    lastPlayerAction=performance.now();idleTime=0;waitSitClock=0;waitSitFrame=0;waitSitActive=false;
  }
  memoryLight=Math.max(0,memoryLight-dt);memoryPulse=Math.max(0,memoryPulse-dt);p.attack=Math.max(0,p.attack-dt);p.inv=Math.max(0,p.inv-dt);gateMsg=Math.max(0,gateMsg-dt);
+ for(let i=0;i<traceRevealFx.length;i++)traceRevealFx[i]=Math.max(0,traceRevealFx[i]-dt);
  updateEnemies(dt);
  updatePilgrim(dt);
  p.coyote=p.on?.12:Math.max(0,p.coyote-dt);
@@ -1092,7 +1215,10 @@ function update(dt){
  let si=0;for(let i=0;i<story.sections.length;i++)if(p.x>=story.sections[i].x)si=i;if(si!==section){section=si;banner(story.sections[si].name)}
  if(!doorOpened)ui.obj.textContent="A chave de Mara reage à parede. Aproxime-se e pressione E.";
  else if(!pilgrimMet)ui.obj.textContent="Atravesse a Estrada sem Placas e encontre quem ainda espera.";
- else if(!tracesSolved)ui.obj.textContent="CAMPO DAS PEGADAS: use F para revelar três rastros da Peregrina.";
+ else if(!tracesSolved){
+   const found=traces.filter(Boolean).length;
+   ui.obj.textContent="CAMPO DAS PEGADAS: use F para reconstruir as ações da Peregrina. Rastros "+found+"/3.";
+ }
  else if(p.x<6100)ui.obj.textContent="ARQUIVO RASURADO: avance entre os registros arrancados. A Peregrina seguirá atrás quando o caminho estiver seguro.";
  else if(p.x<7900)ui.obj.textContent="PONTE DOS NINGUÉM: atravesse o abismo. A Peregrina fará a própria travessia quando Jack abrir distância.";
  else if(p.x<9300)ui.obj.textContent="PRAÇA DOS NOMES ROUBADOS: avance entre as placas enquanto a Peregrina tenta reconhecer o que foi tirado.";
