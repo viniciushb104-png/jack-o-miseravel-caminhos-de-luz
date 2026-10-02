@@ -107,19 +107,85 @@ const checkpoints=[
  {id:"collector",x:9950,groundY:590,respawnX:9880,respawnY:504,name:"Marco sem Nome"}
 ]
 
+const ENEMY_ARCHETYPES=Object.freeze({
+ eraser:Object.freeze({
+   label:"RASURADOR",
+   width:58,height:58,
+   patrolSpeed:38,chaseSpeed:112,
+   detectRange:410,loseRange:590,attackRange:66,
+   alertTime:.22,idleTime:.7,patrolTime:2.2,
+   attackWindup:.34,attackActive:.15,attackRecover:.62,
+   attackCooldown:.82,hitTime:.28,dissolveTime:.78
+ })
+});
+const savedDeadEnemies=new Set(Array.isArray(saveData?.deadEnemies)?saveData.deadEnemies:[]);
+
+function createEnemy(id,kind,x,y,options={}){
+ const cfg=ENEMY_ARCHETYPES[kind];
+ if(!cfg)throw new Error("Arquétipo de inimigo desconhecido: "+kind);
+ const defeated=savedDeadEnemies.has(id);
+ const dir=options.dir===-1?-1:1;
+ return {
+   id,kind,label:cfg.label,
+   x,y,w:cfg.width,h:cfg.height,
+   spawnX:x,spawnY:y,
+   minX:Number.isFinite(options.minX)?options.minX:x-150,
+   maxX:Number.isFinite(options.maxX)?options.maxX:x+150,
+   hp:Math.max(1,Number(options.hp)||2),
+   maxHp:Math.max(1,Number(options.hp)||2),
+   dir,vx:0,
+   state:defeated?"dead":"idle",
+   stateTimer:defeated?0:.35+(x%5)*.07,
+   attackCooldown:0,attackHit:false,
+   alive:!defeated,defeated,
+   alpha:defeated?0:1,
+   hitFlash:0,
+   cfg
+ };
+}
+function setEnemyState(e,state,duration=0){
+ e.state=state;e.stateTimer=Math.max(0,duration);
+ if(state!=="attack")e.attackHit=false;
+}
+function enemyCanBeHit(e){
+ return e&&e.state!=="dead"&&e.state!=="dissolve"&&!e.defeated;
+}
+function defeatEnemy(e,sourceX){
+ if(e.defeated)return;
+ e.defeated=true;e.alive=false;e.alpha=1;
+ e.vx=(e.x<sourceX?-1:1)*150;
+ setEnemyState(e,"dissolve",e.cfg.dissolveTime);
+ banner(e.label+" DISSIPADO");
+ say("A tinta virou cinza. O rastro permaneceu.");
+ save();
+}
+function hitEnemy(e,damage,sourceX){
+ if(!enemyCanBeHit(e))return false;
+ e.hp=Math.max(0,e.hp-Math.max(1,damage||1));
+ e.hitFlash=.22;
+ e.vx=(e.x<sourceX?-1:1)*190;
+ memoryPulse=.9;
+ if(e.hp<=0)defeatEnemy(e,sourceX);
+ else{
+   setEnemyState(e,"hit",e.cfg.hitTime);
+   say("A Luz abriu fissuras na rasura. "+e.hp+"/"+e.maxHp);
+ }
+ return true;
+}
+
 const enemies=[
- {id:"eraser-1",kind:"eraser",x:1510,y:522,w:58,h:58,hp:2,maxHp:2,dir:-1,vx:0,alive:!saveData?.deadEnemies?.includes("eraser-1"),cool:0},
- {id:"eraser-2",kind:"eraser",x:4990,y:522,w:58,h:58,hp:2,maxHp:2,dir:1,vx:0,alive:!saveData?.deadEnemies?.includes("eraser-2"),cool:0},
- {id:"eraser-3",kind:"eraser",x:5450,y:522,w:58,h:58,hp:3,maxHp:3,dir:-1,vx:0,alive:!saveData?.deadEnemies?.includes("eraser-3"),cool:0},
- {id:"eraser-4",kind:"eraser",x:5750,y:522,w:58,h:58,hp:3,maxHp:3,dir:1,vx:0,alive:!saveData?.deadEnemies?.includes("eraser-4"),cool:0},
- {id:"eraser-5",kind:"eraser",x:8310,y:522,w:58,h:58,hp:3,maxHp:3,dir:-1,vx:0,alive:!saveData?.deadEnemies?.includes("eraser-5"),cool:0},
- {id:"eraser-6",kind:"eraser",x:9780,y:522,w:58,h:58,hp:4,maxHp:4,dir:-1,vx:0,alive:!saveData?.deadEnemies?.includes("eraser-6"),cool:0}
-];
+ createEnemy("eraser-1","eraser",1510,522,{hp:2,dir:-1,minX:1180,maxX:1930}),
+ createEnemy("eraser-2","eraser",4990,522,{hp:2,dir:1,minX:4810,maxX:5250}),
+ createEnemy("eraser-3","eraser",5450,522,{hp:3,dir:-1,minX:5260,maxX:5630}),
+ createEnemy("eraser-4","eraser",5750,522,{hp:3,dir:1,minX:5640,maxX:5880}),
+ createEnemy("eraser-5","eraser",8310,522,{hp:3,dir:-1,minX:7960,maxX:8750}),
+ createEnemy("eraser-6","eraser",9780,522,{hp:4,dir:-1,minX:9650,maxX:9970})
+]
 
 function say(t){ui.msg.textContent=t;ui.msg.classList.add("show");clearTimeout(say.t);say.t=setTimeout(()=>ui.msg.classList.remove("show"),2600)}
 function banner(t){ui.banner.textContent=t;ui.banner.classList.add("show");clearTimeout(banner.t);banner.t=setTimeout(()=>ui.banner.classList.remove("show"),1900)}
 function syncHud(){ui.health.textContent="♥ ".repeat(playerLife).trim()||"♡"}
-function deadEnemies(){return enemies.filter(e=>!e.alive).map(e=>e.id)}
+function deadEnemies(){return enemies.filter(e=>e.defeated||e.state==="dead").map(e=>e.id)}
 function markPlayerAction(){
  lastPlayerAction=performance.now();
  idleTime=0;waitSitClock=0;waitSitFrame=0;waitSitActive=false;
@@ -365,7 +431,7 @@ function drawPilgrim(){
 
 function pilgrimDangerNearby(){
  if(!pilgrimMet||pilgrimBridge.active)return false;
- return enemies.some(e=>e.alive&&Math.abs((e.x+e.w/2)-pilgrimX)<235&&Math.abs(p.x-pilgrimX)<620);
+ return enemies.some(e=>!e.defeated&&e.state!=="dead"&&e.state!=="dissolve"&&Math.abs((e.x+e.w/2)-pilgrimX)<235&&Math.abs(p.x-pilgrimX)<620);
 }
 function pilgrimFollowTarget(){
  if(!pilgrimMet)return 2580;
@@ -441,17 +507,92 @@ function drawTraces(){
  ctx.restore();
 }
 function drawEnemy(e){
- if(!e.alive)return;
+ if(e.state==="dead")return;
  const ex=e.x-cam,cy=e.y+e.h/2;
- ctx.save();ctx.translate(ex+e.w/2,cy);
- const wob=Math.sin(p.anim*8+e.x)*4;
- ctx.shadowColor="rgba(0,0,0,.8)";ctx.shadowBlur=12;ctx.fillStyle="#111311";
+ const state=e.state;
+ const dissolve=state==="dissolve";
+ const attack=state==="attack";
+ const alert=state==="alert";
+ const hit=state==="hit";
+ const move=state==="patrol"||state==="chase";
+ const speedStretch=state==="chase"?1.08:(attack?1.16:1);
+ const wobAmp=move?4.5:2.2;
+ const wob=Math.sin(p.anim*(state==="chase"?11:7)+e.spawnX)*wobAmp;
+ const pulse=.5+.5*Math.sin(p.anim*5+e.spawnX*.01);
+
+ ctx.save();
+ ctx.translate(ex+e.w/2,cy);
+ ctx.globalAlpha=Math.max(0,Math.min(1,e.alpha));
+ if(e.dir<0)ctx.scale(-1,1);
+
+ // Estado de alerta: leitura clara antes da perseguição.
+ if(alert){
+   ctx.save();ctx.scale(e.dir<0?-1:1,1);
+   ctx.strokeStyle="rgba(225,193,111,"+(.45+pulse*.35)+")";ctx.lineWidth=3;
+   ctx.beginPath();ctx.arc(0,-3,43+pulse*4,0,Math.PI*2);ctx.stroke();
+   ctx.fillStyle="#e5c06d";ctx.font="700 22px Georgia";ctx.textAlign="center";ctx.fillText("!",0,-45);
+   ctx.restore();
+ }
+
+ // Telegráfico de ataque: alonga o corpo na direção do bote.
+ if(attack){
+   ctx.fillStyle="rgba(215,183,102,.12)";
+   ctx.beginPath();ctx.moveTo(20,-24);ctx.lineTo(78,0);ctx.lineTo(20,24);ctx.closePath();ctx.fill();
+ }
+
+ ctx.scale(speedStretch,attack?.92:1);
+ ctx.shadowColor=hit?"rgba(247,222,159,.95)":"rgba(0,0,0,.8)";
+ ctx.shadowBlur=hit?22:12;
+ ctx.fillStyle=hit&&e.hitFlash>0?"#847a62":"#111311";
  ctx.beginPath();
- for(let i=0;i<18;i++){const a=i*Math.PI*2/18,r=28+(i%2?8:0)+Math.sin(p.anim*5+i)*3;const px=Math.cos(a)*r,py=Math.sin(a)*r*.8;if(i===0)ctx.moveTo(px,py+wob);else ctx.lineTo(px,py+wob)}ctx.closePath();ctx.fill();
- ctx.strokeStyle="#776f5a";ctx.lineWidth=3;for(let i=0;i<4;i++){ctx.beginPath();ctx.moveTo(-18+i*12,18);ctx.lineTo(-34+i*20,38);ctx.stroke()}
- ctx.fillStyle="#d6b968";ctx.beginPath();ctx.arc(-8,-5,3,0,Math.PI*2);ctx.arc(8,-5,3,0,Math.PI*2);ctx.fill();
- ctx.fillStyle="#b9aa89";ctx.font="700 9px Georgia";ctx.textAlign="center";ctx.fillText("RASURADOR",0,-43);
+ for(let i=0;i<18;i++){
+   const a=i*Math.PI*2/18;
+   const r=28+(i%2?8:0)+Math.sin(p.anim*5+i)*3;
+   const px=Math.cos(a)*r,py=Math.sin(a)*r*.8;
+   if(i===0)ctx.moveTo(px,py+wob);else ctx.lineTo(px,py+wob);
+ }
+ ctx.closePath();ctx.fill();
+
+ ctx.strokeStyle="#776f5a";ctx.lineWidth=3;
+ for(let i=0;i<4;i++){
+   ctx.beginPath();ctx.moveTo(-18+i*12,18);ctx.lineTo(-34+i*20,38+wob*.15);ctx.stroke();
+ }
+
+ ctx.fillStyle=alert||state==="chase"||attack?"#f0cc6f":"#d6b968";
+ ctx.beginPath();ctx.arc(-8,-5,3,0,Math.PI*2);ctx.arc(8,-5,3,0,Math.PI*2);ctx.fill();
+
+ // Dissolução procedural provisória: futuramente será substituída pelos PNGs.
+ if(dissolve){
+   ctx.save();ctx.globalAlpha=Math.max(.12,e.alpha);
+   ctx.fillStyle="#b8a77f";
+   for(let i=0;i<8;i++){
+     const a=i*.8+p.anim*2.1,rr=24+(1-e.alpha)*52;
+     ctx.fillRect(Math.cos(a)*rr-2,Math.sin(a)*rr-2,4,4);
+   }
+   ctx.restore();
+ }
+
  ctx.restore();
+
+ // Nome + estado ficam pequenos para podermos depurar o comportamento nesta fase protótipo.
+ if(!dissolve){
+   ctx.save();ctx.textAlign="center";
+   ctx.fillStyle="#b9aa89";ctx.font="700 9px Georgia";
+   ctx.fillText(e.label,ex+e.w/2,e.y-12);
+   const stateLabel={
+     idle:"à espreita",patrol:"patrulha",alert:"percebeu Jack",
+     chase:"perseguindo",attack:"atacando",hit:"atingido"
+   }[state]||state;
+   ctx.fillStyle="rgba(196,184,150,.65)";ctx.font="italic 8px Georgia";
+   ctx.fillText(stateLabel,ex+e.w/2,e.y-1);
+
+   if(e.hp<e.maxHp){
+     const bw=46,bx=ex+e.w/2-bw/2,by=e.y-27;
+     ctx.fillStyle="rgba(0,0,0,.55)";ctx.fillRect(bx,by,bw,4);
+     ctx.fillStyle="#d6b968";ctx.fillRect(bx,by,bw*(e.hp/e.maxHp),4);
+   }
+   ctx.restore();
+ }
 }
 function drawPhase4SkeletonLandmarks(){
  ctx.save();ctx.translate(-cam,0);
@@ -556,28 +697,140 @@ function useLight(){
  }
 
  let target=null,best=999;
- for(const e of enemies){if(!e.alive)continue;const d=Math.abs((e.x+e.w/2)-pc);if(d<best){best=d;target=e}}
+ for(const e of enemies){
+   if(!enemyCanBeHit(e))continue;
+   const d=Math.abs((e.x+e.w/2)-pc);
+   if(d<best){best=d;target=e}
+ }
  if(target&&best<205){
-   target.hp--;target.cool=.35;target.vx=(target.x<pc?-1:1)*180;memoryPulse=.9;
-   if(target.hp<=0){target.alive=false;banner("RASURADOR DISSIPADO");say("A tinta virou cinza. O rastro permaneceu.");}
-   else say("A Luz abriu fissuras na rasura. "+target.hp+"/"+target.maxHp);
-   save();return;
+   if(hitEnemy(target,1,pc)){save();return}
  }
  say("A luz encontra marcas... mas nenhuma responde daqui.");
 }
 
-function updateEnemies(dt){
- const pc=p.x+p.w/2;
- for(const e of enemies){
-   if(!e.alive)continue;e.cool=Math.max(0,e.cool-dt);
-   const ec=e.x+e.w/2,d=pc-ec;
-   if(Math.abs(d)<420){e.dir=Math.sign(d)||e.dir;e.vx+=((e.dir*82)-e.vx)*Math.min(1,dt*4.5)}
-   else e.vx*=Math.max(0,1-dt*3);
-   e.x+=e.vx*dt;
-   if(Math.abs(d)<54&&Math.abs((p.y+p.h)-(e.y+e.h))<100)hurtPlayer(ec);
+function updateEnemyPatrol(e,dt,pc){
+ const cfg=e.cfg,ec=e.x+e.w/2,d=pc-ec,ad=Math.abs(d);
+ if(ad<=cfg.detectRange){
+   e.dir=Math.sign(d)||e.dir;
+   e.vx*=.45;
+   setEnemyState(e,"alert",cfg.alertTime);
+   return;
+ }
+ e.stateTimer=Math.max(0,e.stateTimer-dt);
+ e.vx+=(e.dir*cfg.patrolSpeed-e.vx)*Math.min(1,dt*5);
+ e.x+=e.vx*dt;
+
+ if(e.x<=e.minX){e.x=e.minX;e.dir=1;e.vx=Math.abs(e.vx)}
+ if(e.x>=e.maxX){e.x=e.maxX;e.dir=-1;e.vx=-Math.abs(e.vx)}
+ if(e.stateTimer<=0){
+   e.vx*=.35;
+   setEnemyState(e,"idle",cfg.idleTime);
  }
 }
+function updateEnemyState(e,dt,pc){
+ const cfg=e.cfg;
+ e.attackCooldown=Math.max(0,e.attackCooldown-dt);
+ e.hitFlash=Math.max(0,e.hitFlash-dt);
 
+ if(e.state==="dead")return;
+
+ if(e.state==="dissolve"){
+   e.stateTimer=Math.max(0,e.stateTimer-dt);
+   e.vx*=Math.max(0,1-dt*5);
+   e.x+=e.vx*dt;
+   e.alpha=e.cfg.dissolveTime>0?e.stateTimer/e.cfg.dissolveTime:0;
+   if(e.stateTimer<=0){e.state="dead";e.alpha=0;e.vx=0}
+   return;
+ }
+
+ const ec=e.x+e.w/2,d=pc-ec,ad=Math.abs(d);
+
+ if(e.state==="hit"){
+   e.stateTimer=Math.max(0,e.stateTimer-dt);
+   e.x+=e.vx*dt;e.vx*=Math.max(0,1-dt*7);
+   e.x=Math.max(e.minX,Math.min(e.maxX,e.x));
+   if(e.stateTimer<=0){
+     if(ad<=cfg.loseRange){e.dir=Math.sign(d)||e.dir;setEnemyState(e,"chase")}
+     else setEnemyState(e,"patrol",cfg.patrolTime);
+   }
+   return;
+ }
+
+ if(e.state==="attack"){
+   const total=cfg.attackWindup+cfg.attackActive+cfg.attackRecover;
+   e.stateTimer=Math.max(0,e.stateTimer-dt);
+   const elapsed=total-e.stateTimer;
+   e.vx*=Math.max(0,1-dt*8);
+
+   // Durante a janela ativa, o Rasurador dá um pequeno bote.
+   if(elapsed>=cfg.attackWindup&&elapsed<cfg.attackWindup+cfg.attackActive){
+     e.vx=e.dir*175;
+     e.x+=e.vx*dt;
+     const nowCenter=e.x+e.w/2;
+     const close=Math.abs(pc-nowCenter)<cfg.attackRange+10;
+     const vertical=Math.abs((p.y+p.h)-(e.y+e.h))<105;
+     if(!e.attackHit&&close&&vertical){
+       e.attackHit=true;
+       hurtPlayer(nowCenter);
+     }
+   }
+
+   e.x=Math.max(e.minX,Math.min(e.maxX,e.x));
+   if(e.stateTimer<=0){
+     e.attackCooldown=cfg.attackCooldown;
+     if(ad<=cfg.loseRange)setEnemyState(e,"chase");
+     else setEnemyState(e,"patrol",cfg.patrolTime);
+   }
+   return;
+ }
+
+ if(e.state==="alert"){
+   e.stateTimer=Math.max(0,e.stateTimer-dt);
+   e.vx*=Math.max(0,1-dt*8);
+   if(ad>cfg.loseRange){setEnemyState(e,"idle",cfg.idleTime);return}
+   e.dir=Math.sign(d)||e.dir;
+   if(e.stateTimer<=0)setEnemyState(e,"chase");
+   return;
+ }
+
+ if(e.state==="chase"){
+   if(ad>cfg.loseRange){
+     setEnemyState(e,"patrol",cfg.patrolTime);return;
+   }
+   e.dir=Math.sign(d)||e.dir;
+   if(ad<=cfg.attackRange&&e.attackCooldown<=0){
+     e.vx=0;e.attackHit=false;
+     setEnemyState(e,"attack",cfg.attackWindup+cfg.attackActive+cfg.attackRecover);
+     return;
+   }
+   e.vx+=(e.dir*cfg.chaseSpeed-e.vx)*Math.min(1,dt*7);
+   e.x+=e.vx*dt;
+   if(e.x<=e.minX){e.x=e.minX;e.vx=0}
+   if(e.x>=e.maxX){e.x=e.maxX;e.vx=0}
+   return;
+ }
+
+ if(e.state==="idle"){
+   e.stateTimer=Math.max(0,e.stateTimer-dt);
+   e.vx*=Math.max(0,1-dt*6);
+   if(ad<=cfg.detectRange){
+     e.dir=Math.sign(d)||e.dir;
+     setEnemyState(e,"alert",cfg.alertTime);return;
+   }
+   if(e.stateTimer<=0){
+     // Alternância determinística mantém a patrulha orgânica sem depender de random.
+     if(((Math.floor(p.anim)+Math.floor(e.spawnX/100))&1)===0)e.dir*=-1;
+     setEnemyState(e,"patrol",cfg.patrolTime);
+   }
+   return;
+ }
+
+ setEnemyState(e,"idle",cfg.idleTime);
+}
+function updateEnemies(dt){
+ const pc=p.x+p.w/2;
+ for(const e of enemies)updateEnemyState(e,dt,pc);
+}
 function update(dt){
  if(dialogue.active){
    lastPlayerAction=performance.now();idleTime=0;waitSitActive=false;waitSitClock=0;waitSitFrame=0;
