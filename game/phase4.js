@@ -24,6 +24,8 @@ let saveData=null;if(journeyMode&&!replayMode){try{saveData=JSON.parse(localStor
 
 const input={left:false,right:false,down:false,run:false,jump:false};
 let running=false,last=performance.now(),cam=0,section=-1,jack=null,keyImg=null,jackFrameOverrides={};
+let phase4SignImgs=Array(4).fill(null),checkpointOffImg=null,checkpointOnImg=null;
+let bellNormalImg=null,bellGlowImg=null,memoryDoorImg=null;
 let idleTime=0,waitSitFrame=0,waitSitClock=0,waitSitActive=false,waitSitImages=[];
 let lastPlayerAction=performance.now();
 let playerLife=Math.max(1,Math.min(3,Number(saveData?.playerLife)||3)),memoryLight=0,memoryPulse=0,gateMsg=0;
@@ -608,6 +610,37 @@ const jackReady=img("../assets/game/phase1/sprites-hd/jack-atlas-hd.png")
 const waitSitFiles=Array.from({length:11},(_,i)=>"../assets/sprites/jack/wait-sit/jack-wait-"+String(i+1).padStart(2,"0")+".png");
 waitSitFiles.forEach((src,i)=>img(src).then(im=>waitSitImages[i]=im).catch(()=>{}));
 const keyReady=img("../assets/game/phase3/items/mara-wood-key-glow.png").then(im=>keyImg=im).catch(()=>{});
+
+const phase4SignFiles=[
+ "../assets/game/phase4/props/signs/placa_gótica_de_madeira_e_outono.png",
+ "../assets/game/phase4/props/signs/placa_sombria_de_outono_em_ruínas.png",
+ "../assets/game/phase4/props/signs/placa_gótica_encantada_em_outono.png",
+ "../assets/game/phase4/props/signs/marco_gótico_abandonado_com_folhagens_mortas.png"
+];
+const phase4SignReady=Promise.allSettled(phase4SignFiles.map(src=>img(src))).then(rs=>{
+ phase4SignImgs=rs.map(r=>r.status==="fulfilled"?r.value:null);
+ return phase4SignImgs;
+});
+const checkpointArtReady=Promise.allSettled([
+ img("../assets/game/phase4/checkpoints/marco_gótico_com_abóbora_e_bandeira_rasgada.png"),
+ img("../assets/game/phase4/checkpoints/marco_gótico_com_lanterna_abóbora.png")
+]).then(rs=>{
+ checkpointOffImg=rs[0]?.status==="fulfilled"?rs[0].value:null;
+ checkpointOnImg=rs[1]?.status==="fulfilled"?rs[1].value:null;
+ return [checkpointOffImg,checkpointOnImg];
+});
+const bellArtReady=Promise.allSettled([
+ img("../assets/game/phase4/items/sino_ornamental_de_bronze_antigo.png"),
+ img("../assets/game/phase4/items/sino_encantado_de_outono_gótico.png")
+]).then(rs=>{
+ bellNormalImg=rs[0]?.status==="fulfilled"?rs[0].value:null;
+ bellGlowImg=rs[1]?.status==="fulfilled"?rs[1].value:null;
+ return [bellNormalImg,bellGlowImg];
+});
+const memoryDoorReady=img("../assets/game/phase4/fx/memory-door/portal_gótico_dourado_flutuante.png")
+ .then(im=>memoryDoorImg=im).catch(()=>null);
+const phase4PropReady=Promise.allSettled([phase4SignReady,checkpointArtReady,bellArtReady,memoryDoorReady]);
+
 const jackPortraitFiles=["jack-00-neutral.png","jack-01-serious.png","jack-02-smirk.png","jack-03-surprised.png","jack-04-determined.png","jack-05-resolved.png"];
 const jackPortraitReady=Promise.allSettled(jackPortraitFiles.map(f=>img("../assets/game/phase1/portraits-hd/"+f))).then(rs=>rs.map(r=>r.status==="fulfilled"?r.value:null));
 
@@ -646,7 +679,7 @@ const backgroundReady=Promise.allSettled([
 ]);
 const initialPlatformRule=platformArtRuleAt(p.x);
 const platformReady=Promise.allSettled((PHASE4_PLATFORM_ART_FILES[initialPlatformRule.group]||[]).map((_,i)=>ensurePlatformArt(initialPlatformRule.group,i)));
-window.__PHASE_ASSETS_READY=Promise.allSettled([jackReady,keyReady,dialogueReady,pilgrimGameplayReady,backgroundReady,platformReady]);
+window.__PHASE_ASSETS_READY=Promise.allSettled([jackReady,keyReady,dialogueReady,pilgrimGameplayReady,backgroundReady,platformReady,phase4PropReady]);
 
 function jackFrame(){
  const a=window.JACK_ANIMATIONS?.animations;if(!a)return 0;
@@ -882,12 +915,33 @@ function drawRoad(){
  }
  ctx.restore();
 }
+function drawPropByHeight(im,cx,bottomY,targetH,alpha=1,flip=false){
+ if(!im)return null;
+ const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+ if(!iw||!ih)return null;
+ const targetW=iw*(targetH/ih),dx=cx-targetW/2,dy=bottomY-targetH;
+ ctx.save();ctx.globalAlpha=alpha;ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";
+ if(flip){ctx.translate(dx+targetW,0);ctx.scale(-1,1);ctx.drawImage(im,0,dy,targetW,targetH)}
+ else ctx.drawImage(im,dx,dy,targetW,targetH);
+ ctx.restore();
+ return {x:dx,y:dy,w:targetW,h:targetH};
+}
 function drawSigns(){
  ctx.save();ctx.translate(-cam,0);
+ let idx=0;
  for(let z=1180;z<WORLD;z+=840){
-   ctx.strokeStyle="#5b4d37";ctx.lineWidth=8;ctx.beginPath();ctx.moveTo(z,590);ctx.lineTo(z-4,485);ctx.stroke();
-   ctx.fillStyle="#312c24";ctx.fillRect(z-66,470,132,42);ctx.strokeStyle="#706044";ctx.lineWidth=2;ctx.strokeRect(z-66,470,132,42);
-   ctx.fillStyle="rgba(190,173,136,.18)";ctx.fillRect(z-50,487,74,3);
+   // Não empilhar placa decorativa em cima de checkpoint ou da placa narrativa da ponte.
+   if(checkpoints.some(cp=>Math.abs(cp.x-z)<145)||Math.abs(z-7830)<175){idx++;continue}
+   const im=phase4SignImgs[idx%phase4SignImgs.length];
+   const height=(idx%4===3)?174:(145+(idx%3)*7);
+   if(im){
+     drawPropByHeight(im,z,590,height,.92,idx%5===4);
+   }else{
+     ctx.strokeStyle="#5b4d37";ctx.lineWidth=8;ctx.beginPath();ctx.moveTo(z,590);ctx.lineTo(z-4,485);ctx.stroke();
+     ctx.fillStyle="#312c24";ctx.fillRect(z-66,470,132,42);ctx.strokeStyle="#706044";ctx.lineWidth=2;ctx.strokeRect(z-66,470,132,42);
+     ctx.fillStyle="rgba(190,173,136,.18)";ctx.fillRect(z-50,487,74,3);
+   }
+   idx++;
  }
  ctx.restore();
 }
@@ -908,10 +962,38 @@ function drawDoor(){
 }
 function drawCheckpoint(cp){
  const lit=activeCheckpoint===cp.id;
- ctx.save();ctx.translate(cp.x-cam,cp.groundY);
+ const im=lit?checkpointOnImg:checkpointOffImg;
+ const sx=cp.x-cam,sy=cp.groundY;
+
+ if(im){
+   ctx.save();
+   if(lit){
+     const glow=ctx.createRadialGradient(sx,sy-88,8,sx,sy-88,105);
+     glow.addColorStop(0,"rgba(246,177,63,.30)");
+     glow.addColorStop(.48,"rgba(231,140,38,.13)");
+     glow.addColorStop(1,"rgba(231,140,38,0)");
+     ctx.fillStyle=glow;ctx.beginPath();ctx.arc(sx,sy-88,105,0,Math.PI*2);ctx.fill();
+     ctx.shadowColor="rgba(247,173,54,.62)";ctx.shadowBlur=24;
+   }
+   drawPropByHeight(im,sx,sy,190,lit?1:.9);
+   if(lit){
+     ctx.fillStyle="rgba(245,212,137,.88)";ctx.font="700 9px Georgia";ctx.textAlign="center";
+     ctx.shadowColor="rgba(0,0,0,.92)";ctx.shadowBlur=5;
+     ctx.fillText("VOCÊ PASSOU POR AQUI",sx,sy-198);
+   }
+   ctx.restore();
+   return;
+ }
+
+ // Fallback procedural: a fase continua funcional mesmo se o PNG falhar.
+ ctx.save();ctx.translate(sx,sy);
  ctx.strokeStyle="#625540";ctx.lineWidth=7;ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(-2,-78);ctx.stroke();
  ctx.fillStyle=lit?"#d7bd79":"#554d3b";ctx.strokeStyle=lit?"#d8bd74":"#746342";ctx.lineWidth=2;ctx.fillRect(-55,-112,110,42);ctx.strokeRect(-55,-112,110,42);
- if(lit){ctx.shadowColor="#e8bd59";ctx.shadowBlur=16;ctx.fillStyle="#f1d384";ctx.font="700 9px Georgia";ctx.textAlign="center";ctx.fillText("VOCÊ PASSOU",0,-95)}
+ // Abóbora de fallback: apagada no inativo, acesa no ativo.
+ ctx.beginPath();ctx.arc(0,-128,15,0,Math.PI*2);
+ ctx.fillStyle=lit?"#f0a432":"#6b4b2c";if(lit){ctx.shadowColor="#f2a332";ctx.shadowBlur=15}ctx.fill();
+ ctx.fillStyle=lit?"#ffd77a":"#171713";ctx.fillRect(-7,-131,4,3);ctx.fillRect(4,-131,4,3);
+ if(lit){ctx.fillStyle="#f1d384";ctx.font="700 9px Georgia";ctx.textAlign="center";ctx.fillText("VOCÊ PASSOU",0,-95)}
  ctx.restore();
 }
 function pilgrimSpriteSelection(){
@@ -1453,22 +1535,32 @@ function drawNobodyBridgeFog(){
 }
 function drawBridgeIdentityPlate(){
  if(!bridgeCrossedPlayed&&!bridgeNameGlitchPlayed)return;
- const x=7830,y=512;
- ctx.save();ctx.translate(x-cam,y);
- ctx.strokeStyle="#5f533f";ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(0,78);ctx.lineTo(0,0);ctx.stroke();
- ctx.fillStyle="#302f2b";ctx.fillRect(-68,-33,136,42);
- ctx.strokeStyle="rgba(143,119,77,.8)";ctx.lineWidth=2;ctx.strokeRect(-68,-33,136,42);
+ const x=7830,ground=590;
+ const im=bridgeNameGlitchPlayed?(phase4SignImgs[2]||phase4SignImgs[1]):(phase4SignImgs[1]||phase4SignImgs[0]);
+
+ ctx.save();ctx.translate(-cam,0);
+ if(im){
+   if(bridgeNameGlitchPlayed){ctx.shadowColor="rgba(235,193,92,.58)";ctx.shadowBlur=18}
+   drawPropByHeight(im,x,ground,158,.96);
+ }else{
+   ctx.strokeStyle="#5f533f";ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(x,ground);ctx.lineTo(x,512);ctx.stroke();
+   ctx.fillStyle="#302f2b";ctx.fillRect(x-68,479,136,42);
+   ctx.strokeStyle="rgba(143,119,77,.8)";ctx.lineWidth=2;ctx.strokeRect(x-68,479,136,42);
+ }
+
  ctx.textAlign="center";
  if(bridgeNameGlitchPlayed){
-   ctx.fillStyle="rgba(224,196,115,.85)";ctx.font="700 10px Georgia";
+   ctx.fillStyle="rgba(246,208,112,.94)";ctx.font="700 11px Georgia";
+   ctx.shadowColor="rgba(234,181,58,.75)";ctx.shadowBlur=10;
    const blink=Math.floor(p.anim*1.8)%3;
-   ctx.fillText(blink===0?"J...":(blink===1?"J":""),0,-8);
+   ctx.fillText(blink===0?"J...":(blink===1?"J":""),x,505);
  }else{
-   ctx.fillStyle="rgba(169,155,124,.45)";ctx.font="italic 9px Georgia";ctx.fillText("QUEM PASSOU?",0,-8);
+   ctx.fillStyle="rgba(214,198,157,.72)";ctx.font="italic 9px Georgia";
+   ctx.shadowColor="rgba(0,0,0,.85)";ctx.shadowBlur=4;
+   ctx.fillText("QUEM PASSOU?",x,505);
  }
  ctx.restore();
 }
-
 function plazaEchoGuardDefeated(i){
  const id=plazaEchoGuards[i];
  const e=enemies.find(v=>v.id===id);
@@ -1920,9 +2012,17 @@ function drawCollectorBoss(){
  }
 }
 
-function drawUninscribedBell(x,y,scale=1,alpha=1){
+function drawUninscribedBell(x,y,scale=1,alpha=1,glowing=false){
+ const im=glowing?(bellGlowImg||bellNormalImg):bellNormalImg;
+ if(im){
+   ctx.save();
+   if(glowing){ctx.shadowColor="rgba(238,181,61,.72)";ctx.shadowBlur=22}
+   drawPropByHeight(im,x,y+44*scale,92*scale,alpha);
+   ctx.restore();
+   return;
+ }
  ctx.save();ctx.translate(x,y);ctx.scale(scale,scale);ctx.globalAlpha=alpha;
- ctx.shadowColor="rgba(235,202,117,.75)";ctx.shadowBlur=14;
+ ctx.shadowColor=glowing?"rgba(245,184,58,.9)":"rgba(235,202,117,.45)";ctx.shadowBlur=glowing?18:9;
  ctx.strokeStyle="#d7bb74";ctx.fillStyle="#554b38";ctx.lineWidth=3;
  ctx.beginPath();ctx.moveTo(-15,8);ctx.quadraticCurveTo(-13,-17,0,-24);ctx.quadraticCurveTo(13,-17,15,8);ctx.lineTo(-15,8);ctx.fill();ctx.stroke();
  ctx.beginPath();ctx.moveTo(-18,8);ctx.lineTo(18,8);ctx.stroke();
@@ -1952,20 +2052,28 @@ function drawPhase4Epilogue(){
    const g=ctx.createRadialGradient(bx,by,8,bx,by,70);
    g.addColorStop(0,"rgba(235,202,117,.22)");g.addColorStop(1,"rgba(235,202,117,0)");
    ctx.fillStyle=g;ctx.beginPath();ctx.arc(bx,by,70,0,Math.PI*2);ctx.fill();
-   drawUninscribedBell(bx,by,1.05,.95);
+   drawUninscribedBell(bx,by,1.05,.95,bellObtained);
  }
 
  // The recurring door returns only as memory: no handle, no destination revealed.
  if(epilogueStep===3||epilogueStep===4){
    const x=11105,y=312;
-   const pulse=.65+.2*Math.sin(p.anim*2);
-   ctx.strokeStyle="rgba(232,202,124,"+pulse+")";ctx.lineWidth=4;
-   ctx.shadowColor="#e1bd66";ctx.shadowBlur=22;
-   ctx.strokeRect(x-54,y,108,278);
-   ctx.setLineDash([7,7]);ctx.globalAlpha=.5;
-   ctx.strokeRect(x-42,y+15,84,248);ctx.setLineDash([]);
-   ctx.globalAlpha=.18;ctx.fillStyle="#e4c477";ctx.fillRect(x-50,y+4,100,270);
+   const pulse=.72+.18*Math.sin(p.anim*2);
+   if(memoryDoorImg){
+     ctx.save();
+     ctx.shadowColor="rgba(229,184,67,.86)";ctx.shadowBlur=28;
+     drawPropByHeight(memoryDoorImg,x,590,304,pulse);
+     ctx.restore();
+   }else{
+     ctx.strokeStyle="rgba(232,202,124,"+pulse+")";ctx.lineWidth=4;
+     ctx.shadowColor="#e1bd66";ctx.shadowBlur=22;
+     ctx.strokeRect(x-54,y,108,278);
+     ctx.setLineDash([7,7]);ctx.globalAlpha=.5;
+     ctx.strokeRect(x-42,y+15,84,248);ctx.setLineDash([]);
+     ctx.globalAlpha=.18;ctx.fillStyle="#e4c477";ctx.fillRect(x-50,y+4,100,270);
+   }
    ctx.globalAlpha=.82;ctx.fillStyle="#e7cf91";ctx.font="italic 10px Georgia";ctx.textAlign="center";
+   ctx.shadowColor="rgba(0,0,0,.9)";ctx.shadowBlur=5;
    ctx.fillText("uma porta que ainda não abre",x,y-18);
  }
 
@@ -1981,7 +2089,7 @@ function drawPhase4Epilogue(){
  // Permanent-item reminder during the final beats.
  if(bellObtained&&!phase4Complete){
    ctx.save();ctx.fillStyle="rgba(12,13,12,.68)";ctx.fillRect(W-205,92,170,48);
-   drawUninscribedBell(W-181,116,.55,.9);
+   drawUninscribedBell(W-181,116,.55,.9,true);
    ctx.fillStyle="#dbc27f";ctx.font="700 9px Georgia";ctx.textAlign="left";
    ctx.fillText("SINO SEM INSCRIÇÃO",W-155,113);
    ctx.fillStyle="rgba(222,211,177,.72)";ctx.font="italic 8px Georgia";ctx.fillText("sem nome · ainda toca",W-155,128);
