@@ -1469,3 +1469,35 @@ button:focus-visible{outline:3px solid #fff3b0;outline-offset:4px}
   outline:none;
 }
 .studio-splash__start span{font-size:.82rem;color:#d9b8f4}
+
+
+/* Sincronia logo + vinheta */
+.studio-splash.is-pending{cursor:pointer}
+.studio-splash.is-pending .studio-splash__logo,
+.studio-splash.is-pending .studio-splash__shine,
+.studio-splash.is-pending .studio-splash__loading,
+.studio-splash.is-pending .studio-splash__dots{
+  animation:none !important;
+}
+.studio-splash.is-pending .studio-splash__logo{
+  opacity:0;
+  transform:scale(.95) translateY(8px);
+}
+.studio-splash.is-pending .studio-splash__shine{opacity:0}
+.studio-splash.is-pending .studio-splash__loading{
+  opacity:1;
+  color:rgba(233,222,245,.62);
+}
+.studio-splash.is-pending .studio-splash__dots{opacity:.7}
+.studio-splash.is-started .studio-splash__logo{
+  animation:studio-logo-in 1.15s cubic-bezier(.2,.75,.2,1) .04s forwards;
+}
+.studio-splash.is-started .studio-splash__shine{
+  animation:studio-shine 1.65s ease .9s forwards;
+}
+.studio-splash.is-started .studio-splash__loading{
+  animation:studio-copy-in .55s ease .68s forwards;
+}
+.studio-splash.is-started .studio-splash__dots{
+  animation:studio-copy-in .55s ease .82s forwards;
+}
