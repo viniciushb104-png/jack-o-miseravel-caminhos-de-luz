@@ -44,8 +44,10 @@ button,a{font:inherit}
 .dialogue-name{
  position:absolute;left:30.2%;right:13.4%;top:15.6%;height:12.6%;
  display:flex;align-items:center;justify-content:center;
- color:#ffd982;font-weight:800;letter-spacing:.15em;font-size:.88rem;
- text-align:center;text-transform:uppercase;text-shadow:0 2px 5px #000,0 0 12px rgba(255,145,45,.45)
+ font-family:"Cinzel","Copperplate","Copperplate Gothic Light","Palatino Linotype",Georgia,serif;
+ font-weight:700;font-variant:small-caps;
+ color:#ffd982;letter-spacing:.18em;font-size:.88rem;line-height:1;
+ text-align:center;text-transform:none;text-shadow:0 2px 5px #000,0 0 12px rgba(255,145,45,.45)
 }
 .dialogue-name:empty{opacity:0}
 .dialogue-main{
@@ -54,6 +56,8 @@ button,a{font:inherit}
 }
 .dialogue-text{
  width:100%;height:100%;margin:0;overflow-y:auto;padding-right:8px;
+ font-family:"Palatino Linotype","Book Antiqua",Palatino,Georgia,serif;
+ font-style:italic;letter-spacing:.018em;
  color:#fff1d2;font-size:clamp(.84rem,1.32vw,1.08rem);line-height:1.5;
  text-shadow:0 2px 4px #000,0 0 8px rgba(0,0,0,.65);
  scrollbar-width:thin;scrollbar-color:#b77b32 transparent
@@ -64,7 +68,8 @@ button,a{font:inherit}
  position:absolute;right:6.8%;bottom:11.3%;width:44px;height:36px;
  border:1px solid rgba(255,180,67,.65);border-radius:6px;
  background:rgba(25,12,31,.7);color:#ffd77e;cursor:pointer;
- box-shadow:0 0 10px rgba(255,118,35,.25);font-weight:800
+ box-shadow:0 0 10px rgba(255,118,35,.25);font-weight:800;
+ font-family:"Cinzel","Copperplate","Copperplate Gothic Light","Palatino Linotype",Georgia,serif
 }
 .dialogue-next:hover,.dialogue-next:focus-visible{background:rgba(72,26,48,.85);outline:1px solid #ffbb55}
 .memory-hint{position:fixed;z-index:16;right:20px;bottom:18px;display:flex;align-items:center;gap:7px;padding:7px 10px;background:#080d0bc7;border:1px solid #473e2e;color:#aaa997;font-size:.7rem;letter-spacing:.08em}
