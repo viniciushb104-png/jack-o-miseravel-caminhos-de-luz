@@ -247,17 +247,24 @@
   const chapterTwo = document.getElementById('chapterTwo');
   const chapterThree = document.getElementById('chapterThree');
   const chapterFour = document.getElementById('chapterFour');
+  const chapterFive = document.getElementById('chapterFive');
 
   function syncJourneyUI() {
     if (!journey) return;
 
     const active = journey.isActive();
+    const waitingForPhaseFive = active &&
+      journey.currentPhase() === 4 &&
+      localStorage.getItem('jack-phase4-complete') === 'yes' &&
+      journey.isPhaseUnlocked(5);
     if (continueJourneyButton) {
-      continueJourneyButton.hidden = !active;
-      if (active) {
+      continueJourneyButton.hidden = !active || waitingForPhaseFive;
+      if (active && !waitingForPhaseFive) {
         continueJourneyButton.href = './game/' + journey.continueFile() + '?journey=1';
         const label = continueJourneyButton.querySelector('span:nth-child(2)');
         if (label) label.textContent = 'Continuar Jornada';
+      } else if (waitingForPhaseFive) {
+        continueJourneyButton.removeAttribute('href');
       }
     }
 
@@ -297,17 +304,36 @@
 
     if (chapterFour) {
       const unlocked = journey.isPhaseUnlocked(4);
+      const completed = localStorage.getItem('jack-phase4-complete') === 'yes';
       chapterFour.classList.toggle('chapter-card--open', unlocked);
       chapterFour.setAttribute('aria-disabled', unlocked ? 'false' : 'true');
       const status = chapterFour.querySelector('[data-phase-status]');
       const arrow = chapterFour.querySelector('[data-phase-arrow]');
       if (unlocked) {
-        chapterFour.href = './game/phase4.html?replay=1&new=1';
-        if (status) status.textContent = 'Desbloqueada · protótipo jogável';
+        chapterFour.href = completed
+          ? './game/phase4.html?replay=1&new=1'
+          : './game/phase4.html?journey=1';
+        if (status) status.textContent = completed ? 'Concluída · rejogar esta fase' : 'Desbloqueada · jogar esta fase';
         if (arrow) arrow.textContent = '›';
       } else {
         chapterFour.removeAttribute('href');
         if (status) status.textContent = 'Conclua o Halloween III para desbloquear';
+        if (arrow) arrow.textContent = '🔒';
+      }
+    }
+
+    if (chapterFive) {
+      const unlocked = journey.isPhaseUnlocked(5);
+      chapterFive.classList.toggle('chapter-card--open', unlocked);
+      chapterFive.disabled = !unlocked;
+      chapterFive.setAttribute('aria-disabled', unlocked ? 'false' : 'true');
+      const status = chapterFive.querySelector('[data-phase-status]');
+      const arrow = chapterFive.querySelector('[data-phase-arrow]');
+      if (unlocked) {
+        if (status) status.textContent = 'Desbloqueada · em desenvolvimento';
+        if (arrow) arrow.textContent = '…';
+      } else {
+        if (status) status.textContent = 'Conclua o Halloween IV para desbloquear';
         if (arrow) arrow.textContent = '🔒';
       }
     }
@@ -369,6 +395,12 @@
     if (chapterFour.getAttribute('aria-disabled') === 'true') {
       event.preventDefault();
       showToast('Conclua o Halloween III para abrir A Estrada dos Esquecidos.');
+    }
+  });
+
+  chapterFive?.addEventListener('click', () => {
+    if (chapterFive.getAttribute('aria-disabled') === 'false') {
+      showToast('Halloween V foi desbloqueado. A próxima estrada ainda está sendo construída.');
     }
   });
 
