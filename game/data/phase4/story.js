@@ -62,6 +62,8 @@ window.PHASE4_STORY=Object.freeze({
     Object.freeze({x:3250,name:"CAMPO DAS PEGADAS"}),
     Object.freeze({x:4700,name:"ARQUIVO RASURADO"}),
     Object.freeze({x:6100,name:"PONTE DOS NINGUÉM"}),
-    Object.freeze({x:7350,name:"PRAÇA DOS NOMES ROUBADOS"})
+    Object.freeze({x:7900,name:"PRAÇA DOS NOMES ROUBADOS"}),
+    Object.freeze({x:9300,name:"CASA DO COLETOR"}),
+    Object.freeze({x:10600,name:"ARENA DO COLETOR"})
   ])
 });
