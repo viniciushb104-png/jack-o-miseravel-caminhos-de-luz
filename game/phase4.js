@@ -12,6 +12,11 @@ const dialogue=new window.DialogueSystem(document.getElementById("dialogue"));
 const story=window.PHASE4_STORY;if(!story)throw new Error("PHASE4_STORY não carregou.");
 const journey=window.JackJourney||null,url=new URLSearchParams(location.search),journeyMode=url.get("journey")==="1",replayMode=url.get("replay")==="1",forceNew=url.get("new")==="1";
 const SAVE_KEY="jack-phase4-save",CHECKPOINT_KEY="jack-phase4-checkpoint",MARA_KEY="jack-item-mara-wood-key";
+// Migração: jogadores que concluíram Halloween III antes da chave persistente
+// continuam podendo abrir a primeira passagem de Halloween IV.
+if(localStorage.getItem("jack-phase3-complete")==="yes"&&localStorage.getItem(MARA_KEY)!=="yes"){
+ localStorage.setItem(MARA_KEY,"yes");
+}
 if(replayMode)journey?.beginReplay(4,[SAVE_KEY,CHECKPOINT_KEY]);
 if(forceNew){localStorage.removeItem(SAVE_KEY);localStorage.removeItem(CHECKPOINT_KEY)}
 let saveData=null;if(journeyMode&&!replayMode){try{saveData=JSON.parse(localStorage.getItem(SAVE_KEY)||"null")}catch(_){saveData=null}}
