@@ -269,6 +269,59 @@ window.PHASE4_STORY=Object.freeze({
     {speaker:"JACK",portrait:"jack",expression:1,text:"Pode começar soltando o que nunca foi seu."}
   ]),
 
+  collectorRelease:Object.freeze([
+    {speaker:"COLETOR",text:"SE EU SOLTAR OS NOMES... ELES PODEM DESAPARECER."},
+    {speaker:"JACK",portrait:"jack",expression:1,text:"Também podem voltar para quem quiser carregá-los."},
+    {speaker:"COLETOR",text:"E OS QUE NINGUÉM RECLAMAR?"},
+    {speaker:"JACK",portrait:"jack",expression:5,text:"Continuam tendo pertencido a alguém."},
+    {speaker:"PEREGRINA",text:"Você não precisa possuir uma coisa para admitir que ela existiu."},
+    {speaker:"COLETOR",text:"...ENTÃO EU POSSO SOLTAR."}
+  ]),
+
+  pilgrimChoice:Object.freeze([
+    {speaker:"PEREGRINA",text:"Talvez meu nome esteja no meio deles."},
+    {speaker:"JACK",portrait:"jack",expression:1,text:"Pode estar."},
+    {speaker:"PEREGRINA",text:"Passei tanto tempo esperando que ele me dissesse quem eu era."},
+    {speaker:"JACK",portrait:"jack",expression:5,text:"E agora?"},
+    {speaker:"PEREGRINA",text:"Agora eu lembro que voltei. Amparei alguém. Tive medo. Atravessei."},
+    {speaker:"PEREGRINA",text:"Se um dia eu quiser meu nome de volta, eu procuro."},
+    {speaker:"PEREGRINA",text:"Mas não vou continuar parada esperando por ele."},
+    {speaker:"JACK",portrait:"jack",expression:5,text:"Parece um bom jeito de continuar existindo."}
+  ]),
+
+  bellGift:Object.freeze([
+    {speaker:"PEREGRINA",text:"Antes de ir... eu acordei nesta estrada com isto no bolso."},
+    {speaker:"JACK",portrait:"jack",expression:1,text:"Um sino."},
+    {speaker:"PEREGRINA",text:"Sem nome. Sem inscrição. Mesmo assim, ainda toca."},
+    {speaker:"JACK",portrait:"jack",expression:2,text:"Estamos criando um padrão."},
+    {speaker:"PEREGRINA",text:"Fique com ele."},
+    {speaker:"PEREGRINA",text:"Se encontrar alguém que esqueceu para onde estava indo... chame."},
+    {speaker:"JACK",portrait:"jack",expression:1,text:"Mesmo sem saber o nome?"},
+    {speaker:"PEREGRINA",text:"Principalmente."}
+  ]),
+
+  jackPromiseMemory:Object.freeze([
+    {speaker:"???",text:"Você prometeu."},
+    {speaker:"JACK",portrait:"jack",expression:3,text:"..."},
+    {speaker:"MEMÓRIA DE JACK",text:"Eu volto."},
+    {speaker:"JACK",portrait:"jack",expression:1,text:"Eu disse isso."},
+    {speaker:"PEREGRINA",text:"Para quem?"},
+    {speaker:"JACK",portrait:"jack",expression:3,text:"Ainda não lembro."},
+    {speaker:"???",text:"Encontre o caminho de volta."},
+    {speaker:"JACK",portrait:"jack",expression:5,text:"Pelo menos agora sei o que prometi."}
+  ]),
+
+  phase4Farewell:Object.freeze([
+    {speaker:"PEREGRINA",text:"Vai esperar essa porta abrir?"},
+    {speaker:"JACK",portrait:"jack",expression:1,text:"Não."},
+    {speaker:"PEREGRINA",text:"Mesmo sem saber para onde ela leva?"},
+    {speaker:"JACK",portrait:"jack",expression:5,text:"Esperar parado não ajudou nenhum de nós até agora."},
+    {speaker:"PEREGRINA",text:"Então eu sigo por aqui."},
+    {speaker:"JACK",portrait:"jack",expression:1,text:"E eu continuo pela estrada."},
+    {speaker:"PEREGRINA",text:"Sem saber onde termina?"},
+    {speaker:"JACK",portrait:"jack",expression:2,text:"Nunca pareceu ser requisito."}
+  ]),
+
   traceReveals:Object.freeze([
     Object.freeze([
       {speaker:"PEREGRINA",text:"Essas pegadas chegam até a vala..."},
