@@ -577,6 +577,12 @@
       chapter: 'HALLOWEEN III · O ARQUIVISTA ETERNO',
       title: 'O Arquivista Eterno',
       src: 'assets/phase3/audio/music/phase3-archivist-theme.mp3'
+    },
+    {
+      phase: 3,
+      chapter: 'HALLOWEEN III · LAGO DAS VOZES',
+      title: 'Aquilo que a Água Guarda',
+      src: 'assets/phase3/audio/music/phase3-aquilo-que-a-agua-guarda.mp3'
     }
   ];
 
