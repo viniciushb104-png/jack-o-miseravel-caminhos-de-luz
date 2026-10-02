@@ -144,11 +144,68 @@ window.PHASE4_STORY=Object.freeze({
 
   stolenPlaza:Object.freeze([
     {speaker:"PEREGRINA",text:"Essas placas... todas parecem familiares."},
-    {speaker:"JACK",portrait:"jack",expression:1,text:"Porque alguém fez questão de arrancar o que estava escrito nelas."},
+    {speaker:"JACK",portrait:"jack",expression:1,text:"Talvez porque tenham sido arrancadas do mesmo lugar que os registros."},
     {speaker:"PEREGRINA",text:"E se uma delas for minha?"},
-    {speaker:"JACK",portrait:"jack",expression:5,text:"Então seu nome está aqui."},
+    {speaker:"JACK",portrait:"jack",expression:5,text:"Então seu nome pode estar aqui."},
     {speaker:"PEREGRINA",text:"E eu?"},
-    {speaker:"JACK",portrait:"jack",expression:1,text:"Você está aqui comigo. Não confunda as duas coisas."}
+    {speaker:"JACK",portrait:"jack",expression:1,text:"Você está aqui comigo. Não confunda as duas coisas."},
+    {speaker:"PEREGRINA",text:"Tem vozes entre as placas."},
+    {speaker:"JACK",portrait:"jack",expression:4,text:"Então vamos ouvir antes que alguém resolva catalogá-las também."}
+  ]),
+
+  plazaEchoes:Object.freeze([
+    Object.freeze({
+      x:8125,title:"ECO I · O PÃO",short:"CHEIRO DE PÃO",
+      text:"Uma voz lembra o cheiro de pão antes do amanhecer, mas nenhuma placa reage a ela.",
+      dialogue:Object.freeze([
+        {speaker:"VOZ",text:"Eu gostava do cheiro de pão antes do amanhecer."},
+        {speaker:"PEREGRINA",text:"Eu... conheço esse cheiro."},
+        {speaker:"JACK",portrait:"jack",expression:1,text:"Conhecer não significa que a voz seja sua."},
+        {speaker:"PEREGRINA",text:"E nenhuma placa respondeu."},
+        {speaker:"JACK",portrait:"jack",expression:5,text:"Então alguém separou a lembrança do nome."}
+      ])
+    }),
+    Object.freeze({
+      x:8440,title:"ECO II · A RISADA",short:"UMA RISADA",
+      text:"A voz recorda alguém rindo quando ela ficava brava. O nome correspondente continua impossível de identificar.",
+      dialogue:Object.freeze([
+        {speaker:"VOZ",text:"Alguém sempre ria quando eu ficava brava."},
+        {speaker:"PEREGRINA",text:"Eu lembro disso."},
+        {speaker:"JACK",portrait:"jack",expression:3,text:"Desta vez você tem certeza?"},
+        {speaker:"PEREGRINA",text:"Não. Só tenho certeza da sensação."},
+        {speaker:"JACK",portrait:"jack",expression:5,text:"Talvez seja exatamente isso que ele não consegue guardar numa placa."}
+      ])
+    }),
+    Object.freeze({
+      x:8740,title:"ECO III · A TEMPESTADE",short:"UMA MÃO NA TEMPESTADE",
+      text:"Uma voz lembra ter segurado a mão de alguém durante uma tempestade. O nome continua em outro lugar.",
+      dialogue:Object.freeze([
+        {speaker:"VOZ",text:"Eu segurei uma mão durante uma tempestade. Não soltei até passar."},
+        {speaker:"PEREGRINA",text:"Essa memória é minha."},
+        {speaker:"JACK",portrait:"jack",expression:1,text:"Como sabe?"},
+        {speaker:"PEREGRINA",text:"Não sei o nome de ninguém nela. Mas lembro do medo na mão da outra pessoa."},
+        {speaker:"JACK",portrait:"jack",expression:5,text:"Então ele ficou com o rótulo. Você ficou com a parte que aconteceu."}
+      ])
+    })
+  ]),
+
+  plazaSolved:Object.freeze([
+    {speaker:"PEREGRINA",text:"As vozes continuam aqui. As placas também. Mas não estão juntas."},
+    {speaker:"JACK",portrait:"jack",expression:1,text:"Ele não está guardando pessoas."},
+    {speaker:"PEREGRINA",text:"Está guardando nomes."},
+    {speaker:"JACK",portrait:"jack",expression:1,text:"Como se possuir o nome fosse possuir quem viveu."},
+    {speaker:"PEREGRINA",text:"E se meu nome estiver no meio deles?"},
+    {speaker:"JACK",portrait:"jack",expression:5,text:"Ainda será seu para escolher. Não dele."}
+  ]),
+
+  collectorGlimpse:Object.freeze([
+    {speaker:"???",text:"NOMES SÃO O QUE RESTA QUANDO TODO O RESTO DESAPARECE."},
+    {speaker:"PEREGRINA",text:"Ele está ali."},
+    {speaker:"JACK",portrait:"jack",expression:1,text:"Só parte dele."},
+    {speaker:"???",text:"EU OS GUARDEI QUANDO NINGUÉM MAIS GUARDOU."},
+    {speaker:"JACK",portrait:"jack",expression:4,text:"Guardar não costuma exigir arrancar."},
+    {speaker:"???",text:"VOCÊ AINDA CARREGA UM NOME. NÃO ENTENDERIA."},
+    {speaker:"JACK",portrait:"jack",expression:1,text:"Engraçado. A estrada acabou de discordar de você."}
   ]),
 
   collectorApproach:Object.freeze([
