@@ -1,5 +1,5 @@
 (()=>{"use strict";
-const canvas=document.getElementById("game"),ctx=canvas.getContext("2d"),W=1280,H=720,WORLD=8200,G=1500;
+const canvas=document.getElementById("game"),ctx=canvas.getContext("2d"),W=1280,H=720,WORLD=11250,G=1500;
 const ui={
  obj:document.querySelector("#objective strong"),
  health:document.getElementById("healthValue"),
@@ -27,39 +27,79 @@ let idleTime=0,waitSitFrame=0,waitSitClock=0,waitSitActive=false,waitSitImages=[
 let lastPlayerAction=performance.now();
 let playerLife=Math.max(1,Math.min(3,Number(saveData?.playerLife)||3)),memoryLight=0,memoryPulse=0,gateMsg=0;
 let activeCheckpoint=saveData?.activeCheckpoint||localStorage.getItem(CHECKPOINT_KEY)||"";
-let introPlayed=!!saveData?.introPlayed,doorOpened=!!saveData?.doorOpened,pilgrimMet=!!saveData?.pilgrimMet,tracesSolved=!!saveData?.tracesSolved,prototypeEndPlayed=!!saveData?.prototypeEndPlayed;
+let introPlayed=!!saveData?.introPlayed,doorOpened=!!saveData?.doorOpened,pilgrimMet=!!saveData?.pilgrimMet,tracesSolved=!!saveData?.tracesSolved,prototypeEndPlayed=!!saveData?.prototypeEndPlayed,arenaReached=!!saveData?.arenaReached;
 let traces=Array.isArray(saveData?.traces)?saveData.traces.slice(0,3).map(Boolean):[false,false,false];
 
 const p={x:Number.isFinite(saveData?.x)?saveData.x:110,y:Number.isFinite(saveData?.y)?saveData.y:470,w:46,h:86,vx:0,vy:0,dir:saveData?.dir===-1?-1:1,on:false,coyote:0,buffer:0,anim:0,attack:0,inv:0};
 
 const platforms=[
- {x:0,y:590,w:980,h:130},
- {x:1080,y:590,w:950,h:130},
- {x:2140,y:590,w:980,h:130},
- {x:3240,y:590,w:1420,h:130},
- {x:4760,y:590,w:1200,h:130},
- {x:6070,y:590,w:980,h:130},
- {x:7160,y:590,w:1040,h:130},
- {x:520,y:500,w:220,h:26},
- {x:1300,y:485,w:210,h:26},
- {x:1730,y:430,w:190,h:26},
- {x:2800,y:475,w:230,h:26},
- {x:3730,y:485,w:210,h:26},
- {x:4470,y:440,w:180,h:26},
- {x:5150,y:470,w:220,h:26},
- {x:6500,y:465,w:240,h:26}
-];
+ // 1 — Porta / começo da estrada.
+ {x:0,y:590,w:980,h:130,kind:"road"},
+ {x:1080,y:590,w:940,h:130,kind:"road"},
+ {x:520,y:500,w:220,h:26,kind:"ledge"},
+ {x:1300,y:485,w:210,h:26,kind:"ledge"},
+ {x:1730,y:430,w:190,h:26,kind:"ledge"},
+
+ // 2 — Povoado sem Nomes.
+ {x:2140,y:590,w:980,h:130,kind:"village"},
+ {x:2560,y:500,w:230,h:26,kind:"village"},
+ {x:2850,y:445,w:190,h:26,kind:"village"},
+
+ // 3 — Campo das Pegadas.
+ {x:3240,y:590,w:1420,h:130,kind:"traces"},
+ {x:3380,y:510,w:180,h:26,kind:"traces"},
+ {x:3720,y:465,w:220,h:26,kind:"traces"},
+ {x:4120,y:420,w:180,h:26,kind:"traces"},
+ {x:4470,y:500,w:160,h:26,kind:"traces"},
+
+ // 4 — Arquivo Rasurado: corredor amplo para lutas e exploração vertical.
+ {x:4760,y:590,w:1180,h:130,kind:"archive"},
+ {x:4930,y:480,w:200,h:26,kind:"archive"},
+ {x:5290,y:420,w:190,h:26,kind:"archive"},
+ {x:5650,y:485,w:220,h:26,kind:"archive"},
+
+ // 5 — Ponte dos Ninguém: primeiro trecho realmente exigente de plataforma.
+ {x:6070,y:590,w:360,h:130,kind:"bridge"},
+ {x:6500,y:520,w:170,h:24,kind:"bridge"},
+ {x:6760,y:455,w:180,h:24,kind:"bridge"},
+ {x:7040,y:515,w:190,h:24,kind:"bridge"},
+ {x:7340,y:440,w:170,h:24,kind:"bridge"},
+ {x:7600,y:505,w:210,h:24,kind:"bridge"},
+
+ // 6 — Praça dos Nomes Roubados: área larga para encontros em grupo.
+ {x:7900,y:590,w:930,h:130,kind:"plaza"},
+ {x:8120,y:480,w:180,h:26,kind:"plaza"},
+ {x:8460,y:430,w:180,h:26,kind:"plaza"},
+
+ // 7 — Aproximação / Casa do Coletor.
+ {x:8940,y:590,w:560,h:130,kind:"collector"},
+ {x:9030,y:490,w:200,h:26,kind:"collector"},
+ {x:9340,y:435,w:180,h:26,kind:"collector"},
+ {x:9620,y:590,w:410,h:130,kind:"collector"},
+ {x:9760,y:485,w:170,h:26,kind:"collector"},
+ {x:10150,y:590,w:420,h:130,kind:"collector"},
+ {x:10220,y:470,w:170,h:26,kind:"collector"},
+
+ // 8 — Arena provisória do Coletor.
+ {x:10670,y:590,w:580,h:130,kind:"arena"}
+]
 
 const checkpoints=[
  {id:"road",x:1870,groundY:590,respawnX:1800,respawnY:504,name:"Marco sem inscrição"},
  {id:"village",x:2910,groundY:590,respawnX:2840,respawnY:504,name:"Marco do Povoado"},
- {id:"traces",x:4580,groundY:590,respawnX:4510,respawnY:504,name:"Marco das Pegadas"}
-];
+ {id:"traces",x:4580,groundY:590,respawnX:4510,respawnY:504,name:"Marco das Pegadas"},
+ {id:"archive",x:5750,groundY:590,respawnX:5680,respawnY:504,name:"Marco do Arquivo"},
+ {id:"plaza",x:8150,groundY:590,respawnX:8080,respawnY:504,name:"Marco da Praça"},
+ {id:"collector",x:9950,groundY:590,respawnX:9880,respawnY:504,name:"Marco sem Nome"}
+]
 
 const enemies=[
  {id:"eraser-1",kind:"eraser",x:1510,y:522,w:58,h:58,hp:2,maxHp:2,dir:-1,vx:0,alive:!saveData?.deadEnemies?.includes("eraser-1"),cool:0},
  {id:"eraser-2",kind:"eraser",x:4990,y:522,w:58,h:58,hp:2,maxHp:2,dir:1,vx:0,alive:!saveData?.deadEnemies?.includes("eraser-2"),cool:0},
- {id:"eraser-3",kind:"eraser",x:5450,y:522,w:58,h:58,hp:3,maxHp:3,dir:-1,vx:0,alive:!saveData?.deadEnemies?.includes("eraser-3"),cool:0}
+ {id:"eraser-3",kind:"eraser",x:5450,y:522,w:58,h:58,hp:3,maxHp:3,dir:-1,vx:0,alive:!saveData?.deadEnemies?.includes("eraser-3"),cool:0},
+ {id:"eraser-4",kind:"eraser",x:5750,y:522,w:58,h:58,hp:3,maxHp:3,dir:1,vx:0,alive:!saveData?.deadEnemies?.includes("eraser-4"),cool:0},
+ {id:"eraser-5",kind:"eraser",x:8310,y:522,w:58,h:58,hp:3,maxHp:3,dir:-1,vx:0,alive:!saveData?.deadEnemies?.includes("eraser-5"),cool:0},
+ {id:"eraser-6",kind:"eraser",x:9780,y:522,w:58,h:58,hp:4,maxHp:4,dir:-1,vx:0,alive:!saveData?.deadEnemies?.includes("eraser-6"),cool:0}
 ];
 
 function say(t){ui.msg.textContent=t;ui.msg.classList.add("show");clearTimeout(say.t);say.t=setTimeout(()=>ui.msg.classList.remove("show"),2600)}
@@ -73,7 +113,7 @@ function markPlayerAction(){
 function save(){
  if(!journeyMode||replayMode||!journey?.isActive()||journey.currentPhase()!==4)return;
  localStorage.setItem(SAVE_KEY,JSON.stringify({
-   x:p.x,y:p.y,dir:p.dir,playerLife,activeCheckpoint,introPlayed,doorOpened,pilgrimMet,traces:[...traces],tracesSolved,prototypeEndPlayed,deadEnemies:deadEnemies(),savedAt:Date.now()
+   x:p.x,y:p.y,dir:p.dir,playerLife,activeCheckpoint,introPlayed,doorOpened,pilgrimMet,traces:[...traces],tracesSolved,prototypeEndPlayed,arenaReached,deadEnemies:deadEnemies(),savedAt:Date.now()
  }));
 }
 function respawn(msg){
@@ -195,9 +235,22 @@ function drawBackdrop(){
 function drawRoad(){
  ctx.save();ctx.translate(-cam,0);
  for(const q of platforms){
-   ctx.fillStyle=q.h>100?"#30291f":"#4a4435";ctx.fillRect(q.x,q.y,q.w,q.h);
-   ctx.fillStyle=q.h>100?"#847052":"#9b865d";ctx.fillRect(q.x,q.y,q.w,5);
-   if(q.h>100){ctx.strokeStyle="rgba(30,24,18,.7)";ctx.lineWidth=3;for(let xx=q.x+45;xx<q.x+q.w;xx+=95){ctx.beginPath();ctx.moveTo(xx,q.y+8);ctx.lineTo(xx-18,q.y+42);ctx.stroke()}}
+   const palette={
+     road:["#30291f","#847052"],ledge:["#40382d","#9b865d"],
+     village:["#332f27","#847457"],traces:["#342d23","#8d7750"],
+     archive:["#272925","#6f6a55"],bridge:["#352c21","#9a7d4f"],
+     plaza:["#34322d","#7d735e"],collector:["#242522","#655b49"],
+     arena:["#201f1d","#8b714b"]
+   }[q.kind]||["#30291f","#847052"];
+   ctx.fillStyle=palette[0];ctx.fillRect(q.x,q.y,q.w,q.h);
+   ctx.fillStyle=palette[1];ctx.fillRect(q.x,q.y,q.w,5);
+   if(q.h>100){
+     ctx.strokeStyle="rgba(25,22,18,.7)";ctx.lineWidth=3;
+     for(let xx=q.x+45;xx<q.x+q.w;xx+=95){ctx.beginPath();ctx.moveTo(xx,q.y+8);ctx.lineTo(xx-18,q.y+42);ctx.stroke()}
+   }else if(q.kind==="bridge"){
+     ctx.strokeStyle="rgba(181,146,84,.3)";ctx.lineWidth=2;
+     for(let xx=q.x+24;xx<q.x+q.w;xx+=42){ctx.beginPath();ctx.moveTo(xx,q.y);ctx.lineTo(xx,q.y+q.h);ctx.stroke()}
+   }
  }
  ctx.restore();
 }
@@ -265,8 +318,59 @@ function drawEnemy(e){
  ctx.fillStyle="#b9aa89";ctx.font="700 9px Georgia";ctx.textAlign="center";ctx.fillText("RASURADOR",0,-43);
  ctx.restore();
 }
+function drawPhase4SkeletonLandmarks(){
+ ctx.save();ctx.translate(-cam,0);
+
+ // Arquivo Rasurado — estantes e placas arrancadas.
+ for(const bx of [5050,5380,5700]){
+   ctx.fillStyle="rgba(28,31,28,.88)";ctx.fillRect(bx-70,315,140,275);
+   ctx.strokeStyle="rgba(117,105,77,.55)";ctx.lineWidth=3;
+   for(let y=350;y<555;y+=48){ctx.beginPath();ctx.moveTo(bx-60,y);ctx.lineTo(bx+60,y);ctx.stroke()}
+   ctx.fillStyle="rgba(188,169,125,.15)";
+   for(let y=365;y<545;y+=48)ctx.fillRect(bx-48,y,62+(y%3)*7,4);
+ }
+ ctx.fillStyle="rgba(208,184,125,.48)";ctx.font="italic 11px Georgia";ctx.textAlign="center";
+ ctx.fillText("registros arrancados",5380,292);
+
+ // Ponte dos Ninguém — postes e cabos indicam o grande trecho de travessia.
+ ctx.strokeStyle="rgba(92,76,53,.8)";ctx.lineWidth=6;
+ for(const bx of [6140,6650,7130,7640]){
+   ctx.beginPath();ctx.moveTo(bx,590);ctx.lineTo(bx,350);ctx.stroke();
+ }
+ ctx.strokeStyle="rgba(111,91,61,.42)";ctx.lineWidth=2;
+ ctx.beginPath();ctx.moveTo(6140,370);ctx.bezierCurveTo(6500,450,7240,300,7640,370);ctx.stroke();
+
+ // Praça — círculo de placas vazias.
+ ctx.strokeStyle="rgba(132,117,87,.55)";ctx.lineWidth=4;
+ ctx.beginPath();ctx.ellipse(8350,574,330,44,0,0,Math.PI*2);ctx.stroke();
+ for(let i=0;i<7;i++){
+   const a=Math.PI+(i/6)*Math.PI,px=8350+Math.cos(a)*280,py=570+Math.sin(a)*75;
+   ctx.strokeStyle="#5b4e3a";ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(px,py-92);ctx.stroke();
+   ctx.fillStyle="#2c2b27";ctx.fillRect(px-42,py-112,84,30);
+ }
+
+ // Casa do Coletor — apenas massa arquitetônica provisória por enquanto.
+ ctx.fillStyle="rgba(15,17,16,.92)";
+ ctx.fillRect(9460,245,420,345);
+ ctx.beginPath();ctx.moveTo(9405,245);ctx.lineTo(9670,118);ctx.lineTo(9935,245);ctx.closePath();ctx.fill();
+ ctx.strokeStyle="rgba(128,105,65,.55)";ctx.lineWidth=4;ctx.strokeRect(9620,378,105,212);
+ for(let i=0;i<8;i++){
+   const px=9495+(i%4)*105,py=285+Math.floor(i/4)*58;
+   ctx.fillStyle="rgba(177,151,98,.18)";ctx.fillRect(px,py,72,20);
+ }
+
+ // Arena final provisória — o espaço já tem escala para receber o boss.
+ ctx.strokeStyle="rgba(191,156,83,.48)";ctx.lineWidth=5;
+ ctx.beginPath();ctx.ellipse(10920,580,245,50,0,0,Math.PI*2);ctx.stroke();
+ ctx.strokeStyle="rgba(105,86,57,.7)";ctx.lineWidth=7;
+ for(const bx of [10710,11130]){ctx.beginPath();ctx.moveTo(bx,590);ctx.lineTo(bx,300);ctx.stroke()}
+ ctx.beginPath();ctx.arc(10920,315,210,Math.PI,Math.PI*2);ctx.stroke();
+
+ ctx.restore();
+}
+
 function drawWorld(){
- drawRoad();drawSigns();drawDoor();
+ drawRoad();drawPhase4SkeletonLandmarks();drawSigns();drawDoor();
  checkpoints.forEach(drawCheckpoint);
  drawPilgrim();drawTraces();enemies.forEach(drawEnemy);
  if(tracesSolved){
@@ -295,7 +399,7 @@ function interact(){
    pilgrimMet=true;p.vx=0;dialogue.open(story.pilgrimMeeting,()=>{banner("POVOADO SEM NOMES");say("A Peregrina não lembra o nome. Procure rastros do que ela fez.");save()});return;
  }
  if(tracesSolved&&!prototypeEndPlayed&&pc>4660){
-   prototypeEndPlayed=true;p.vx=0;dialogue.open(story.prototypeEnd,()=>{ui.prototype.hidden=false;save()});return;
+   prototypeEndPlayed=true;p.vx=0;dialogue.open(story.prototypeEnd,()=>{banner("ARQUIVO RASURADO");save()});return;
  }
  say("Nada responde aqui. Ainda.");
 }
@@ -375,14 +479,27 @@ function update(dt){
  if(p.y>780){playerLife--;syncHud();if(playerLife<=0)respawn("A estrada tentou apagar Jack.");else{const cp=checkpoints.find(q=>q.id===activeCheckpoint);p.x=cp?cp.respawnX:110;p.y=cp?cp.respawnY:470;p.vx=p.vy=0;say("Um passo desapareceu na névoa. "+playerLife+"/3.")}}
  updateCheckpoint();
  if(!pilgrimMet&&doorOpened&&p.x>2400){pilgrimMet=true;p.vx=0;dialogue.open(story.pilgrimMeeting,()=>{banner("POVOADO SEM NOMES");say("Procure rastros da Peregrina com F.");save()})}
- if(tracesSolved&&!prototypeEndPlayed&&p.x>4700){prototypeEndPlayed=true;p.vx=0;dialogue.open(story.prototypeEnd,()=>{ui.prototype.hidden=false;save()})}
+ if(tracesSolved&&!prototypeEndPlayed&&p.x>4700){
+   prototypeEndPlayed=true;p.vx=0;
+   dialogue.open(story.prototypeEnd,()=>{banner("ARQUIVO RASURADO");say("A estrada continua. Agora há sinais de que alguém está escolhendo o que deve desaparecer.");save()})
+ }
+ if(!arenaReached&&p.x>10720){
+   arenaReached=true;p.vx=0;banner("ARENA DO COLETOR");
+   say("A espinha dorsal da Fase 4 chega até aqui. O próximo passo será dar vida aos encontros deste caminho.");
+   setTimeout(()=>{if(ui.prototype)ui.prototype.hidden=false},650);
+   save();
+ }
 
  cam+=(Math.max(0,Math.min(WORLD-W,p.x-W*.34))-cam)*Math.min(1,dt*5);
  let si=0;for(let i=0;i<story.sections.length;i++)if(p.x>=story.sections[i].x)si=i;if(si!==section){section=si;banner(story.sections[si].name)}
  if(!doorOpened)ui.obj.textContent="A chave de Mara reage à parede. Aproxime-se e pressione E.";
  else if(!pilgrimMet)ui.obj.textContent="Atravesse a Estrada sem Placas e encontre quem ainda espera.";
  else if(!tracesSolved)ui.obj.textContent="CAMPO DAS PEGADAS: use F para revelar três rastros da Peregrina.";
- else ui.obj.textContent="Siga a estrada. Alguém está arrancando os nomes deste lugar.";
+ else if(p.x<6100)ui.obj.textContent="ARQUIVO RASURADO: avance entre os registros arrancados e descubra quem levou os nomes.";
+ else if(p.x<7900)ui.obj.textContent="PONTE DOS NINGUÉM: atravesse o abismo usando corrida, salto e as plataformas suspensas.";
+ else if(p.x<9300)ui.obj.textContent="PRAÇA DOS NOMES ROUBADOS: atravesse o espaço onde os nomes foram reunidos.";
+ else if(p.x<10600)ui.obj.textContent="CASA DO COLETOR: suba pela aproximação e alcance o coração da construção.";
+ else ui.obj.textContent="ARENA DO COLETOR: o espaço do confronto final está pronto para receber o boss.";
  p.anim+=dt;saveClock+=dt;if(saveClock>2.4){saveClock=0;save()}
 }
 let saveClock=0;
