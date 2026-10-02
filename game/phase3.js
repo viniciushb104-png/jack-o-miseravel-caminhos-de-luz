@@ -16,7 +16,17 @@ Object.entries(phase3Music).forEach(([name,a])=>{
  a.preload=name==="voices"?"metadata":"auto";
  a.volume=0;
 });
-let activeMusic=null,musicFadeTimer=0,voicesMusicPrimed=false;
+let activeMusic=null,musicFadeTimer=0,voicesMusicPrimed=false,musicMuted=false;
+const musicToggle=document.getElementById("musicToggle");
+function syncMusicToggle(){
+ Object.values(phase3Music).forEach(a=>{a.muted=musicMuted});
+ if(musicToggle){
+   musicToggle.setAttribute("aria-pressed",String(musicMuted));
+   musicToggle.setAttribute("aria-label",musicMuted?"Ativar música":"Silenciar música");
+ }
+}
+musicToggle?.addEventListener("click",()=>{musicMuted=!musicMuted;syncMusicToggle()});
+syncMusicToggle();
 function fadeMusicTo(name,target=.58,duration=900){
  const next=phase3Music[name];if(!next||activeMusic===next)return;
  const prev=activeMusic;activeMusic=next;
