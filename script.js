@@ -60,10 +60,8 @@
 
     const alreadySeen = sessionStorage.getItem(studioSplashSeenKey) === '1';
     const minimumTime = alreadySeen ? 1450 : 3300;
-    const startButton = document.getElementById('studioSplashStart');
     const loading = studioSplash.querySelector('.studio-splash__loading');
 
-    // Aquecemos o menu enquanto a marca do estúdio está na tela.
     const warmups = Promise.allSettled([
       studioWarmImage('assets/images/menu/menu-poster.webp'),
       studioWarmAudio(mainThemeAudio, 1500)
@@ -73,42 +71,57 @@
       try { video.load(); } catch (_) {}
     }
 
-    // Áudio com som antes do primeiro gesto costuma ser bloqueado pelo navegador.
-    // Tentamos autoplay; se falhar, pedimos um único clique elegante na própria splash.
-    let introStarted = false;
+    const startLogoAndSound = async () => {
+      studioIntroAudio.currentTime = 0;
+      try {
+        await studioIntroAudio.play();
+      } catch (_) {
+        // Se o arquivo falhar mesmo após um gesto válido, seguimos sem travar a abertura.
+      }
+      studioSplash.classList.remove('is-pending');
+      studioSplash.classList.add('is-started');
+      if (loading) loading.textContent = 'Carregando a jornada';
+    };
+
+    // Primeiro tentamos a experiência ideal: logo e vinheta entram juntos automaticamente.
+    let autoplayWorked = false;
     studioIntroAudio.currentTime = 0;
     try {
       await studioIntroAudio.play();
-      introStarted = true;
-    } catch (_) {
-      if (startButton) {
-        if (loading) loading.textContent = 'Toque para despertar a vinheta';
-        startButton.hidden = false;
+      autoplayWorked = true;
+    } catch (_) {}
 
-        await new Promise(resolve => {
-          startButton.addEventListener('click', async () => {
-            startButton.disabled = true;
-            startButton.hidden = true;
-            if (loading) loading.textContent = 'Asas do Medo Games';
-            try {
-              studioIntroAudio.currentTime = 0;
-              await studioIntroAudio.play();
-              introStarted = true;
-            } catch (_) {
-              // Se o áudio falhar mesmo após o gesto, seguimos sem travar a entrada.
-            }
-            resolve();
-          }, { once:true });
-        });
-      }
+    if (autoplayWorked) {
+      studioSplash.classList.remove('is-pending');
+      studioSplash.classList.add('is-started');
+      if (loading) loading.textContent = 'Carregando a jornada';
+    } else {
+      // Chrome/Safari/Firefox podem bloquear áudio com som antes do primeiro gesto.
+      // Não mostramos botão de play: qualquer clique/toque na abertura inicia som + logo juntos.
+      if (loading) loading.textContent = 'Toque para entrar';
+      await new Promise(resolve => {
+        const begin = async () => {
+          studioSplash.removeEventListener('pointerdown', begin);
+          studioSplash.removeEventListener('keydown', keyBegin);
+          await startLogoAndSound();
+          resolve();
+        };
+        const keyBegin = event => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            begin();
+          }
+        };
+        studioSplash.tabIndex = 0;
+        studioSplash.addEventListener('pointerdown', begin, { once:true });
+        studioSplash.addEventListener('keydown', keyBegin);
+      });
     }
 
     await Promise.allSettled([
       warmups,
       studioWait(minimumTime)
     ]);
-
-    if (introStarted) await studioWait(120);
 
     studioIntroAudio.pause();
     sessionStorage.setItem(studioSplashSeenKey, '1');
