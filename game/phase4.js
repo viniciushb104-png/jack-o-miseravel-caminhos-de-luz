@@ -610,7 +610,26 @@ waitSitFiles.forEach((src,i)=>img(src).then(im=>waitSitImages[i]=im).catch(()=>{
 const keyReady=img("../assets/game/phase3/items/mara-wood-key-glow.png").then(im=>keyImg=im).catch(()=>{});
 const jackPortraitFiles=["jack-00-neutral.png","jack-01-serious.png","jack-02-smirk.png","jack-03-surprised.png","jack-04-determined.png","jack-05-resolved.png"];
 const jackPortraitReady=Promise.allSettled(jackPortraitFiles.map(f=>img("../assets/game/phase1/portraits-hd/"+f))).then(rs=>rs.map(r=>r.status==="fulfilled"?r.value:null));
-const dialogueReady=jackPortraitReady.then(frames=>dialogue.setAssets({jack:{frames}}));
+
+const pilgrimPortraitFiles=[
+ "pilgrim-dialogue-01-calm.png",
+ "pilgrim-dialogue-02-serious.png",
+ "pilgrim-dialogue-03-soft-smile.png",
+ "pilgrim-dialogue-04-thinking.png",
+ "pilgrim-dialogue-05-sad.png",
+ "pilgrim-dialogue-06-surprised.png",
+ "pilgrim-dialogue-07-stern.png"
+];
+const pilgrimPortraitReady=Promise.allSettled(
+ pilgrimPortraitFiles.map(f=>img("../assets/game/phase4/npc/pilgrim/dialogue/"+f))
+).then(rs=>rs.map(r=>r.status==="fulfilled"?r.value:null));
+
+const dialogueReady=Promise.all([jackPortraitReady,pilgrimPortraitReady]).then(([jackFrames,pilgrimFrames])=>{
+ dialogue.setAssets({
+   jack:{frames:jackFrames},
+   pilgrim:{frames:pilgrimFrames}
+ });
+});
 const initialBackgroundIndex=phase4BackgroundIndex(p.x);
 const backgroundReady=Promise.allSettled([
  ensurePhase4Background(initialBackgroundIndex),
