@@ -153,6 +153,7 @@ let bossFirstStrike=!!loadedSave?.bossFirstStrike;
 let bossFacesSeen=Array.isArray(loadedSave?.bossFacesSeen)?loadedSave.bossFacesSeen.slice(0,3).map(Boolean):[false,false,false];
 let maraBossX=Number.isFinite(loadedSave?.maraBossX)?loadedSave.maraBossX:6700;
 let bossCooldown=0,bossPulse=0,bossReleaseT=0;
+let bossCoreRevealT=(bossActive&&bossAct===3&&bossStep>=3)?2.8:0;
 let endingSequenceActive=false;
 const bossFacePositions=[6780,7010,7270],bossRootPositions=[6795,6915,7005];
 
@@ -166,6 +167,12 @@ const bossRootSealSprites={
 let bossRootSealLoadStarted=false;
 let bossRootSealAnim={active:false,index:-1,t:0};
 const BOSS_ROOT_SEAL_TIMING={lit:.38,dissolve:1.02,release:.42,total:1.82};
+
+// Núcleo final do Arquivista — substitui o antigo círculo procedural.
+const bossCoreSprites=[null,null,null];
+const bossCoreFx=[null,null,null,null,null];
+let bossCoreAssetsLoadStarted=false;
+const BOSS_CORE_REVEAL_DURATION=2.8;
 
 let gateMessageCooldown=0;
 const p={x:Number.isFinite(loadedSave?.x)?loadedSave.x:120,y:Number.isFinite(loadedSave?.y)?loadedSave.y:470,w:46,h:86,vx:0,vy:0,dir:loadedSave?.dir===-1?-1:1,on:false,coyote:0,buffer:0,anim:0,attack:0};
@@ -567,6 +574,26 @@ function ensureBossRootSealAssets(){
    .then(im=>{bossRootSealSprites.fx.dust=im}).catch(()=>{});
  img(base+"fx/archivist-root-seal-fx-03-leaf-release.png")
    .then(im=>{bossRootSealSprites.fx.leaves=im}).catch(()=>{});
+}
+
+function ensureBossCoreAssets(){
+ if(bossCoreAssetsLoadStarted)return;
+ bossCoreAssetsLoadStarted=true;
+ const root="../assets/game/phase3/boss/core-fx/";
+ const coreFiles=[
+   "core/phase3-boss-core-01-dormant.png",
+   "core/phase3-boss-core-02-awakened.png",
+   "core/phase3-boss-core-03-revealed.png"
+ ];
+ const fxFiles=[
+   "fx/phase3-boss-core-fx-01-circle-ascension.png",
+   "fx/phase3-boss-core-fx-02-energy-spiral.png",
+   "fx/phase3-boss-core-fx-03-lotus-emblem.png",
+   "fx/phase3-boss-core-fx-04-leaf-vortex.png",
+   "fx/phase3-boss-core-fx-05-ground-burst.png"
+ ];
+ coreFiles.forEach((file,i)=>img(root+file).then(im=>{bossCoreSprites[i]=im}).catch(()=>{}));
+ fxFiles.forEach((file,i)=>img(root+file).then(im=>{bossCoreFx[i]=im}).catch(()=>{}));
 }
 
 window.__PHASE_ASSETS_READY=Promise.allSettled([
@@ -1636,6 +1663,13 @@ function updateBossRootSealAnimation(dt){
  bossStep++;
  bossPulse=1.35;memoryPulse=1.05;
 
+ if(bossStep>=bossRootPositions.length){
+   bossCoreRevealT=0;
+   ensureBossCoreAssets();
+   bossPulse=2.15;memoryPulse=1.35;
+   banner("O CORAÇÃO DA ORDEM FOI EXPOSTO");
+ }
+
  const targets=[6815,6935,7025];
  const target=targets[Math.min(targets.length-1,resolvedIndex)];
  banner("RAIZ-SELO PURIFICADA — "+bossStep+"/"+bossRootPositions.length);
@@ -1656,6 +1690,7 @@ function startBoss(){
  ensureBossRootSealAssets();
  fadeMusicTo("archivist",.64,760);
  bossActive=true;bossAct=1;bossStep=0;bossPulse=1.6;bossFirstStrike=false;bossFacesSeen=[false,false,false];maraBossX=6700;p.vx=0;
+ bossCoreRevealT=0;
  bossRootSealAnim={active:false,index:-1,t:0};
  banner(story.boss.name+" — "+story.boss.acts[0].title);
  say("A ordem ganhou corpo. Tente usar a Luz no Arquivista.");
@@ -1712,9 +1747,10 @@ function advanceBossWithLight(){
    if(bossStep>=3){
      p.vx=0;
      dialogue.open(story.dialogues.bossAct2Solved,()=>{
-       bossAct=3;bossStep=0;maraBossX=6700;
+       bossAct=3;bossStep=0;maraBossX=6700;bossCoreRevealT=0;
        bossRootSealAnim={active:false,index:-1,t:0};
        ensureBossRootSealAssets();
+       ensureBossCoreAssets();
        dialogue.open(story.dialogues.bossAct3,()=>{
          banner(story.boss.acts[2].title);
          say("Abra caminho para Mara: aproxime-se da Raiz-Selo corrompida e use F.");
@@ -2204,6 +2240,120 @@ function drawBossCapturedEcho(i,worldX,recognized){
  x.restore();
 }
 
+function drawBossCoreAsset(im,cx,cy,targetH,alpha=1,glow=0,rotation=0,screen=false){
+ if(!im||alpha<=0)return false;
+ const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+ const dh=targetH,dw=iw*(dh/ih);
+ x.save();
+ x.translate(cx,cy);
+ x.rotate(rotation);
+ x.globalAlpha=alpha;
+ if(screen)x.globalCompositeOperation="screen";
+ x.imageSmoothingEnabled=true;x.imageSmoothingQuality="high";
+ if(glow>0){
+   x.shadowColor="rgba(255,211,112,"+(0.30+glow*.5)+")";
+   x.shadowBlur=12+glow*30;
+ }
+ x.drawImage(im,-dw/2,-dh/2,dw,dh);
+ x.restore();
+ return true;
+}
+
+function drawBossCoreSequence(treeX,groundY){
+ if(!bossActive||bossComplete||bossAct!==3||bossStep<bossRootPositions.length)return;
+ ensureBossCoreAssets();
+
+ const t=Math.max(0,Math.min(BOSS_CORE_REVEAL_DURATION,bossCoreRevealT));
+ const q=t/BOSS_CORE_REVEAL_DURATION;
+ const heartY=397;
+ const pulse=.5+.5*Math.sin(p.anim*3.1);
+
+ // Círculo ritual sobe do chão e converge para o coração.
+ if(t<2.15){
+   const a=Math.min(.64,Math.max(0,t/.42)*.58)*(1-Math.max(0,(t-1.55)/.6));
+   drawBossCoreAsset(
+     bossCoreFx[0],treeX,groundY-29,
+     345+t*24,a,.55,-p.anim*.035,true
+   );
+ }
+
+ // Núcleo comprimido: raízes ainda seguram a luz.
+ if(t<.92){
+   const a=1-Math.max(0,(t-.55)/.37);
+   drawBossCoreAsset(bossCoreSprites[0],treeX,heartY,230,a,.35);
+ }
+
+ // Fissuras acordam e os filamentos começam a orbitar.
+ if(t>.38&&t<1.82){
+   const a=Math.min(1,(t-.38)/.34)*(1-Math.max(0,(t-1.42)/.4));
+   drawBossCoreAsset(bossCoreSprites[1],treeX,heartY,238,a,.78);
+   drawBossCoreAsset(
+     bossCoreFx[1],treeX,heartY,
+     275+Math.sin(p.anim*2.1)*7,
+     .24+a*.42,.75,p.anim*.095,true
+   );
+ }
+
+ // Vórtice de folhas: a ordem rígida começa a se soltar.
+ if(t>.82&&t<2.35){
+   const enter=Math.min(1,(t-.82)/.35);
+   const leave=1-Math.max(0,(t-1.86)/.49);
+   drawBossCoreAsset(
+     bossCoreFx[3],treeX,heartY-2,
+     305+enter*34,
+     enter*leave*.62,.65,-p.anim*.06,true
+   );
+ }
+
+ // Impacto curto: o núcleo realmente se abre.
+ if(t>1.12&&t<1.88){
+   const u=(t-1.12)/.76;
+   const a=Math.sin(Math.PI*Math.max(0,Math.min(1,u)))*.72;
+   drawBossCoreAsset(
+     bossCoreFx[4],treeX,groundY-86,
+     330+u*85,a,.9,0,true
+   );
+ }
+
+ // Estado revelado permanece como novo indicador de interação.
+ if(t>1.28){
+   const a=Math.min(1,(t-1.28)/.5);
+   const breathe=1+Math.sin(p.anim*2.6)*.018;
+   drawBossCoreAsset(
+     bossCoreSprites[2],treeX,heartY,
+     248*breathe,a,.95
+   );
+
+   // Símbolo de lótus substitui o antigo aro procedural.
+   const emblemAlpha=Math.min(1,(t-1.5)/.44)*(.72+pulse*.18);
+   drawBossCoreAsset(
+     bossCoreFx[2],treeX,heartY,
+     118+pulse*9,emblemAlpha,1.0,-p.anim*.025,true
+   );
+
+   // Uma respiração mínima da espiral mantém o coração "vivo" enquanto espera E.
+   if(t>=2.05){
+     drawBossCoreAsset(
+       bossCoreFx[1],treeX,heartY,
+       286+pulse*8,.13+pulse*.07,.55,p.anim*.045,true
+     );
+     x.save();
+     x.textAlign="center";x.textBaseline="middle";
+     x.fillStyle="rgba(247,225,161,"+(.76+pulse*.14)+")";
+     x.font="700 10px Georgia";
+     x.shadowColor="rgba(0,0,0,.8)";x.shadowBlur=4;
+     x.fillText("E · LIBERTAR",treeX,532);
+     x.restore();
+   }
+ }
+
+ // Fallback caso os PNGs ainda estejam chegando.
+ if(!bossCoreSprites[0]&&!bossCoreSprites[1]&&!bossCoreSprites[2]){
+   x.save();x.translate(treeX,0);x.shadowColor="rgba(246,216,130,.8)";x.shadowBlur=30;
+   x.fillStyle="#f0d58d";x.beginPath();x.arc(0,heartY,21+pulse*4,0,Math.PI*2);x.fill();x.restore();
+ }
+}
+
 function drawMotherTreeAndBoss(){
  if(!motherTreeScene&&p.x<6000)return;
 
@@ -2356,8 +2506,7 @@ function drawMotherTreeAndBoss(){
  if(bossActive&&bossAct===3){
    drawBossRootSeals();
    if(bossStep>=bossRootPositions.length&&!bossRootSealAnim.active){
-     x.save();x.translate(treeX,0);x.shadowColor="rgba(246,216,130,.8)";x.shadowBlur=36;
-     x.strokeStyle="#f0d58d";x.lineWidth=4;x.beginPath();x.arc(0,397,42+Math.sin(p.anim*3)*5,0,Math.PI*2);x.stroke();x.restore();
+     drawBossCoreSequence(treeX,groundY);
    }
  }
 }
@@ -2654,12 +2803,16 @@ function update(dt){
  if((portraitsSolved||p.x>3850)&&!voiceLakeAssetsLoadStarted)ensureVoiceLakeAssets();
  if((voicesSolved||p.x>5200)&&!archivePuzzleAssetsLoadStarted)ensureArchivePuzzleAssets();
  if((archiveSolved||p.x>6000)&&!cycleFailureAssetsLoadStarted)ensureCycleFailureAssets();
+ if((motherTreeScene||p.x>6500)&&!bossCoreAssetsLoadStarted)ensureBossCoreAssets();
  updateRootGateAnimations(dt);
  updateBossRootSealAnimation(dt);
  updateArchiveReleaseFx(dt);
  updateMotherTreeFragmentState(dt);
  if((p.x>5550||motherTreeScene)&&!motherTreeSuspendedLoadStarted)ensureMotherTreeSuspendedMemories();
  bossReleaseT=Math.max(0,bossReleaseT-dt);
+ if(bossActive&&bossAct===3&&bossStep>=bossRootPositions.length&&!bossComplete){
+   bossCoreRevealT=Math.min(BOSS_CORE_REVEAL_DURATION,bossCoreRevealT+dt);
+ }
  if(endingSequenceActive&&!dialogue.active){
    p.vx=0;p.vy=0;p.anim+=dt;
    cam+=(Math.max(0,Math.min(WORLD-W,p.x-W*.35))-cam)*Math.min(1,dt*4);
