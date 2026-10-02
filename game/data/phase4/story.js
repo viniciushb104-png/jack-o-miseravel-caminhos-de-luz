@@ -226,6 +226,49 @@ window.PHASE4_STORY=Object.freeze({
     {speaker:"JACK",portrait:"jack",expression:5,text:"Eu volto."}
   ]),
 
+  collectorBossIntro:Object.freeze([
+    {speaker:"COLETOR",text:"VOCÊ ENTROU NUM LUGAR ONDE NENHUM NOME PRECISA MORRER."},
+    {speaker:"JACK",portrait:"jack",expression:1,text:"Curioso. Eles parecem presos."},
+    {speaker:"COLETOR",text:"PRESOS? EU OS SALVEI."},
+    {speaker:"JACK",portrait:"jack",expression:4,text:"Você arrancou nomes de pessoas que ainda estavam usando eles."},
+    {speaker:"COLETOR",text:"PESSOAS DESAPARECEM. NOMES PODEM PERMANECER."},
+    {speaker:"JACK",portrait:"jack",expression:1,text:"Então vamos descobrir o que sobra quando você larga alguns."}
+  ]),
+
+  collectorArmorBreak:Object.freeze([
+    {speaker:"COLETOR",text:"PARE. ELES SERÃO ESQUECIDOS."},
+    {speaker:"JACK",portrait:"jack",expression:1,text:"Você não sabe disso."},
+    {speaker:"COLETOR",text:"SEM ELES, NÃO SOBRA NADA."},
+    {speaker:"PEREGRINA",text:"Então por que ainda consigo ver você?"},
+    {speaker:"COLETOR",text:"..."},
+    {speaker:"JACK",portrait:"jack",expression:5,text:"Acho que chegamos à parte que a sua coleção não consegue responder."}
+  ]),
+
+  collectorActTwo:Object.freeze([
+    {speaker:"COLETOR",text:"DEVOLVA-OS."},
+    {speaker:"JACK",portrait:"jack",expression:4,text:"Eles nunca foram seus."},
+    {speaker:"COLETOR",text:"EU OS MANTIVE VIVOS."},
+    {speaker:"JACK",portrait:"jack",expression:1,text:"Você manteve etiquetas vivas. As pessoas continuaram sem você."}
+  ]),
+
+  collectorExhausted:Object.freeze([
+    {speaker:"COLETOR",text:"NÃO..."},
+    {speaker:"COLETOR",text:"SEM OS NOMES..."},
+    {speaker:"PEREGRINA",text:"Ele ficou menor."},
+    {speaker:"JACK",portrait:"jack",expression:1,text:"Não. Agora estamos vendo o tamanho que sempre esteve ali."},
+    {speaker:"COLETOR",text:"SE NINGUÉM DISSER MEU NOME... O QUE SOBRA?"}
+  ]),
+
+  collectorRecognized:Object.freeze([
+    {speaker:"JACK",portrait:"jack",expression:5,text:"Você."},
+    {speaker:"COLETOR",text:"..."},
+    {speaker:"JACK",portrait:"jack",expression:1,text:"Antes do nome. Depois dele. Você."},
+    {speaker:"PEREGRINA",text:"Então ser lembrado não é ser possuído por uma palavra."},
+    {speaker:"JACK",portrait:"jack",expression:5,text:"Parece que não."},
+    {speaker:"COLETOR",text:"EU NÃO SEI O QUE FAZER SEM ELES."},
+    {speaker:"JACK",portrait:"jack",expression:1,text:"Pode começar soltando o que nunca foi seu."}
+  ]),
+
   traceReveals:Object.freeze([
     Object.freeze([
       {speaker:"PEREGRINA",text:"Essas pegadas chegam até a vala..."},
