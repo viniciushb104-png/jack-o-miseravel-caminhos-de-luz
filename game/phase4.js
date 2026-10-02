@@ -31,6 +31,14 @@ let introPlayed=!!saveData?.introPlayed,doorOpened=!!saveData?.doorOpened,pilgri
 let bridgeFearPlayed=!!saveData?.bridgeFearPlayed,bridgeCrossedPlayed=!!saveData?.bridgeCrossedPlayed,stolenPlazaPlayed=!!saveData?.stolenPlazaPlayed,collectorApproachPlayed=!!saveData?.collectorApproachPlayed,arenaEdgePlayed=!!saveData?.arenaEdgePlayed;
 let traces=Array.isArray(saveData?.traces)?saveData.traces.slice(0,3).map(Boolean):[false,false,false];
 const traceRevealFx=[0,0,0];
+const hadArchiveState=Array.isArray(saveData?.archiveEvidence);
+let archiveEvidence=hadArchiveState?saveData.archiveEvidence.slice(0,3).map(Boolean):[false,false,false];
+let archiveSolved=!!saveData?.archiveSolved;
+if(!hadArchiveState&&prototypeEndPlayed&&Number(saveData?.x||0)>=6100){
+ archiveEvidence=[true,true,true];archiveSolved=true;
+}
+const archiveRevealFx=[0,0,0];
+const archiveEvidenceGuards=["eraser-2","hollow-1","hound-1"];
 
 const p={x:Number.isFinite(saveData?.x)?saveData.x:110,y:Number.isFinite(saveData?.y)?saveData.y:470,w:46,h:86,vx:0,vy:0,dir:saveData?.dir===-1?-1:1,on:false,coyote:0,buffer:0,anim:0,attack:0,inv:0};
 
@@ -259,7 +267,7 @@ function save(){
  localStorage.setItem(SAVE_KEY,JSON.stringify({
    x:p.x,y:p.y,dir:p.dir,playerLife,activeCheckpoint,introPlayed,doorOpened,pilgrimMet,traces:[...traces],tracesSolved,prototypeEndPlayed,arenaReached,
    bridgeFearPlayed,bridgeCrossedPlayed,stolenPlazaPlayed,collectorApproachPlayed,arenaEdgePlayed,
-   pilgrimX,pilgrimBridgeDone,deadEnemies:deadEnemies(),savedAt:Date.now()
+   pilgrimX,pilgrimBridgeDone,archiveEvidence:[...archiveEvidence],archiveSolved,deadEnemies:deadEnemies(),savedAt:Date.now()
  }));
 }
 function resetPilgrimAfterRespawn(){
@@ -511,7 +519,14 @@ function pilgrimFollowTarget(){
    const furthest=Math.max(...revealed.map(t=>t.x));
    return Math.max(3230,Math.min(4180,furthest-155));
  }
- if(!pilgrimBridgeDone&&p.x<6100)return Math.max(3320,Math.min(5920,p.x-155));
+ if(!pilgrimBridgeDone&&p.x<6100){
+   if(prototypeEndPlayed&&!archiveSolved){
+     const found=archiveEvidence.filter(Boolean).length;
+     const holds=[4800,5140,5530,5860];
+     return holds[Math.min(found,holds.length-1)];
+   }
+   return Math.max(3320,Math.min(5920,p.x-155));
+ }
  if(!pilgrimBridgeDone)return 6250;
  if(p.x<9300)return Math.max(8010,Math.min(8840,p.x-165));
  if(p.x<10600)return Math.max(8950,Math.min(10480,p.x-175));
@@ -814,6 +829,84 @@ function drawEnemy(e){
    ctx.restore();
  }
 }
+function archiveGuardDefeated(i){
+ const id=archiveEvidenceGuards[i];
+ const e=enemies.find(v=>v.id===id);
+ return !e||e.defeated||e.state==="dead"||e.state==="dissolve";
+}
+function drawArchiveEvidence(){
+ if(!prototypeEndPlayed)return;
+ const pc=p.x+p.w/2;
+ ctx.save();ctx.translate(-cam,0);
+
+ story.archiveEvidence.forEach((ev,i)=>{
+   const solved=archiveEvidence[i],guardClear=archiveGuardDefeated(i);
+   const x=ev.x,pulse=.5+.5*Math.sin(p.anim*2.1+i*.8),fx=Math.min(1,archiveRevealFx[i]/1.2);
+
+   ctx.save();ctx.translate(x,0);
+
+   // Pedestal / base common to the three proof objects.
+   ctx.fillStyle="#242622";ctx.fillRect(-48,520,96,70);
+   ctx.strokeStyle=solved?"rgba(224,193,112,.85)":"rgba(105,94,70,.72)";
+   ctx.lineWidth=2;ctx.strokeRect(-48,520,96,70);
+   ctx.fillStyle=solved?"rgba(225,197,116,.12)":"rgba(190,174,136,.05)";
+   ctx.fillRect(-42,526,84,58);
+
+   if(i===0){
+     // Page with an unnaturally precise missing name strip.
+     ctx.fillStyle="#b8aa88";ctx.fillRect(-31,474,62,48);
+     ctx.fillStyle="#242622";ctx.fillRect(-25,483,49,8);
+     ctx.strokeStyle="rgba(73,65,49,.65)";ctx.lineWidth=2;
+     for(let yy=499;yy<516;yy+=7){ctx.beginPath();ctx.moveTo(-23,yy);ctx.lineTo(23,yy);ctx.stroke()}
+   }else if(i===1){
+     // Three empty nameplate mounts, screws bent outward.
+     ctx.strokeStyle="#8d7d5d";ctx.lineWidth=3;
+     for(let yy=470;yy<=512;yy+=21){
+       ctx.strokeRect(-34,yy,68,14);
+       ctx.beginPath();ctx.moveTo(-38,yy+7);ctx.lineTo(-44,yy+2);ctx.moveTo(38,yy+7);ctx.lineTo(45,yy+12);ctx.stroke();
+     }
+   }else{
+     // Inventory ledger; entries remain while name column is absent.
+     ctx.fillStyle="#9f9275";ctx.fillRect(-35,468,70,55);
+     ctx.strokeStyle="#544b3b";ctx.lineWidth=2;
+     ctx.beginPath();ctx.moveTo(-10,472);ctx.lineTo(-10,519);ctx.stroke();
+     for(let yy=480;yy<516;yy+=10){ctx.beginPath();ctx.moveTo(-30,yy);ctx.lineTo(29,yy);ctx.stroke()}
+     ctx.fillStyle="#262622";ctx.fillRect(-30,474,17,43);
+     ctx.fillStyle=solved?"#d9bd73":"#695f4b";ctx.font="700 7px Georgia";ctx.textAlign="center";
+     ctx.fillText("RECEBIDO",12,491);ctx.fillText("RECEBIDO",12,511);
+   }
+
+   if(solved){
+     ctx.strokeStyle="rgba(238,205,119,"+(.45+pulse*.35)+")";ctx.lineWidth=2;
+     ctx.beginPath();ctx.arc(0,493,52+4*pulse,0,Math.PI*2);ctx.stroke();
+     ctx.fillStyle="rgba(240,215,150,.9)";ctx.font="700 9px Georgia";ctx.textAlign="center";
+     ctx.fillText("PROVA REGISTRADA",0,451);
+   }else if(Math.abs(pc-x)<150){
+     ctx.fillStyle=guardClear?"rgba(238,220,166,.92)":"rgba(187,169,128,.7)";
+     ctx.font="700 9px Georgia";ctx.textAlign="center";
+     ctx.fillText(guardClear?ev.prompt:"A PROVA ESTÁ SOB ATAQUE",0,451);
+   }
+
+   if(fx>0){
+     ctx.globalAlpha=fx*.55;ctx.strokeStyle="#f1d38b";ctx.lineWidth=4;
+     ctx.beginPath();ctx.arc(0,493,66+(1-fx)*26,0,Math.PI*2);ctx.stroke();
+   }
+   ctx.restore();
+ });
+
+ if(archiveSolved){
+   // Visual deduction: the three clues converge toward the road ahead.
+   ctx.strokeStyle="rgba(231,199,113,.42)";ctx.lineWidth=2;ctx.setLineDash([7,8]);
+   ctx.beginPath();ctx.moveTo(5005,438);ctx.quadraticCurveTo(5380,400,5760,438);ctx.stroke();
+   ctx.beginPath();ctx.moveTo(5760,438);ctx.lineTo(6005,438);ctx.stroke();
+   ctx.setLineDash([]);
+   ctx.fillStyle="rgba(238,211,143,.82)";ctx.font="italic 11px Georgia";ctx.textAlign="center";
+   ctx.fillText("os nomes seguiram adiante",5680,410);
+   ctx.beginPath();ctx.moveTo(6005,438);ctx.lineTo(5988,430);ctx.moveTo(6005,438);ctx.lineTo(5988,446);ctx.stroke();
+ }
+ ctx.restore();
+}
+
 function drawPhase4SkeletonLandmarks(){
  ctx.save();ctx.translate(-cam,0);
 
@@ -866,11 +959,12 @@ function drawPhase4SkeletonLandmarks(){
 }
 
 function drawWorld(){
- drawRoad();drawPhase4SkeletonLandmarks();drawSigns();drawDoor();
+ drawRoad();drawPhase4SkeletonLandmarks();drawSigns();drawDoor();drawArchiveEvidence();
  checkpoints.forEach(drawCheckpoint);
  drawPilgrim();drawTraces();enemies.forEach(drawEnemy);
- if(tracesSolved){
-   ctx.save();ctx.translate(4660-cam,0);ctx.strokeStyle="#d6bd7a";ctx.lineWidth=2;ctx.globalAlpha=.55;ctx.beginPath();ctx.moveTo(0,590);ctx.lineTo(0,370);ctx.stroke();ctx.fillStyle="#e6cd8a";ctx.font="italic 11px Georgia";ctx.textAlign="center";ctx.fillText("alguém arrancou os nomes daqui",0,345);ctx.restore();
+ if(prototypeEndPlayed){
+   ctx.save();ctx.translate(4660-cam,0);ctx.strokeStyle="#d6bd7a";ctx.lineWidth=2;ctx.globalAlpha=.55;ctx.beginPath();ctx.moveTo(0,590);ctx.lineTo(0,370);ctx.stroke();ctx.fillStyle="#e6cd8a";ctx.font="italic 11px Georgia";ctx.textAlign="center";
+   ctx.fillText(archiveSolved?"os nomes não sumiram — foram levados":"há marcas de remoção no arquivo",0,345);ctx.restore();
  }
 }
 function drawMemoryLight(){
@@ -896,7 +990,35 @@ function interact(){
    dialogue.open(story.pilgrimMeeting,()=>{banner("POVOADO SEM NOMES");say("A Peregrina seguirá Jack, mas não atravessará o mundo como uma sombra colada nele.");save()});return;
  }
  if(tracesSolved&&!prototypeEndPlayed&&pc>4660){
-   prototypeEndPlayed=true;p.vx=0;dialogue.open(story.prototypeEnd,()=>{banner("ARQUIVO RASURADO");save()});return;
+   prototypeEndPlayed=true;p.vx=0;
+   dialogue.open(story.prototypeEnd,()=>{banner("ARQUIVO RASURADO");say("Derrote as criaturas e examine as marcas deixadas nos registros.");save()});return;
+ }
+ if(prototypeEndPlayed&&!archiveSolved&&story.archiveEvidence){
+   let idx=-1,best=999;
+   story.archiveEvidence.forEach((ev,i)=>{
+     const d=Math.abs(ev.x-pc);
+     if(!archiveEvidence[i]&&d<best){best=d;idx=i}
+   });
+   if(idx>=0&&best<150){
+     if(!archiveGuardDefeated(idx)){
+       const guard=enemies.find(e=>e.id===archiveEvidenceGuards[idx]);
+       say((guard?.label||"A criatura")+" ainda protege esta parte do arquivo.");return;
+     }
+     archiveEvidence[idx]=true;archiveRevealFx[idx]=2.2;memoryPulse=1.1;p.vx=0;
+     const all=archiveEvidence.every(Boolean);
+     banner(story.archiveEvidence[idx].title);
+     dialogue.open(story.archiveEvidence[idx].dialogue,()=>{
+       say(story.archiveEvidence[idx].text);save();
+       if(all){
+         archiveSolved=true;memoryPulse=1.5;save();
+         setTimeout(()=>dialogue.open(story.archiveSolved,()=>{
+           banner("OS NOMES ESTÃO SENDO COLETADOS");
+           say("A passagem para a Ponte dos Ninguém foi liberada.");save();
+         }),240);
+       }
+     });
+     save();return;
+   }
  }
  say("Nada responde aqui. Ainda.");
 }
@@ -1163,6 +1285,7 @@ function update(dt){
  }
  memoryLight=Math.max(0,memoryLight-dt);memoryPulse=Math.max(0,memoryPulse-dt);p.attack=Math.max(0,p.attack-dt);p.inv=Math.max(0,p.inv-dt);gateMsg=Math.max(0,gateMsg-dt);
  for(let i=0;i<traceRevealFx.length;i++)traceRevealFx[i]=Math.max(0,traceRevealFx[i]-dt);
+ for(let i=0;i<archiveRevealFx.length;i++)archiveRevealFx[i]=Math.max(0,archiveRevealFx[i]-dt);
  updateEnemies(dt);
  updatePilgrim(dt);
  p.coyote=p.on?.12:Math.max(0,p.coyote-dt);
@@ -1174,6 +1297,13 @@ function update(dt){
  if(!doorOpened&&p.x+p.w>930){p.x=930-p.w;p.vx=Math.min(0,p.vx);if(gateMsg<=0){say("A parede não tem porta. A chave de Mara está reagindo.");gateMsg=2}}
  if(!pilgrimMet&&p.x+p.w>3130){p.x=3130-p.w;p.vx=Math.min(0,p.vx);if(gateMsg<=0){say("A estrada se perde na névoa. Há alguém esperando no povoado.");gateMsg=2}}
  if(pilgrimMet&&!tracesSolved&&p.x+p.w>4660){p.x=4660-p.w;p.vx=Math.min(0,p.vx);if(gateMsg<=0){say("As pegadas terminam aqui. Três rastros ainda precisam ser iluminados.");gateMsg=2}}
+ if(prototypeEndPlayed&&!archiveSolved&&p.x+p.w>5910){
+   p.x=5910-p.w;p.vx=Math.min(0,p.vx);
+   if(gateMsg<=0){
+     const found=archiveEvidence.filter(Boolean).length;
+     say("O Arquivo ainda guarda provas. Examine os registros com E. "+found+"/3.");gateMsg=2;
+   }
+ }
  if(bridgeFearPlayed&&!pilgrimBridgeDone&&p.x+p.w>7945){
    p.x=7945-p.w;p.vx=Math.min(0,p.vx);
    if(gateMsg<=0){say("A Peregrina ainda está atravessando. Jack espera que ela encontre o próprio passo.");gateMsg=1.8}
@@ -1189,7 +1319,7 @@ function update(dt){
  }else if(tracesSolved&&!prototypeEndPlayed&&p.x>4700){
    prototypeEndPlayed=true;p.vx=0;
    dialogue.open(story.prototypeEnd,()=>{banner("ARQUIVO RASURADO");say("A Peregrina volta a acompanhar Jack pelos registros arrancados.");save()})
- }else if(prototypeEndPlayed&&!bridgeFearPlayed&&p.x>6070){
+ }else if(archiveSolved&&!bridgeFearPlayed&&p.x>6070){
    bridgeFearPlayed=true;p.vx=0;
    dialogue.open(story.bridgeFear,()=>{pilgrimX=Math.min(pilgrimX,6250);banner("PONTE DOS NINGUÉM");say("Ela não perdeu o medo. Mesmo assim, vai atravessar.");save()})
  }else if(pilgrimBridgeDone&&!bridgeCrossedPlayed&&p.x>7950){
@@ -1219,7 +1349,12 @@ function update(dt){
    const found=traces.filter(Boolean).length;
    ui.obj.textContent="CAMPO DAS PEGADAS: use F para reconstruir as ações da Peregrina. Rastros "+found+"/3.";
  }
- else if(p.x<6100)ui.obj.textContent="ARQUIVO RASURADO: avance entre os registros arrancados. A Peregrina seguirá atrás quando o caminho estiver seguro.";
+ else if(p.x<6100){
+   const found=archiveEvidence.filter(Boolean).length;
+   ui.obj.textContent=archiveSolved
+     ?"ARQUIVO RASURADO: as três provas apontam para a estrada adiante."
+     :"ARQUIVO RASURADO: derrote os guardiões e use E nas provas. Evidências "+found+"/3.";
+ }
  else if(p.x<7900)ui.obj.textContent="PONTE DOS NINGUÉM: atravesse o abismo. A Peregrina fará a própria travessia quando Jack abrir distância.";
  else if(p.x<9300)ui.obj.textContent="PRAÇA DOS NOMES ROUBADOS: avance entre as placas enquanto a Peregrina tenta reconhecer o que foi tirado.";
  else if(p.x<10600)ui.obj.textContent="CASA DO COLETOR: siga com a Peregrina até a entrada da arena.";
