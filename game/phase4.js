@@ -23,6 +23,8 @@ let saveData=null;if(journeyMode&&!replayMode){try{saveData=JSON.parse(localStor
 
 const input={left:false,right:false,down:false,run:false,jump:false};
 let running=false,last=performance.now(),cam=0,section=-1,jack=null,keyImg=null;
+let idleTime=0,waitSitFrame=0,waitSitClock=0,waitSitActive=false,waitSitImages=[];
+let lastPlayerAction=performance.now();
 let playerLife=Math.max(1,Math.min(3,Number(saveData?.playerLife)||3)),memoryLight=0,memoryPulse=0,gateMsg=0;
 let activeCheckpoint=saveData?.activeCheckpoint||localStorage.getItem(CHECKPOINT_KEY)||"";
 let introPlayed=!!saveData?.introPlayed,doorOpened=!!saveData?.doorOpened,pilgrimMet=!!saveData?.pilgrimMet,tracesSolved=!!saveData?.tracesSolved,prototypeEndPlayed=!!saveData?.prototypeEndPlayed;
@@ -64,6 +66,10 @@ function say(t){ui.msg.textContent=t;ui.msg.classList.add("show");clearTimeout(s
 function banner(t){ui.banner.textContent=t;ui.banner.classList.add("show");clearTimeout(banner.t);banner.t=setTimeout(()=>ui.banner.classList.remove("show"),1900)}
 function syncHud(){ui.health.textContent="♥ ".repeat(playerLife).trim()||"♡"}
 function deadEnemies(){return enemies.filter(e=>!e.alive).map(e=>e.id)}
+function markPlayerAction(){
+ lastPlayerAction=performance.now();
+ idleTime=0;waitSitClock=0;waitSitFrame=0;waitSitActive=false;
+}
 function save(){
  if(!journeyMode||replayMode||!journey?.isActive()||journey.currentPhase()!==4)return;
  localStorage.setItem(SAVE_KEY,JSON.stringify({
@@ -76,6 +82,7 @@ function respawn(msg){
 }
 function hurtPlayer(sourceX){
  if(p.inv>0)return;
+ markPlayerAction();
  playerLife--;syncHud();p.inv=1.15;p.vy=-310;p.vx=(p.x<sourceX?-1:1)*260;
  if(playerLife<=0)respawn("A estrada apagou seus passos — mas a lanterna lembrou o caminho.");
  else say("A cinza mordeu a luz. "+playerLife+"/3.");
@@ -93,6 +100,10 @@ function updateCheckpoint(){
 
 function img(src){return new Promise((r,j)=>{const im=new Image();im.onload=()=>r(im);im.onerror=j;im.src=src+"?v=phase4-1"})}
 const jackReady=img("../assets/game/phase1/sprites-hd/jack-atlas-hd.png").then(im=>jack=im).catch(()=>{});
+// Mesma animação oficial de descanso usada nas fases anteriores.
+// É opcional e não bloqueia o carregamento inicial da Fase 4.
+const waitSitFiles=Array.from({length:11},(_,i)=>"../assets/sprites/jack/wait-sit/jack-wait-"+String(i+1).padStart(2,"0")+".png");
+waitSitFiles.forEach((src,i)=>img(src).then(im=>waitSitImages[i]=im).catch(()=>{}));
 const keyReady=img("../assets/game/phase3/items/mara-wood-key-glow.png").then(im=>keyImg=im).catch(()=>{});
 const jackPortraitFiles=["jack-00-neutral.png","jack-01-serious.png","jack-02-smirk.png","jack-03-surprised.png","jack-04-determined.png","jack-05-resolved.png"];
 const jackPortraitReady=Promise.allSettled(jackPortraitFiles.map(f=>img("../assets/game/phase1/portraits-hd/"+f))).then(rs=>rs.map(r=>r.status==="fulfilled"?r.value:null));
@@ -108,6 +119,25 @@ function jackFrame(){
  return a.idle[Math.floor(p.anim*2.4)%a.idle.length];
 }
 function drawJack(){
+ if(waitSitActive&&!dialogue.active){
+   const im=waitSitImages[waitSitFrame];
+   if(im){
+     const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+     // Frames 01–05 já correspondem bem ao tamanho do Jack.
+     // Nos 06–11 ele ocupa menos área do PNG, então compensamos escala e baseline.
+     const seated=waitSitFrame>=5;
+     const targetH=seated?222:164,targetW=iw*(targetH/ih);
+     const groundY=p.y+p.h+(seated?22:2);
+     const dx=p.x-cam+p.w/2-targetW/2,dy=groundY-targetH;
+     ctx.save();
+     ctx.globalAlpha=p.inv>0&&Math.floor(p.inv*12)%2?.42:1;
+     ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";
+     if(p.dir<0){ctx.translate(dx+targetW,0);ctx.scale(-1,1);ctx.drawImage(im,0,dy,targetW,targetH)}
+     else ctx.drawImage(im,dx,dy,targetW,targetH);
+     ctx.restore();
+     return;
+   }
+ }
  if(p.on){ctx.save();ctx.globalAlpha=.2;ctx.fillStyle="#000";ctx.beginPath();ctx.ellipse(p.x-cam+p.w/2,p.y+p.h+1,18,3,0,0,Math.PI*2);ctx.fill();ctx.restore()}
  if(!jack){ctx.fillStyle="#eee";ctx.fillRect(p.x-cam,p.y,p.w,p.h);return}
  const cfg=window.JACK_ANIMATIONS||{},idx=jackFrame(),cell=cfg.cell||320,cols=cfg.cols||8,sx=(idx%cols)*cell,sy=Math.floor(idx/cols)*cell,rw=190,rh=190,dx=p.x-cam+p.w/2-rw/2,dy=p.y+p.h/2-132;
@@ -227,6 +257,7 @@ function openDoor(){
 }
 function interact(){
  if(!running||dialogue.active)return;
+ markPlayerAction();
  const pc=p.x+p.w/2;
  if(!doorOpened&&pc<1050){openDoor();return}
  if(doorOpened&&!pilgrimMet&&Math.abs(pc-2580)<130){
@@ -239,6 +270,7 @@ function interact(){
 }
 function useLight(){
  if(!running||dialogue.active)return;
+ markPlayerAction();
  p.attack=.48;memoryLight=2.4;memoryPulse=.55;
  const pc=p.x+p.w/2;
 
@@ -276,7 +308,25 @@ function updateEnemies(dt){
 }
 
 function update(dt){
- if(dialogue.active){p.vx*=.75;p.anim+=dt;cam+=(Math.max(0,Math.min(WORLD-W,p.x-W*.34))-cam)*Math.min(1,dt*4);return}
+ if(dialogue.active){
+   lastPlayerAction=performance.now();idleTime=0;waitSitActive=false;waitSitClock=0;waitSitFrame=0;
+   p.vx*=.75;p.anim+=dt;cam+=(Math.max(0,Math.min(WORLD-W,p.x-W*.34))-cam)*Math.min(1,dt*4);return
+ }
+ const idleNow=!input.left&&!input.right&&!input.down&&!input.jump&&!input.run&&p.attack<=0;
+ if(idleNow){
+   idleTime=(performance.now()-lastPlayerAction)/1000;
+   if(idleTime>=8&&p.on&&Math.abs(p.vx)<8){
+     if(!waitSitActive){waitSitActive=true;waitSitFrame=0;waitSitClock=0;p.vx=0}
+     waitSitClock+=dt;
+     if(waitSitClock>=.38){
+       waitSitClock=0;
+       if(waitSitFrame<10)waitSitFrame++;
+       else waitSitFrame=7;
+     }
+   }
+ }else{
+   lastPlayerAction=performance.now();idleTime=0;waitSitClock=0;waitSitFrame=0;waitSitActive=false;
+ }
  memoryLight=Math.max(0,memoryLight-dt);memoryPulse=Math.max(0,memoryPulse-dt);p.attack=Math.max(0,p.attack-dt);p.inv=Math.max(0,p.inv-dt);gateMsg=Math.max(0,gateMsg-dt);
  updateEnemies(dt);
  p.coyote=p.on?.12:Math.max(0,p.coyote-dt);
@@ -310,17 +360,38 @@ function draw(){
  drawBackdrop();drawWorld();drawJack();drawMemoryLight();
 }
 
-function bindHold(id,key){const b=document.getElementById(id);["pointerdown","pointerup","pointercancel","pointerleave"].forEach(ev=>b?.addEventListener(ev,()=>input[key]=ev==="pointerdown"))}
+function bindHold(id,key){
+ const b=document.getElementById(id);
+ ["pointerdown","pointerup","pointercancel","pointerleave"].forEach(ev=>b?.addEventListener(ev,()=>{
+   input[key]=ev==="pointerdown";
+   if(ev==="pointerdown")markPlayerAction();
+ }));
+}
 bindHold("leftBtn","left");bindHold("rightBtn","right");bindHold("downBtn","down");
-document.getElementById("jumpBtn")?.addEventListener("pointerdown",()=>input.jump=true);
+document.getElementById("jumpBtn")?.addEventListener("pointerdown",()=>{markPlayerAction();input.jump=true});
 document.getElementById("lightBtn")?.addEventListener("pointerdown",useLight);
 document.getElementById("interactBtn")?.addEventListener("pointerdown",interact);
-addEventListener("keydown",e=>{if(dialogue.active)return;if(["ArrowLeft","a","A"].includes(e.key))input.left=true;if(["ArrowRight","d","D"].includes(e.key))input.right=true;if(["ArrowDown","s","S"].includes(e.key))input.down=true;if(e.key==="Shift")input.run=true;if(e.code==="Space"){input.jump=true;e.preventDefault()}if(["f","F"].includes(e.key))useLight();if(["e","E"].includes(e.key))interact()});
-addEventListener("keyup",e=>{if(["ArrowLeft","a","A"].includes(e.key))input.left=false;if(["ArrowRight","d","D"].includes(e.key))input.right=false;if(["ArrowDown","s","S"].includes(e.key))input.down=false;if(e.key==="Shift")input.run=false});
+addEventListener("keydown",e=>{
+ if(dialogue.active)return;
+ markPlayerAction();
+ if(["ArrowLeft","a","A"].includes(e.key))input.left=true;
+ if(["ArrowRight","d","D"].includes(e.key))input.right=true;
+ if(["ArrowDown","s","S"].includes(e.key))input.down=true;
+ if(e.key==="Shift")input.run=true;
+ if(e.code==="Space"){input.jump=true;e.preventDefault()}
+ if(["f","F"].includes(e.key))useLight();
+ if(["e","E"].includes(e.key))interact();
+});
+addEventListener("keyup",e=>{
+ if(["ArrowLeft","a","A"].includes(e.key))input.left=false;
+ if(["ArrowRight","d","D"].includes(e.key))input.right=false;
+ if(["ArrowDown","s","S"].includes(e.key))input.down=false;
+ if(e.key==="Shift")input.run=false;
+});
 
 document.getElementById("startGame").onclick=()=>{
  if(journeyMode&&!replayMode)journey?.advanceTo(4);
- ui.intro.hidden=true;running=true;last=performance.now();requestAnimationFrame(loop);
+ ui.intro.hidden=true;running=true;last=performance.now();markPlayerAction();requestAnimationFrame(loop);
  if(!introPlayed){introPlayed=true;setTimeout(()=>dialogue.open(story.opening,()=>{say("A Chave de Madeira de Mara começou a aquecer.");save()}),300)}
 };
 document.getElementById("phase4Continue")?.addEventListener("click",()=>ui.prototype.hidden=true);
