@@ -2003,7 +2003,9 @@ function updateEnemies(dt){
 function update(dt){
  if(dialogue.active){
    lastPlayerAction=performance.now();idleTime=0;waitSitActive=false;waitSitClock=0;waitSitFrame=0;
-   p.vx*=.75;p.anim+=dt;cam+=(Math.max(0,Math.min(WORLD-W,p.x-W*.34))-cam)*Math.min(1,dt*4);return
+   p.vx*=.75;
+   if(bossResolved)updatePilgrim(dt);
+   p.anim+=dt;cam+=(Math.max(0,Math.min(WORLD-W,p.x-W*.34))-cam)*Math.min(1,dt*4);return
  }
  const idleNow=!input.left&&!input.right&&!input.down&&!input.jump&&!input.run&&p.attack<=0;
  if(idleNow){
@@ -2205,7 +2207,7 @@ document.getElementById("startGame").onclick=()=>{
 };
 document.getElementById("phase4Continue")?.addEventListener("click",()=>ui.prototype.hidden=true);
 document.getElementById("phase4Menu")?.addEventListener("click",()=>location.href="../index.html#fases");
-document.getElementById("phase4Replay")?.addEventListener("click",()=>{localStorage.removeItem(SAVE_KEY);localStorage.removeItem(CHECKPOINT_KEY);location.href="phase4.html?replay=1&new=1"});
+document.getElementById("phase4Replay")?.addEventListener("click",()=>{location.href="phase4.html?replay=1&new=1"});
 
 function loop(t){if(!running)return;const dt=Math.min(.033,(t-last)/1000);last=t;update(dt);draw();requestAnimationFrame(loop)}
 addEventListener("pagehide",save);document.addEventListener("visibilitychange",()=>{if(document.hidden)save()});
