@@ -169,6 +169,7 @@ let bossHp=Math.max(0,Math.min(5,Number.isFinite(saveData?.bossHp)?saveData.boss
 let bossX=Number.isFinite(saveData?.bossX)?saveData.bossX:10935,bossDir=-1;
 let bossState=bossResolved?"resolved":(bossAct===3?"exhausted":"idle");
 let bossStateTimer=0,bossAttackClock=.9,bossInv=0,bossAttackHit=false;
+let bossAnimClock=0,bossPendingArmorFinish=false;
 let bossProjectiles=[],bossReleasedPlates=[];
 if(!hadBossState&&arenaReached){arenaReached=false;bossStarted=false}
 if(bossResolved){bossStarted=true;bossAct=3;bossArmor=0;bossHp=0}
@@ -885,10 +886,63 @@ const pilgrimPortraitReady=Promise.allSettled(
  pilgrimPortraitFiles.map(f=>img("../assets/game/phase4/npc/pilgrim/dialogue/"+f))
 ).then(rs=>rs.map(r=>r.status==="fulfilled"?r.value:null));
 
-const dialogueReady=Promise.all([jackPortraitReady,pilgrimPortraitReady]).then(([jackFrames,pilgrimFrames])=>{
+const collectorPortraitFiles=[
+ "collector-dialogue-01-shadow.png",
+ "collector-dialogue-02-keeper.png",
+ "collector-dialogue-03-defensive.png",
+ "collector-dialogue-04-panic.png",
+ "collector-dialogue-05-desperate.png",
+ "collector-dialogue-06-exhausted.png",
+ "collector-dialogue-07-recognized.png",
+ "collector-dialogue-08-release.png"
+];
+const collectorPortraitReady=Promise.allSettled(
+ collectorPortraitFiles.map(f=>img("../assets/game/phase4/boss/collector/dialogue/"+f))
+).then(rs=>rs.map(r=>r.status==="fulfilled"?r.value:null));
+
+const collectorAct1Files=[
+ "collector-act1-idle-01.png","collector-act1-idle-02.png",
+ "collector-act1-windup-01.png","collector-act1-windup-02.png",
+ "collector-act1-throw-01.png","collector-act1-throw-02.png","collector-act1-throw-03.png",
+ "collector-act1-recover.png"
+];
+let collectorAct1Imgs=Array(8).fill(null);
+const collectorAct1Ready=Promise.allSettled(
+ collectorAct1Files.map(f=>img("../assets/game/phase4/boss/collector/act1/"+f))
+).then(rs=>(collectorAct1Imgs=rs.map(r=>r.status==="fulfilled"?r.value:null)));
+
+const collectorReactionFiles=[
+ "collector-act1-light-hit-01.png","collector-act1-light-hit-02.png","collector-act1-light-hit-03.png",
+ "collector-act1-protect-01.png","collector-act1-protect-02.png"
+];
+let collectorReactionImgs=Array(5).fill(null);
+const collectorReactionReady=Promise.allSettled(
+ collectorReactionFiles.map(f=>img("../assets/game/phase4/boss/collector/act1/reactions/"+f))
+).then(rs=>(collectorReactionImgs=rs.map(r=>r.status==="fulfilled"?r.value:null)));
+
+const collectorArmorFiles=Array.from({length:5},(_,i)=>"collector-armor-nameplate-"+String(i+1).padStart(2,"0")+".png");
+let collectorArmorImgs=Array(5).fill(null);
+const collectorArmorReady=Promise.allSettled(
+ collectorArmorFiles.map(f=>img("../assets/game/phase4/boss/collector/armor/"+f))
+).then(rs=>(collectorArmorImgs=rs.map(r=>r.status==="fulfilled"?r.value:null)));
+
+const collectorMasterFiles=[
+ "collector-master-act1-monument.png",
+ "collector-master-act2-man-beneath-names.png",
+ "collector-master-act3-recognized.png"
+];
+let collectorMasterImgs=Array(3).fill(null);
+const collectorMasterReady=Promise.allSettled(
+ collectorMasterFiles.map(f=>img("../assets/game/phase4/boss/collector/master/"+f))
+).then(rs=>(collectorMasterImgs=rs.map(r=>r.status==="fulfilled"?r.value:null)));
+
+const collectorArtReady=Promise.allSettled([collectorAct1Ready,collectorReactionReady,collectorArmorReady,collectorMasterReady]);
+
+const dialogueReady=Promise.all([jackPortraitReady,pilgrimPortraitReady,collectorPortraitReady]).then(([jackFrames,pilgrimFrames,collectorFrames])=>{
  dialogue.setAssets({
    jack:{frames:jackFrames},
-   pilgrim:{frames:pilgrimFrames}
+   pilgrim:{frames:pilgrimFrames},
+   collector:{frames:collectorFrames}
  });
 });
 const initialBackgroundIndex=phase4BackgroundIndex(p.x);
@@ -898,7 +952,7 @@ const backgroundReady=Promise.allSettled([
 ]);
 const initialPlatformRule=platformArtRuleAt(p.x);
 const platformReady=Promise.allSettled((PHASE4_PLATFORM_ART_FILES[initialPlatformRule.group]||[]).map((_,i)=>ensurePlatformArt(initialPlatformRule.group,i)));
-window.__PHASE_ASSETS_READY=Promise.allSettled([jackReady,keyReady,dialogueReady,pilgrimGameplayReady,backgroundReady,platformReady,phase4PropReady]);
+window.__PHASE_ASSETS_READY=Promise.allSettled([jackReady,keyReady,dialogueReady,pilgrimGameplayReady,backgroundReady,platformReady,phase4PropReady,collectorArtReady]);
 
 function jackFrame(){
  const a=window.JACK_ANIMATIONS?.animations;if(!a)return 0;
@@ -2076,7 +2130,7 @@ function releaseCollectorPlate(index){
  bossReleasedPlates.push({
    x:bossX+(index%2?28:-28),y:430+index*13,
    vx:Math.cos(a)*145,vy:Math.sin(a)*145-55,
-   rot:(index%2?1:-1)*.8,life:2.6,maxLife:2.6
+   rot:(index%2?1:-1)*.8,life:2.6,maxLife:2.6,plateIndex:index
  });
 }
 function spawnCollectorNameProjectile(){
@@ -2084,7 +2138,7 @@ function spawnCollectorNameProjectile(){
  const tx=p.x+p.w/2,ty=p.y+p.h*.48;
  const dx=tx-sx,dy=ty-sy,len=Math.max(1,Math.hypot(dx,dy));
  const speed=255;
- bossProjectiles.push({x:sx,y:sy,vx:dx/len*speed,vy:dy/len*speed,w:42,h:16,life:4.2,rot:0,dead:false});
+ bossProjectiles.push({x:sx,y:sy,vx:dx/len*speed,vy:dy/len*speed,w:42,h:16,life:4.2,rot:0,dead:false,plateIndex:Math.floor(bossAnimClock*2)%5});
 }
 function updateCollectorParticles(dt){
  for(const r of bossReleasedPlates){
@@ -2116,7 +2170,7 @@ function breakCollectorPlatforms(){
 function startCollectorBoss(){
  if(bossStarted||bossResolved)return;
  bossStarted=true;arenaReached=true;bossAct=1;bossArmor=5;bossHp=5;bossX=10935;bossDir=-1;
- bossState="intro";bossStateTimer=0;bossAttackClock=1.05;bossProjectiles=[];bossReleasedPlates=[];
+ bossState="intro";bossStateTimer=0;bossAttackClock=1.05;bossAnimClock=0;bossPendingArmorFinish=false;bossProjectiles=[];bossReleasedPlates=[];
  for(const q of platforms)if(q.bossBreakable)q.broken=false;
  p.vx=0;save();
  dialogue.open(story.collectorBossIntro,()=>{
@@ -2126,7 +2180,7 @@ function startCollectorBoss(){
  });
 }
 function beginCollectorActTwo(){
- bossAct=2;bossArmor=0;bossHp=5;bossX=10935;bossDir=-1;bossState="idle";bossStateTimer=0;bossAttackClock=.7;bossInv=.3;
+ bossAct=2;bossArmor=0;bossHp=5;bossX=10935;bossDir=-1;bossState="idle";bossStateTimer=0;bossAttackClock=.7;bossInv=.3;bossPendingArmorFinish=false;
  bossProjectiles=[];
  for(const q of platforms)if(q.bossBreakable)q.broken=false;
  banner("ATO II · O HOMEM SOB OS NOMES");
@@ -2252,13 +2306,14 @@ function tryLightCollector(pc,pcy){
  if(bossInv>0)return d<330;
 
  if(bossAct===1&&d<315){
-   bossInv=.52;memoryPulse=1.25;
+   bossInv=.86;memoryPulse=1.25;
    const released=5-bossArmor;
    releaseCollectorPlate(released);
    bossArmor=Math.max(0,bossArmor-1);
+   bossState="lightHit";bossStateTimer=.42;bossAttackHit=false;
+   bossPendingArmorFinish=bossArmor<=0;
    banner("NOME LIBERADO · "+(5-bossArmor)+"/5");
-   if(bossArmor<=0)finishCollectorArmor();
-   else say("Uma placa se soltou. O Coletor ficou um pouco menor.");
+   if(bossArmor>0)say("Uma placa se soltou. O Coletor tenta proteger o que resta.");
    save();return true;
  }
  if(bossAct===2&&d<245){
@@ -2273,6 +2328,7 @@ function tryLightCollector(pc,pcy){
 }
 function updateCollectorBoss(dt){
  updateCollectorParticles(dt);
+ bossAnimClock+=dt;
  bossInv=Math.max(0,bossInv-dt);
  if(!bossStarted||bossResolved||dialogue.active)return;
 
@@ -2281,8 +2337,28 @@ function updateCollectorBoss(dt){
    if(bossState==="idle"){
      bossAttackClock-=dt;
      if(bossAttackClock<=0){
-       spawnCollectorNameProjectile();
-       bossAttackClock=1.05+(bossArmor*.06);
+       bossState="windup";bossStateTimer=.44;bossAttackHit=false;
+     }
+   }else if(bossState==="windup"){
+     bossStateTimer-=dt;
+     if(bossStateTimer<=0){bossState="throw";bossStateTimer=.48;bossAttackHit=false}
+   }else if(bossState==="throw"){
+     bossStateTimer-=dt;
+     if(!bossAttackHit&&bossStateTimer<=.31){
+       bossAttackHit=true;spawnCollectorNameProjectile();
+     }
+     if(bossStateTimer<=0){bossState="recover";bossStateTimer=.34}
+   }else if(bossState==="recover"){
+     bossStateTimer-=dt;
+     if(bossStateTimer<=0){bossState="idle";bossAttackClock=1.05+(bossArmor*.06)}
+   }else if(bossState==="lightHit"){
+     bossStateTimer-=dt;
+     if(bossStateTimer<=0){bossState="protect";bossStateTimer=.34}
+   }else if(bossState==="protect"){
+     bossStateTimer-=dt;
+     if(bossStateTimer<=0){
+       if(bossPendingArmorFinish){bossPendingArmorFinish=false;finishCollectorArmor()}
+       else{bossState="idle";bossAttackClock=.78}
      }
    }
    return;
@@ -2318,7 +2394,7 @@ function updateCollectorBoss(dt){
    }
  }
 }
-function drawCollectorBoss(){
+function drawCollectorBossProcedural(){
  if(!bossStarted)return;
  const sx=bossX-cam;
  const act=bossAct;
@@ -2409,6 +2485,107 @@ function drawCollectorBoss(){
    ctx.restore();
  }
 }
+function collectorAct1Image(){
+ if(bossState==="idle")return collectorAct1Imgs[Math.floor(bossAnimClock*2.2)%2]||collectorMasterImgs[0];
+ if(bossState==="windup")return collectorAct1Imgs[bossStateTimer>.22?2:3]||collectorMasterImgs[0];
+ if(bossState==="throw"){
+   const q=1-Math.max(0,bossStateTimer)/.48;
+   return collectorAct1Imgs[q<.34?4:(q<.68?5:6)]||collectorMasterImgs[0];
+ }
+ if(bossState==="recover")return collectorAct1Imgs[7]||collectorMasterImgs[0];
+ if(bossState==="lightHit"){
+   const q=1-Math.max(0,bossStateTimer)/.42;
+   return collectorReactionImgs[q<.34?0:(q<.68?1:2)]||collectorMasterImgs[0];
+ }
+ if(bossState==="protect"){
+   const q=1-Math.max(0,bossStateTimer)/.34;
+   return collectorReactionImgs[q<.5?3:4]||collectorMasterImgs[0];
+ }
+ return collectorMasterImgs[0];
+}
+function drawCollectorPng(im,sx,feet,targetH,flip=false,alpha=1){
+ if(!im)return false;
+ const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+ if(!iw||!ih)return false;
+ const w=iw*(targetH/ih),x=-w/2,y=feet-targetH;
+ ctx.save();ctx.translate(sx,0);ctx.globalAlpha=alpha;
+ ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";
+ if(flip){ctx.scale(-1,1);ctx.drawImage(im,x,y,w,targetH)}
+ else ctx.drawImage(im,x,y,w,targetH);
+ ctx.restore();return true;
+}
+function drawCollectorPlatePng(im,x,y,targetW,alpha=1,rot=0){
+ if(!im)return false;
+ const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+ if(!iw||!ih)return false;
+ const h=ih*(targetW/iw);
+ ctx.save();ctx.translate(x,y);ctx.rotate(rot);ctx.globalAlpha=alpha;
+ ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";
+ ctx.drawImage(im,-targetW/2,-h/2,targetW,h);ctx.restore();return true;
+}
+function drawCollectorBoss(){
+ if(!bossStarted)return;
+ const bodyIm=bossAct===1?collectorAct1Image():(bossAct===2?collectorMasterImgs[1]:collectorMasterImgs[2]);
+ if(!bodyIm){drawCollectorBossProcedural();return}
+
+ const sx=bossX-cam,resolved=bossResolved;
+ const footFix=visualFootOffsetAt(bossX,590,40);
+ const feet=590+footFix;
+ const targetH=bossAct===1?278:(bossAct===2?218:176);
+ const flip=bossDir>0;
+ const flash=bossInv>0&&Math.floor(bossInv*18)%2===0;
+
+ drawGroundShadow(sx,feet+2,bossAct===1?62:(bossAct===2?43:36),7,bossAct===1?.31:.25);
+ ctx.save();
+ if(flash){ctx.globalAlpha=.9;ctx.shadowColor="rgba(242,213,139,.95)";ctx.shadowBlur=28}
+ ctx.restore();
+ drawCollectorPng(bodyIm,sx,feet,targetH,flip,resolved?.68:1);
+
+ // Cinco placas externas acompanham a armadura real: 5 → 4 → 3 → 2 → 1 → 0.
+ if(bossAct===1&&bossArmor>0){
+   const pos=[[-42,-174,-.08],[35,-160,.07],[-32,-128,.05],[38,-111,-.06],[0,-82,.02]];
+   const firstReleased=5-bossArmor;
+   for(let i=firstReleased;i<5;i++){
+     const im=collectorArmorImgs[i];if(!im)continue;
+     const px=sx+(flip?-pos[i][0]:pos[i][0]),py=feet+pos[i][1];
+     drawCollectorPlatePng(im,px,py,i===4?58:54,.96,flip?-pos[i][2]:pos[i][2]);
+   }
+ }
+
+ if(bossAct===3&&!resolved){
+   ctx.save();ctx.fillStyle="rgba(242,218,154,.95)";ctx.font="700 11px Georgia";ctx.textAlign="center";
+   ctx.fillText("E · RECONHECER",sx,feet-targetH-18);ctx.restore();
+ }
+ if(resolved){
+   ctx.save();ctx.fillStyle="rgba(229,207,149,.78)";ctx.font="italic 10px Georgia";ctx.textAlign="center";
+   ctx.fillText("RECONHECIDO",sx,feet-targetH-14);ctx.restore();
+ }
+
+ // Placas libertadas usam os próprios assets do Lote 4.
+ for(const r of bossReleasedPlates){
+   const a=Math.max(0,r.life/r.maxLife),im=collectorArmorImgs[r.plateIndex];
+   if(!drawCollectorPlatePng(im,r.x-cam,r.y,66,a,r.rot))
+     drawStolenNamePlate(r.x-cam,r.y,62,20,a,r.rot);
+ }
+ // Projéteis também são placas reais.
+ for(const pr of bossProjectiles){
+   const im=collectorArmorImgs[pr.plateIndex];
+   if(!drawCollectorPlatePng(im,pr.x-cam,pr.y,58,.94,pr.rot))
+     drawStolenNamePlate(pr.x-cam,pr.y,pr.w,pr.h,.9,pr.rot);
+ }
+
+ if(!resolved){
+   ctx.save();ctx.textAlign="center";ctx.fillStyle="rgba(12,13,12,.78)";ctx.fillRect(W/2-205,102,410,52);
+   ctx.strokeStyle="rgba(181,151,91,.65)";ctx.lineWidth=2;ctx.strokeRect(W/2-205,102,410,52);
+   ctx.fillStyle="#dfc27a";ctx.font="700 12px Georgia";
+   ctx.fillText("O COLETOR DE NOMES · ATO "+bossAct,W/2,122);
+   const val=bossAct===1?bossArmor:(bossAct===2?bossHp:1),max=bossAct===1?5:(bossAct===2?5:1);
+   ctx.fillStyle="rgba(255,255,255,.10)";ctx.fillRect(W/2-160,134,320,8);
+   ctx.fillStyle="#c6aa68";ctx.fillRect(W/2-160,134,320*(val/max),8);
+   ctx.restore();
+ }
+}
+
 
 function drawUninscribedBell(x,y,scale=1,alpha=1,glowing=false){
  const im=glowing?(bellGlowImg||bellNormalImg):bellNormalImg;
