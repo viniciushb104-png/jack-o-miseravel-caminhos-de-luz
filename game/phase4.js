@@ -134,7 +134,7 @@ let saveData=null;if(journeyMode&&!replayMode){try{saveData=JSON.parse(localStor
 
 const input={left:false,right:false,down:false,run:false,jump:false};
 let running=false,last=performance.now(),cam=0,section=-1,jack=null,keyImg=null,jackFrameOverrides={};
-let phase4SignImgs=Array(4).fill(null),signlessRoadPostImgs=Array(3).fill(null),checkpointOffImg=null,checkpointOnImg=null;
+let phase4SignImgs=Array(4).fill(null),signlessRoadPostImgs=Array(3).fill(null),eraserGameplaySprites=Array(10).fill(null),checkpointOffImg=null,checkpointOnImg=null;
 let bellNormalImg=null,bellGlowImg=null,memoryDoorImg=null;
 let nonexistentDoorImg=null,nonexistentDoorRevealFxImg=null,doorRevealFx=0;
 let idleTime=0,waitSitFrame=0,waitSitClock=0,waitSitActive=false,waitSitImages=[];
@@ -826,6 +826,14 @@ const signlessRoadPostReady=Promise.allSettled(signlessRoadPostFiles.map(src=>im
  signlessRoadPostImgs=rs.map(r=>r.status==="fulfilled"?r.value:null);
  return signlessRoadPostImgs;
 });
+const eraserGameplayFiles=Array.from({length:10},(_,i)=>
+ "../assets/game/phase4/enemies/eraser/gameplay/phase4-eraser-sprite-"+String(i+1).padStart(2,"0")+".png"
+);
+const eraserGameplayReady=Promise.allSettled(eraserGameplayFiles.map(src=>img(src))).then(rs=>{
+ eraserGameplaySprites=rs.map(r=>r.status==="fulfilled"?r.value:null);
+ return eraserGameplaySprites;
+});
+
 const checkpointArtReady=Promise.allSettled([
  img("../assets/game/phase4/checkpoints/marco_gótico_com_abóbora_e_bandeira_rasgada.png"),
  img("../assets/game/phase4/checkpoints/marco_gótico_com_lanterna_abóbora.png")
@@ -866,7 +874,7 @@ const nonexistentDoorReady=Promise.allSettled([
 });
 
 const phase4PropReady=Promise.allSettled([
- phase4SignReady,signlessRoadPostReady,checkpointArtReady,bellArtReady,memoryDoorReady,nonexistentDoorReady
+ phase4SignReady,signlessRoadPostReady,eraserGameplayReady,checkpointArtReady,bellArtReady,memoryDoorReady,nonexistentDoorReady
 ]);
 
 const jackPortraitFiles=["jack-00-neutral.png","jack-01-serious.png","jack-02-smirk.png","jack-03-surprised.png","jack-04-determined.png","jack-05-resolved.png"];
@@ -1843,7 +1851,64 @@ function drawTraces(){
  }
  ctx.restore();
 }
-function drawEraserEnemy(e){
+const ERASER_SPRITE_INDEX=Object.freeze({
+ idle:[0,1],
+ patrol:[0,1],
+ alert:[4],
+ chase:[2,3],
+ hit:[7],
+ dissolve:[8,9]
+});
+function eraserSpriteIndex(e){
+ if(e.state==="attack"){
+   const total=e.cfg.attackWindup+e.cfg.attackActive+e.cfg.attackRecover;
+   const elapsed=Math.max(0,total-e.stateTimer);
+   if(elapsed<e.cfg.attackWindup)return 4;
+   if(elapsed<e.cfg.attackWindup+e.cfg.attackActive)return 5;
+   return 6;
+ }
+ if(e.state==="dissolve")return e.alpha>.48?8:9;
+ const seq=ERASER_SPRITE_INDEX[e.state]||ERASER_SPRITE_INDEX.idle;
+ if(seq.length===1)return seq[0];
+ const fps=e.state==="chase"?7.5:2.8;
+ return seq[Math.floor((p.anim+e.spawnX*.001)*fps)%seq.length];
+}
+function drawEraserSprite(e){
+ const index=eraserSpriteIndex(e);
+ const im=eraserGameplaySprites[index];
+ if(!im)return false;
+ const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+ if(!iw||!ih)return false;
+
+ const attacking=e.state==="attack";
+ const chasing=e.state==="chase";
+ const targetH=attacking?126:(chasing?121:116);
+ const targetW=iw*(targetH/ih);
+ const bob=(e.state==="idle"||e.state==="patrol")?Math.sin(p.anim*3.2+e.spawnX*.01)*1.8:0;
+ const forward=attacking?8:(chasing?4:0);
+ const bottom=e.h/2+8;
+ const dx=-targetW/2+forward;
+ const dy=bottom-targetH+bob;
+
+ ctx.save();
+ ctx.imageSmoothingEnabled=true;
+ ctx.imageSmoothingQuality="high";
+ ctx.shadowColor=e.hitFlash>0?"rgba(249,224,157,.95)":"rgba(0,0,0,.72)";
+ ctx.shadowBlur=e.hitFlash>0?24:10;
+ ctx.drawImage(im,dx,dy,targetW,targetH);
+
+ // A Luz deixa um clarão curto no corpo sem destruir as cores do PNG.
+ if(e.hitFlash>0){
+   ctx.globalAlpha=Math.min(.28,e.hitFlash*1.15);
+   ctx.globalCompositeOperation="screen";
+   ctx.shadowColor="rgba(247,215,126,.95)";
+   ctx.shadowBlur=28;
+   ctx.drawImage(im,dx,dy,targetW,targetH);
+ }
+ ctx.restore();
+ return true;
+}
+function drawEraserEnemyFallback(e){
  const wob=Math.sin(p.anim*(e.state==="chase"?11:7)+e.spawnX)*4;
  ctx.shadowColor=e.hitFlash>0?"rgba(247,222,159,.95)":"rgba(0,0,0,.8)";
  ctx.shadowBlur=e.hitFlash>0?22:12;
@@ -1955,25 +2020,26 @@ function drawEnemy(e){
  if(e.kind==="ashHound")drawAshHoundEnemy(e);
  else if(e.kind==="hollow")drawHollowEnemy(e);
  else if(e.kind==="crow")drawCrowEnemy(e);
- else drawEraserEnemy(e);
+ else if(!drawEraserSprite(e))drawEraserEnemyFallback(e);
 
  if(state==="dissolve")drawEnemyDissolve(e);
  ctx.restore();
 
  if(state!=="dissolve"){
    ctx.save();ctx.textAlign="center";
-   ctx.fillStyle="#b9aa89";ctx.font="700 9px Georgia";ctx.fillText(e.label,ex+e.w/2,visualY-14);
+   const enemyLabelY=e.kind==="eraser"?visualY-74:visualY-14;
+   ctx.fillStyle="#b9aa89";ctx.font="700 9px Georgia";ctx.fillText(e.label,ex+e.w/2,enemyLabelY);
    const stateLabel={
      idle:"à espreita",patrol:"patrulha",alert:"percebeu Jack",
      chase:e.kind==="crow"?"circulando":"perseguindo",attack:e.kind==="crow"?"mergulho":"atacando",hit:"atingido"
    }[state]||state;
-   ctx.fillStyle="rgba(196,184,150,.65)";ctx.font="italic 8px Georgia";ctx.fillText(stateLabel,ex+e.w/2,visualY-3);
+   ctx.fillStyle="rgba(196,184,150,.65)";ctx.font="italic 8px Georgia";ctx.fillText(stateLabel,ex+e.w/2,enemyLabelY+11);
 
    if(e.cfg.needsReveal&&e.exposedTimer>0){
      ctx.fillStyle="#ddc576";ctx.font="700 8px Georgia";ctx.fillText("EXPOSTO",ex+e.w/2,visualY+e.h+14);
    }
    if(e.hp<e.maxHp){
-     const bw=46,bx=ex+e.w/2-bw/2,by=visualY-29;
+     const bw=46,bx=ex+e.w/2-bw/2,by=e.kind==="eraser"?enemyLabelY-11:visualY-29;
      ctx.fillStyle="rgba(0,0,0,.55)";ctx.fillRect(bx,by,bw,4);
      ctx.fillStyle="#d6b968";ctx.fillRect(bx,by,bw*(e.hp/e.maxHp),4);
    }
