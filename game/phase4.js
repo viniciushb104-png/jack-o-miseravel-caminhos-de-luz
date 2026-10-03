@@ -1882,7 +1882,7 @@ function drawEraserSprite(e){
 
  const attacking=e.state==="attack";
  const chasing=e.state==="chase";
- const targetH=attacking?126:(chasing?121:116);
+ const targetH=attacking?150:(chasing?144:138);
  const targetW=iw*(targetH/ih);
  const bob=(e.state==="idle"||e.state==="patrol")?Math.sin(p.anim*3.2+e.spawnX*.01)*1.8:0;
  const forward=attacking?8:(chasing?4:0);
@@ -2027,7 +2027,7 @@ function drawEnemy(e){
 
  if(state!=="dissolve"){
    ctx.save();ctx.textAlign="center";
-   const enemyLabelY=e.kind==="eraser"?visualY-74:visualY-14;
+   const enemyLabelY=e.kind==="eraser"?visualY-92:visualY-14;
    ctx.fillStyle="#b9aa89";ctx.font="700 9px Georgia";ctx.fillText(e.label,ex+e.w/2,enemyLabelY);
    const stateLabel={
      idle:"à espreita",patrol:"patrulha",alert:"percebeu Jack",
