@@ -207,6 +207,7 @@ const p={x:Number.isFinite(saveData?.x)?saveData.x:110,y:Number.isFinite(saveDat
 // Peregrina — companheira narrativa independente de Jack E do combate.
 // Sua posição e animação avançam apenas por estados da história/enigmas.
 // Movimento, dano, perseguição, hit e morte dos inimigos nunca alteram seu estado.
+// Dano, queda, morte e respawn de Jack também não reiniciam nem reposicionam a Peregrina.
 let pilgrimBridgeDone=!!saveData?.pilgrimBridgeDone||
  bridgeNameGlitchPlayed||bridgeCrossedPlayed||stolenPlazaPlayed||plazaSolved||
  collectorApproachPlayed||arenaEdgePlayed||bossStarted||bossResolved||phase4Complete;
@@ -543,26 +544,6 @@ function save(){
    pilgrimX,pilgrimDir,pilgrimBridgeDone,archiveEvidence:[...archiveEvidence],archiveSolved,deadEnemies:deadEnemies(),savedAt:Date.now()
  }));
 }
-function resetPilgrimAfterRespawn(){
- if(!pilgrimMet)return;
- const wasBridgeMotion=pilgrimBridge.active||(!pilgrimBridgeDone&&pilgrimX>6350&&pilgrimX<7900);
- pilgrimBridge.active=false;pilgrimBridge.segment=0;pilgrimBridge.t=0;pilgrimBridge.landingPause=0;
- pilgrimTerrainJump.active=false;pilgrimTerrainJump.t=0;
- pilgrimFeetY=590;pilgrimMode="wait";pilgrimMoveSpeed=0;
- pilgrimAnimClock=0;pilgrimAnimLastMode="wait";
-
- // A morte/respawn de Jack não regride o arco da Peregrina.
- if(bossStarted&&!bossResolved){
-   pilgrimBridgeDone=true;pilgrimX=10535;pilgrimDir=1;return;
- }
- if(wasBridgeMotion&&!pilgrimBridgeDone){
-   pilgrimX=6250;pilgrimDir=1;return;
- }
-
- // Fora de um salto, ela permanece no ponto narrativo já conquistado.
- // Se um save antigo a deixou dentro de um vão, normalizamos apenas o chão.
- normalizePilgrimGroundOnly();
-}
 function resetCollectorAct(){
  if(!bossStarted||bossResolved)return;
  bossProjectiles=[];bossReleasedPlates=[];bossInv=0;bossAttackHit=false;bossStateTimer=0;bossX=10935;bossDir=-1;
@@ -574,7 +555,6 @@ function resetCollectorAct(){
 function respawn(msg){
  const cp=checkpoints.find(q=>q.id===activeCheckpoint);
  p.x=cp?cp.respawnX:110;p.y=cp?cp.respawnY:470;p.vx=p.vy=0;p.on=false;p.inv=1.2;playerLife=3;syncHud();
- resetPilgrimAfterRespawn();
  if(bossStarted&&!bossResolved)resetCollectorAct();
  if(msg)say(msg);save();
 }
@@ -1295,7 +1275,6 @@ function drawCheckpoint(cp){
 }
 function pilgrimSpriteSelection(){
  const moving=pilgrimMode==="walk"||pilgrimMode==="run";
- if(pilgrimMode==="guard")return {index:9,baseLeft:true,scale:1.02};
  if(pilgrimMode==="jump"){
    const seq=[5,6,7,8];
    const t=pilgrimJumpProgress();
@@ -1325,7 +1304,7 @@ function drawPilgrimSprite(im,px,feet,footFix,selection){
  const facesLeft=!!selection.baseLeft;
  const shouldFlip=facesLeft?(pilgrimDir>0):(pilgrimDir<0);
 
- if(pilgrimMode!=="jump")drawGroundShadow(sx,groundY+1,pilgrimMode==="guard"?24:21,4,.24);
+ if(pilgrimMode!=="jump")drawGroundShadow(sx,groundY+1,21,4,.24);
  ctx.save();
  ctx.globalAlpha=.98;
  ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";
@@ -1363,8 +1342,7 @@ function drawPilgrim(){
  const phase=pilgrimAnimClock*(pilgrimMode==="run"?10:6);
  const stride=moving?Math.sin(phase)*14:0;
  const bob=moving?Math.abs(Math.sin(phase))*3:Math.sin(pilgrimAnimClock*1.8)*1.3;
- const guard=pilgrimMode==="guard";
- const lean=jump?pilgrimDir*7:(pilgrimMode==="run"?pilgrimDir*4:(guard?-pilgrimDir*3:0));
+ const lean=jump?pilgrimDir*7:(pilgrimMode==="run"?pilgrimDir*4:0);
 
  ctx.save();ctx.translate(sx+lean,footFix);ctx.globalAlpha=.94;
  if(!jump)drawGroundShadow(0,feet+1,22,4,.24);
@@ -1379,7 +1357,7 @@ function drawPilgrim(){
  }
 
  const bodyY=feet-106+bob;
- ctx.fillStyle=guard?"#343936":"#414743";
+ ctx.fillStyle="#414743";
  ctx.beginPath();ctx.moveTo(0,bodyY-28);ctx.quadraticCurveTo(-34,bodyY+4,-31,bodyY+64);ctx.lineTo(-18,feet-62);ctx.lineTo(18,feet-62);ctx.lineTo(31,bodyY+64);ctx.quadraticCurveTo(34,bodyY+4,0,bodyY-28);ctx.fill();
  ctx.strokeStyle="#625c4d";ctx.lineWidth=2;ctx.stroke();
 
@@ -1592,7 +1570,7 @@ function updatePilgrim(dt){
 
  pilgrimDir=1;
  if(collectorSequence){
-   // Passo mais deliberado nesta área; só corre se Jack realmente abriu muita distância.
+   // Passo mais deliberado nesta área; a velocidade depende apenas da distância até o marco narrativo.
    pilgrimMoveSpeed=ad>430?220:145;
    pilgrimMode=pilgrimMoveSpeed>210?"run":"walk";
  }else{
@@ -3180,7 +3158,6 @@ function update(dt){
    else{
      const cp=checkpoints.find(q=>q.id===activeCheckpoint);
      p.x=cp?cp.respawnX:110;p.y=cp?cp.respawnY:470;p.vx=p.vy=0;
-     resetPilgrimAfterRespawn();
      if(wasBridge){bridgeFogClock=0;for(const q of platforms)if(q.unstable)q.lightTimer=0}
      say((wasBridge?"A névoa apagou a plataforma sob Jack. ":"Um passo desapareceu na névoa. ")+playerLife+"/3.");
    }
