@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
   <meta name="theme-color" content="#0b0e0c">
   <title>Halloween IV — A Estrada dos Esquecidos</title>
-  <link rel="stylesheet" href="phase4.css?v=4">
+  <link rel="stylesheet" href="phase4.css?v=5">
   <link rel="stylesheet" href="preloader.css?v=4">
 </head>
 <body>
@@ -26,7 +26,12 @@
   <header class="hud">
     <a class="hud-btn" href="../index.html#fases">‹ MAPA</a>
     <div class="hud-title"><small>HALLOWEEN IV</small><strong>A ESTRADA DOS ESQUECIDOS</strong></div>
-    <div class="hud-box"><span>VIDA</span><b id="healthValue">♥ ♥ ♥</b></div>
+    <div class="hud-cluster">
+      <div class="hud-box"><span>VIDA</span><b id="healthValue">♥ ♥ ♥</b></div>
+      <button id="phase4MusicToggle" class="hud-audio" type="button" aria-label="Silenciar música" aria-pressed="false">
+        <b>♫</b><span>MÚSICA</span>
+      </button>
+    </div>
   </header>
 
   <div id="objective" class="objective">
@@ -88,7 +93,7 @@
 <script src="engine/dialogue.js?v=6"></script>
 <script src="data/phase1/jack-animations.js?v=1"></script>
 <script src="data/phase4/story.js?v=10"></script>
-<script src="phase4.js?v=25"></script>
+<script src="phase4.js?v=26"></script>
 <script src="preloader.js?v=2"></script>
 </body>
 </html>
