@@ -199,12 +199,12 @@ window.PHASE4_STORY=Object.freeze({
   ]),
 
   collectorGlimpse:Object.freeze([
-    {speaker:"???",text:"NOMES SÃO O QUE RESTA QUANDO TODO O RESTO DESAPARECE."},
+    {speaker:"???",portrait:"collector",expression:0,text:"NOMES SÃO O QUE RESTA QUANDO TODO O RESTO DESAPARECE."},
     {speaker:"PEREGRINA",portrait:"pilgrim",expression:5,text:"Ele está ali."},
     {speaker:"JACK",portrait:"jack",expression:1,text:"Só parte dele."},
-    {speaker:"???",text:"EU OS GUARDEI QUANDO NINGUÉM MAIS GUARDOU."},
+    {speaker:"???",portrait:"collector",expression:0,text:"EU OS GUARDEI QUANDO NINGUÉM MAIS GUARDOU."},
     {speaker:"JACK",portrait:"jack",expression:4,text:"Guardar não costuma exigir arrancar."},
-    {speaker:"???",text:"VOCÊ AINDA CARREGA UM NOME. NÃO ENTENDERIA."},
+    {speaker:"???",portrait:"collector",expression:0,text:"VOCÊ AINDA CARREGA UM NOME. NÃO ENTENDERIA."},
     {speaker:"JACK",portrait:"jack",expression:1,text:"Engraçado. A estrada acabou de discordar de você."}
   ]),
 
@@ -227,55 +227,55 @@ window.PHASE4_STORY=Object.freeze({
   ]),
 
   collectorBossIntro:Object.freeze([
-    {speaker:"COLETOR",text:"VOCÊ ENTROU NUM LUGAR ONDE NENHUM NOME PRECISA MORRER."},
+    {speaker:"COLETOR",portrait:"collector",expression:1,text:"VOCÊ ENTROU NUM LUGAR ONDE NENHUM NOME PRECISA MORRER."},
     {speaker:"JACK",portrait:"jack",expression:1,text:"Curioso. Eles parecem presos."},
-    {speaker:"COLETOR",text:"PRESOS? EU OS SALVEI."},
+    {speaker:"COLETOR",portrait:"collector",expression:1,text:"PRESOS? EU OS SALVEI."},
     {speaker:"JACK",portrait:"jack",expression:4,text:"Você arrancou nomes de pessoas que ainda estavam usando eles."},
-    {speaker:"COLETOR",text:"PESSOAS DESAPARECEM. NOMES PODEM PERMANECER."},
+    {speaker:"COLETOR",portrait:"collector",expression:1,text:"PESSOAS DESAPARECEM. NOMES PODEM PERMANECER."},
     {speaker:"JACK",portrait:"jack",expression:1,text:"Então vamos descobrir o que sobra quando você larga alguns."}
   ]),
 
   collectorArmorBreak:Object.freeze([
-    {speaker:"COLETOR",text:"PARE. ELES SERÃO ESQUECIDOS."},
+    {speaker:"COLETOR",portrait:"collector",expression:2,text:"PARE. ELES SERÃO ESQUECIDOS."},
     {speaker:"JACK",portrait:"jack",expression:1,text:"Você não sabe disso."},
-    {speaker:"COLETOR",text:"SEM ELES, NÃO SOBRA NADA."},
+    {speaker:"COLETOR",portrait:"collector",expression:3,text:"SEM ELES, NÃO SOBRA NADA."},
     {speaker:"PEREGRINA",portrait:"pilgrim",expression:6,text:"Então por que ainda consigo ver você?"},
-    {speaker:"COLETOR",text:"..."},
+    {speaker:"COLETOR",portrait:"collector",expression:3,text:"..."},
     {speaker:"JACK",portrait:"jack",expression:5,text:"Acho que chegamos à parte que a sua coleção não consegue responder."}
   ]),
 
   collectorActTwo:Object.freeze([
-    {speaker:"COLETOR",text:"DEVOLVA-OS."},
+    {speaker:"COLETOR",portrait:"collector",expression:4,text:"DEVOLVA-OS."},
     {speaker:"JACK",portrait:"jack",expression:4,text:"Eles nunca foram seus."},
-    {speaker:"COLETOR",text:"EU OS MANTIVE VIVOS."},
+    {speaker:"COLETOR",portrait:"collector",expression:4,text:"EU OS MANTIVE VIVOS."},
     {speaker:"JACK",portrait:"jack",expression:1,text:"Você manteve etiquetas vivas. As pessoas continuaram sem você."}
   ]),
 
   collectorExhausted:Object.freeze([
-    {speaker:"COLETOR",text:"NÃO..."},
-    {speaker:"COLETOR",text:"SEM OS NOMES..."},
+    {speaker:"COLETOR",portrait:"collector",expression:5,text:"NÃO..."},
+    {speaker:"COLETOR",portrait:"collector",expression:5,text:"SEM OS NOMES..."},
     {speaker:"PEREGRINA",portrait:"pilgrim",expression:5,text:"Ele ficou menor."},
     {speaker:"JACK",portrait:"jack",expression:1,text:"Não. Agora estamos vendo o tamanho que sempre esteve ali."},
-    {speaker:"COLETOR",text:"SE NINGUÉM DISSER MEU NOME... O QUE SOBRA?"}
+    {speaker:"COLETOR",portrait:"collector",expression:5,text:"SE NINGUÉM DISSER MEU NOME... O QUE SOBRA?"}
   ]),
 
   collectorRecognized:Object.freeze([
     {speaker:"JACK",portrait:"jack",expression:5,text:"Você."},
-    {speaker:"COLETOR",text:"..."},
+    {speaker:"COLETOR",portrait:"collector",expression:6,text:"..."},
     {speaker:"JACK",portrait:"jack",expression:1,text:"Antes do nome. Depois dele. Você."},
     {speaker:"PEREGRINA",portrait:"pilgrim",expression:3,text:"Então ser lembrado não é ser possuído por uma palavra."},
     {speaker:"JACK",portrait:"jack",expression:5,text:"Parece que não."},
-    {speaker:"COLETOR",text:"EU NÃO SEI O QUE FAZER SEM ELES."},
+    {speaker:"COLETOR",portrait:"collector",expression:6,text:"EU NÃO SEI O QUE FAZER SEM ELES."},
     {speaker:"JACK",portrait:"jack",expression:1,text:"Pode começar soltando o que nunca foi seu."}
   ]),
 
   collectorRelease:Object.freeze([
-    {speaker:"COLETOR",text:"SE EU SOLTAR OS NOMES... ELES PODEM DESAPARECER."},
+    {speaker:"COLETOR",portrait:"collector",expression:7,text:"SE EU SOLTAR OS NOMES... ELES PODEM DESAPARECER."},
     {speaker:"JACK",portrait:"jack",expression:1,text:"Também podem voltar para quem quiser carregá-los."},
-    {speaker:"COLETOR",text:"E OS QUE NINGUÉM RECLAMAR?"},
+    {speaker:"COLETOR",portrait:"collector",expression:7,text:"E OS QUE NINGUÉM RECLAMAR?"},
     {speaker:"JACK",portrait:"jack",expression:5,text:"Continuam tendo pertencido a alguém."},
     {speaker:"PEREGRINA",portrait:"pilgrim",expression:1,text:"Você não precisa possuir uma coisa para admitir que ela existiu."},
-    {speaker:"COLETOR",text:"...ENTÃO EU POSSO SOLTAR."}
+    {speaker:"COLETOR",portrait:"collector",expression:7,text:"...ENTÃO EU POSSO SOLTAR."}
   ]),
 
   pilgrimChoice:Object.freeze([
