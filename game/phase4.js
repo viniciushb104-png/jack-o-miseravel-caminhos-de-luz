@@ -965,35 +965,58 @@ function drawCheckpoint(cp){
  const im=lit?checkpointOnImg:checkpointOffImg;
  const sx=cp.x-cam,sy=cp.groundY;
 
+ // O PNG deve tocar o chão VISUAL das plataformas novas, não apenas a hitbox antiga.
+ // Isso não altera colisão, respawn nem lógica do checkpoint.
+ const support=supportPlatformAt(cp.x,cp.groundY,90);
+ const groundFix=(support?platformVisualFootOffset(support):0)+14;
+ const bottomY=sy+groundFix;
+ const targetH=242;
+
  if(im){
    ctx.save();
    if(lit){
-     const glow=ctx.createRadialGradient(sx,sy-88,8,sx,sy-88,105);
-     glow.addColorStop(0,"rgba(246,177,63,.30)");
-     glow.addColorStop(.48,"rgba(231,140,38,.13)");
+     const glowY=bottomY-targetH*.48;
+     const glow=ctx.createRadialGradient(sx,glowY,10,sx,glowY,128);
+     glow.addColorStop(0,"rgba(246,177,63,.34)");
+     glow.addColorStop(.48,"rgba(231,140,38,.15)");
      glow.addColorStop(1,"rgba(231,140,38,0)");
-     ctx.fillStyle=glow;ctx.beginPath();ctx.arc(sx,sy-88,105,0,Math.PI*2);ctx.fill();
-     ctx.shadowColor="rgba(247,173,54,.62)";ctx.shadowBlur=24;
+     ctx.fillStyle=glow;ctx.beginPath();ctx.arc(sx,glowY,128,0,Math.PI*2);ctx.fill();
+     ctx.shadowColor="rgba(247,173,54,.66)";ctx.shadowBlur=27;
    }
-   drawPropByHeight(im,sx,sy,190,lit?1:.9);
+
+   drawPropByHeight(im,sx,bottomY,targetH,lit?1:.94);
+
    if(lit){
-     ctx.fillStyle="rgba(245,212,137,.88)";ctx.font="700 9px Georgia";ctx.textAlign="center";
+     ctx.fillStyle="rgba(245,212,137,.9)";ctx.font="700 9px Georgia";ctx.textAlign="center";
      ctx.shadowColor="rgba(0,0,0,.92)";ctx.shadowBlur=5;
-     ctx.fillText("VOCÊ PASSOU POR AQUI",sx,sy-198);
+     ctx.fillText("VOCÊ PASSOU POR AQUI",sx,bottomY-targetH-9);
    }
    ctx.restore();
    return;
  }
 
- // Fallback procedural: a fase continua funcional mesmo se o PNG falhar.
- ctx.save();ctx.translate(sx,sy);
- ctx.strokeStyle="#625540";ctx.lineWidth=7;ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(-2,-78);ctx.stroke();
- ctx.fillStyle=lit?"#d7bd79":"#554d3b";ctx.strokeStyle=lit?"#d8bd74":"#746342";ctx.lineWidth=2;ctx.fillRect(-55,-112,110,42);ctx.strokeRect(-55,-112,110,42);
- // Abóbora de fallback: apagada no inativo, acesa no ativo.
- ctx.beginPath();ctx.arc(0,-128,15,0,Math.PI*2);
- ctx.fillStyle=lit?"#f0a432":"#6b4b2c";if(lit){ctx.shadowColor="#f2a332";ctx.shadowBlur=15}ctx.fill();
- ctx.fillStyle=lit?"#ffd77a":"#171713";ctx.fillRect(-7,-131,4,3);ctx.fillRect(4,-131,4,3);
- if(lit){ctx.fillStyle="#f1d384";ctx.font="700 9px Georgia";ctx.textAlign="center";ctx.fillText("VOCÊ PASSOU",0,-95)}
+ // Fallback procedural: mantém a mesma escala/apoio do checkpoint final.
+ ctx.save();ctx.translate(sx,bottomY);
+ ctx.strokeStyle="#625540";ctx.lineWidth=8;
+ ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(-2,-100);ctx.stroke();
+
+ ctx.fillStyle=lit?"#d7bd79":"#554d3b";
+ ctx.strokeStyle=lit?"#d8bd74":"#746342";
+ ctx.lineWidth=2;
+ ctx.fillRect(-67,-145,134,49);ctx.strokeRect(-67,-145,134,49);
+
+ // Regra oficial: abóbora apagada no checkpoint inativo e acesa no ativo.
+ ctx.beginPath();ctx.arc(0,-166,19,0,Math.PI*2);
+ ctx.fillStyle=lit?"#f0a432":"#6b4b2c";
+ if(lit){ctx.shadowColor="#f2a332";ctx.shadowBlur=18}
+ ctx.fill();
+ ctx.fillStyle=lit?"#ffd77a":"#171713";
+ ctx.fillRect(-9,-170,5,4);ctx.fillRect(5,-170,5,4);
+
+ if(lit){
+   ctx.fillStyle="#f1d384";ctx.font="700 9px Georgia";ctx.textAlign="center";
+   ctx.fillText("VOCÊ PASSOU POR AQUI",0,-201);
+ }
  ctx.restore();
 }
 function pilgrimSpriteSelection(){
