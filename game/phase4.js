@@ -140,6 +140,13 @@ let idleTime=0,waitSitFrame=0,waitSitClock=0,waitSitActive=false,waitSitImages=[
 let lastPlayerAction=performance.now();
 let playerLife=Math.max(1,Math.min(3,Number(saveData?.playerLife)||3)),memoryLight=0,memoryPulse=0,gateMsg=0;
 let activeCheckpoint=saveData?.activeCheckpoint||localStorage.getItem(CHECKPOINT_KEY)||"";
+// Halloween IV não usa mais checkpoint na Ponte dos Ninguém.
+// Saves antigos que ainda apontam para "bridge" retornam com segurança ao Arquivo Rasurado.
+if(activeCheckpoint==="bridge"){
+ activeCheckpoint="archive";
+ localStorage.setItem(CHECKPOINT_KEY,"archive");
+ if(saveData)saveData.activeCheckpoint="archive";
+}
 let introPlayed=!!saveData?.introPlayed,doorOpened=!!saveData?.doorOpened,pilgrimMet=!!saveData?.pilgrimMet,tracesSolved=!!saveData?.tracesSolved,prototypeEndPlayed=!!saveData?.prototypeEndPlayed,arenaReached=!!saveData?.arenaReached;
 let bridgeFearPlayed=!!saveData?.bridgeFearPlayed,bridgeCrossedPlayed=!!saveData?.bridgeCrossedPlayed,stolenPlazaPlayed=!!saveData?.stolenPlazaPlayed,collectorApproachPlayed=!!saveData?.collectorApproachPlayed,arenaEdgePlayed=!!saveData?.arenaEdgePlayed;
 let bridgeNameGlitchPlayed=!!saveData?.bridgeNameGlitchPlayed,bridgeFogClock=Number(saveData?.bridgeFogClock)||0;
@@ -287,7 +294,6 @@ const checkpoints=[
  {id:"village",x:2910,groundY:590,respawnX:2840,respawnY:504,name:"Marco do Povoado"},
  {id:"traces",x:4580,groundY:590,respawnX:4510,respawnY:504,name:"Marco das Pegadas"},
  {id:"archive",x:5750,groundY:590,respawnX:5680,respawnY:504,name:"Marco do Arquivo"},
- {id:"bridge",x:6260,groundY:590,respawnX:6170,respawnY:504,name:"Marco da Ponte dos Ninguém"},
  {id:"plaza",x:8150,groundY:590,respawnX:8080,respawnY:504,name:"Marco da Praça"},
  {id:"collector",x:9950,groundY:590,respawnX:9880,respawnY:504,name:"Marco sem Nome"}
 ]
