@@ -296,7 +296,7 @@ const checkpoints=[
  {id:"road",x:1870,groundY:590,respawnX:1800,respawnY:504,name:"Marco sem inscrição"},
  {id:"village",x:2910,groundY:590,respawnX:2840,respawnY:504,name:"Marco do Povoado"},
  {id:"traces",x:4580,groundY:590,respawnX:4510,respawnY:504,name:"Marco das Pegadas"},
- {id:"archive",x:5750,groundY:590,respawnX:5680,respawnY:504,name:"Marco do Arquivo"},
+ {id:"archive",x:5570,groundY:590,respawnX:5500,respawnY:504,name:"Marco do Arquivo"},
  {id:"plaza",x:8150,groundY:590,respawnX:8080,respawnY:504,name:"Marco da Praça"},
  {id:"collector",x:9950,groundY:590,respawnX:9880,respawnY:504,name:"Marco sem Nome"}
 ]
