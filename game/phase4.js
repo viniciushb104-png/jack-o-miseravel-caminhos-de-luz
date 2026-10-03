@@ -178,10 +178,13 @@ if(bossResolved){bossStarted=true;bossAct=3;bossArmor=0;bossHp=0}
 let epilogueStep=Math.max(0,Math.min(5,Number(saveData?.epilogueStep)||0));
 let phase4Complete=!!saveData?.phase4Complete;
 let bellObtained=!!saveData?.bellObtained;
+let bellGiftPresented=!!saveData?.bellGiftPresented||bellObtained||epilogueStep>2;
+let bellAcquireFx=0;
 let epilogueRunning=false,epilogueFxClock=0;
+const BELL_WORLD_X=10835,BELL_WORLD_Y=546;
 if(phase4Complete){
  bossResolved=true;bossStarted=true;bossAct=3;bossArmor=0;bossHp=0;bossState="resolved";
- epilogueStep=5;bellObtained=true;
+ epilogueStep=5;bellObtained=true;bellGiftPresented=true;
 }
 
 let traces=Array.isArray(saveData?.traces)?saveData.traces.slice(0,3).map(Boolean):[false,false,false];
@@ -451,7 +454,7 @@ function save(){
    bridgeFearPlayed,bridgeCrossedPlayed,bridgeNameGlitchPlayed,stolenPlazaPlayed,collectorApproachPlayed,arenaEdgePlayed,bridgeFogClock,
    plazaEchoes:[...plazaEchoes],plazaSolved,collectorGlimpsePlayed,
    bossStarted,bossResolved,bossAct,bossArmor,bossHp,bossX,
-   epilogueStep,phase4Complete,bellObtained,
+   epilogueStep,phase4Complete,bellObtained,bellGiftPresented,
    pilgrimX,pilgrimBridgeDone,archiveEvidence:[...archiveEvidence],archiveSolved,deadEnemies:deadEnemies(),savedAt:Date.now()
  }));
 }
@@ -754,6 +757,17 @@ const bellArtReady=Promise.allSettled([
  bellGlowImg=rs[1]?.status==="fulfilled"?rs[1].value:null;
  return [bellNormalImg,bellGlowImg];
 });
+const phase4BellSfx=new Audio("../assets/game/phase2/audio/sfx/soundreality-bell-fx-410608.mp3");
+phase4BellSfx.preload="auto";
+phase4BellSfx.volume=.95;
+function playPhase4BellSfx(){
+ try{
+   phase4BellSfx.pause();
+   phase4BellSfx.currentTime=0;
+   const q=phase4BellSfx.play();
+   if(q&&q.catch)q.catch(()=>{});
+ }catch(_){}
+}
 const memoryDoorReady=img("../assets/game/phase4/fx/memory-door/portal_gótico_dourado_flutuante.png")
  .then(im=>memoryDoorImg=im).catch(()=>null);
 const phase4PropReady=Promise.allSettled([phase4SignReady,checkpointArtReady,bellArtReady,memoryDoorReady]);
@@ -2022,10 +2036,13 @@ function recognizeCollector(){
  return true;
 }
 function grantUninscribedBell(){
- bellObtained=true;memoryPulse=Math.max(memoryPulse,1.45);
+ if(bellObtained)return;
+ bellObtained=true;bellGiftPresented=true;bellAcquireFx=1.65;
+ memoryPulse=Math.max(memoryPulse,1.65);
+ playPhase4BellSfx();
  if(!replayMode)localStorage.setItem(BELL_KEY,"yes");
  banner("ITEM · SINO SEM INSCRIÇÃO");
- say("Um sino sem nome agora acompanha a lanterna de Jack.");
+ say("O sino toca sem chamar um nome — e alguma coisa na memória de Jack responde.");
  save();
 }
 function finishPhase4Progress(){
@@ -2054,6 +2071,16 @@ function playPhase4Epilogue(lines,step,bannerText,onDone){
    setTimeout(()=>runPhase4Epilogue(),260);
  });
 }
+function presentUninscribedBell(){
+ epilogueRunning=true;epilogueStep=2;bellGiftPresented=true;p.vx=0;
+ input.left=input.right=input.down=input.run=false;input.jump=false;
+ save();
+ dialogue.open(story.bellGift,()=>{
+   banner("SINO SEM INSCRIÇÃO");
+   say("Aproxime-se do sino e pressione E para recebê-lo.");
+   epilogueRunning=false;save();
+ });
+}
 function runPhase4Epilogue(){
  if(!bossResolved||phase4Complete||epilogueRunning||dialogue.active)return;
  if(epilogueStep===0){
@@ -2068,7 +2095,9 @@ function runPhase4Epilogue(){
    });return;
  }
  if(epilogueStep===2){
-   playPhase4Epilogue(story.bellGift,2,"SINO SEM INSCRIÇÃO",()=>grantUninscribedBell());return;
+   if(!bellGiftPresented){presentUninscribedBell();return}
+   if(!bellObtained)return;
+   epilogueStep=3;save();
  }
  if(epilogueStep===3){
    memoryPulse=1.35;
@@ -2287,13 +2316,28 @@ function drawPhase4Epilogue(){
    }
  }
 
- // The bell has no inscription, but it still has a function.
- if(epilogueStep>=2&&epilogueStep<5){
-   const bx=10835,by=455+Math.sin(p.anim*2.2)*4;
-   const g=ctx.createRadialGradient(bx,by,8,bx,by,70);
-   g.addColorStop(0,"rgba(235,202,117,.22)");g.addColorStop(1,"rgba(235,202,117,0)");
-   ctx.fillStyle=g;ctx.beginPath();ctx.arc(bx,by,70,0,Math.PI*2);ctx.fill();
-   drawUninscribedBell(bx,by,1.05,.95,bellObtained);
+ // The bell is now a real story item: presented, collected, then carried by Jack.
+ if(epilogueStep===2&&bellGiftPresented&&!bellObtained){
+   const bx=BELL_WORLD_X,by=BELL_WORLD_Y;
+   const near=Math.abs((p.x+p.w/2)-bx)<170;
+   const pulse=.55+.18*Math.sin(p.anim*3.2);
+   const g=ctx.createRadialGradient(bx,by-42,8,bx,by-42,near?82:62);
+   g.addColorStop(0,"rgba(235,202,117,"+(near?.22:.11)+")");g.addColorStop(1,"rgba(235,202,117,0)");
+   ctx.fillStyle=g;ctx.beginPath();ctx.arc(bx,by-42,near?82:62,0,Math.PI*2);ctx.fill();
+   drawUninscribedBell(bx,by,1.05,.96,false);
+   ctx.fillStyle=near?"rgba(255,225,151,.98)":"rgba(225,205,154,.76)";
+   ctx.font="700 11px Georgia";ctx.textAlign="center";
+   ctx.shadowColor="rgba(0,0,0,.95)";ctx.shadowBlur=5;
+   ctx.fillText(near?"E · RECEBER":"SINO SEM INSCRIÇÃO",bx,by-118-pulse*3);
+ }
+ if(bellAcquireFx>0){
+   const t=1-bellAcquireFx/1.65;
+   const alpha=Math.max(0,Math.min(1,bellAcquireFx/.45));
+   const bx=p.x+p.w/2,by=p.y-42-Math.sin(Math.min(1,t)*Math.PI)*36;
+   const g=ctx.createRadialGradient(bx,by,6,bx,by,94);
+   g.addColorStop(0,"rgba(255,222,121,"+(.42*alpha)+")");g.addColorStop(1,"rgba(255,180,51,0)");
+   ctx.fillStyle=g;ctx.beginPath();ctx.arc(bx,by,94,0,Math.PI*2);ctx.fill();
+   drawUninscribedBell(bx,by,.78,alpha,true);
  }
 
  // The recurring door returns only as memory: no handle, no destination revealed.
@@ -2430,6 +2474,18 @@ function interact(){
  if(!running||dialogue.active)return;
  markPlayerAction();
  const pc=p.x+p.w/2;
+ if(bossResolved&&epilogueStep===2&&bellGiftPresented&&!bellObtained){
+   const d=Math.abs(pc-BELL_WORLD_X);
+   if(d>145){say("O Sino sem Inscrição espera alguns passos adiante.");return}
+   p.vx=0;
+   grantUninscribedBell();
+   epilogueStep=3;epilogueRunning=true;save();
+   setTimeout(()=>{
+     epilogueRunning=false;
+     runPhase4Epilogue();
+   },950);
+   return;
+ }
  if(bossStarted&&!bossResolved&&bossAct===3){
    if(recognizeCollector())return;
  }
@@ -2778,6 +2834,7 @@ function update(dt){
  for(let i=0;i<plazaEchoFx.length;i++)plazaEchoFx[i]=Math.max(0,plazaEchoFx[i]-dt);
  collectorGlimpseTimer=Math.max(0,collectorGlimpseTimer-dt);
  epilogueFxClock=Math.max(0,epilogueFxClock-dt);
+ bellAcquireFx=Math.max(0,bellAcquireFx-dt);
  updateCollectorBoss(dt);
  updateEnemies(dt);
  updatePilgrim(dt);
@@ -2910,13 +2967,15 @@ function update(dt){
  else if(!bossStarted)ui.obj.textContent="ARENA DO COLETOR: entre e descubra o que existe sob a coleção de nomes.";
  else if(phase4Complete)ui.obj.textContent="HALLOWEEN IV CONCLUÍDO: o Sino sem Inscrição acompanha Jack. A estrada continua.";
  else if(bossResolved){
-   const epilogueObjective=[
-     "EPÍLOGO: o Coletor está soltando os nomes.",
-     "EPÍLOGO: a Peregrina decide se continuará esperando pelo próprio nome.",
-     "EPÍLOGO: receba o Sino sem Inscrição.",
-     "EPÍLOGO: a porta de Jack voltou a aparecer.",
-     "EPÍLOGO: escolha continuar pela estrada."
-   ][Math.min(4,epilogueStep)];
+   const epilogueObjective=epilogueStep===2&&bellGiftPresented&&!bellObtained
+     ?"EPÍLOGO: aproxime-se do Sino sem Inscrição e pressione E · RECEBER."
+     :[
+       "EPÍLOGO: o Coletor está soltando os nomes.",
+       "EPÍLOGO: a Peregrina decide se continuará esperando pelo próprio nome.",
+       "EPÍLOGO: a Peregrina tem algo para entregar a Jack.",
+       "EPÍLOGO: o primeiro toque do sino chamou uma memória de Jack.",
+       "EPÍLOGO: escolha continuar pela estrada."
+     ][Math.min(4,epilogueStep)];
    ui.obj.textContent=epilogueObjective;
  }
  else if(bossAct===1)ui.obj.textContent="ATO I: use F perto do Coletor para libertar 5 placas da armadura. "+(5-bossArmor)+"/5.";
