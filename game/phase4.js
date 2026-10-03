@@ -13,6 +13,116 @@ const story=window.PHASE4_STORY;if(!story)throw new Error("PHASE4_STORY não car
 const journey=window.JackJourney||null,url=new URLSearchParams(location.search),journeyMode=url.get("journey")==="1",replayMode=url.get("replay")==="1",forceNew=url.get("new")==="1";
 const SAVE_KEY="jack-phase4-save",CHECKPOINT_KEY="jack-phase4-checkpoint",MARA_KEY="jack-item-mara-wood-key",
       BELL_KEY="jack-item-uninscribed-bell",COMPLETE_KEY="jack-phase4-complete",PHASE5_KEY="jack-phase5-unlocked";
+
+const PHASE4_MUSIC=Object.freeze({
+ door:Object.freeze({src:"../assets/audio/phase4/phase4-door-theme.mp3",volume:.48}),
+ road:Object.freeze({src:"../assets/audio/phase4/phase4-forgotten-road-theme.mp3",volume:.55}),
+ village:Object.freeze({src:"../assets/audio/phase4/phase4-nameless-village-theme.mp3",volume:.52}),
+ footprints:Object.freeze({src:"../assets/audio/phase4/phase4-footprints-theme.mp3",volume:.53}),
+ archive:Object.freeze({src:"../assets/audio/phase4/phase4-erased-archive-theme.mp3",volume:.54}),
+ bridge:Object.freeze({src:"../assets/audio/phase4/phase4-nobody-bridge-theme.mp3",volume:.48}),
+ plaza:Object.freeze({src:"../assets/audio/phase4/phase4-stolen-names-plaza-theme.mp3",volume:.52}),
+ collectorHouse:Object.freeze({src:"../assets/audio/phase4/phase4-collector-house-theme.mp3",volume:.56}),
+ boss1:Object.freeze({src:"../assets/audio/phase4/phase4-collector-boss-act1.mp3",volume:.64}),
+ boss2:Object.freeze({src:"../assets/audio/phase4/phase4-collector-boss-act2.mp3",volume:.66}),
+ boss3:Object.freeze({src:"../assets/audio/phase4/phase4-collector-boss-act3.mp3",volume:.54}),
+ epilogue:Object.freeze({src:"../assets/audio/phase4/phase4-uninscribed-bell-epilogue.mp3",volume:.55}),
+ finale:Object.freeze({src:"../assets/audio/phase4/phase4-road-continues-finale.mp3",volume:.58})
+});
+const phase4MusicChannels=[new Audio(),new Audio()];
+phase4MusicChannels.forEach(a=>{a.loop=true;a.preload="none";a.volume=0});
+let phase4MusicEnabled=localStorage.getItem("jack-phase4-music-muted")!=="1";
+let phase4MusicActiveChannel=0,phase4MusicKey="",phase4MusicPendingKey="",phase4MusicFade=0;
+const phase4MusicFailed=new Set();
+const phase4MusicToggle=document.getElementById("phase4MusicToggle");
+
+function syncPhase4MusicToggle(){
+ phase4MusicChannels.forEach(a=>a.muted=!phase4MusicEnabled);
+ if(!phase4MusicToggle)return;
+ phase4MusicToggle.setAttribute("aria-pressed",String(!phase4MusicEnabled));
+ phase4MusicToggle.setAttribute("aria-label",phase4MusicEnabled?"Silenciar música":"Ativar música");
+ const icon=phase4MusicToggle.querySelector("b");
+ if(icon)icon.textContent=phase4MusicEnabled?"♫":"×";
+}
+function desiredPhase4Music(){
+ if(phase4Complete)return "finale";
+ if(bossStarted){
+   if(bossResolved)return epilogueStep>=5?"finale":"epilogue";
+   if(bossAct===1)return "boss1";
+   if(bossAct===2)return "boss2";
+   return "boss3";
+ }
+ const x=p.x+p.w/2;
+ if(x<980)return "door";
+ if(x<2140)return "road";
+ if(x<3240)return "village";
+ if(x<4760)return "footprints";
+ if(x<6070)return "archive";
+ if(x<7900)return "bridge";
+ if(x<8940)return "plaza";
+ return "collectorHouse";
+}
+function stopPhase4Music(){
+ cancelAnimationFrame(phase4MusicFade);
+ phase4MusicChannels.forEach(a=>{a.pause();a.volume=0});
+ phase4MusicKey="";phase4MusicPendingKey="";
+}
+function fadePhase4MusicTo(key,force=false){
+ if(!phase4MusicEnabled)return;
+ if(!force&&(key===phase4MusicKey||key===phase4MusicPendingKey))return;
+ const track=PHASE4_MUSIC[key];
+ if(!track||phase4MusicFailed.has(key))return;
+
+ phase4MusicPendingKey=key;
+ const prevIndex=phase4MusicActiveChannel;
+ const nextIndex=prevIndex===0?1:0;
+ const prev=phase4MusicChannels[prevIndex],next=phase4MusicChannels[nextIndex];
+
+ cancelAnimationFrame(phase4MusicFade);
+ next.pause();next.src=track.src;next.currentTime=0;next.volume=0;next.muted=!phase4MusicEnabled;
+ try{next.load()}catch(_){}
+
+ Promise.resolve(next.play()).then(()=>{
+   if(phase4MusicPendingKey!==key){next.pause();next.volume=0;return}
+   const started=performance.now(),duration=(key.startsWith("boss")?720:1150);
+   const fromPrev=prev.volume||0,target=track.volume;
+   const tick=now=>{
+     if(phase4MusicPendingKey!==key)return;
+     const t=Math.min(1,(now-started)/duration),ease=t*t*(3-2*t);
+     next.volume=target*ease;
+     prev.volume=fromPrev*(1-ease);
+     if(t<1)phase4MusicFade=requestAnimationFrame(tick);
+     else{
+       prev.pause();prev.volume=0;
+       phase4MusicActiveChannel=nextIndex;
+       phase4MusicKey=key;phase4MusicPendingKey="";
+     }
+   };
+   phase4MusicFade=requestAnimationFrame(tick);
+ }).catch(()=>{
+   phase4MusicFailed.add(key);
+   phase4MusicPendingKey="";
+   next.pause();next.volume=0;
+ });
+}
+function syncPhase4Music(force=false){
+ if(!running||!phase4MusicEnabled)return;
+ fadePhase4MusicTo(desiredPhase4Music(),force);
+}
+phase4MusicToggle?.addEventListener("click",()=>{
+ phase4MusicEnabled=!phase4MusicEnabled;
+ localStorage.setItem("jack-phase4-music-muted",phase4MusicEnabled?"0":"1");
+ syncPhase4MusicToggle();
+ if(!phase4MusicEnabled){
+   cancelAnimationFrame(phase4MusicFade);
+   phase4MusicChannels.forEach(a=>{a.pause();a.volume=0});
+   phase4MusicKey="";phase4MusicPendingKey="";
+ }else{
+   phase4MusicFailed.clear();
+   syncPhase4Music(true);
+ }
+});
+syncPhase4MusicToggle();
 // Migração: jogadores que concluíram Halloween III antes da chave persistente
 // continuam podendo abrir a primeira passagem de Halloween IV.
 if(localStorage.getItem("jack-phase3-complete")==="yes"&&localStorage.getItem(MARA_KEY)!=="yes"){
@@ -1877,7 +1987,7 @@ function grantUninscribedBell(){
 }
 function finishPhase4Progress(){
  if(phase4Complete)return;
- phase4Complete=true;epilogueStep=5;epilogueRunning=false;memoryPulse=2;
+ phase4Complete=true;epilogueStep=5;epilogueRunning=false;memoryPulse=2;syncPhase4Music(true);
  if(!replayMode){
    localStorage.setItem(COMPLETE_KEY,"yes");
    localStorage.setItem(PHASE5_KEY,"yes");
@@ -2595,6 +2705,7 @@ function updateEnemies(dt){
  for(const e of enemies)updateEnemyState(e,dt,pc);
 }
 function update(dt){
+ syncPhase4Music();
  if(dialogue.active){
    lastPlayerAction=performance.now();idleTime=0;waitSitActive=false;waitSitClock=0;waitSitFrame=0;
    p.vx*=.75;
@@ -2795,7 +2906,7 @@ addEventListener("keyup",e=>{
 
 document.getElementById("startGame").onclick=()=>{
  if(journeyMode&&!replayMode)journey?.advanceTo(4);
- ui.intro.hidden=true;running=true;last=performance.now();markPlayerAction();requestAnimationFrame(loop);
+ ui.intro.hidden=true;running=true;last=performance.now();markPlayerAction();syncPhase4Music(true);requestAnimationFrame(loop);
  if(phase4Complete){setTimeout(()=>{if(ui.prototype)ui.prototype.hidden=false},420);return}
  if(!introPlayed){introPlayed=true;setTimeout(()=>dialogue.open(story.opening,()=>{say("A Chave de Madeira de Mara começou a aquecer.");save()}),300)}
 };
@@ -2804,6 +2915,16 @@ document.getElementById("phase4Menu")?.addEventListener("click",()=>location.hre
 document.getElementById("phase4Replay")?.addEventListener("click",()=>{location.href="phase4.html?replay=1&new=1"});
 
 function loop(t){if(!running)return;const dt=Math.min(.033,(t-last)/1000);last=t;update(dt);draw();requestAnimationFrame(loop)}
-addEventListener("pagehide",save);document.addEventListener("visibilitychange",()=>{if(document.hidden)save()});
+addEventListener("pagehide",()=>{save();stopPhase4Music()});
+document.addEventListener("visibilitychange",()=>{
+ if(document.hidden){
+   save();
+   phase4MusicChannels.forEach(a=>a.pause());
+ }else if(running&&phase4MusicEnabled){
+   const active=phase4MusicChannels[phase4MusicActiveChannel];
+   if(phase4MusicKey&&active.src)active.play().catch(()=>syncPhase4Music(true));
+   else syncPhase4Music(true);
+ }
+});
 syncHud();draw();
 })();
