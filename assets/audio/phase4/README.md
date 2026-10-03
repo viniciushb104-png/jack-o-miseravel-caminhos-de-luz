@@ -17,3 +17,13 @@ Coloque nesta pasta as 13 faixas em MP3 com estes nomes exatos:
 13. `phase4-road-continues-finale.mp3` — A Estrada Continua
 
 As faixas são usadas automaticamente dentro da Fase 4 conforme a área/ato e são desbloqueadas no Fonógrafo da Lanterna após `jack-phase4-complete=yes`.
+
+
+## Status
+
+✅ 13/13 faixas enviadas ao repositório.
+
+Integração:
+- reprodução adaptativa dentro de Halloween IV;
+- crossfade por área e ato do Coletor;
+- desbloqueio no Fonógrafo da Lanterna após `jack-phase4-complete=yes`.
