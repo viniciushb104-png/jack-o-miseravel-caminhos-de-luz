@@ -208,9 +208,9 @@ let pilgrimBridgeDone=!!saveData?.pilgrimBridgeDone||Number(saveData?.x||0)>=790
 let pilgrimX=Number.isFinite(saveData?.pilgrimX)?saveData.pilgrimX:
  (arenaReached?10535:arenaEdgePlayed?10535:collectorApproachPlayed?9950:stolenPlazaPlayed?8300:pilgrimBridgeDone?8040:prototypeEndPlayed?4850:tracesSolved?4680:2580);
 if(!pilgrimBridgeDone&&pilgrimX>6350)pilgrimX=6250;
-let pilgrimFeetY=590,pilgrimDir=1,pilgrimMode="wait",pilgrimMoveSpeed=0;
+let pilgrimFeetY=590,pilgrimDir=saveData?.pilgrimDir===-1?-1:1,pilgrimMode="wait",pilgrimMoveSpeed=0;
 let pilgrimTerrainJump={active:false,fromX:0,toX:0,fromY:590,toY:590,t:0,arc:72,dir:1};
-const pilgrimBridge={active:false,segment:0,t:0};
+const pilgrimBridge={active:false,segment:0,t:0,landingPause:0};
 const pilgrimBridgeWaypoints=[
  {x:6250,y:590},{x:6580,y:520},{x:6850,y:455},{x:7135,y:515},
  {x:7425,y:440},{x:7705,y:505},{x:8010,y:590}
@@ -300,6 +300,28 @@ const checkpoints=[
  {id:"plaza",x:8150,groundY:590,respawnX:8080,respawnY:504,name:"Marco da Praça"},
  {id:"collector",x:9950,groundY:590,respawnX:9880,respawnY:504,name:"Marco sem Nome"}
 ]
+
+function normalizePilgrimAfterLoad(){
+ if(!pilgrimMet)return;
+ if(!pilgrimBridgeDone&&pilgrimX>6350&&pilgrimX<7900){
+   pilgrimX=6250;pilgrimFeetY=590;return;
+ }
+ if(supportPlatformAt(pilgrimX,590,28))return;
+ const runs=platforms
+   .filter(q=>q.y===590&&q.h>=100&&!q.broken&&q.kind!=="bridge")
+   .slice().sort((a,b)=>a.x-b.x);
+ let bestX=pilgrimX,best=Infinity;
+ for(const q of runs){
+   const left=q.x+34,right=q.x+q.w-34;
+   for(const x of [left,right]){
+     const d=Math.abs(x-pilgrimX);
+     if(d<best){best=d;bestX=x}
+   }
+ }
+ if(best<220)pilgrimX=bestX;
+ pilgrimFeetY=590;
+}
+normalizePilgrimAfterLoad();
 
 const ENEMY_ARCHETYPES=Object.freeze({
  eraser:Object.freeze({
@@ -455,19 +477,16 @@ function save(){
    plazaEchoes:[...plazaEchoes],plazaSolved,collectorGlimpsePlayed,
    bossStarted,bossResolved,bossAct,bossArmor,bossHp,bossX,
    epilogueStep,phase4Complete,bellObtained,bellGiftPresented,
-   pilgrimX,pilgrimBridgeDone,archiveEvidence:[...archiveEvidence],archiveSolved,deadEnemies:deadEnemies(),savedAt:Date.now()
+   pilgrimX,pilgrimDir,pilgrimBridgeDone,archiveEvidence:[...archiveEvidence],archiveSolved,deadEnemies:deadEnemies(),savedAt:Date.now()
  }));
 }
 function resetPilgrimAfterRespawn(){
  if(!pilgrimMet)return;
- pilgrimBridge.active=false;pilgrimFeetY=590;pilgrimMode="wait";
+ pilgrimBridge.active=false;pilgrimBridge.segment=0;pilgrimBridge.t=0;pilgrimBridge.landingPause=0;
+ pilgrimTerrainJump.active=false;pilgrimTerrainJump.t=0;
+ pilgrimFeetY=590;pilgrimMode="wait";pilgrimMoveSpeed=0;
  if(activeCheckpoint==="collector"){pilgrimBridgeDone=true;pilgrimX=9820;return}
  if(activeCheckpoint==="plaza"){pilgrimBridgeDone=true;pilgrimX=8030;return}
- if(activeCheckpoint==="bridge"){
-   pilgrimBridgeDone=false;pilgrimX=6250;pilgrimFeetY=590;bridgeFogClock=0;
-   for(const q of platforms)if(q.unstable)q.lightTimer=0;
-   return;
- }
  if(activeCheckpoint==="archive"){pilgrimBridgeDone=false;pilgrimX=5850;return}
  if(activeCheckpoint==="traces"){pilgrimX=tracesSolved?4660:3230;return}
  if(activeCheckpoint==="village"){pilgrimX=2860;return}
@@ -1155,8 +1174,9 @@ function pilgrimSpriteSelection(){
  if(pilgrimMode==="guard")return {index:9,baseLeft:true,scale:1.02};
  if(pilgrimMode==="jump"){
    const seq=[5,6,7,8];
-   const idx=seq[Math.floor(p.anim*10)%seq.length];
-   return {index:idx,baseLeft:true,scale:1.04};
+   const t=pilgrimJumpProgress();
+   const phase=t<.2?0:(t<.48?1:(t<.76?2:3));
+   return {index:seq[phase],baseLeft:true,scale:1.04};
  }
  if(moving){
    const seq=[5,6,7,8];
@@ -1207,7 +1227,7 @@ function drawPilgrim(){
  const jump=pilgrimMode==="jump";
  const support=jump?null:supportPlatformAt(px,feet,48);
  const extraField=support?.artGroup==="2c"?2:0;
- const footFix=jump?0:platformVisualFootOffset(support)+2+extraField;
+ const footFix=jump?pilgrimJumpFootFix():platformVisualFootOffset(support)+2+extraField;
 
  const selection=pilgrimSpriteSelection();
  const im=pilgrimGameplaySprites[selection.index];
@@ -1246,10 +1266,17 @@ function drawPilgrim(){
  ctx.restore();
 }
 
-function pilgrimDangerNearby(){
- if(!pilgrimMet||pilgrimBridge.active)return false;
- return enemies.some(e=>!e.defeated&&e.state!=="dead"&&e.state!=="dissolve"&&Math.abs((e.x+e.w/2)-pilgrimX)<260&&Math.abs(p.x-pilgrimX)<650);
+function pilgrimNearestDanger(){
+ if(!pilgrimMet||pilgrimBridge.active)return null;
+ let best=null,bestDist=Infinity;
+ for(const e of enemies){
+   if(e.defeated||e.state==="dead"||e.state==="dissolve")continue;
+   const d=Math.abs((e.x+e.w/2)-pilgrimX);
+   if(d<260&&Math.abs((p.x+p.w/2)-pilgrimX)<650&&d<bestDist){best=e;bestDist=d}
+ }
+ return best;
 }
+function pilgrimDangerNearby(){return !!pilgrimNearestDanger()}
 function pilgrimFollowTarget(){
  if(!pilgrimMet)return 2580;
  if(!tracesSolved){
@@ -1261,7 +1288,8 @@ function pilgrimFollowTarget(){
  if(!pilgrimBridgeDone&&p.x<6100){
    if(prototypeEndPlayed&&!archiveSolved){
      const found=archiveEvidence.filter(Boolean).length;
-     const holds=[4845,5185,5575,5905];
+     // A terceira espera fica antes do checkpoint do Arquivo (x=5570), sem sobrepor a arte.
+     const holds=[4845,5185,5470,5905];
      return holds[Math.min(found,holds.length-1)];
    }
    return Math.max(3320,Math.min(5920,p.x-155));
@@ -1298,8 +1326,16 @@ function pilgrimInCollectorSequence(){
 }
 function pilgrimCollectorGapJumpFor(x,target){
  if(!pilgrimInCollectorSequence())return null;
+ const dir=Math.sign(target-x);
+ if(!dir)return null;
  for(const j of PILGRIM_COLLECTOR_JUMPS){
-   if(x>=j.fromX-24&&x<=j.fromX+18&&target>j.toX-10)return {...j};
+   if(dir>0&&x>=j.fromX-24&&x<=j.fromX+18&&target>j.toX-10)return {...j};
+   if(dir<0&&x<=j.toX+24&&x>=j.toX-18&&target<j.fromX+10){
+     return {
+       fromX:j.toX,toX:j.fromX,fromY:j.toY,toY:j.fromY,
+       dir:-1,gap:j.gap,arc:j.arc
+     };
+   }
  }
  return null;
 }
@@ -1333,6 +1369,34 @@ function pilgrimGapJumpFor(x,target){
  }
  return null;
 }
+function pilgrimPlatformFootFixAt(x,y){
+ const q=supportPlatformAt(x,y,52);
+ return platformVisualFootOffset(q)+2+(q?.artGroup==="2c"?2:0);
+}
+function pilgrimJumpProgress(){
+ if(pilgrimTerrainJump.active)return pilgrimTerrainJump.t;
+ if(pilgrimBridge.active)return pilgrimBridge.t;
+ return 0;
+}
+function pilgrimJumpFootFix(){
+ if(pilgrimTerrainJump.active){
+   const j=pilgrimTerrainJump,t=Math.max(0,Math.min(1,j.t));
+   const a=pilgrimPlatformFootFixAt(j.fromX,j.fromY);
+   const b=pilgrimPlatformFootFixAt(j.toX,j.toY);
+   return a+(b-a)*t;
+ }
+ if(pilgrimBridge.active){
+   const a=pilgrimBridgeWaypoints[pilgrimBridge.segment];
+   const b=pilgrimBridgeWaypoints[pilgrimBridge.segment+1];
+   if(a&&b){
+     const t=Math.max(0,Math.min(1,pilgrimBridge.t));
+     const fa=pilgrimPlatformFootFixAt(a.x,a.y);
+     const fb=pilgrimPlatformFootFixAt(b.x,b.y);
+     return fa+(fb-fa)*t;
+   }
+ }
+ return 0;
+}
 function startPilgrimTerrainJump(j){
  if(!j||pilgrimTerrainJump.active)return false;
  pilgrimTerrainJump={
@@ -1364,12 +1428,20 @@ function updatePilgrimTerrainJump(dt){
 
 function startPilgrimBridge(){
  if(pilgrimBridge.active||pilgrimBridgeDone)return;
- pilgrimBridge.active=true;pilgrimBridge.segment=0;pilgrimBridge.t=0;
+ pilgrimBridge.active=true;pilgrimBridge.segment=0;pilgrimBridge.t=0;pilgrimBridge.landingPause=0;
  pilgrimX=pilgrimBridgeWaypoints[0].x;pilgrimFeetY=pilgrimBridgeWaypoints[0].y;
  pilgrimMode="jump";pilgrimDir=1;
 }
 function updatePilgrimBridge(dt){
  if(!pilgrimBridge.active)return;
+ if(pilgrimBridge.landingPause>0){
+   pilgrimBridge.landingPause=Math.max(0,pilgrimBridge.landingPause-dt);
+   const landed=pilgrimBridgeWaypoints[pilgrimBridge.segment];
+   if(landed){
+     pilgrimX=landed.x;pilgrimFeetY=landed.y;pilgrimMode="wait";pilgrimMoveSpeed=0;
+   }
+   return;
+ }
  const a=pilgrimBridgeWaypoints[pilgrimBridge.segment];
  const b=pilgrimBridgeWaypoints[pilgrimBridge.segment+1];
  if(!a||!b){
@@ -1387,8 +1459,13 @@ function updatePilgrimBridge(dt){
  if(t>=1){
    pilgrimX=b.x;pilgrimFeetY=b.y;pilgrimBridge.segment++;pilgrimBridge.t=0;
    if(pilgrimBridge.segment>=pilgrimBridgeWaypoints.length-1){
-     pilgrimBridge.active=false;pilgrimBridgeDone=true;pilgrimX=8010;pilgrimFeetY=590;pilgrimMode="wait";
+     pilgrimBridge.active=false;pilgrimBridgeDone=true;pilgrimBridge.landingPause=0;
+     pilgrimX=8010;pilgrimFeetY=590;pilgrimMode="wait";pilgrimMoveSpeed=0;
      banner("A PEREGRINA ATRAVESSOU");save();
+   }else{
+     // Um pouso curto torna cada salto legível e impede a sensação de "sobrevoar" a ponte.
+     pilgrimBridge.landingPause=.13;
+     pilgrimMode="wait";pilgrimMoveSpeed=0;
    }
  }
 }
@@ -1403,15 +1480,19 @@ function updatePilgrim(dt){
  const target=pilgrimFollowTarget();
  const collectorSequence=pilgrimInCollectorSequence();
 
- if(pilgrimDangerNearby()){
-   // Na Casa do Coletor ela espera firmemente sobre o chão em vez de oscilar
-   // entre corrida, salto e guarda. Assim a retomada da caminhada é legível.
+ const threat=pilgrimNearestDanger();
+ if(threat){
+   // Guarda estável: encara a ameaça e não alterna direção aleatoriamente.
+   pilgrimDir=((threat.x+threat.w/2)>=pilgrimX)?1:-1;
    pilgrimMode="guard";pilgrimMoveSpeed=0;pilgrimFeetY=590;return;
  }
 
  const delta=target-pilgrimX,ad=Math.abs(delta);
  if(ad<12){
-   pilgrimX=target;pilgrimFeetY=590;pilgrimMode="wait";pilgrimMoveSpeed=0;return;
+   pilgrimX=target;pilgrimFeetY=590;pilgrimMode="wait";pilgrimMoveSpeed=0;
+   const jackCenter=p.x+p.w/2;
+   if(Math.abs(jackCenter-pilgrimX)>8)pilgrimDir=jackCenter>=pilgrimX?1:-1;
+   return;
  }
 
  // A Casa do Coletor possui somente dois saltos narrativos.
@@ -2892,6 +2973,7 @@ function update(dt){
    else{
      const cp=checkpoints.find(q=>q.id===activeCheckpoint);
      p.x=cp?cp.respawnX:110;p.y=cp?cp.respawnY:470;p.vx=p.vy=0;
+     resetPilgrimAfterRespawn();
      if(wasBridge){bridgeFogClock=0;for(const q of platforms)if(q.unstable)q.lightTimer=0}
      say((wasBridge?"A névoa apagou a plataforma sob Jack. ":"Um passo desapareceu na névoa. ")+playerLife+"/3.");
    }
