@@ -203,7 +203,7 @@ const p={x:Number.isFinite(saveData?.x)?saveData.x:110,y:Number.isFinite(saveDat
 // já possui posição, distância de seguimento, espera, corrida e travessia própria.
 let pilgrimBridgeDone=!!saveData?.pilgrimBridgeDone||Number(saveData?.x||0)>=7900;
 let pilgrimX=Number.isFinite(saveData?.pilgrimX)?saveData.pilgrimX:
- (arenaReached?10530:collectorApproachPlayed?9950:stolenPlazaPlayed?8300:pilgrimBridgeDone?8040:prototypeEndPlayed?4850:tracesSolved?4680:2580);
+ (arenaReached?10535:arenaEdgePlayed?10535:collectorApproachPlayed?9950:stolenPlazaPlayed?8300:pilgrimBridgeDone?8040:prototypeEndPlayed?4850:tracesSolved?4680:2580);
 if(!pilgrimBridgeDone&&pilgrimX>6350)pilgrimX=6250;
 let pilgrimFeetY=590,pilgrimDir=1,pilgrimMode="wait",pilgrimMoveSpeed=0;
 let pilgrimTerrainJump={active:false,fromX:0,toX:0,fromY:590,toY:590,t:0,arc:72,dir:1};
@@ -1253,7 +1253,7 @@ function pilgrimFollowTarget(){
    return Math.max(3320,Math.min(5920,p.x-155));
  }
  if(!pilgrimBridgeDone)return 6250;
- if(p.x<9300){
+ if(p.x<9300&&!collectorApproachPlayed){
    if(stolenPlazaPlayed&&!plazaSolved){
      const found=plazaEchoes.filter(Boolean).length;
      const holds=[8040,8240,8510,8760];
@@ -1261,13 +1261,33 @@ function pilgrimFollowTarget(){
    }
    return Math.max(8010,Math.min(8840,p.x-165));
  }
- if(p.x<10600)return Math.max(8950,Math.min(10480,p.x-175));
  if(bossResolved){
    if(epilogueStep<4)return 10765;
    if(epilogueStep===4)return 10805;
    return 11155;
  }
+
+ // Casa do Coletor: a Peregrina ganha uma coreografia própria.
+ // Ela acompanha Jack pelos dois vãos reais, mas para antes da arena porque
+ // a fala "Eu volto" só funciona se ela permanecer do lado de fora.
+ const jackCenter=p.x+p.w/2;
+ if(!collectorApproachPlayed)return Math.max(8950,Math.min(9250,jackCenter-180));
+ if(!arenaEdgePlayed)return Math.max(9140,Math.min(10400,jackCenter-160));
  return 10535;
+}
+const PILGRIM_COLLECTOR_JUMPS=Object.freeze([
+ Object.freeze({fromX:9464,toX:9656,fromY:590,toY:590,dir:1,gap:120,arc:82}),
+ Object.freeze({fromX:9994,toX:10186,fromY:590,toY:590,dir:1,gap:120,arc:82})
+]);
+function pilgrimInCollectorSequence(){
+ return !bossResolved&&(p.x>=8940||pilgrimX>=8940||collectorApproachPlayed||arenaEdgePlayed||bossStarted);
+}
+function pilgrimCollectorGapJumpFor(x,target){
+ if(!pilgrimInCollectorSequence())return null;
+ for(const j of PILGRIM_COLLECTOR_JUMPS){
+   if(x>=j.fromX-24&&x<=j.fromX+18&&target>j.toX-10)return {...j};
+ }
+ return null;
 }
 function pilgrimGroundRuns(){
  return platforms
@@ -1303,7 +1323,7 @@ function startPilgrimTerrainJump(j){
  if(!j||pilgrimTerrainJump.active)return false;
  pilgrimTerrainJump={
    active:true,fromX:j.fromX,toX:j.toX,fromY:j.fromY,toY:j.toY,
-   t:0,arc:68+Math.min(22,j.gap*.12),dir:j.dir
+   t:0,arc:Number.isFinite(j.arc)?j.arc:68+Math.min(22,j.gap*.12),dir:j.dir
  };
  pilgrimX=j.fromX;pilgrimFeetY=j.fromY;pilgrimDir=j.dir;
  pilgrimMode="jump";pilgrimMoveSpeed=0;
@@ -1367,7 +1387,11 @@ function updatePilgrim(dt){
  }
 
  const target=pilgrimFollowTarget();
+ const collectorSequence=pilgrimInCollectorSequence();
+
  if(pilgrimDangerNearby()){
+   // Na Casa do Coletor ela espera firmemente sobre o chão em vez de oscilar
+   // entre corrida, salto e guarda. Assim a retomada da caminhada é legível.
    pilgrimMode="guard";pilgrimMoveSpeed=0;pilgrimFeetY=590;return;
  }
 
@@ -1376,13 +1400,26 @@ function updatePilgrim(dt){
    pilgrimX=target;pilgrimFeetY=590;pilgrimMode="wait";pilgrimMoveSpeed=0;return;
  }
 
- // Se há um vão real entre dois blocos de chão, a Peregrina salta em vez de caminhar no ar.
- const terrainJump=pilgrimGapJumpFor(pilgrimX,target);
- if(terrainJump&&startPilgrimTerrainJump(terrainJump))return;
+ // A Casa do Coletor possui somente dois saltos narrativos.
+ // O terceiro vão é a entrada da arena: a Peregrina NÃO o atravessa.
+ const collectorJump=collectorSequence?pilgrimCollectorGapJumpFor(pilgrimX,target):null;
+ if(collectorJump&&startPilgrimTerrainJump(collectorJump))return;
+
+ // Fora da Casa do Coletor, preservamos exatamente o sistema já aprovado.
+ if(!collectorSequence){
+   const terrainJump=pilgrimGapJumpFor(pilgrimX,target);
+   if(terrainJump&&startPilgrimTerrainJump(terrainJump))return;
+ }
 
  pilgrimDir=Math.sign(delta)||pilgrimDir;
- pilgrimMoveSpeed=ad>290?255:165;
- pilgrimMode=pilgrimMoveSpeed>210?"run":"walk";
+ if(collectorSequence){
+   // Passo mais deliberado nesta área; só corre se Jack realmente abriu muita distância.
+   pilgrimMoveSpeed=ad>430?220:145;
+   pilgrimMode=pilgrimMoveSpeed>210?"run":"walk";
+ }else{
+   pilgrimMoveSpeed=ad>290?255:165;
+   pilgrimMode=pilgrimMoveSpeed>210?"run":"walk";
+ }
  pilgrimX+=pilgrimDir*Math.min(ad,pilgrimMoveSpeed*dt);
  pilgrimFeetY=590;
 }
@@ -2771,6 +2808,14 @@ function update(dt){
      say("As placas fecham a saída. Ainda há vozes separadas de seus nomes. "+heard+"/3.");gateMsg=2;
    }
  }
+ if(collectorApproachPlayed&&!arenaEdgePlayed&&p.x+p.w>10495&&pilgrimX<10325){
+   p.x=10495-p.w;p.vx=Math.min(0,p.vx);
+   if(gateMsg<=0){say("A Peregrina vem logo atrás. Jack espera antes da entrada.");gateMsg=1.5}
+ }
+ if(arenaEdgePlayed&&!bossStarted&&!bossResolved&&p.x+p.w>10705&&pilgrimX<10512){
+   p.x=10705-p.w;p.vx=Math.min(0,p.vx);
+   if(gateMsg<=0){say("A Peregrina para diante da arena. Jack espera até ela estar segura.");gateMsg=1.5}
+ }
  if(bossStarted&&!bossResolved&&p.x>10480&&p.x<10685){
    p.x=10685;p.vx=Math.max(0,p.vx);
    if(gateMsg<=0){say("A arena fechou atrás de Jack.");gateMsg=1.6}
@@ -2825,10 +2870,14 @@ function update(dt){
  }else if(plazaSolved&&!collectorApproachPlayed&&p.x>9340){
    collectorApproachPlayed=true;p.vx=0;
    dialogue.open(story.collectorApproach,()=>{banner("CASA DO COLETOR");save()})
- }else if(collectorApproachPlayed&&!arenaEdgePlayed&&p.x>10420){
-   arenaEdgePlayed=true;p.vx=0;
-   dialogue.open(story.arenaEdge,()=>{pilgrimX=Math.min(pilgrimX,10535);banner("DIANTE DA CASA DO COLETOR");save()})
- }else if(arenaEdgePlayed&&!bossStarted&&!bossResolved&&p.x>10720){
+ }else if(collectorApproachPlayed&&!arenaEdgePlayed&&p.x>10420&&pilgrimX>=10320){
+   arenaEdgePlayed=true;p.vx=0;pilgrimMode="wait";
+   dialogue.open(story.arenaEdge,()=>{
+     banner("DIANTE DA CASA DO COLETOR");
+     // Depois de "Eu volto", ela caminha os últimos passos e para fora da arena.
+     pilgrimMode="walk";save();
+   })
+ }else if(arenaEdgePlayed&&!bossStarted&&!bossResolved&&p.x>10720&&pilgrimX>=10512&&!pilgrimTerrainJump.active){
    startCollectorBoss();
  }
 
