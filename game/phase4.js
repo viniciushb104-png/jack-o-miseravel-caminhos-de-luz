@@ -202,11 +202,57 @@ const archiveEvidenceGuards=["eraser-2","hollow-1","hound-1"];
 
 const p={x:Number.isFinite(saveData?.x)?saveData.x:110,y:Number.isFinite(saveData?.y)?saveData.y:470,w:46,h:86,vx:0,vy:0,dir:saveData?.dir===-1?-1:1,on:false,coyote:0,buffer:0,anim:0,attack:0,inv:0};
 
-// Peregrina — companheira narrativa. Antes dos sprites definitivos, o protótipo
-// já possui posição, distância de seguimento, espera, corrida e travessia própria.
-let pilgrimBridgeDone=!!saveData?.pilgrimBridgeDone||Number(saveData?.x||0)>=7900;
-let pilgrimX=Number.isFinite(saveData?.pilgrimX)?saveData.pilgrimX:
- (arenaReached?10535:arenaEdgePlayed?10535:collectorApproachPlayed?9950:stolenPlazaPlayed?8300:pilgrimBridgeDone?8040:prototypeEndPlayed?4850:tracesSolved?4680:2580);
+// Peregrina — companheira narrativa independente do movimento de Jack.
+// Sua posição avança por estados da história/enigmas; Jack pode voltar no mapa sem arrastá-la.
+let pilgrimBridgeDone=!!saveData?.pilgrimBridgeDone||
+ bridgeNameGlitchPlayed||bridgeCrossedPlayed||stolenPlazaPlayed||plazaSolved||
+ collectorApproachPlayed||arenaEdgePlayed||bossStarted||bossResolved||phase4Complete;
+
+function pilgrimNarrativeTarget(){
+ if(!pilgrimMet)return 2580;
+
+ // 1 · Campo das Pegadas — ela avança somente quando cada memória é reconstruída.
+ if(!tracesSolved){
+   const found=traces.filter(Boolean).length;
+   return [3310,3690,4080][Math.min(found,2)];
+ }
+
+ // 2 · Entrada do Arquivo — o Campo já foi resolvido; ela não volta ao Povoado.
+ if(!prototypeEndPlayed)return 4660;
+
+ // 3 · Arquivo Rasurado — cada prova resolvida libera o próximo ponto de espera.
+ if(!archiveSolved){
+   const found=archiveEvidence.filter(Boolean).length;
+   return [4845,5185,5470,5905][Math.min(found,3)];
+ }
+
+ // 4 · Ponte dos Ninguém — o Arquivo resolvido libera a aproximação.
+ // A travessia propriamente dita só começa após o diálogo bridgeFearPlayed.
+ if(!pilgrimBridgeDone)return 6250;
+
+ // 5 · Praça dos Nomes Roubados — cada eco resolvido move a Peregrina adiante.
+ if(!plazaSolved){
+   if(!stolenPlazaPlayed)return 8010;
+   const found=plazaEchoes.filter(Boolean).length;
+   return [8040,8240,8510,8760][Math.min(found,3)];
+ }
+
+ // 6 · A Praça resolvida permite que ela siga até a Casa, sem depender de Jack voltar ou avançar.
+ if(!collectorApproachPlayed)return 9140;
+
+ // 7 · Após a conversa sobre o nome, ela atravessa a Casa até o ponto do último diálogo.
+ if(!arenaEdgePlayed)return 10325;
+
+ // 8 · "Eu volto": daqui em diante ela permanece fora da arena.
+ if(!bossResolved)return 10535;
+
+ // 9 · Epílogo — movimentos exclusivamente narrativos.
+ if(epilogueStep<4)return 10765;
+ if(epilogueStep===4)return 10805;
+ return 11155;
+}
+
+let pilgrimX=Number.isFinite(saveData?.pilgrimX)?saveData.pilgrimX:pilgrimNarrativeTarget();
 if(!pilgrimBridgeDone&&pilgrimX>6350)pilgrimX=6250;
 let pilgrimFeetY=590,pilgrimDir=saveData?.pilgrimDir===-1?-1:1,pilgrimMode="wait",pilgrimMoveSpeed=0;
 let pilgrimAnimClock=0,pilgrimAnimLastMode="wait";
@@ -302,17 +348,9 @@ const checkpoints=[
  {id:"collector",x:9950,groundY:590,respawnX:9880,respawnY:504,name:"Marco sem Nome"}
 ]
 
-function normalizePilgrimAfterLoad(){
+function normalizePilgrimGroundOnly(){
  if(!pilgrimMet)return;
- // Depois que a arena fecha, a posição narrativa da Peregrina é fixa:
- // ela ficou do lado de fora esperando Jack cumprir "Eu volto".
- if(bossStarted&&!bossResolved){
-   pilgrimBridgeDone=true;pilgrimX=10535;pilgrimFeetY=590;pilgrimDir=1;return;
- }
- if(!pilgrimBridgeDone&&pilgrimX>6350&&pilgrimX<7900){
-   pilgrimX=6250;pilgrimFeetY=590;return;
- }
- if(supportPlatformAt(pilgrimX,590,28))return;
+ if(supportPlatformAt(pilgrimX,590,28)){pilgrimFeetY=590;return}
  const runs=platforms
    .filter(q=>q.y===590&&q.h>=100&&!q.broken&&q.kind!=="bridge")
    .slice().sort((a,b)=>a.x-b.x);
@@ -326,6 +364,22 @@ function normalizePilgrimAfterLoad(){
  }
  if(best<220)pilgrimX=bestX;
  pilgrimFeetY=590;
+}
+function normalizePilgrimAfterLoad(){
+ if(!pilgrimMet)return;
+ if(bossStarted&&!bossResolved){
+   pilgrimBridgeDone=true;pilgrimX=10535;pilgrimFeetY=590;pilgrimDir=1;return;
+ }
+ if(!pilgrimBridgeDone&&pilgrimX>6350&&pilgrimX<7900){
+   pilgrimX=6250;pilgrimFeetY=590;pilgrimDir=1;return;
+ }
+
+ // Migração dos saves antigos do sistema "segue Jack":
+ // se ela foi levada muito além do enigma realmente resolvido, volta apenas uma vez
+ // para o marco narrativo correto. Depois disso não há regressão por movimento de Jack.
+ const narrativeTarget=pilgrimNarrativeTarget();
+ if(pilgrimX>narrativeTarget+220)pilgrimX=narrativeTarget;
+ normalizePilgrimGroundOnly();
 }
 normalizePilgrimAfterLoad();
 
@@ -488,17 +542,23 @@ function save(){
 }
 function resetPilgrimAfterRespawn(){
  if(!pilgrimMet)return;
+ const wasBridgeMotion=pilgrimBridge.active||(!pilgrimBridgeDone&&pilgrimX>6350&&pilgrimX<7900);
  pilgrimBridge.active=false;pilgrimBridge.segment=0;pilgrimBridge.t=0;pilgrimBridge.landingPause=0;
  pilgrimTerrainJump.active=false;pilgrimTerrainJump.t=0;
  pilgrimFeetY=590;pilgrimMode="wait";pilgrimMoveSpeed=0;
  pilgrimAnimClock=0;pilgrimAnimLastMode="wait";
- if(bossStarted&&!bossResolved){pilgrimBridgeDone=true;pilgrimX=10535;pilgrimDir=1;return}
- if(activeCheckpoint==="collector"){pilgrimBridgeDone=true;pilgrimX=9820;return}
- if(activeCheckpoint==="plaza"){pilgrimBridgeDone=true;pilgrimX=8030;return}
- if(activeCheckpoint==="archive"){pilgrimBridgeDone=false;pilgrimX=5850;return}
- if(activeCheckpoint==="traces"){pilgrimX=tracesSolved?4660:3230;return}
- if(activeCheckpoint==="village"){pilgrimX=2860;return}
- pilgrimX=2580;
+
+ // A morte/respawn de Jack não regride o arco da Peregrina.
+ if(bossStarted&&!bossResolved){
+   pilgrimBridgeDone=true;pilgrimX=10535;pilgrimDir=1;return;
+ }
+ if(wasBridgeMotion&&!pilgrimBridgeDone){
+   pilgrimX=6250;pilgrimDir=1;return;
+ }
+
+ // Fora de um salto, ela permanece no ponto narrativo já conquistado.
+ // Se um save antigo a deixou dentro de um vão, normalizamos apenas o chão.
+ normalizePilgrimGroundOnly();
 }
 function resetCollectorAct(){
  if(!bossStarted||bossResolved)return;
@@ -1280,56 +1340,20 @@ function pilgrimNearestDanger(){
  for(const e of enemies){
    if(e.defeated||e.state==="dead"||e.state==="dissolve")continue;
    const d=Math.abs((e.x+e.w/2)-pilgrimX);
-   if(d<260&&Math.abs((p.x+p.w/2)-pilgrimX)<650&&d<bestDist){best=e;bestDist=d}
+   if(d<260&&d<bestDist){best=e;bestDist=d}
  }
  return best;
 }
 function pilgrimFollowTarget(){
- if(!pilgrimMet)return 2580;
- if(!tracesSolved){
-   const revealed=story.traces.filter((_,i)=>traces[i]);
-   if(!revealed.length)return 3310;
-   const furthest=Math.max(...revealed.map(t=>t.x));
-   return Math.max(3310,Math.min(4260,furthest-115));
- }
- if(!pilgrimBridgeDone&&p.x<6100){
-   if(prototypeEndPlayed&&!archiveSolved){
-     const found=archiveEvidence.filter(Boolean).length;
-     // A terceira espera fica antes do checkpoint do Arquivo (x=5570), sem sobrepor a arte.
-     const holds=[4845,5185,5470,5905];
-     return holds[Math.min(found,holds.length-1)];
-   }
-   return Math.max(3320,Math.min(5920,p.x-155));
- }
- if(!pilgrimBridgeDone)return 6250;
- if(p.x<9300&&!collectorApproachPlayed){
-   if(stolenPlazaPlayed&&!plazaSolved){
-     const found=plazaEchoes.filter(Boolean).length;
-     const holds=[8040,8240,8510,8760];
-     return holds[Math.min(found,holds.length-1)];
-   }
-   return Math.max(8010,Math.min(8840,p.x-165));
- }
- if(bossResolved){
-   if(epilogueStep<4)return 10765;
-   if(epilogueStep===4)return 10805;
-   return 11155;
- }
-
- // Casa do Coletor: a Peregrina ganha uma coreografia própria.
- // Ela acompanha Jack pelos dois vãos reais, mas para antes da arena porque
- // a fala "Eu volto" só funciona se ela permanecer do lado de fora.
- const jackCenter=p.x+p.w/2;
- if(!collectorApproachPlayed)return Math.max(8950,Math.min(9250,jackCenter-180));
- if(!arenaEdgePlayed)return Math.max(9140,Math.min(10400,jackCenter-160));
- return 10535;
+ return pilgrimNarrativeTarget();
 }
+
 const PILGRIM_COLLECTOR_JUMPS=Object.freeze([
  Object.freeze({fromX:9464,toX:9656,fromY:590,toY:590,dir:1,gap:120,arc:82}),
  Object.freeze({fromX:9994,toX:10186,fromY:590,toY:590,dir:1,gap:120,arc:82})
 ]);
 function pilgrimInCollectorSequence(){
- return !bossResolved&&(p.x>=8940||pilgrimX>=8940||collectorApproachPlayed||arenaEdgePlayed||bossStarted);
+ return !bossResolved&&(plazaSolved||collectorApproachPlayed||arenaEdgePlayed||bossStarted||pilgrimX>=8940);
 }
 function pilgrimCollectorGapJumpFor(x,target){
  if(!pilgrimInCollectorSequence())return null;
@@ -1496,7 +1520,7 @@ function updatePilgrim(dt){
  }
  if(pilgrimBridge.active){updatePilgrimBridge(dt);return}
  if(pilgrimTerrainJump.active){updatePilgrimTerrainJump(dt);return}
- if(!pilgrimBridgeDone&&bridgeFearPlayed&&p.x>6420&&Math.abs(pilgrimX-6250)<12){
+ if(!pilgrimBridgeDone&&bridgeFearPlayed&&Math.abs(pilgrimX-6250)<12){
    startPilgrimBridge();return;
  }
 
@@ -1510,13 +1534,15 @@ function updatePilgrim(dt){
    pilgrimMode="guard";pilgrimMoveSpeed=0;pilgrimFeetY=590;return;
  }
 
- const delta=target-pilgrimX,ad=Math.abs(delta);
- if(ad<12){
-   pilgrimX=target;pilgrimFeetY=590;pilgrimMode="wait";pilgrimMoveSpeed=0;
-   const jackCenter=p.x+p.w/2;
-   if(Math.abs(jackCenter-pilgrimX)>8)pilgrimDir=jackCenter>=pilgrimX?1:-1;
+ const delta=target-pilgrimX;
+ // A progressão da Peregrina é monotônica: Jack pode voltar quantas vezes quiser.
+ // Um alvo narrativo nunca ordena que ela caminhe para trás.
+ if(delta<=12){
+   if(delta>0)pilgrimX=target;
+   pilgrimFeetY=590;pilgrimMode="wait";pilgrimMoveSpeed=0;
    return;
  }
+ const ad=delta;
 
  // A Casa do Coletor possui somente dois saltos narrativos.
  // O terceiro vão é a entrada da arena: a Peregrina NÃO o atravessa.
@@ -1529,7 +1555,7 @@ function updatePilgrim(dt){
    if(terrainJump&&startPilgrimTerrainJump(terrainJump))return;
  }
 
- pilgrimDir=Math.sign(delta)||pilgrimDir;
+ pilgrimDir=1;
  if(collectorSequence){
    // Passo mais deliberado nesta área; só corre se Jack realmente abriu muita distância.
    pilgrimMoveSpeed=ad>430?220:145;
