@@ -134,7 +134,7 @@ let saveData=null;if(journeyMode&&!replayMode){try{saveData=JSON.parse(localStor
 
 const input={left:false,right:false,down:false,run:false,jump:false};
 let running=false,last=performance.now(),cam=0,section=-1,jack=null,keyImg=null,jackFrameOverrides={};
-let phase4SignImgs=Array(4).fill(null),checkpointOffImg=null,checkpointOnImg=null;
+let phase4SignImgs=Array(4).fill(null),signlessRoadPostImgs=Array(3).fill(null),checkpointOffImg=null,checkpointOnImg=null;
 let bellNormalImg=null,bellGlowImg=null,memoryDoorImg=null;
 let nonexistentDoorImg=null,nonexistentDoorRevealFxImg=null,doorRevealFx=0;
 let idleTime=0,waitSitFrame=0,waitSitClock=0,waitSitActive=false,waitSitImages=[];
@@ -817,6 +817,15 @@ const phase4SignReady=Promise.allSettled(phase4SignFiles.map(src=>img(src))).the
  phase4SignImgs=rs.map(r=>r.status==="fulfilled"?r.value:null);
  return phase4SignImgs;
 });
+const signlessRoadPostFiles=[
+ "../assets/game/phase4/props/signless-road-posts/phase4-signless-road-post-01.png",
+ "../assets/game/phase4/props/signless-road-posts/phase4-signless-road-post-02.png",
+ "../assets/game/phase4/props/signless-road-posts/phase4-signless-road-post-03.png"
+];
+const signlessRoadPostReady=Promise.allSettled(signlessRoadPostFiles.map(src=>img(src))).then(rs=>{
+ signlessRoadPostImgs=rs.map(r=>r.status==="fulfilled"?r.value:null);
+ return signlessRoadPostImgs;
+});
 const checkpointArtReady=Promise.allSettled([
  img("../assets/game/phase4/checkpoints/marco_gótico_com_abóbora_e_bandeira_rasgada.png"),
  img("../assets/game/phase4/checkpoints/marco_gótico_com_lanterna_abóbora.png")
@@ -857,7 +866,7 @@ const nonexistentDoorReady=Promise.allSettled([
 });
 
 const phase4PropReady=Promise.allSettled([
- phase4SignReady,checkpointArtReady,bellArtReady,memoryDoorReady,nonexistentDoorReady
+ phase4SignReady,signlessRoadPostReady,checkpointArtReady,bellArtReady,memoryDoorReady,nonexistentDoorReady
 ]);
 
 const jackPortraitFiles=["jack-00-neutral.png","jack-01-serious.png","jack-02-smirk.png","jack-03-surprised.png","jack-04-determined.png","jack-05-resolved.png"];
@@ -1229,8 +1238,46 @@ function drawPropByHeight(im,cx,bottomY,targetH,alpha=1,flip=false){
 }
 function drawSigns(){
  ctx.save();ctx.translate(-cam,0);
+
+ // ESTRADA SEM PLACAS — suportes vazios substituem qualquer placa legível.
+ // Cada peça reforça a ideia de que algo foi fisicamente removido da estrada.
+ const signlessRoadLayout=[
+   {x:1160,bottomY:590,h:214},
+   {x:1400,bottomY:485,h:160},
+   {x:1790,bottomY:430,h:150}
+ ];
+ for(let i=0;i<signlessRoadLayout.length;i++){
+   const q=signlessRoadLayout[i],im=signlessRoadPostImgs[i];
+   if(im){
+     drawPropByHeight(im,q.x,q.bottomY,q.h,.94,false);
+   }else{
+     // Fallback visual: poste e suporte vazio, sem recriar uma placa completa.
+     ctx.save();
+     ctx.globalAlpha=.68;
+     ctx.strokeStyle="#574937";
+     ctx.lineWidth=7;
+     ctx.beginPath();
+     ctx.moveTo(q.x,q.bottomY);
+     ctx.lineTo(q.x-2,q.bottomY-q.h*.72);
+     ctx.stroke();
+     ctx.strokeStyle="rgba(120,101,70,.65)";
+     ctx.lineWidth=2;
+     ctx.beginPath();
+     ctx.moveTo(q.x-3,q.bottomY-q.h*.68);
+     ctx.lineTo(q.x+46,q.bottomY-q.h*.68);
+     ctx.stroke();
+     ctx.fillStyle="rgba(206,188,145,.34)";
+     ctx.beginPath();ctx.arc(q.x+18,q.bottomY-q.h*.68,3,0,Math.PI*2);ctx.fill();
+     ctx.beginPath();ctx.arc(q.x+39,q.bottomY-q.h*.68,3,0,Math.PI*2);ctx.fill();
+     ctx.restore();
+   }
+ }
+
  let idx=0;
  for(let z=1180;z<WORLD;z+=840){
+   // A Estrada sem Placas (1050–2140) nunca recebe as placas decorativas globais.
+   if(z>=1050&&z<2140){idx++;continue}
+
    // Não empilhar placa decorativa em cima de checkpoint ou da placa narrativa da ponte.
    if(checkpoints.some(cp=>Math.abs(cp.x-z)<145)||Math.abs(z-7830)<175){idx++;continue}
    const im=phase4SignImgs[idx%phase4SignImgs.length];
