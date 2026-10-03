@@ -1227,9 +1227,9 @@ function drawPilgrim(){
  const px=pilgrimMet?pilgrimX:2580;
  const feet=pilgrimMet?pilgrimFeetY:590;
  const jump=pilgrimMode==="jump";
- const support=jump?null:supportPlatformAt(px,feet,48);
- const extraField=support?.artGroup==="2c"?2:0;
- const footFix=jump?pilgrimJumpFootFix():platformVisualFootOffset(support)+2+extraField;
+ // A Peregrina usa a geometria da plataforma mesmo quando a névoa a torna
+ // temporariamente não-sólida para Jack. Isso mantém os pés no mesmo baseline.
+ const footFix=jump?pilgrimJumpFootFix():pilgrimPlatformFootFixAt(px,feet);
 
  const selection=pilgrimSpriteSelection();
  const im=pilgrimGameplaySprites[selection.index];
