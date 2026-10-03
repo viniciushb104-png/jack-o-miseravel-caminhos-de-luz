@@ -204,8 +204,9 @@ const archiveEvidenceGuards=["eraser-2","hollow-1","hound-1"];
 
 const p={x:Number.isFinite(saveData?.x)?saveData.x:110,y:Number.isFinite(saveData?.y)?saveData.y:470,w:46,h:86,vx:0,vy:0,dir:saveData?.dir===-1?-1:1,on:false,coyote:0,buffer:0,anim:0,attack:0,inv:0};
 
-// Peregrina — companheira narrativa independente do movimento de Jack.
-// Sua posição avança por estados da história/enigmas; Jack pode voltar no mapa sem arrastá-la.
+// Peregrina — companheira narrativa independente de Jack E do combate.
+// Sua posição e animação avançam apenas por estados da história/enigmas.
+// Movimento, dano, perseguição, hit e morte dos inimigos nunca alteram seu estado.
 let pilgrimBridgeDone=!!saveData?.pilgrimBridgeDone||
  bridgeNameGlitchPlayed||bridgeCrossedPlayed||stolenPlazaPlayed||plazaSolved||
  collectorApproachPlayed||arenaEdgePlayed||bossStarted||bossResolved||phase4Complete;
@@ -1389,17 +1390,6 @@ function drawPilgrim(){
  ctx.restore();
 }
 
-function pilgrimNearestDanger(){
- if(!pilgrimMet||pilgrimBridge.active)return null;
- let best=null,bestDist=Infinity;
- for(const e of enemies){
-   if(e.defeated||e.state==="dead"||e.state==="dissolve")continue;
-   const d=Math.abs((e.x+e.w/2)-pilgrimX);
-   if(d<260&&d<bestDist){best=e;bestDist=d}
- }
- return best;
-}
-
 const PILGRIM_COLLECTOR_JUMPS=Object.freeze([
  Object.freeze({fromX:9464,toX:9656,fromY:590,toY:590,dir:1,gap:120,arc:82}),
  Object.freeze({fromX:9994,toX:10186,fromY:590,toY:590,dir:1,gap:120,arc:82})
@@ -1578,13 +1568,6 @@ function updatePilgrim(dt){
 
  const target=pilgrimNarrativeTarget();
  const collectorSequence=pilgrimInCollectorSequence();
-
- const threat=pilgrimNearestDanger();
- if(threat){
-   // Guarda estável: encara a ameaça e não alterna direção aleatoriamente.
-   pilgrimDir=((threat.x+threat.w/2)>=pilgrimX)?1:-1;
-   pilgrimMode="guard";pilgrimMoveSpeed=0;pilgrimFeetY=590;return;
- }
 
  const delta=target-pilgrimX;
  // A progressão da Peregrina é monotônica: Jack pode voltar quantas vezes quiser.
