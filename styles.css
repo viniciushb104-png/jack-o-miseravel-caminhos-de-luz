@@ -1264,6 +1264,52 @@ button:focus-visible{outline:3px solid #fff3b0;outline-offset:4px}
   }
 }
 
+/* Arte final desbloqueável — Halloween IV */
+.memory-trophy--phase4 .memory-trophy-art{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:
+    radial-gradient(circle at 52% 48%,rgba(237,154,49,.18),transparent 38%),
+    radial-gradient(circle at 50% 78%,rgba(114,55,22,.24),transparent 46%),
+    linear-gradient(180deg,#120f12 0%,#0a0b10 58%,#05070b 100%);
+}
+.memory-trophy--phase4 .memory-trophy-art img{
+  width:100%;
+  height:100%;
+  padding:4px 12px;
+  object-fit:contain;
+  object-position:center center;
+  transform:scale(.97);
+  filter:saturate(1.03) contrast(1.04) brightness(.96) drop-shadow(0 10px 20px rgba(0,0,0,.42));
+}
+.memory-trophy--phase4.is-unlocked .memory-trophy-art{
+  box-shadow:
+    inset 0 0 36px rgba(245,166,62,.16),
+    inset 0 -18px 42px rgba(87,38,14,.20);
+}
+.memory-trophy--phase4.is-unlocked:hover .memory-trophy-art img{
+  transform:scale(.99);
+}
+.memory-trophy--phase4.is-unlocked .memory-trophy-art::before,
+.memory-trophy--phase4.is-unlocked .memory-trophy-art::after{
+  color:#ffd26b;
+  text-shadow:0 0 14px rgba(255,149,36,.78);
+}
+.memory-trophy--phase4.is-unlocked .memory-trophy-copy{
+  background:
+    linear-gradient(180deg,rgba(75,35,10,.27),rgba(31,17,12,.18),rgba(7,9,14,.96));
+}
+@media (max-width:760px){
+  .memory-trophy--phase4 .memory-trophy-art img{
+    padding:3px 8px;
+    transform:scale(.98);
+  }
+  .memory-trophy--phase4.is-unlocked:hover .memory-trophy-art img{
+    transform:scale(.99);
+  }
+}
+
 .memories-music-toggle{
   margin-top:.75rem;
   display:inline-flex;
