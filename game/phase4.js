@@ -89,6 +89,7 @@ let pilgrimX=Number.isFinite(saveData?.pilgrimX)?saveData.pilgrimX:
  (arenaReached?10530:collectorApproachPlayed?9950:stolenPlazaPlayed?8300:pilgrimBridgeDone?8040:prototypeEndPlayed?4850:tracesSolved?4680:2580);
 if(!pilgrimBridgeDone&&pilgrimX>6350)pilgrimX=6250;
 let pilgrimFeetY=590,pilgrimDir=1,pilgrimMode="wait",pilgrimMoveSpeed=0;
+let pilgrimTerrainJump={active:false,fromX:0,toX:0,fromY:590,toY:590,t:0,arc:72,dir:1};
 const pilgrimBridge={active:false,segment:0,t:0};
 const pilgrimBridgeWaypoints=[
  {x:6250,y:590},{x:6580,y:520},{x:6850,y:455},{x:7135,y:515},
@@ -1050,7 +1051,7 @@ function drawPilgrimSprite(im,px,feet,footFix,selection){
  const facesLeft=!!selection.baseLeft;
  const shouldFlip=facesLeft?(pilgrimDir>0):(pilgrimDir<0);
 
- drawGroundShadow(sx,groundY+1,pilgrimMode==="guard"?24:21,4,.24);
+ if(pilgrimMode!=="jump")drawGroundShadow(sx,groundY+1,pilgrimMode==="guard"?24:21,4,.24);
  ctx.save();
  ctx.globalAlpha=.98;
  ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";
@@ -1152,6 +1153,65 @@ function pilgrimFollowTarget(){
  }
  return 10535;
 }
+function pilgrimGroundRuns(){
+ return platforms
+   .filter(q=>q.y===590&&q.h>=100&&!q.broken&&q.kind!=="bridge")
+   .slice().sort((a,b)=>a.x-b.x);
+}
+function pilgrimGapJumpFor(x,target){
+ const dir=Math.sign(target-x);
+ if(!dir)return null;
+ const runs=pilgrimGroundRuns();
+ for(let i=0;i<runs.length-1;i++){
+   const a=runs[i],b=runs[i+1];
+   const gapStart=a.x+a.w,gapEnd=b.x,gap=gapEnd-gapStart;
+   if(gap<55||gap>175)continue;
+
+   // Ponte dos Ninguém tem coreografia própria e nunca usa este salto genérico.
+   if(gapStart>=5940&&gapEnd<=7900)continue;
+
+   const pad=34;
+   if(dir>0){
+     const fromX=gapStart-pad,toX=gapEnd+pad;
+     if(x>=fromX-22&&x<=gapStart+8&&target>toX-8)
+       return {fromX,toX,fromY:590,toY:590,dir:1,gap};
+   }else{
+     const fromX=gapEnd+pad,toX=gapStart-pad;
+     if(x<=fromX+22&&x>=gapEnd-8&&target<toX+8)
+       return {fromX,toX,fromY:590,toY:590,dir:-1,gap};
+   }
+ }
+ return null;
+}
+function startPilgrimTerrainJump(j){
+ if(!j||pilgrimTerrainJump.active)return false;
+ pilgrimTerrainJump={
+   active:true,fromX:j.fromX,toX:j.toX,fromY:j.fromY,toY:j.toY,
+   t:0,arc:68+Math.min(22,j.gap*.12),dir:j.dir
+ };
+ pilgrimX=j.fromX;pilgrimFeetY=j.fromY;pilgrimDir=j.dir;
+ pilgrimMode="jump";pilgrimMoveSpeed=0;
+ return true;
+}
+function updatePilgrimTerrainJump(dt){
+ const j=pilgrimTerrainJump;
+ if(!j.active)return false;
+ const dist=Math.abs(j.toX-j.fromX);
+ const duration=Math.max(.42,Math.min(.68,dist/390));
+ j.t=Math.min(1,j.t+dt/duration);
+ const t=j.t,e=t*t*(3-2*t);
+ pilgrimX=j.fromX+(j.toX-j.fromX)*e;
+ const baseY=j.fromY+(j.toY-j.fromY)*e;
+ pilgrimFeetY=baseY-Math.sin(Math.PI*t)*j.arc;
+ pilgrimDir=j.dir;pilgrimMode="jump";
+ if(t>=1){
+   pilgrimX=j.toX;pilgrimFeetY=j.toY;
+   pilgrimTerrainJump.active=false;
+   pilgrimMode="walk";
+ }
+ return true;
+}
+
 function startPilgrimBridge(){
  if(pilgrimBridge.active||pilgrimBridgeDone)return;
  pilgrimBridge.active=true;pilgrimBridge.segment=0;pilgrimBridge.t=0;
@@ -1185,6 +1245,7 @@ function updatePilgrimBridge(dt){
 function updatePilgrim(dt){
  if(!pilgrimMet)return;
  if(pilgrimBridge.active){updatePilgrimBridge(dt);return}
+ if(pilgrimTerrainJump.active){updatePilgrimTerrainJump(dt);return}
  if(!pilgrimBridgeDone&&bridgeFearPlayed&&p.x>6420&&Math.abs(pilgrimX-6250)<42){
    startPilgrimBridge();return;
  }
@@ -1198,6 +1259,10 @@ function updatePilgrim(dt){
  if(ad<12){
    pilgrimX=target;pilgrimFeetY=590;pilgrimMode="wait";pilgrimMoveSpeed=0;return;
  }
+
+ // Se há um vão real entre dois blocos de chão, a Peregrina salta em vez de caminhar no ar.
+ const terrainJump=pilgrimGapJumpFor(pilgrimX,target);
+ if(terrainJump&&startPilgrimTerrainJump(terrainJump))return;
 
  pilgrimDir=Math.sign(delta)||pilgrimDir;
  pilgrimMoveSpeed=ad>290?255:165;
