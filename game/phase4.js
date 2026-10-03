@@ -188,6 +188,7 @@ if(phase4Complete){
 }
 
 let traces=Array.isArray(saveData?.traces)?saveData.traces.slice(0,3).map(Boolean):[false,false,false];
+if(traces.every(Boolean))tracesSolved=true;
 const traceRevealFx=[0,0,0];
 const hadArchiveState=Array.isArray(saveData?.archiveEvidence);
 let archiveEvidence=hadArchiveState?saveData.archiveEvidence.slice(0,3).map(Boolean):[false,false,false];
@@ -1306,7 +1307,7 @@ function drawPilgrim(){
  const moving=pilgrimMode==="walk"||pilgrimMode==="run";
  const phase=pilgrimAnimClock*(pilgrimMode==="run"?10:6);
  const stride=moving?Math.sin(phase)*14:0;
- const bob=moving?Math.abs(Math.sin(phase))*3:Math.sin(p.anim*1.8)*1.3;
+ const bob=moving?Math.abs(Math.sin(phase))*3:Math.sin(pilgrimAnimClock*1.8)*1.3;
  const guard=pilgrimMode==="guard";
  const lean=jump?pilgrimDir*7:(pilgrimMode==="run"?pilgrimDir*4:(guard?-pilgrimDir*3:0));
 
@@ -1343,9 +1344,6 @@ function pilgrimNearestDanger(){
    if(d<260&&d<bestDist){best=e;bestDist=d}
  }
  return best;
-}
-function pilgrimFollowTarget(){
- return pilgrimNarrativeTarget();
 }
 
 const PILGRIM_COLLECTOR_JUMPS=Object.freeze([
@@ -1524,7 +1522,7 @@ function updatePilgrim(dt){
    startPilgrimBridge();return;
  }
 
- const target=pilgrimFollowTarget();
+ const target=pilgrimNarrativeTarget();
  const collectorSequence=pilgrimInCollectorSequence();
 
  const threat=pilgrimNearestDanger();
