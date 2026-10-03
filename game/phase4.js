@@ -304,6 +304,11 @@ const checkpoints=[
 
 function normalizePilgrimAfterLoad(){
  if(!pilgrimMet)return;
+ // Depois que a arena fecha, a posição narrativa da Peregrina é fixa:
+ // ela ficou do lado de fora esperando Jack cumprir "Eu volto".
+ if(bossStarted&&!bossResolved){
+   pilgrimBridgeDone=true;pilgrimX=10535;pilgrimFeetY=590;pilgrimDir=1;return;
+ }
  if(!pilgrimBridgeDone&&pilgrimX>6350&&pilgrimX<7900){
    pilgrimX=6250;pilgrimFeetY=590;return;
  }
@@ -487,6 +492,7 @@ function resetPilgrimAfterRespawn(){
  pilgrimTerrainJump.active=false;pilgrimTerrainJump.t=0;
  pilgrimFeetY=590;pilgrimMode="wait";pilgrimMoveSpeed=0;
  pilgrimAnimClock=0;pilgrimAnimLastMode="wait";
+ if(bossStarted&&!bossResolved){pilgrimBridgeDone=true;pilgrimX=10535;pilgrimDir=1;return}
  if(activeCheckpoint==="collector"){pilgrimBridgeDone=true;pilgrimX=9820;return}
  if(activeCheckpoint==="plaza"){pilgrimBridgeDone=true;pilgrimX=8030;return}
  if(activeCheckpoint==="archive"){pilgrimBridgeDone=false;pilgrimX=5850;return}
