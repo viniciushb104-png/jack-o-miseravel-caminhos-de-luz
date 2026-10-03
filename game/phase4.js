@@ -1368,6 +1368,16 @@ function drawPilgrim(){
  ctx.restore();
 }
 
+const PILGRIM_ARCHIVE_BRIDGE_JUMP=Object.freeze({
+ fromX:5906,toX:6104,fromY:590,toY:590,dir:1,gap:130,arc:58
+});
+function pilgrimArchiveBridgeJumpFor(x,target){
+ if(!archiveSolved||pilgrimBridgeDone)return null;
+ const j=PILGRIM_ARCHIVE_BRIDGE_JUMP;
+ if(x>=j.fromX-22&&x<=5948&&target>=j.toX+40)return {...j};
+ return null;
+}
+
 const PILGRIM_COLLECTOR_JUMPS=Object.freeze([
  Object.freeze({fromX:9464,toX:9656,fromY:590,toY:590,dir:1,gap:120,arc:82}),
  Object.freeze({fromX:9994,toX:10186,fromY:590,toY:590,dir:1,gap:120,arc:82})
@@ -1556,6 +1566,11 @@ function updatePilgrim(dt){
    return;
  }
  const ad=delta;
+
+ // Arquivo -> Ponte: há um vão físico entre x=5940 e x=6070.
+ // A Peregrina dá um salto curto próprio e pousa antes da coreografia da Ponte dos Ninguém.
+ const archiveBridgeJump=pilgrimArchiveBridgeJumpFor(pilgrimX,target);
+ if(archiveBridgeJump&&startPilgrimTerrainJump(archiveBridgeJump))return;
 
  // A Casa do Coletor possui somente dois saltos narrativos.
  // O terceiro vão é a entrada da arena: a Peregrina NÃO o atravessa.
