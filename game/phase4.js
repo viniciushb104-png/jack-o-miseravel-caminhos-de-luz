@@ -209,6 +209,7 @@ let pilgrimX=Number.isFinite(saveData?.pilgrimX)?saveData.pilgrimX:
  (arenaReached?10535:arenaEdgePlayed?10535:collectorApproachPlayed?9950:stolenPlazaPlayed?8300:pilgrimBridgeDone?8040:prototypeEndPlayed?4850:tracesSolved?4680:2580);
 if(!pilgrimBridgeDone&&pilgrimX>6350)pilgrimX=6250;
 let pilgrimFeetY=590,pilgrimDir=saveData?.pilgrimDir===-1?-1:1,pilgrimMode="wait",pilgrimMoveSpeed=0;
+let pilgrimAnimClock=0,pilgrimAnimLastMode="wait";
 let pilgrimTerrainJump={active:false,fromX:0,toX:0,fromY:590,toY:590,t:0,arc:72,dir:1};
 const pilgrimBridge={active:false,segment:0,t:0,landingPause:0};
 const pilgrimBridgeWaypoints=[
@@ -485,6 +486,7 @@ function resetPilgrimAfterRespawn(){
  pilgrimBridge.active=false;pilgrimBridge.segment=0;pilgrimBridge.t=0;pilgrimBridge.landingPause=0;
  pilgrimTerrainJump.active=false;pilgrimTerrainJump.t=0;
  pilgrimFeetY=590;pilgrimMode="wait";pilgrimMoveSpeed=0;
+ pilgrimAnimClock=0;pilgrimAnimLastMode="wait";
  if(activeCheckpoint==="collector"){pilgrimBridgeDone=true;pilgrimX=9820;return}
  if(activeCheckpoint==="plaza"){pilgrimBridgeDone=true;pilgrimX=8030;return}
  if(activeCheckpoint==="archive"){pilgrimBridgeDone=false;pilgrimX=5850;return}
@@ -1181,7 +1183,7 @@ function pilgrimSpriteSelection(){
  if(moving){
    const seq=[5,6,7,8];
    const fps=pilgrimMode==="run"?11:7;
-   const idx=seq[Math.floor(p.anim*fps)%seq.length];
+   const idx=seq[Math.floor(pilgrimAnimClock*fps)%seq.length];
    return {index:idx,baseLeft:true,scale:pilgrimMode==="run"?1.04:1.0};
  }
  if(bossResolved&&epilogueStep===2)return {index:10,baseLeft:false,scale:1.0};
@@ -1236,7 +1238,7 @@ function drawPilgrim(){
  // Fallback procedural para a fase nunca quebrar caso algum PNG falhe.
  const sx=px-cam;
  const moving=pilgrimMode==="walk"||pilgrimMode==="run";
- const phase=p.anim*(pilgrimMode==="run"?10:6);
+ const phase=pilgrimAnimClock*(pilgrimMode==="run"?10:6);
  const stride=moving?Math.sin(phase)*14:0;
  const bob=moving?Math.abs(Math.sin(phase))*3:Math.sin(p.anim*1.8)*1.3;
  const guard=pilgrimMode==="guard";
@@ -1276,7 +1278,6 @@ function pilgrimNearestDanger(){
  }
  return best;
 }
-function pilgrimDangerNearby(){return !!pilgrimNearestDanger()}
 function pilgrimFollowTarget(){
  if(!pilgrimMet)return 2580;
  if(!tracesSolved){
@@ -1370,7 +1371,13 @@ function pilgrimGapJumpFor(x,target){
  return null;
 }
 function pilgrimPlatformFootFixAt(x,y){
- const q=supportPlatformAt(x,y,52);
+ let q=null,best=Infinity;
+ for(const candidate of platforms){
+   if(candidate.broken)continue;
+   if(x<candidate.x-8||x>candidate.x+candidate.w+8)continue;
+   const d=Math.abs(y-candidate.y);
+   if(d<=52&&d<best){q=candidate;best=d}
+ }
  return platformVisualFootOffset(q)+2+(q?.artGroup==="2c"?2:0);
 }
 function pilgrimJumpProgress(){
@@ -1471,6 +1478,12 @@ function updatePilgrimBridge(dt){
 }
 function updatePilgrim(dt){
  if(!pilgrimMet)return;
+ if(pilgrimMode!==pilgrimAnimLastMode){
+   pilgrimAnimLastMode=pilgrimMode;
+   pilgrimAnimClock=0;
+ }else{
+   pilgrimAnimClock+=dt;
+ }
  if(pilgrimBridge.active){updatePilgrimBridge(dt);return}
  if(pilgrimTerrainJump.active){updatePilgrimTerrainJump(dt);return}
  if(!pilgrimBridgeDone&&bridgeFearPlayed&&p.x>6420&&Math.abs(pilgrimX-6250)<42){
