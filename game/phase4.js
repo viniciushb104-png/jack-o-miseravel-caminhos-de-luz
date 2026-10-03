@@ -169,10 +169,15 @@ let bossHp=Math.max(0,Math.min(5,Number.isFinite(saveData?.bossHp)?saveData.boss
 let bossX=Number.isFinite(saveData?.bossX)?saveData.bossX:10935,bossDir=-1;
 let bossState=bossResolved?"resolved":(bossAct===3?"exhausted":"idle");
 let bossStateTimer=0,bossAttackClock=.9,bossInv=0,bossAttackHit=false;
-let bossAnimClock=0,bossPendingArmorFinish=false;
+let bossAnimClock=0,bossPendingArmorFinish=false,bossPendingPhysicalFinish=false;
+const COLLECTOR_TRANSITION_DURATION=2.85;
+let bossTransitionTimer=0;
 let bossProjectiles=[],bossReleasedPlates=[];
 if(!hadBossState&&arenaReached){arenaReached=false;bossStarted=false}
 if(bossResolved){bossStarted=true;bossAct=3;bossArmor=0;bossHp=0}
+else if(bossStarted&&bossAct===1&&bossArmor<=0){
+ bossState="transition";bossTransitionTimer=COLLECTOR_TRANSITION_DURATION;
+}
 
 // Epílogo da Fase 4.
 // 0 soltar nomes · 1 decisão · 2 sino · 3 promessa · 4 despedida · 5 concluído.
@@ -901,6 +906,33 @@ const collectorReactionReady=Promise.allSettled(
  collectorReactionFiles.map(f=>img("../assets/game/phase4/boss/collector/act1/reactions/"+f))
 ).then(rs=>(collectorReactionImgs=rs.map(r=>r.status==="fulfilled"?r.value:null)));
 
+const collectorTransitionFiles=[
+ "collector-transform-01-final-hit.png",
+ "collector-transform-02-grasping.png",
+ "collector-transform-03-collapse.png",
+ "collector-transform-04-kneeling.png",
+ "collector-transform-05-unveiled.png",
+ "collector-transform-06-rising.png",
+ "collector-transform-07-man-beneath.png"
+];
+let collectorTransitionImgs=Array(7).fill(null);
+const collectorTransitionReady=Promise.allSettled(
+ collectorTransitionFiles.map(f=>img("./phase4/boss/collector/transition-act1-act2/"+f))
+).then(rs=>(collectorTransitionImgs=rs.map(r=>r.status==="fulfilled"?r.value:null)));
+
+const collectorAct2Files=[
+ "collector-act2-idle-01.png","collector-act2-idle-02.png",
+ "collector-act2-run-01.png","collector-act2-run-02.png","collector-act2-run-03.png",
+ "collector-act2-windup.png",
+ "collector-act2-dash-01.png","collector-act2-dash-02.png",
+ "collector-act2-recover.png",
+ "collector-act2-light-hit-01.png","collector-act2-light-hit-02.png","collector-act2-light-hit-03.png"
+];
+let collectorAct2Imgs=Array(12).fill(null);
+const collectorAct2Ready=Promise.allSettled(
+ collectorAct2Files.map(f=>img("./phase4/boss/collector/act2/"+f))
+).then(rs=>(collectorAct2Imgs=rs.map(r=>r.status==="fulfilled"?r.value:null)));
+
 const collectorArmorFiles=Array.from({length:5},(_,i)=>"collector-armor-nameplate-"+String(i+1).padStart(2,"0")+".png");
 let collectorArmorImgs=Array(5).fill(null);
 const collectorArmorReady=Promise.allSettled(
@@ -917,7 +949,9 @@ const collectorMasterReady=Promise.allSettled(
  collectorMasterFiles.map(f=>img("../assets/game/phase4/boss/collector/master/"+f))
 ).then(rs=>(collectorMasterImgs=rs.map(r=>r.status==="fulfilled"?r.value:null)));
 
-const collectorArtReady=Promise.allSettled([collectorAct1Ready,collectorReactionReady,collectorArmorReady,collectorMasterReady]);
+const collectorArtReady=Promise.allSettled([
+ collectorAct1Ready,collectorReactionReady,collectorTransitionReady,collectorAct2Ready,collectorArmorReady,collectorMasterReady
+]);
 
 const dialogueReady=Promise.all([jackPortraitReady,pilgrimPortraitReady,collectorPortraitReady]).then(([jackFrames,pilgrimFrames,collectorFrames])=>{
  dialogue.setAssets({
@@ -2146,7 +2180,7 @@ function breakCollectorPlatforms(){
 function startCollectorBoss(){
  if(bossStarted||bossResolved)return;
  bossStarted=true;arenaReached=true;bossAct=1;bossArmor=5;bossHp=5;bossX=10935;bossDir=-1;
- bossState="intro";bossStateTimer=0;bossAttackClock=1.05;bossAnimClock=0;bossPendingArmorFinish=false;bossProjectiles=[];bossReleasedPlates=[];
+ bossState="intro";bossStateTimer=0;bossAttackClock=1.05;bossAnimClock=0;bossPendingArmorFinish=false;bossPendingPhysicalFinish=false;bossTransitionTimer=0;bossProjectiles=[];bossReleasedPlates=[];
  for(const q of platforms)if(q.bossBreakable)q.broken=false;
  p.vx=0;save();
  dialogue.open(story.collectorBossIntro,()=>{
@@ -2156,22 +2190,31 @@ function startCollectorBoss(){
  });
 }
 function beginCollectorActTwo(){
- bossAct=2;bossArmor=0;bossHp=5;bossX=10935;bossDir=-1;bossState="idle";bossStateTimer=0;bossAttackClock=.7;bossInv=.3;bossPendingArmorFinish=false;
+ bossAct=2;bossArmor=0;bossHp=5;bossX=10935;bossDir=-1;bossState="idle";bossStateTimer=0;bossAttackClock=.7;bossInv=.3;
+ bossPendingArmorFinish=false;bossPendingPhysicalFinish=false;bossTransitionTimer=0;
  bossProjectiles=[];
  for(const q of platforms)if(q.bossBreakable)q.broken=false;
  banner("ATO II · O HOMEM SOB OS NOMES");
  say("Sem a armadura, o Coletor ficou menor — e muito mais rápido.");save();
 }
 function finishCollectorArmor(){
- if(bossState==="transition"||bossAct!==1)return;
- bossState="transition";bossProjectiles=[];p.vx=0;save();
+ if(bossState==="transition"||bossState==="transitionDialogue"||bossAct!==1)return;
+ bossState="transition";bossTransitionTimer=COLLECTOR_TRANSITION_DURATION;
+ bossProjectiles=[];bossInv=0;p.vx=0;
+ banner("OS NOMES CAEM");
+ say("A forma monumental do Coletor começa a desabar.");
+ save();
+}
+function finishCollectorTransformation(){
+ if(bossState!=="transition"||bossAct!==1)return;
+ bossState="transitionDialogue";bossTransitionTimer=0;p.vx=0;save();
  dialogue.open(story.collectorArmorBreak,()=>{
    setTimeout(()=>dialogue.open(story.collectorActTwo,()=>beginCollectorActTwo()),220);
  });
 }
 function finishCollectorPhysical(){
  if(bossAct!==2)return;
- bossAct=3;bossHp=0;bossState="exhausted";bossStateTimer=0;bossProjectiles=[];bossInv=0;p.vx=0;
+ bossAct=3;bossHp=0;bossState="exhausted";bossStateTimer=0;bossProjectiles=[];bossInv=0;bossPendingPhysicalFinish=false;p.vx=0;
  bossX=Math.max(10880,Math.min(11030,bossX));
  save();
  dialogue.open(story.collectorExhausted,()=>{
@@ -2278,7 +2321,7 @@ function tryLightCollector(pc,pcy){
    if(d<245){say("Não há mais armadura para arrancar. Talvez outro gesto.");return true}
    return false;
  }
- if(bossState==="intro"||bossState==="transition")return d<330;
+ if(bossState==="intro"||bossState==="transition"||bossState==="transitionDialogue")return d<330;
  if(bossInv>0)return d<330;
 
  if(bossAct===1&&d<315){
@@ -2293,10 +2336,12 @@ function tryLightCollector(pc,pcy){
    save();return true;
  }
  if(bossAct===2&&d<245){
-   bossInv=.3;bossHp=Math.max(0,bossHp-1);memoryPulse=1.0;
+   bossInv=.78;bossHp=Math.max(0,bossHp-1);memoryPulse=1.0;
    bossX=Math.max(10770,Math.min(11125,bossX+(bossX<pc?-34:34)));
+   bossState="lightHit";bossStateTimer=.72;bossAttackHit=false;
+   bossPendingPhysicalFinish=bossHp<=0;
    banner("LUZ · "+bossHp+"/5");
-   if(bossHp<=0)finishCollectorPhysical();
+   if(bossPendingPhysicalFinish)say("A última resistência cede. O homem sob os nomes já não consegue avançar.");
    else say("A Luz atravessou o que restou da coleção.");
    save();return true;
  }
@@ -2306,7 +2351,13 @@ function updateCollectorBoss(dt){
  updateCollectorParticles(dt);
  bossAnimClock+=dt;
  bossInv=Math.max(0,bossInv-dt);
- if(!bossStarted||bossResolved||dialogue.active)return;
+ if(!bossStarted||bossResolved)return;
+ if(bossState==="transition"){
+   bossTransitionTimer=Math.max(0,bossTransitionTimer-dt);
+   if(bossTransitionTimer<=0)finishCollectorTransformation();
+   return;
+ }
+ if(dialogue.active)return;
 
  if(bossAct===1){
    bossDir=(p.x+p.w/2)<bossX?-1:1;
@@ -2344,7 +2395,8 @@ function updateCollectorBoss(dt){
    const pc=p.x+p.w/2;
    if(bossState==="idle"){
      bossDir=pc<bossX?-1:1;
-     bossX+=bossDir*42*dt;
+     const dist=Math.abs(pc-bossX);
+     if(dist>82)bossX+=bossDir*58*dt;
      bossX=Math.max(10755,Math.min(11145,bossX));
      bossAttackClock-=dt;
      if(bossAttackClock<=0){
@@ -2367,6 +2419,12 @@ function updateCollectorBoss(dt){
    }else if(bossState==="recover"){
      bossStateTimer-=dt;
      if(bossStateTimer<=0){bossState="idle";bossAttackClock=.72}
+   }else if(bossState==="lightHit"){
+     bossStateTimer-=dt;
+     if(bossStateTimer<=0){
+       if(bossPendingPhysicalFinish){bossPendingPhysicalFinish=false;finishCollectorPhysical()}
+       else{bossState="idle";bossAttackClock=.82}
+     }
    }
  }
 }
@@ -2479,6 +2537,41 @@ function collectorAct1Image(){
  }
  return collectorMasterImgs[0];
 }
+function collectorTransitionProgress(){
+ if(bossState==="transitionDialogue")return 1;
+ return Math.max(0,Math.min(1,1-(bossTransitionTimer/COLLECTOR_TRANSITION_DURATION)));
+}
+function collectorTransitionImage(){
+ const q=collectorTransitionProgress();
+ const cuts=[.12,.25,.38,.56,.72,.88];
+ const idx=q<cuts[0]?0:q<cuts[1]?1:q<cuts[2]?2:q<cuts[3]?3:q<cuts[4]?4:q<cuts[5]?5:6;
+ return collectorTransitionImgs[idx]||collectorMasterImgs[idx>=5?1:0];
+}
+function collectorTransitionTargetH(){
+ const hs=[278,270,258,244,232,224,218];
+ const q=collectorTransitionProgress();
+ const cuts=[.12,.25,.38,.56,.72,.88];
+ const idx=q<cuts[0]?0:q<cuts[1]?1:q<cuts[2]?2:q<cuts[3]?3:q<cuts[4]?4:q<cuts[5]?5:6;
+ return hs[idx];
+}
+function collectorAct2Image(){
+ if(bossState==="lightHit"){
+   const q=1-Math.max(0,bossStateTimer)/.72;
+   return collectorAct2Imgs[q<.34?9:(q<.68?10:11)]||collectorMasterImgs[1];
+ }
+ if(bossState==="windup")return collectorAct2Imgs[5]||collectorMasterImgs[1];
+ if(bossState==="dash"){
+   const q=1-Math.max(0,bossStateTimer)/.58;
+   return collectorAct2Imgs[q<.5?6:7]||collectorMasterImgs[1];
+ }
+ if(bossState==="recover")return collectorAct2Imgs[8]||collectorMasterImgs[1];
+ if(bossState==="idle"){
+   const moving=Math.abs((p.x+p.w/2)-bossX)>82;
+   if(moving)return collectorAct2Imgs[2+(Math.floor(bossAnimClock*9)%3)]||collectorMasterImgs[1];
+   return collectorAct2Imgs[Math.floor(bossAnimClock*2.2)%2]||collectorMasterImgs[1];
+ }
+ return collectorMasterImgs[1];
+}
 function drawCollectorPng(im,sx,feet,targetH,flip=false,alpha=1){
  if(!im)return false;
  const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
@@ -2501,13 +2594,14 @@ function drawCollectorPlatePng(im,x,y,targetW,alpha=1,rot=0){
 }
 function drawCollectorBoss(){
  if(!bossStarted)return;
- const bodyIm=bossAct===1?collectorAct1Image():(bossAct===2?collectorMasterImgs[1]:collectorMasterImgs[2]);
+ const transitionVisual=bossAct===1&&(bossState==="transition"||bossState==="transitionDialogue");
+ const bodyIm=transitionVisual?collectorTransitionImage():(bossAct===1?collectorAct1Image():(bossAct===2?collectorAct2Image():collectorMasterImgs[2]));
  if(!bodyIm){drawCollectorBossProcedural();return}
 
  const sx=bossX-cam,resolved=bossResolved;
  const footFix=visualFootOffsetAt(bossX,590,40);
  const feet=590+footFix;
- const targetH=bossAct===1?278:(bossAct===2?218:176);
+ const targetH=transitionVisual?collectorTransitionTargetH():(bossAct===1?278:(bossAct===2?218:176));
  const flip=bossDir>0;
  const flash=bossInv>0&&Math.floor(bossInv*18)%2===0;
 
@@ -2550,7 +2644,7 @@ function drawCollectorBoss(){
      drawStolenNamePlate(pr.x-cam,pr.y,pr.w,pr.h,.9,pr.rot);
  }
 
- if(!resolved){
+ if(!resolved&&bossState!=="transition"&&bossState!=="transitionDialogue"){
    ctx.save();ctx.textAlign="center";ctx.fillStyle="rgba(12,13,12,.78)";ctx.fillRect(W/2-205,102,410,52);
    ctx.strokeStyle="rgba(181,151,91,.65)";ctx.lineWidth=2;ctx.strokeRect(W/2-205,102,410,52);
    ctx.fillStyle="#dfc27a";ctx.font="700 12px Georgia";
