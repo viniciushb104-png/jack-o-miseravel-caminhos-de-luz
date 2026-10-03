@@ -1406,12 +1406,14 @@ function pilgrimJumpFootFix(){
 }
 function startPilgrimTerrainJump(j){
  if(!j||pilgrimTerrainJump.active)return false;
+ const actualFromX=pilgrimX,actualFromY=pilgrimFeetY;
  pilgrimTerrainJump={
-   active:true,fromX:j.fromX,toX:j.toX,fromY:j.fromY,toY:j.toY,
+   active:true,fromX:actualFromX,toX:j.toX,fromY:actualFromY,toY:j.toY,
    t:0,arc:Number.isFinite(j.arc)?j.arc:68+Math.min(22,j.gap*.12),dir:j.dir
  };
- pilgrimX=j.fromX;pilgrimFeetY=j.fromY;pilgrimDir=j.dir;
+ pilgrimX=actualFromX;pilgrimFeetY=actualFromY;pilgrimDir=j.dir;
  pilgrimMode="jump";pilgrimMoveSpeed=0;
+ pilgrimAnimClock=0;pilgrimAnimLastMode="jump";
  return true;
 }
 function updatePilgrimTerrainJump(dt){
@@ -1428,7 +1430,8 @@ function updatePilgrimTerrainJump(dt){
  if(t>=1){
    pilgrimX=j.toX;pilgrimFeetY=j.toY;
    pilgrimTerrainJump.active=false;
-   pilgrimMode="walk";
+   pilgrimMode="walk";pilgrimMoveSpeed=0;
+   pilgrimAnimClock=0;pilgrimAnimLastMode="walk";
  }
  return true;
 }
@@ -1437,7 +1440,8 @@ function startPilgrimBridge(){
  if(pilgrimBridge.active||pilgrimBridgeDone)return;
  pilgrimBridge.active=true;pilgrimBridge.segment=0;pilgrimBridge.t=0;pilgrimBridge.landingPause=0;
  pilgrimX=pilgrimBridgeWaypoints[0].x;pilgrimFeetY=pilgrimBridgeWaypoints[0].y;
- pilgrimMode="jump";pilgrimDir=1;
+ pilgrimMode="jump";pilgrimDir=1;pilgrimMoveSpeed=0;
+ pilgrimAnimClock=0;pilgrimAnimLastMode="jump";
 }
 function updatePilgrimBridge(dt){
  if(!pilgrimBridge.active)return;
@@ -1486,7 +1490,7 @@ function updatePilgrim(dt){
  }
  if(pilgrimBridge.active){updatePilgrimBridge(dt);return}
  if(pilgrimTerrainJump.active){updatePilgrimTerrainJump(dt);return}
- if(!pilgrimBridgeDone&&bridgeFearPlayed&&p.x>6420&&Math.abs(pilgrimX-6250)<42){
+ if(!pilgrimBridgeDone&&bridgeFearPlayed&&p.x>6420&&Math.abs(pilgrimX-6250)<12){
    startPilgrimBridge();return;
  }
 
@@ -2185,7 +2189,7 @@ function runPhase4Epilogue(){
  }
  if(epilogueStep===1){
    playPhase4Epilogue(story.pilgrimChoice,1,"ELA NÃO PRECISA ESPERAR PELO NOME",()=>{
-     pilgrimX=Math.max(pilgrimX,10740);memoryPulse=.9;
+     memoryPulse=.9;
    });return;
  }
  if(epilogueStep===2){
@@ -2982,7 +2986,7 @@ function update(dt){
  if(p.y>780){
    playerLife--;syncHud();
    const wasBridge=p.x>6200&&p.x<7900;
-   if(playerLife<=0)respawn(wasBridge?"A Ponte dos Ninguém apagou o chão — mas o checkpoint guardou a travessia.":"A estrada tentou apagar Jack.");
+   if(playerLife<=0)respawn(wasBridge?"A Ponte dos Ninguém apagou o chão — o último marco guardou os passos de Jack.":"A estrada tentou apagar Jack.");
    else{
      const cp=checkpoints.find(q=>q.id===activeCheckpoint);
      p.x=cp?cp.respawnX:110;p.y=cp?cp.respawnY:470;p.vx=p.vy=0;
@@ -3001,7 +3005,7 @@ function update(dt){
    dialogue.open(story.prototypeEnd,()=>{banner("ARQUIVO RASURADO");say("A Peregrina volta a acompanhar Jack pelos registros arrancados.");save()})
  }else if(archiveSolved&&!bridgeFearPlayed&&p.x>6070){
    bridgeFearPlayed=true;p.vx=0;
-   dialogue.open(story.bridgeFear,()=>{pilgrimX=Math.min(pilgrimX,6250);banner("PONTE DOS NINGUÉM");say("Ela não perdeu o medo. Mesmo assim, vai atravessar.");save()})
+   dialogue.open(story.bridgeFear,()=>{banner("PONTE DOS NINGUÉM");say("Ela não perdeu o medo. Mesmo assim, vai atravessar.");save()})
  }else if(pilgrimBridgeDone&&!bridgeNameGlitchPlayed&&p.x>7950){
    bridgeNameGlitchPlayed=true;p.vx=0;
    dialogue.open(story.bridgeNameGlitch,()=>{
