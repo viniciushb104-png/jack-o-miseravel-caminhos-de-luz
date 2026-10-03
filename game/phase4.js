@@ -1130,7 +1130,7 @@ function pilgrimFollowTarget(){
  if(!pilgrimBridgeDone&&p.x<6100){
    if(prototypeEndPlayed&&!archiveSolved){
      const found=archiveEvidence.filter(Boolean).length;
-     const holds=[4800,5140,5530,5860];
+     const holds=[4845,5185,5575,5905];
      return holds[Math.min(found,holds.length-1)];
    }
    return Math.max(3320,Math.min(5920,p.x-155));
