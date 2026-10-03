@@ -136,6 +136,7 @@ const input={left:false,right:false,down:false,run:false,jump:false};
 let running=false,last=performance.now(),cam=0,section=-1,jack=null,keyImg=null,jackFrameOverrides={};
 let phase4SignImgs=Array(4).fill(null),checkpointOffImg=null,checkpointOnImg=null;
 let bellNormalImg=null,bellGlowImg=null,memoryDoorImg=null;
+let nonexistentDoorImg=null,nonexistentDoorRevealFxImg=null,doorRevealFx=0;
 let idleTime=0,waitSitFrame=0,waitSitClock=0,waitSitActive=false,waitSitImages=[];
 let lastPlayerAction=performance.now();
 let playerLife=Math.max(1,Math.min(3,Number(saveData?.playerLife)||3)),memoryLight=0,memoryPulse=0,gateMsg=0;
@@ -845,7 +846,19 @@ function playPhase4BellSfx(){
 }
 const memoryDoorReady=img("../assets/game/phase4/fx/memory-door/portal_gótico_dourado_flutuante.png")
  .then(im=>memoryDoorImg=im).catch(()=>null);
-const phase4PropReady=Promise.allSettled([phase4SignReady,checkpointArtReady,bellArtReady,memoryDoorReady]);
+
+const nonexistentDoorReady=Promise.allSettled([
+ img("../assets/game/phase4/fx/nonexistent-door/phase4-nonexistent-door.png"),
+ img("../assets/game/phase4/fx/nonexistent-door/phase4-nonexistent-door-reveal-fx.png")
+]).then(rs=>{
+ nonexistentDoorImg=rs[0]?.status==="fulfilled"?rs[0].value:null;
+ nonexistentDoorRevealFxImg=rs[1]?.status==="fulfilled"?rs[1].value:null;
+ return [nonexistentDoorImg,nonexistentDoorRevealFxImg];
+});
+
+const phase4PropReady=Promise.allSettled([
+ phase4SignReady,checkpointArtReady,bellArtReady,memoryDoorReady,nonexistentDoorReady
+]);
 
 const jackPortraitFiles=["jack-00-neutral.png","jack-01-serious.png","jack-02-smirk.png","jack-03-surprised.png","jack-04-determined.png","jack-05-resolved.png"];
 const jackPortraitReady=Promise.allSettled(jackPortraitFiles.map(f=>img("../assets/game/phase1/portraits-hd/"+f))).then(rs=>rs.map(r=>r.status==="fulfilled"?r.value:null));
@@ -1234,18 +1247,61 @@ function drawSigns(){
  ctx.restore();
 }
 function drawDoor(){
- const xw=860;
- if(doorOpened){
-   ctx.save();ctx.translate(xw-cam,0);ctx.strokeStyle="rgba(233,201,121,.78)";ctx.lineWidth=5;ctx.shadowColor="#e8c36c";ctx.shadowBlur=24;ctx.strokeRect(-56,318,112,272);
-   ctx.globalAlpha=.14;ctx.fillStyle="#e8c98b";ctx.fillRect(-53,322,106,268);ctx.restore();
-   return;
+ const xw=860,groundY=590;
+ const hasMaraKey=localStorage.getItem(MARA_KEY)==="yes";
+ const closedHint=hasMaraKey?(0.055+0.025*Math.sin(p.anim*2.15)):0;
+ const openedAlpha=0.76+0.06*Math.sin(p.anim*1.65);
+ const fxBurst=Math.max(0,Math.min(1,doorRevealFx/1.2));
+ const fxIdle=doorOpened?(0.20+0.045*Math.sin(p.anim*2.4)):0;
+ const fxAlpha=Math.max(fxIdle,fxBurst*.92);
+
+ ctx.save();
+ ctx.translate(-cam,0);
+
+ // Antes da ativação, a porta existe apenas como uma lembrança quase imperceptível.
+ // Depois, o próprio PNG continua translúcido — sem bloco amarelo ou preenchimento retangular.
+ if(nonexistentDoorImg&&(doorOpened||hasMaraKey)){
+   const alpha=doorOpened?openedAlpha:closedHint;
+   if(alpha>0)drawPropByHeight(nonexistentDoorImg,xw,groundY,326,alpha);
+ }else if(doorOpened){
+   // Fallback discreto: preserva leitura caso o asset falhe, sem recriar o retângulo antigo.
+   ctx.save();
+   ctx.globalAlpha=.44;
+   ctx.strokeStyle="rgba(231,204,137,.72)";
+   ctx.lineWidth=2.5;
+   ctx.shadowColor="rgba(230,192,100,.55)";
+   ctx.shadowBlur=15;
+   ctx.beginPath();
+   ctx.moveTo(xw-49,568);
+   ctx.lineTo(xw-49,414);
+   ctx.quadraticCurveTo(xw,354,xw+49,414);
+   ctx.lineTo(xw+49,568);
+   ctx.stroke();
+   ctx.restore();
  }
- ctx.save();ctx.translate(xw-cam,0);
- if(!hasPhase4BackgroundAt(xw)){
-   ctx.fillStyle="#252721";ctx.fillRect(-90,280,180,310);ctx.strokeStyle="#62563d";ctx.strokeRect(-90,280,180,310);
+
+ // O segundo PNG é só magia: surge forte na revelação e permanece respirando suavemente.
+ if(nonexistentDoorRevealFxImg&&fxAlpha>0){
+   ctx.save();
+   if(doorRevealFx>0){
+     ctx.shadowColor="rgba(245,207,119,.60)";
+     ctx.shadowBlur=22+fxBurst*18;
+   }
+   drawPropByHeight(nonexistentDoorRevealFxImg,xw,groundY+4,404,fxAlpha);
+   ctx.restore();
  }
- ctx.globalAlpha=.12+.08*Math.sin(p.anim*2);ctx.strokeStyle="#e5ca86";ctx.setLineDash([9,8]);ctx.lineWidth=3;ctx.strokeRect(-54,318,108,272);ctx.setLineDash([]);
- if(keyImg&&localStorage.getItem(MARA_KEY)==="yes"){const iw=keyImg.naturalWidth||keyImg.width,ih=keyImg.naturalHeight||keyImg.height,dh=72,dw=iw*(dh/ih);ctx.globalAlpha=.72+.18*Math.sin(p.anim*2.8);ctx.drawImage(keyImg,-dw/2,402,dw,dh)}
+
+ // Enquanto ainda não abriu, a chave de Mara continua denunciando que há algo na parede.
+ if(!doorOpened&&hasMaraKey&&keyImg){
+   const iw=keyImg.naturalWidth||keyImg.width,ih=keyImg.naturalHeight||keyImg.height;
+   const dh=72,dw=iw*(dh/ih);
+   ctx.save();
+   ctx.globalAlpha=.70+.20*Math.sin(p.anim*2.8);
+   ctx.shadowColor="rgba(237,201,112,.48)";
+   ctx.shadowBlur=12;
+   ctx.drawImage(keyImg,xw-dw/2,402,dw,dh);
+   ctx.restore();
+ }
  ctx.restore();
 }
 function drawCheckpoint(cp){
@@ -2843,7 +2899,17 @@ function openDoor(){
  if(doorOpened)return;
  const pc=p.x+p.w/2;if(Math.abs(pc-860)>125){say("A chave está reagindo a alguma coisa na parede.");return}
  if(localStorage.getItem(MARA_KEY)!=="yes"){say("Há o contorno de uma porta, mas Jack não tem nada que se encaixe nela.");return}
- p.vx=0;dialogue.open(story.door,()=>{doorOpened=true;memoryPulse=1.6;banner("A CHAVE LEMBROU A PORTA");say("A passagem existe enquanto a memória da chave permanecer acesa.");save()});
+ p.vx=0;
+ doorRevealFx=1.35;
+ memoryPulse=Math.max(memoryPulse,.72);
+ dialogue.open(story.door,()=>{
+   doorOpened=true;
+   doorRevealFx=2.2;
+   memoryPulse=1.6;
+   banner("A CHAVE LEMBROU A PORTA");
+   say("A passagem existe enquanto a memória da chave permanecer acesa.");
+   save();
+ });
 }
 function interact(){
  if(!running||dialogue.active)return;
@@ -3210,6 +3276,7 @@ function update(dt){
  collectorGlimpseTimer=Math.max(0,collectorGlimpseTimer-dt);
  epilogueFxClock=Math.max(0,epilogueFxClock-dt);
  bellAcquireFx=Math.max(0,bellAcquireFx-dt);
+ doorRevealFx=Math.max(0,doorRevealFx-dt);
  updateCollectorBoss(dt);
  updateEnemies(dt);
  updatePilgrim(dt);
