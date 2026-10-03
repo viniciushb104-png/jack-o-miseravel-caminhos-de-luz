@@ -742,79 +742,79 @@
       phase: 4,
       chapter: 'HALLOWEEN IV · A PORTA QUE NÃO EXISTE',
       title: 'A Chave Lembrou a Porta',
-      src: 'assets/audio/phase4/phase4-door-theme.mp3'
+      src: 'assets/audio/phase4/phase4-door-theme.mp3?v=1'
     },
     {
       phase: 4,
       chapter: 'HALLOWEEN IV · ESTRADA SEM PLACAS',
       title: 'A Estrada dos Esquecidos',
-      src: 'assets/audio/phase4/phase4-forgotten-road-theme.mp3'
+      src: 'assets/audio/phase4/phase4-forgotten-road-theme.mp3?v=1'
     },
     {
       phase: 4,
       chapter: 'HALLOWEEN IV · POVOADO SEM NOMES',
       title: 'Casas que Esqueceram Quem Morou Aqui',
-      src: 'assets/audio/phase4/phase4-nameless-village-theme.mp3'
+      src: 'assets/audio/phase4/phase4-nameless-village-theme.mp3?v=1'
     },
     {
       phase: 4,
       chapter: 'HALLOWEEN IV · CAMPO DAS PEGADAS',
       title: 'Passos que Ainda se Lembram',
-      src: 'assets/audio/phase4/phase4-footprints-theme.mp3'
+      src: 'assets/audio/phase4/phase4-footprints-theme.mp3?v=1'
     },
     {
       phase: 4,
       chapter: 'HALLOWEEN IV · ARQUIVO RASURADO',
       title: 'Onde os Nomes Foram Cortados',
-      src: 'assets/audio/phase4/phase4-erased-archive-theme.mp3'
+      src: 'assets/audio/phase4/phase4-erased-archive-theme.mp3?v=1'
     },
     {
       phase: 4,
       chapter: 'HALLOWEEN IV · PONTE DOS NINGUÉM',
       title: 'Quem Passou Por Aqui?',
-      src: 'assets/audio/phase4/phase4-nobody-bridge-theme.mp3'
+      src: 'assets/audio/phase4/phase4-nobody-bridge-theme.mp3?v=1'
     },
     {
       phase: 4,
       chapter: 'HALLOWEEN IV · PRAÇA DOS NOMES ROUBADOS',
       title: 'Vozes sem Placas',
-      src: 'assets/audio/phase4/phase4-stolen-names-plaza-theme.mp3'
+      src: 'assets/audio/phase4/phase4-stolen-names-plaza-theme.mp3?v=1'
     },
     {
       phase: 4,
       chapter: 'HALLOWEEN IV · CASA DO COLETOR',
       title: 'Aquele que Guardava Nomes',
-      src: 'assets/audio/phase4/phase4-collector-house-theme.mp3'
+      src: 'assets/audio/phase4/phase4-collector-house-theme.mp3?v=1'
     },
     {
       phase: 4,
       chapter: 'HALLOWEEN IV · COLETOR · ATO I',
       title: 'O Coletor de Nomes',
-      src: 'assets/audio/phase4/phase4-collector-boss-act1.mp3'
+      src: 'assets/audio/phase4/phase4-collector-boss-act1.mp3?v=1'
     },
     {
       phase: 4,
       chapter: 'HALLOWEEN IV · COLETOR · ATO II',
       title: 'Sem os Nomes, Só Resta o Medo',
-      src: 'assets/audio/phase4/phase4-collector-boss-act2.mp3'
+      src: 'assets/audio/phase4/phase4-collector-boss-act2.mp3?v=1'
     },
     {
       phase: 4,
       chapter: 'HALLOWEEN IV · COLETOR · ATO III',
       title: 'Você',
-      src: 'assets/audio/phase4/phase4-collector-boss-act3.mp3'
+      src: 'assets/audio/phase4/phase4-collector-boss-act3.mp3?v=1'
     },
     {
       phase: 4,
       chapter: 'HALLOWEEN IV · EPÍLOGO',
       title: 'Mesmo sem Nome, Ainda Toca',
-      src: 'assets/audio/phase4/phase4-uninscribed-bell-epilogue.mp3'
+      src: 'assets/audio/phase4/phase4-uninscribed-bell-epilogue.mp3?v=1'
     },
     {
       phase: 4,
       chapter: 'HALLOWEEN IV · A ESTRADA CONTINUA',
       title: 'A Estrada Continua',
-      src: 'assets/audio/phase4/phase4-road-continues-finale.mp3'
+      src: 'assets/audio/phase4/phase4-road-continues-finale.mp3?v=1'
     }
   ];
 
