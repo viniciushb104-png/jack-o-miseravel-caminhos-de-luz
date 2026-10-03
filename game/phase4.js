@@ -15,22 +15,22 @@ const SAVE_KEY="jack-phase4-save",CHECKPOINT_KEY="jack-phase4-checkpoint",MARA_K
       BELL_KEY="jack-item-uninscribed-bell",COMPLETE_KEY="jack-phase4-complete",PHASE5_KEY="jack-phase5-unlocked";
 
 const PHASE4_MUSIC=Object.freeze({
- door:Object.freeze({src:"../assets/audio/phase4/phase4-door-theme.mp3",volume:.48}),
- road:Object.freeze({src:"../assets/audio/phase4/phase4-forgotten-road-theme.mp3",volume:.55}),
- village:Object.freeze({src:"../assets/audio/phase4/phase4-nameless-village-theme.mp3",volume:.52}),
- footprints:Object.freeze({src:"../assets/audio/phase4/phase4-footprints-theme.mp3",volume:.53}),
- archive:Object.freeze({src:"../assets/audio/phase4/phase4-erased-archive-theme.mp3",volume:.54}),
- bridge:Object.freeze({src:"../assets/audio/phase4/phase4-nobody-bridge-theme.mp3",volume:.48}),
- plaza:Object.freeze({src:"../assets/audio/phase4/phase4-stolen-names-plaza-theme.mp3",volume:.52}),
- collectorHouse:Object.freeze({src:"../assets/audio/phase4/phase4-collector-house-theme.mp3",volume:.56}),
- boss1:Object.freeze({src:"../assets/audio/phase4/phase4-collector-boss-act1.mp3",volume:.64}),
- boss2:Object.freeze({src:"../assets/audio/phase4/phase4-collector-boss-act2.mp3",volume:.66}),
- boss3:Object.freeze({src:"../assets/audio/phase4/phase4-collector-boss-act3.mp3",volume:.54}),
- epilogue:Object.freeze({src:"../assets/audio/phase4/phase4-uninscribed-bell-epilogue.mp3",volume:.55}),
- finale:Object.freeze({src:"../assets/audio/phase4/phase4-road-continues-finale.mp3",volume:.58})
+ door:Object.freeze({src:"../assets/audio/phase4/phase4-door-theme.mp3?v=1",volume:.48}),
+ road:Object.freeze({src:"../assets/audio/phase4/phase4-forgotten-road-theme.mp3?v=1",volume:.55}),
+ village:Object.freeze({src:"../assets/audio/phase4/phase4-nameless-village-theme.mp3?v=1",volume:.52}),
+ footprints:Object.freeze({src:"../assets/audio/phase4/phase4-footprints-theme.mp3?v=1",volume:.53}),
+ archive:Object.freeze({src:"../assets/audio/phase4/phase4-erased-archive-theme.mp3?v=1",volume:.54}),
+ bridge:Object.freeze({src:"../assets/audio/phase4/phase4-nobody-bridge-theme.mp3?v=1",volume:.48}),
+ plaza:Object.freeze({src:"../assets/audio/phase4/phase4-stolen-names-plaza-theme.mp3?v=1",volume:.52}),
+ collectorHouse:Object.freeze({src:"../assets/audio/phase4/phase4-collector-house-theme.mp3?v=1",volume:.56}),
+ boss1:Object.freeze({src:"../assets/audio/phase4/phase4-collector-boss-act1.mp3?v=1",volume:.64}),
+ boss2:Object.freeze({src:"../assets/audio/phase4/phase4-collector-boss-act2.mp3?v=1",volume:.66}),
+ boss3:Object.freeze({src:"../assets/audio/phase4/phase4-collector-boss-act3.mp3?v=1",volume:.54}),
+ epilogue:Object.freeze({src:"../assets/audio/phase4/phase4-uninscribed-bell-epilogue.mp3?v=1",volume:.55}),
+ finale:Object.freeze({src:"../assets/audio/phase4/phase4-road-continues-finale.mp3?v=1",volume:.58})
 });
 const phase4MusicChannels=[new Audio(),new Audio()];
-phase4MusicChannels.forEach(a=>{a.loop=true;a.preload="none";a.volume=0});
+phase4MusicChannels.forEach(a=>{a.loop=true;a.preload="metadata";a.volume=0});
 let phase4MusicEnabled=localStorage.getItem("jack-phase4-music-muted")!=="1";
 let phase4MusicActiveChannel=0,phase4MusicKey="",phase4MusicPendingKey="",phase4MusicFade=0;
 const phase4MusicFailed=new Set();
