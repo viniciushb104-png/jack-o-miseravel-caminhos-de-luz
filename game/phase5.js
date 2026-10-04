@@ -128,7 +128,11 @@ let bossStarted=!!state.bossStarted,bossAct=Number(state.bossAct)||0;
 const bossSigilLit=new Set(state.bossSigils||[]);
 const bossLessonLit=new Set(state.bossLessons||[]);
 let bossContinued=!!state.bossContinued,bossResolved=!!state.bossResolved;
-let phase5Complete=!!state.phase5Complete||localStorage.getItem(COMPLETE_KEY)==="yes";
+// COMPLETE_KEY é uma conquista permanente (troféu 5/5), não o estado da partida atual.
+// Em replay/new game ela continua salva no perfil, mas NÃO deve pular a fase para a tela final.
+let phase5Complete=(!forceNew&&!replayMode)&&(
+ !!state.phase5Complete||localStorage.getItem(COMPLETE_KEY)==="yes"
+);
 
 const p={x:Number(state.px)||150,y:Number(state.py)||480,w:44,h:86,vx:0,vy:0,on:false,dir:1,anim:0,attack:0,inv:0};
 let life=3,cam=0,running=false,last=performance.now(),sectionIndex=-1,lightPulse=0,lightCooldown=0;
