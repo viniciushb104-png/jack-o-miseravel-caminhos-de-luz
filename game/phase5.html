@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+  <meta name="theme-color" content="#090b0d">
+  <title>Halloween V — A Última Lanterna</title>
+  <link rel="stylesheet" href="phase5.css?v=1">
+  <link rel="stylesheet" href="preloader.css?v=4">
+</head>
+<body>
+<section id="journeyLoader" aria-label="Carregando caminho">
+  <div class="loader-vignette"></div>
+  <div class="loader-card">
+    <div class="loader-title">CAMINHOS DE LUZ</div>
+    <div class="loader-jack run"></div>
+    <div class="loader-track"><div class="loader-fill"></div></div>
+    <div class="loader-copy"><span data-loader-message>PROCURANDO O CAMINHO DE VOLTA...</span><strong data-loader-percent>0%</strong></div>
+  </div>
+  <div class="loader-flash"></div>
+</section>
+
+<main class="game-page">
+  <canvas id="game" width="1280" height="720" aria-label="Halloween V — A Última Lanterna"></canvas>
+
+  <header class="hud">
+    <a class="hud-btn" href="../index.html#fases">‹ MAPA</a>
+    <div class="hud-title"><small>HALLOWEEN V</small><strong>A ÚLTIMA LANTERNA</strong></div>
+    <div class="hud-cluster">
+      <div class="hud-box"><span>VIDA</span><b id="healthValue">♥ ♥ ♥</b></div>
+      <button id="phase5MusicToggle" class="hud-audio" type="button" aria-label="Silenciar música" aria-pressed="false">
+        <b>♫</b><span>MÚSICA</span>
+      </button>
+    </div>
+  </header>
+
+  <div id="objective" class="objective">
+    <small>OBJETIVO</small>
+    <strong>Siga a estrada. O sino sem inscrição ainda está com Jack.</strong>
+  </div>
+  <div id="sectionBanner" class="section-banner"></div>
+  <div id="message" class="message"></div>
+
+  <section id="intro" class="intro-card">
+    <p>CAMINHOS DE LUZ · HALLOWEEN V</p>
+    <h1>A ÚLTIMA<br>LANTERNA</h1>
+    <span>O sino da Peregrina chama para uma estrada que Jack nunca conseguiu enxergar. Desta vez, a Luz não aponta apenas para quem está perdido.</span>
+    <button id="startGame">✦ SEGUIR O SINO</button>
+  </section>
+
+  <section id="dialogue" class="dialogue" hidden aria-live="polite">
+    <div class="dialogue-shell">
+      <div class="dialogue-portrait is-hidden" data-dialogue-portrait aria-hidden="true"></div>
+      <div class="dialogue-name" data-dialogue-name></div>
+      <div class="dialogue-main"><p class="dialogue-text" data-dialogue-text></p></div>
+      <button class="dialogue-next" data-dialogue-next type="button" aria-label="Próxima fala">▶</button>
+    </div>
+  </section>
+
+  <div class="memory-hint"><b>F</b><span>LUZ / REFLETIR</span><b>E</b><span>INTERAGIR</span></div>
+
+  <section id="phase5Prototype" class="phase5-prototype" hidden aria-label="Halloween V concluído">
+    <div class="phase5-prototype-card">
+      <small>CAMINHOS DE LUZ · CONCLUÍDO</small>
+      <h2>A ÚLTIMA LANTERNA</h2>
+      <p>Jack não apagou o passado e não recebeu uma sentença antecipada. Ele apenas deixou de permitir que o pior de sua história escrevesse sozinho tudo o que ainda pode fazer.</p>
+      <blockquote>“Ainda não. Mas finalmente sei como continuar procurando.”</blockquote>
+      <p><strong>✦ JORNADA 5/5</strong><br><small>A última lanterna desta aventura foi acesa. Jack continua caminhando.</small></p>
+      <button id="phase5Replay" type="button">↻ REJOGAR HALLOWEEN V</button>
+      <a id="phase5Menu" href="../index.html#memorias">✦ VER MEMÓRIAS DA JORNADA</a>
+    </div>
+  </section>
+
+  <div class="mobile-controls">
+    <div class="dpad">
+      <button id="leftBtn" type="button">◀</button>
+      <button id="downBtn" type="button">▼</button>
+      <button id="rightBtn" type="button">▶</button>
+    </div>
+    <div class="actions">
+      <button id="interactBtn" type="button">E<small>INTERAGIR</small></button>
+      <button id="lightBtn" type="button">✦<small>LUZ</small></button>
+      <button id="jumpBtn" type="button">▲<small>PULAR</small></button>
+    </div>
+  </div>
+</main>
+
+<script src="engine/journey.js?v=4"></script>
+<script src="engine/dialogue.js?v=6"></script>
+<script src="data/phase1/jack-animations.js?v=1"></script>
+<script src="data/phase5/story.js?v=1"></script>
+<script src="phase5.js?v=1"></script>
+<script src="preloader.js?v=2"></script>
+</body>
+</html>
