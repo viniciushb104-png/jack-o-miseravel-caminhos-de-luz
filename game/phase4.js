@@ -134,7 +134,7 @@ let saveData=null;if(journeyMode&&!replayMode){try{saveData=JSON.parse(localStor
 
 const input={left:false,right:false,down:false,run:false,jump:false};
 let running=false,last=performance.now(),cam=0,section=-1,jack=null,keyImg=null,jackFrameOverrides={};
-let phase4SignImgs=Array(4).fill(null),signlessRoadPostImgs=Array(3).fill(null),eraserGameplaySprites=Array(10).fill(null),traceFootprintImgs=Array.from({length:3},()=>[null,null]),traceMemoryImgs=Array(3).fill(null),checkpointOffImg=null,checkpointOnImg=null;
+let phase4SignImgs=Array(4).fill(null),signlessRoadPostImgs=Array(3).fill(null),eraserGameplaySprites=Array(10).fill(null),traceFootprintImgs=Array.from({length:3},()=>[null,null]),traceMemoryImgs=Array(3).fill(null),traceMemoryLoading=Array(3).fill(false),traceMemoryRetryAt=Array(3).fill(0),checkpointOffImg=null,checkpointOnImg=null;
 let bellNormalImg=null,bellGlowImg=null,memoryDoorImg=null;
 let nonexistentDoorImg=null,nonexistentDoorRevealFxImg=null,doorRevealFx=0;
 let idleTime=0,waitSitFrame=0,waitSitClock=0,waitSitActive=false,waitSitImages=[];
@@ -861,6 +861,27 @@ const traceMemoryReady=Promise.allSettled(traceMemoryFiles.map(src=>img(src))).t
  traceMemoryImgs=rs.map(r=>r.status==="fulfilled"?r.value:null);
  return traceMemoryImgs;
 });
+
+function ensureTraceMemoryImage(i){
+ if(traceMemoryImgs[i])return traceMemoryImgs[i];
+ if(traceMemoryLoading[i])return null;
+ const now=performance.now();
+ if(now<traceMemoryRetryAt[i])return null;
+
+ traceMemoryLoading[i]=true;
+ const im=new Image();
+ im.onload=()=>{
+   traceMemoryImgs[i]=im;
+   traceMemoryLoading[i]=false;
+   traceMemoryRetryAt[i]=0;
+ };
+ im.onerror=()=>{
+   traceMemoryLoading[i]=false;
+   traceMemoryRetryAt[i]=performance.now()+3500;
+ };
+ im.src=traceMemoryFiles[i]+"?v=phase4-memory-3";
+ return null;
+}
 
 const checkpointArtReady=Promise.allSettled([
  img("../assets/game/phase4/checkpoints/marco_gótico_com_abóbora_e_bandeira_rasgada.png"),
@@ -1884,7 +1905,7 @@ function drawTraceFigure(x,y,opts={}){
  ctx.restore();
 }
 function drawTraceMemoryAsset(i,t,alpha,burst){
- const im=traceMemoryImgs[i];
+ const im=traceMemoryImgs[i]||ensureTraceMemoryImage(i);
  if(!im)return false;
  const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
  if(!iw||!ih)return false;
@@ -1937,7 +1958,7 @@ function drawTraceMemoryScene(i,t){
  const baseX=traceSceneX(t),surfaceY=traceSurfaceY(t),baseY=surfaceY-4;
 
  ctx.save();
- // Halo discreto: a cena é lembrança, não holograma tecnológico.
+ // Halo discreto: a memória nasce do chão, mas a identidade permanece oculta.
  const g=ctx.createRadialGradient(baseX,baseY-72,8,baseX,baseY-72,130);
  g.addColorStop(0,"rgba(234,204,119,"+(alpha*.15)+")");
  g.addColorStop(1,"rgba(234,204,119,0)");
@@ -1947,35 +1968,13 @@ function drawTraceMemoryScene(i,t){
  ctx.beginPath();ctx.ellipse(baseX,baseY-7,82+Math.sin(p.anim*1.4+i)*3,15,0,0,Math.PI*2);ctx.stroke();
  ctx.restore();
 
+ // Somente o asset final aparece. O rascunho procedural foi removido definitivamente.
  const memoryAsset=drawTraceMemoryAsset(i,t,alpha,burst);
 
- // Fallback: se qualquer PNG falhar, preserva a leitura narrativa anterior.
- if(!memoryAsset){
-   ctx.save();
-   if(i===0){
-     ctx.strokeStyle="rgba(126,111,78,.72)";ctx.lineWidth=4;
-     ctx.beginPath();ctx.moveTo(baseX+38,baseY);ctx.lineTo(baseX+58,baseY-24);ctx.lineTo(baseX+72,baseY);ctx.stroke();
-     drawTraceFigure(baseX+12,baseY-2,{alpha,dir:-1,lean:-.08,phase:.3});
-     ctx.strokeStyle="rgba(235,207,125,"+(alpha*.5)+")";ctx.lineWidth=2;
-     ctx.beginPath();ctx.moveTo(baseX-2,baseY-39);ctx.quadraticCurveTo(baseX-28,baseY-58,baseX-48,baseY-34);ctx.stroke();
-   }else if(i===1){
-     drawTraceFigure(baseX-23,baseY-1,{alpha,dir:1,lean:.02,phase:.2});
-     drawTraceFigure(baseX+27,baseY+2,{alpha:alpha*.82,dir:1,lean:.15,limp:true,phase:1.1});
-     ctx.strokeStyle="rgba(236,209,131,"+(alpha*.72)+")";ctx.lineWidth=5;ctx.lineCap="round";
-     ctx.beginPath();ctx.moveTo(baseX-8,baseY-44);ctx.lineTo(baseX+19,baseY-39);ctx.stroke();
-   }else{
-     drawTraceFigure(baseX+35,baseY-2,{alpha:alpha*.4,dir:1,limp:true,phase:.8});
-     drawTraceFigure(baseX-26,baseY-1,{alpha,dir:-1,lean:-.05,phase:.1});
-     ctx.strokeStyle="rgba(235,207,125,"+(alpha*.52)+")";ctx.lineWidth=2;
-     ctx.beginPath();ctx.moveTo(baseX-3,baseY-36);ctx.lineTo(baseX-58,baseY-36);ctx.stroke();
-   }
-   ctx.restore();
- }
-
- // O verbo é a única informação explícita: mostra a ação, nunca a identidade.
- const labelY=memoryAsset?Math.max(250,memoryAsset.topY-8):Math.max(330,baseY-118);
+ // Enquanto um PNG estiver recarregando, mostramos apenas o halo/rótulo — nunca bonequinhos.
+ const labelY=memoryAsset?Math.max(250,memoryAsset.topY-8):Math.max(300,baseY-108);
  ctx.save();ctx.textAlign="center";
- ctx.fillStyle="rgba(243,220,154,"+(.68+burst*.2)+")";
+ ctx.fillStyle="rgba(243,220,154,"+(.72+burst*.18)+")";
  ctx.shadowColor="rgba(235,204,125,.38)";ctx.shadowBlur=7;
  ctx.font="700 10px Georgia";
  ctx.fillText(t.memoryLabel||t.title,baseX,labelY);
