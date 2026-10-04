@@ -418,11 +418,11 @@ const ENEMY_ARCHETYPES=Object.freeze({
    label:"PEREGRINO OCO",defeatMessage:"As roupas caíram vazias. O pó dentro delas não tinha nome.",
    hitMessage:"A Luz atravessou o vazio sob as roupas.",
    revealMessage:"A lanterna revelou um vazio sob as vestes. Agora a Luz pode alcançá-lo.",
-   width:68,height:96,patrolSpeed:24,chaseSpeed:58,attackSpeed:112,
-   detectRange:345,loseRange:480,attackRange:78,lightRange:210,
-   alertTime:.42,idleTime:1.0,patrolTime:2.8,
-   attackWindup:.68,attackActive:.24,attackRecover:.9,
-   attackCooldown:1.2,hitTime:.38,dissolveTime:.95,
+   width:68,height:96,patrolSpeed:30,chaseSpeed:72,attackSpeed:170,
+   detectRange:345,loseRange:480,attackRange:82,lightRange:210,
+   alertTime:.34,idleTime:.82,patrolTime:2.35,
+   attackWindup:.42,attackActive:.32,attackRecover:.48,
+   attackCooldown:.96,hitTime:.32,dissolveTime:.95,
    knockbackX:215,knockbackY:-385,
    needsReveal:true,revealTime:2.8
  }),
@@ -2272,6 +2272,8 @@ const HOLLOW_SPRITE_INDEX=Object.freeze({
  dissolve:[9]
 });
 function hollowSpriteIndex(e){
+ if(e.state==="dissolve")return 9;
+ if(e.state==="hit"||e.hitFlash>0)return 8;
  if(e.state==="attack"){
    const total=e.cfg.attackWindup+e.cfg.attackActive+e.cfg.attackRecover;
    const elapsed=Math.max(0,total-e.stateTimer);
@@ -2279,8 +2281,6 @@ function hollowSpriteIndex(e){
    if(elapsed<e.cfg.attackWindup+e.cfg.attackActive)return 6;
    return 7;
  }
- if(e.state==="dissolve")return 9;
- if(e.state==="hit"||e.hitFlash>0)return 8;
  const seq=HOLLOW_SPRITE_INDEX[e.state]||HOLLOW_SPRITE_INDEX.idle;
  if(seq.length===1)return seq[0];
  const fps=e.state==="chase"?5.4:(e.state==="patrol"?3.2:1.8);
@@ -2288,72 +2288,154 @@ function hollowSpriteIndex(e){
 }
 function drawHollowSprite(e){
  const moving=e.state==="patrol"||e.state==="chase";
- const index=hollowSpriteIndex(e);
- const primary=hollowGameplaySprites[index];
- if(!primary)return false;
- const iw=primary.naturalWidth||primary.width,ih=primary.naturalHeight||primary.height;
- if(!iw||!ih)return false;
-
  const attacking=e.state==="attack";
  const chasing=e.state==="chase";
  const exposed=e.exposedTimer>0;
+ const baseIndex=hollowSpriteIndex(e);
+ const baseIm=hollowGameplaySprites[baseIndex];
+ if(!baseIm)return false;
+
  const targetH=e.state==="dissolve"?208:(attacking?208:(chasing?200:194));
- const targetW=iw*(targetH/ih);
  const bottom=e.h/2+8;
- const walkSpeed=chasing?6.4:4.6;
- const walkClock=(p.anim+e.spawnX*.001)*walkSpeed;
- const walkFrac=walkClock-Math.floor(walkClock);
- const smoothStep=walkFrac*walkFrac*(3-2*walkFrac);
- const bob=moving?Math.sin(walkClock*Math.PI)*2.3:((e.state==="idle")?Math.sin(p.anim*2.25+e.spawnX*.01)*1.5:0);
- const forward=attacking?10:(chasing?5:0);
- const dx=-targetW/2+forward;
- const dy=bottom-targetH+bob;
+ let bodyX=0,bodyY=0,rotation=0,scaleX=1,scaleY=1;
+ let frames=[];
+
+ const addFrame=(index,alpha=1)=>{
+   const im=hollowGameplaySprites[index];
+   if(im&&alpha>.001)frames.push({im,alpha});
+ };
+
+ if(moving){
+   // Dois desenhos de caminhada, mas sem manter duas silhuetas fantasmas sobrepostas
+   // o tempo todo. Cada passo fica sólido e a fusão só acontece perto da troca.
+   const speed=chasing?7.2:5.15;
+   const clock=(p.anim+e.spawnX*.001)*speed;
+   const step=Math.floor(clock);
+   const frac=clock-step;
+   const current=(step&1)?3:2;
+   const next=current===2?3:2;
+   const transitionStart=.76;
+   if(frac<transitionStart){
+     addFrame(current,1);
+   }else{
+     const t=(frac-transitionStart)/(1-transitionStart);
+     const ease=t*t*(3-2*t);
+     addFrame(current,1-ease);
+     addFrame(next,ease);
+   }
+   const gait=Math.sin(clock*Math.PI);
+   bodyY=Math.abs(gait)*-2.3;
+   bodyX=Math.sin(clock*Math.PI*2)*(chasing?2.1:1.3);
+   rotation=Math.sin(clock*Math.PI*2)*(chasing?.010:.007);
+ }else if(attacking){
+   const total=e.cfg.attackWindup+e.cfg.attackActive+e.cfg.attackRecover;
+   const elapsed=Math.max(0,total-e.stateTimer);
+
+   if(elapsed<e.cfg.attackWindup){
+     // 05 alert -> 06 windup, com recuo e compressão do corpo.
+     const t=Math.min(1,elapsed/e.cfg.attackWindup);
+     const ease=t*t*(3-2*t);
+     addFrame(4,1-ease);
+     addFrame(5,ease);
+     bodyX=-8*ease;
+     bodyY=3*ease;
+     rotation=-.025*ease;
+     scaleX=1-.025*ease;
+     scaleY=1+.018*ease;
+   }else if(elapsed<e.cfg.attackWindup+e.cfg.attackActive){
+     // Golpe: 06 -> 07 e avanço visual sincronizado com o deslocamento físico.
+     const t=Math.min(1,(elapsed-e.cfg.attackWindup)/e.cfg.attackActive);
+     const ease=1-Math.pow(1-t,3);
+     const blend=Math.min(1,t/.28);
+     addFrame(5,1-blend);
+     addFrame(6,blend);
+     bodyX=-8+27*ease;
+     bodyY=-2*Math.sin(t*Math.PI);
+     rotation=.032*ease;
+     scaleX=1+.045*Math.sin(t*Math.PI);
+     scaleY=1-.025*Math.sin(t*Math.PI);
+   }else{
+     // Recuperação rápida: 07 -> 08 -> idle. Não segura 08 congelado.
+     const t=Math.min(1,(elapsed-e.cfg.attackWindup-e.cfg.attackActive)/e.cfg.attackRecover);
+     if(t<.58){
+       const q=t/.58, ease=q*q*(3-2*q);
+       addFrame(6,1-ease);
+       addFrame(7,ease);
+     }else{
+       const q=(t-.58)/.42, ease=q*q*(3-2*q);
+       addFrame(7,1-ease);
+       addFrame(0,ease);
+     }
+     bodyX=19*(1-t);
+     bodyY=Math.sin(t*Math.PI)*2.4;
+     rotation=.032*(1-t)-.012*Math.sin(t*Math.PI);
+   }
+ }else{
+   addFrame(baseIndex,1);
+   if(e.state==="idle"){
+     bodyY=Math.sin(p.anim*2.05+e.spawnX*.01)*1.4;
+     rotation=Math.sin(p.anim*1.35+e.spawnX*.006)*.006;
+   }else if(e.state==="alert"){
+     bodyY=-1.5;
+     scaleY=1.012;
+   }else if(e.state==="hit"){
+     bodyX=-5;
+     rotation=-.018;
+   }
+ }
+
+ // Se o clarão da Luz ocorreu, a pose de impacto precisa vencer qualquer pose anterior.
+ if(e.hitFlash>0&&e.state!=="dissolve"){
+   frames=[];
+   addFrame(8,1);
+   bodyX=-5;
+   bodyY=-2;
+   rotation=-.018;
+   scaleX=.985;
+   scaleY=1.02;
+ }
+
+ const drawFrame=(fr,alphaMul=1,composite=null)=>{
+   const im=fr.im;
+   const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+   if(!iw||!ih)return;
+   const h=targetH*scaleY;
+   const w=iw*(h/ih)*scaleX;
+   const dx=-w/2;
+   const dy=bottom-h;
+
+   ctx.save();
+   ctx.globalAlpha=Math.max(0,Math.min(1,fr.alpha*alphaMul));
+   if(composite)ctx.globalCompositeOperation=composite;
+   ctx.drawImage(im,dx,dy,w,h);
+   ctx.restore();
+ };
 
  ctx.save();
+ ctx.translate(bodyX,bodyY);
+ ctx.rotate(rotation);
  ctx.imageSmoothingEnabled=true;
  ctx.imageSmoothingQuality="high";
  ctx.shadowColor=e.hitFlash>0?"rgba(249,224,157,.98)":(exposed?"rgba(232,199,109,.65)":"rgba(0,0,0,.74)");
  ctx.shadowBlur=e.hitFlash>0?27:(exposed?18:11);
 
- // Para patrulha/perseguição, fazemos uma transição curta entre os dois frames.
- // Isso elimina a sensação de "travada" sem inventar poses novas.
- const frames=[];
- if(moving){
-   const aIndex=(Math.floor(walkClock)&1)?3:2;
-   const bIndex=aIndex===2?3:2;
-   const a=hollowGameplaySprites[aIndex],b=hollowGameplaySprites[bIndex];
-   if(a)frames.push({im:a,alpha:1-smoothStep});
-   if(b)frames.push({im:b,alpha:smoothStep});
- }else{
-   frames.push({im:primary,alpha:1});
- }
-
  if(exposed&&e.state!=="dissolve"){
-   const pulse=.38+.14*Math.sin(p.anim*5.2);
+   const pulse=.28+.10*Math.sin(p.anim*5.2);
    ctx.save();
-   ctx.globalCompositeOperation="screen";
    ctx.shadowColor="rgba(241,208,119,.9)";
    ctx.shadowBlur=22;
-   for(const fr of frames){
-     ctx.globalAlpha=pulse*fr.alpha;
-     ctx.drawImage(fr.im,dx,dy,targetW,targetH);
-   }
+   for(const fr of frames)drawFrame(fr,pulse,"screen");
    ctx.restore();
  }
 
- for(const fr of frames){
-   ctx.globalAlpha=fr.alpha;
-   ctx.drawImage(fr.im,dx,dy,targetW,targetH);
- }
+ for(const fr of frames)drawFrame(fr,1);
 
  if(e.hitFlash>0){
-   ctx.globalCompositeOperation="screen";
+   ctx.save();
    ctx.shadowColor="rgba(252,224,146,.98)";
    ctx.shadowBlur=30;
-   for(const fr of frames){
-     ctx.globalAlpha=Math.min(.30,e.hitFlash*1.22)*fr.alpha;
-     ctx.drawImage(fr.im,dx,dy,targetW,targetH);
-   }
+   for(const fr of frames)drawFrame(fr,Math.min(.30,e.hitFlash*1.22),"screen");
+   ctx.restore();
  }
  ctx.restore();
  return true;
