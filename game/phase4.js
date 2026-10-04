@@ -1258,9 +1258,10 @@ const PLATFORM_VISUAL_FOOT_OFFSETS=Object.freeze({
  "2c":12,
  "2d":9,
  "2e":7,
- // Praça dos Nomes Roubados: a arte 2F possui borda/perspectiva mais profunda.
- // 24 px alinha personagens, sombras, checkpoint e props ao topo realmente pintado.
- "2f":24,
+ // Praça dos Nomes Roubados: a arte 2F possui borda/perspectiva bem profunda.
+ // 34 px coloca os pés sobre a pedra pintada; PNGs com margem transparente
+ // recebem ainda uma correção automática pela base visível.
+ "2f":34,
  "2g":11,
  "2h":12
 });
@@ -1285,6 +1286,28 @@ function platformVisualFootOffset(q){
 }
 function visualFootOffsetAt(cx,bottomY,tolerance=34){
  return platformVisualFootOffset(supportPlatformAt(cx,bottomY,tolerance));
+}
+
+const PLAZA_CRACK_HOLE=Object.freeze({
+ left:8310,
+ right:8460,
+ fromX:8272,
+ toX:8498
+});
+function plazaCrackOpen(){
+ return !!plazaSolved;
+}
+function plazaCrackContainsX(x){
+ return plazaCrackOpen()&&x>PLAZA_CRACK_HOLE.left&&x<PLAZA_CRACK_HOLE.right;
+}
+function platformSupportsFoot(q,footX){
+ if(!q)return false;
+ // A arte 2F-04 abre um vão central depois dos três ecos.
+ // Antes disso, a mesma plataforma continua inteira.
+ if(plazaCrackOpen()&&q.kind==="plaza"&&q.h>=100&&q.x===7900){
+   return !plazaCrackContainsX(footX);
+ }
+ return true;
 }
 function drawGroundShadow(x,y,rx=18,ry=4,alpha=.22){
  ctx.save();ctx.globalAlpha=alpha;ctx.fillStyle="#000";
@@ -1727,8 +1750,9 @@ function drawCheckpoint(cp){
  // Isso não altera colisão, respawn nem lógica do checkpoint.
  const support=supportPlatformAt(cp.x,cp.groundY,90);
  const groundFix=(support?platformVisualFootOffset(support):0)+14;
- const bottomY=sy+groundFix;
  const targetH=242;
+ const plazaPad=cp.id==="plaza"?visibleBottomPadPx(im,targetH,32):0;
+ const bottomY=sy+groundFix+plazaPad;
 
  if(im){
    ctx.save();
@@ -1804,7 +1828,8 @@ function drawPilgrimSprite(im,px,feet,footFix,selection){
  const targetW=iw*(targetH/ih);
  const sx=px-cam;
  const groundY=feet+footFix;
- const dx=sx-targetW/2,dy=groundY-targetH;
+ const plazaPad=(px>=7900&&px<8940)?visibleBottomPadPx(im,targetH,20):0;
+ const dx=sx-targetW/2,dy=groundY-targetH+plazaPad;
  const facesLeft=!!selection.baseLeft;
  const shouldFlip=facesLeft?(pilgrimDir>0):(pilgrimDir<0);
 
@@ -1882,6 +1907,18 @@ function pilgrimArchiveBridgeJumpFor(x,target){
  return null;
 }
 
+
+const PILGRIM_PLAZA_CRACK_JUMP=Object.freeze({
+ fromX:PLAZA_CRACK_HOLE.fromX,
+ toX:PLAZA_CRACK_HOLE.toX,
+ fromY:590,toY:590,dir:1,gap:PLAZA_CRACK_HOLE.right-PLAZA_CRACK_HOLE.left,arc:76
+});
+function pilgrimPlazaCrackJumpFor(x,target){
+ if(!plazaCrackOpen())return null;
+ const j=PILGRIM_PLAZA_CRACK_JUMP;
+ if(x>=j.fromX-26&&x<=PLAZA_CRACK_HOLE.left+12&&target>j.toX-8)return {...j};
+ return null;
+}
 const PILGRIM_COLLECTOR_JUMPS=Object.freeze([
  Object.freeze({fromX:9464,toX:9656,fromY:590,toY:590,dir:1,gap:120,arc:82}),
  Object.freeze({fromX:9994,toX:10186,fromY:590,toY:590,dir:1,gap:120,arc:82})
@@ -2075,6 +2112,11 @@ function updatePilgrim(dt){
  // A Peregrina dá um salto curto próprio e pousa antes da coreografia da Ponte dos Ninguém.
  const archiveBridgeJump=pilgrimArchiveBridgeJumpFor(pilgrimX,target);
  if(archiveBridgeJump&&startPilgrimTerrainJump(archiveBridgeJump))return;
+
+ // Depois dos três ecos, o chão central da Praça realmente se abre.
+ // Se a Peregrina ainda estiver à esquerda por save/tempo de diálogo, ela salta o mesmo buraco de Jack.
+ const plazaCrackJump=pilgrimPlazaCrackJumpFor(pilgrimX,target);
+ if(plazaCrackJump&&startPilgrimTerrainJump(plazaCrackJump))return;
 
  // A Casa do Coletor possui somente dois saltos narrativos.
  // O terceiro vão é a entrada da arena: a Peregrina NÃO o atravessa.
@@ -3271,11 +3313,45 @@ function drawPlazaImageFit(im,cx,cy,maxW,maxH,alpha=1,tilt=0,screen=false){
 function plazaVisualGroundY(x){
  return 590+visualFootOffsetAt(x,590,42);
 }
+
+const visibleBottomPadCache=new WeakMap();
+function visibleBottomPadRatio(im){
+ if(!im)return 0;
+ if(visibleBottomPadCache.has(im))return visibleBottomPadCache.get(im);
+ let ratio=0;
+ try{
+   const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+   if(iw&&ih){
+     const maxW=220,scale=Math.min(1,maxW/iw);
+     const sw=Math.max(24,Math.round(iw*scale)),sh=Math.max(24,Math.round(ih*scale));
+     const cv=document.createElement("canvas");cv.width=sw;cv.height=sh;
+     const cx=cv.getContext("2d",{willReadFrequently:true});
+     cx.clearRect(0,0,sw,sh);cx.drawImage(im,0,0,sw,sh);
+     const data=cx.getImageData(0,0,sw,sh).data;
+     const need=Math.max(3,Math.floor(sw*.018));
+     let last=sh-1;
+     outer:for(let y=sh-1;y>=0;y--){
+       let solid=0;
+       for(let x=0;x<sw;x++){
+         if(data[(y*sw+x)*4+3]>30&&++solid>=need){last=y;break outer}
+       }
+     }
+     ratio=Math.max(0,Math.min(.22,(sh-1-last)/sh));
+   }
+ }catch(_){ratio=0}
+ visibleBottomPadCache.set(im,ratio);
+ return ratio;
+}
+function visibleBottomPadPx(im,targetH,maxPx=30){
+ return Math.min(maxPx,targetH*visibleBottomPadRatio(im));
+}
 function drawPlazaImageBottom(im,cx,bottomY,targetH,alpha=1,flip=false,screen=false){
  if(!im)return false;
  const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
  if(!iw||!ih)return false;
- const w=iw*(targetH/ih),x=cx-w/2,y=bottomY-targetH;
+ const w=iw*(targetH/ih),x=cx-w/2;
+ const visiblePad=visibleBottomPadPx(im,targetH,30);
+ const y=bottomY-targetH+visiblePad;
  ctx.save();ctx.globalAlpha=Math.max(0,Math.min(1,alpha));
  if(screen)ctx.globalCompositeOperation="screen";
  ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";
@@ -4593,6 +4669,8 @@ function update(dt){
  p.y+=p.vy*dt;p.on=false;
  for(const q of platforms){
    if(q.broken||!bridgePlatformSolid(q))continue;
+   const footX=p.x+p.w/2;
+   if(!platformSupportsFoot(q,footX))continue;
    if(p.x+p.w>q.x&&p.x<q.x+q.w&&oldY+p.h<=q.y+8&&p.y+p.h>=q.y&&p.vy>=0){
      p.y=q.y-p.h;p.vy=0;p.on=true;
    }
@@ -4600,12 +4678,21 @@ function update(dt){
  if(p.y>780){
    playerLife--;syncHud();
    const wasBridge=p.x>6200&&p.x<7900;
-   if(playerLife<=0)respawn(wasBridge?"A Ponte dos Ninguém apagou o chão — o último marco guardou os passos de Jack.":"A estrada tentou apagar Jack.");
+   const wasPlazaCrack=plazaCrackContainsX(p.x+p.w/2);
+   if(playerLife<=0)respawn(
+     wasBridge?"A Ponte dos Ninguém apagou o chão — o último marco guardou os passos de Jack.":
+     wasPlazaCrack?"A Praça rachou sob Jack — o Marco da Praça guardou seus passos.":
+     "A estrada tentou apagar Jack."
+   );
    else{
      const cp=checkpoints.find(q=>q.id===activeCheckpoint);
      p.x=cp?cp.respawnX:110;p.y=cp?cp.respawnY:470;p.vx=p.vy=0;
      if(wasBridge){bridgeFogClock=0;for(const q of platforms)if(q.unstable)q.lightTimer=0}
-     say((wasBridge?"A névoa apagou a plataforma sob Jack. ":"Um passo desapareceu na névoa. ")+playerLife+"/3.");
+     say((
+       wasBridge?"A névoa apagou a plataforma sob Jack. ":
+       wasPlazaCrack?"O piso rachado cedeu sob Jack. ":
+       "Um passo desapareceu na névoa. "
+     )+playerLife+"/3.");
    }
  }
  updateCheckpoint();
