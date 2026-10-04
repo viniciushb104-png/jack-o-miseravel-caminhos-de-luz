@@ -134,7 +134,7 @@ let saveData=null;if(journeyMode&&!replayMode){try{saveData=JSON.parse(localStor
 
 const input={left:false,right:false,down:false,run:false,jump:false};
 let running=false,last=performance.now(),cam=0,section=-1,jack=null,keyImg=null,jackFrameOverrides={};
-let phase4SignImgs=Array(4).fill(null),signlessRoadPostImgs=Array(3).fill(null),eraserGameplaySprites=Array(10).fill(null),checkpointOffImg=null,checkpointOnImg=null;
+let phase4SignImgs=Array(4).fill(null),signlessRoadPostImgs=Array(3).fill(null),eraserGameplaySprites=Array(10).fill(null),traceFootprintImgs=Array.from({length:3},()=>[null,null]),checkpointOffImg=null,checkpointOnImg=null;
 let bellNormalImg=null,bellGlowImg=null,memoryDoorImg=null;
 let nonexistentDoorImg=null,nonexistentDoorRevealFxImg=null,doorRevealFx=0;
 let idleTime=0,waitSitFrame=0,waitSitClock=0,waitSitActive=false,waitSitImages=[];
@@ -834,6 +834,24 @@ const eraserGameplayReady=Promise.allSettled(eraserGameplayFiles.map(src=>img(sr
  return eraserGameplaySprites;
 });
 
+const traceFootprintFiles=[
+ "../assets/game/phase4/puzzles/footprint-field/traces/trace-01-dormant.png",
+ "../assets/game/phase4/puzzles/footprint-field/traces/trace-01-revealed.png",
+ "../assets/game/phase4/puzzles/footprint-field/traces/trace-02-dormant.png",
+ "../assets/game/phase4/puzzles/footprint-field/traces/trace-02-revealed.png",
+ "../assets/game/phase4/puzzles/footprint-field/traces/trace-03-dormant.png",
+ "../assets/game/phase4/puzzles/footprint-field/traces/trace-03-revealed.png"
+];
+const traceFootprintReady=Promise.allSettled(traceFootprintFiles.map(src=>img(src))).then(rs=>{
+ const loaded=rs.map(r=>r.status==="fulfilled"?r.value:null);
+ traceFootprintImgs=[
+   [loaded[0],loaded[1]],
+   [loaded[2],loaded[3]],
+   [loaded[4],loaded[5]]
+ ];
+ return traceFootprintImgs;
+});
+
 const checkpointArtReady=Promise.allSettled([
  img("../assets/game/phase4/checkpoints/marco_gótico_com_abóbora_e_bandeira_rasgada.png"),
  img("../assets/game/phase4/checkpoints/marco_gótico_com_lanterna_abóbora.png")
@@ -874,7 +892,7 @@ const nonexistentDoorReady=Promise.allSettled([
 });
 
 const phase4PropReady=Promise.allSettled([
- phase4SignReady,signlessRoadPostReady,eraserGameplayReady,checkpointArtReady,bellArtReady,memoryDoorReady,nonexistentDoorReady
+ phase4SignReady,signlessRoadPostReady,eraserGameplayReady,traceFootprintReady,checkpointArtReady,bellArtReady,memoryDoorReady,nonexistentDoorReady
 ]);
 
 const jackPortraitFiles=["jack-00-neutral.png","jack-01-serious.png","jack-02-smirk.png","jack-03-surprised.png","jack-04-determined.png","jack-05-resolved.png"];
@@ -1786,6 +1804,62 @@ function drawTraceFoot(x,y,angle,alpha=1,scale=1){
  ctx.beginPath();ctx.ellipse(6,-6,2.8,3.7,.35,0,Math.PI*2);ctx.fill();
  ctx.restore();
 }
+function drawTraceAsset(i,t,on,pulse){
+ const q=traceHostPlatform(t);
+ const im=traceFootprintImgs[i]?.[on?1:0];
+ if(!q||!im)return false;
+
+ const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+ if(!iw||!ih)return false;
+
+ // O PNG é horizontal, mas em um platformer lateral ele precisa parecer "impresso"
+ // no topo da plataforma. Mantemos a largura e comprimimos a altura em perspectiva.
+ const pad=10;
+ const targetW=Math.max(90,q.w-pad*2);
+ const targetH=Math.max(27,Math.min(42,targetW*.19));
+ const centerX=q.x+q.w/2;
+ const surfaceY=q.y+platformVisualFootOffset(q);
+ const dx=centerX-targetW/2;
+ const dy=surfaceY-targetH*.78;
+ const near=Math.abs((p.x+p.w/2)-t.x)<205;
+ const revealBurst=Math.min(1,traceRevealFx[i]/1.15);
+ const alpha=on
+   ? Math.min(.96,.78+pulse*.10+revealBurst*.08)
+   : (near ? .31+pulse*.05 : .18+pulse*.025);
+
+ ctx.save();
+
+ // Nunca deixa a arte escapar da plataforma que contém o enigma.
+ ctx.beginPath();
+ ctx.rect(q.x+5,surfaceY-52,q.w-10,58);
+ ctx.clip();
+
+ ctx.globalAlpha=alpha;
+ ctx.imageSmoothingEnabled=true;
+ ctx.imageSmoothingQuality="high";
+
+ if(on){
+   ctx.shadowColor="rgba(239,205,111,.72)";
+   ctx.shadowBlur=10+revealBurst*13;
+ }else{
+   ctx.shadowColor="rgba(188,157,91,.18)";
+   ctx.shadowBlur=4;
+ }
+
+ ctx.drawImage(im,dx,dy,targetW,targetH);
+
+ // Pulso de revelação: a mesma arte reaparece em screen por um instante,
+ // como se a Luz estivesse reconstruindo a memória no chão.
+ if(on&&revealBurst>0){
+   ctx.globalCompositeOperation="screen";
+   ctx.globalAlpha=revealBurst*.32;
+   ctx.shadowColor="rgba(255,226,150,.95)";
+   ctx.shadowBlur=20;
+   ctx.drawImage(im,dx,dy,targetW,targetH);
+ }
+ ctx.restore();
+ return true;
+}
 function drawTraceFigure(x,y,opts={}){
  const alpha=opts.alpha??.72,dir=opts.dir===-1?-1:1,lean=opts.lean||0,limp=!!opts.limp,phase=opts.phase||0;
  const step=Math.sin(p.anim*3.2+phase)*4;
@@ -1867,11 +1941,15 @@ function drawTraces(){
    const surfaceY=traceSurfaceY(t);
    const footprints=traceFootPositions(t);
 
-   // Todas as pegadas ficam contidas no topo visual da plataforma 2C correspondente.
-   footprints.forEach((fp,k)=>{
-     const side=k%2?-1:1;
-     drawTraceFoot(fp.x,fp.y,side*.16,baseAlpha,on?1:0.92);
-   });
+   // Lote 1 — usa a arte narrativa própria de cada rastro.
+   // Se algum PNG falhar, o desenho procedural antigo continua funcionando.
+   const assetDrawn=drawTraceAsset(i,t,on,pulse);
+   if(!assetDrawn){
+     footprints.forEach((fp,k)=>{
+       const side=k%2?-1:1;
+       drawTraceFoot(fp.x,fp.y,side*.16,baseAlpha,on?1:0.92);
+     });
+   }
 
    if(on){
      // Halo em perspectiva, apoiado no chão em vez de um círculo vertical.
