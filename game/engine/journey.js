@@ -12,7 +12,8 @@
     1: "phase1.html",
     2: "phase2-prototype.html",
     3: "phase3.html",
-    4: "phase4.html"
+    4: "phase4.html",
+    5: "phase5.html"
   });
 
   function currentPhase() {
@@ -43,10 +44,12 @@
     localStorage.removeItem("jack-phase2-save");
     localStorage.removeItem("jack-phase3-save");
     localStorage.removeItem("jack-phase4-save");
+    localStorage.removeItem("jack-phase5-save");
     localStorage.removeItem("jack-journey-phase1-snapshot");
     localStorage.removeItem("jack-journey-phase2-snapshot");
     localStorage.removeItem("jack-journey-phase3-snapshot");
     localStorage.removeItem("jack-journey-phase4-snapshot");
+    localStorage.removeItem("jack-journey-phase5-snapshot");
   }
 
   function advanceTo(phase) {
