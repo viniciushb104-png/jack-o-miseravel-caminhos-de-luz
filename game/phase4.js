@@ -1893,18 +1893,28 @@ function drawTraceMemoryAsset(i,t,alpha,burst){
  const baseX=traceSceneX(t),surfaceY=traceSurfaceY(t);
  // Memória é visão, não decal: pode ser um pouco mais larga que a plataforma,
  // mas continua centrada no rastro para não revelar uma "cena completa".
- const targetW=Math.max(205,Math.min(275,(q?.w||190)+72));
+ const targetW=Math.max(360,Math.min(430,(q?.w||190)+205));
  const targetH=targetW*(ih/iw);
- const floatY=surfaceY-targetH-16;
+ const floatY=surfaceY-targetH-8;
  const breatheY=Math.sin(p.anim*1.35+i*.9)*2.2;
- const memoryAlpha=Math.min(.94,alpha*(.90+Math.sin(p.anim*1.6+i)*.04));
+ // Os PNGs já são etéreos por natureza; no tamanho antigo a soma das transparências
+ // deixava a memória quase invisível. Mantemos o mistério, mas com leitura clara.
+ const memoryAlpha=Math.min(.98,.82+burst*.10+Math.sin(p.anim*1.6+i)*.035);
 
  ctx.save();
  ctx.globalAlpha=memoryAlpha;
  ctx.imageSmoothingEnabled=true;
  ctx.imageSmoothingQuality="high";
- ctx.shadowColor="rgba(236,202,116,.46)";
- ctx.shadowBlur=12+burst*12;
+ // Uma névoa dourada muito suave atrás da visão garante contraste contra fundos escuros
+ // sem criar uma moldura ou denunciar identidade.
+ const glow=ctx.createRadialGradient(baseX,floatY+targetH*.58,18,baseX,floatY+targetH*.58,targetW*.34);
+ glow.addColorStop(0,"rgba(233,198,112,.16)");
+ glow.addColorStop(1,"rgba(233,198,112,0)");
+ ctx.fillStyle=glow;
+ ctx.beginPath();ctx.ellipse(baseX,floatY+targetH*.60,targetW*.34,targetH*.62,0,0,Math.PI*2);ctx.fill();
+
+ ctx.shadowColor="rgba(236,202,116,.64)";
+ ctx.shadowBlur=18+burst*16;
  ctx.drawImage(im,baseX-targetW/2,floatY+breatheY,targetW,targetH);
 
  // No instante da revelação, a lembrança "fecha" por um breve clarão,
@@ -1963,7 +1973,7 @@ function drawTraceMemoryScene(i,t){
  }
 
  // O verbo é a única informação explícita: mostra a ação, nunca a identidade.
- const labelY=memoryAsset?Math.max(292,memoryAsset.topY-7):Math.max(330,baseY-118);
+ const labelY=memoryAsset?Math.max(250,memoryAsset.topY-8):Math.max(330,baseY-118);
  ctx.save();ctx.textAlign="center";
  ctx.fillStyle="rgba(243,220,154,"+(.68+burst*.2)+")";
  ctx.shadowColor="rgba(235,204,125,.38)";ctx.shadowBlur=7;
