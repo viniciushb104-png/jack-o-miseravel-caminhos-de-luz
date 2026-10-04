@@ -1518,6 +1518,80 @@ function drawRoad(){
  }
  ctx.restore();
 }
+function drawNobodyBridgeForegrounds(){
+ // Mesmo princípio da ponte da Fase 1:
+ // personagens são desenhados primeiro; depois a faixa frontal da arte 2E
+ // volta por cima dos pés. A hitbox continua invisível e inalterada.
+ if(cam+W<6070||cam>7900)return;
+
+ ctx.save();
+ ctx.translate(-cam,0);
+
+ for(const q of platforms){
+   if(q.kind!=="bridge"||q.artGroup!=="2e"||q.broken)continue;
+
+   const alpha=bridgePlatformAlpha(q);
+   if(alpha<=.03)continue;
+
+   const sel=selectedPlatformArt(q);
+   const key=platformArtKey(sel.group,sel.index);
+   const im=phase4PlatformImages[key];
+   if(!im){ensurePlatformArt(sel.group,sel.index);continue}
+
+   const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+   if(!iw||!ih)continue;
+
+   const meta=phase4PlatformMeta[key]||{surfaceRatio:.34};
+   const widthScale=q.h>100?1.035:1.12;
+   const dw=Math.max(40,q.w*widthScale);
+   const dh=ih*(dw/iw);
+   const dx=q.x+q.w/2-dw/2;
+   const dy=q.y-meta.surfaceRatio*dh;
+
+   // A borda começa alguns pixels acima do ponto onde os pés encostam.
+   // Plataformas finas recebem uma faixa menor; a cabeceira recebe uma faixa mais profunda.
+   const foot=platformVisualFootOffset(q);
+   const clipTop=q.y+Math.max(-2,foot-8);
+   const clipH=q.h>80?58:38;
+
+   ctx.save();
+   ctx.beginPath();
+   ctx.rect(dx-5,clipTop,dw+10,clipH);
+   ctx.clip();
+   ctx.globalAlpha=alpha;
+   ctx.imageSmoothingEnabled=true;
+   ctx.imageSmoothingQuality="high";
+
+   if(q.unstable&&(q.lightTimer||0)>0){
+     ctx.shadowColor="rgba(236,204,112,.72)";
+     ctx.shadowBlur=16;
+   }else if(bridgePlatformWarning(q)){
+     ctx.shadowColor="rgba(204,199,180,.42)";
+     ctx.shadowBlur=9;
+   }
+
+   ctx.drawImage(im,dx,dy,dw,dh);
+   ctx.restore();
+
+   // Linha de contato mínima ajuda o pé a "assentar" sem virar HUD.
+   // Ela acompanha o desaparecimento da plataforma.
+   const edgeAlpha=Math.min(.18,alpha*.16);
+   if(edgeAlpha>.015){
+     ctx.save();
+     ctx.globalAlpha=edgeAlpha;
+     ctx.strokeStyle=(q.lightTimer||0)>0?"rgba(245,213,132,.9)":"rgba(15,16,14,.9)";
+     ctx.lineWidth=2;
+     ctx.beginPath();
+     ctx.moveTo(q.x+10,q.y+foot+1);
+     ctx.lineTo(q.x+q.w-10,q.y+foot+1);
+     ctx.stroke();
+     ctx.restore();
+   }
+ }
+
+ ctx.restore();
+}
+
 function drawPropByHeight(im,cx,bottomY,targetH,alpha=1,flip=false){
  if(!im)return null;
  const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
@@ -4624,7 +4698,13 @@ function update(dt){
 let saveClock=0;
 
 function draw(){
- drawBackdrop();drawWorld();drawJack();drawMemoryLight();
+ drawBackdrop();
+ drawWorld();
+ drawJack();
+ // Ponte dos Ninguém recebe a mesma composição em primeiro plano usada na Fase 1.
+ // Assim Jack parece caminhar dentro da ponte, atrás da borda frontal, não sobre um PNG plano.
+ drawNobodyBridgeForegrounds();
+ drawMemoryLight();
 }
 
 function bindHold(id,key){
