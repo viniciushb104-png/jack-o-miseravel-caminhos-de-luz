@@ -826,6 +826,60 @@
       chapter: 'HALLOWEEN IV · A ESTRADA CONTINUA',
       title: 'A Estrada Continua',
       src: 'assets/audio/phase4/phase4-road-continues-finale.mp3?v=1'
+    },
+    {
+      phase: 5,
+      chapter: 'HALLOWEEN V · A ESTRADA QUE VOLTA',
+      title: 'O Sino Chama Para Trás',
+      src: 'assets/audio/phase5/phase5-01-o-sino-chama-para-tras.mp3?v=1'
+    },
+    {
+      phase: 5,
+      chapter: 'HALLOWEEN V · AS CASAS SEM ESPERA',
+      title: 'Casas Que Ainda Esperam',
+      src: 'assets/audio/phase5/phase5-02-casas-que-ainda-esperam.mp3?v=1'
+    },
+    {
+      phase: 5,
+      chapter: 'HALLOWEEN V · O RELÓGIO SEM ONTEM',
+      title: 'O Relógio sem Ontem',
+      src: 'assets/audio/phase5/phase5-03-o-relogio-sem-ontem.mp3?v=1'
+    },
+    {
+      phase: 5,
+      chapter: 'HALLOWEEN V · O JARDIM DAS COISAS GUARDADAS',
+      title: 'Aquilo que Não Precisa Ser Carregado',
+      src: 'assets/audio/phase5/phase5-04-aquilo-que-nao-precisa-ser-carregado.mp3?v=1'
+    },
+    {
+      phase: 5,
+      chapter: 'HALLOWEEN V · A CIDADE SEM JACK',
+      title: 'A Cidade sem Jack',
+      src: 'assets/audio/phase5/phase5-05-a-cidade-sem-jack.mp3?v=1'
+    },
+    {
+      phase: 5,
+      chapter: 'HALLOWEEN V · A ENCRUZILHADA DA PROMESSA',
+      title: 'Para Todos Eles',
+      src: 'assets/audio/phase5/phase5-06-para-todos-eles.mp3?v=1'
+    },
+    {
+      phase: 5,
+      chapter: 'HALLOWEEN V · O MISERÁVEL · ATO I',
+      title: 'O Que Você Fez',
+      src: 'assets/audio/phase5/phase5-07-o-que-voce-fez.mp3?v=1'
+    },
+    {
+      phase: 5,
+      chapter: 'HALLOWEEN V · O MISERÁVEL · ATOS II–III',
+      title: 'O Que Você Faz Depois',
+      src: 'assets/audio/phase5/phase5-08-o-que-voce-faz-depois.mp3?v=1'
+    },
+    {
+      phase: 5,
+      chapter: 'HALLOWEEN V · EPÍLOGO',
+      title: 'A Última Lanterna',
+      src: 'assets/audio/phase5/phase5-09-a-ultima-lanterna.mp3?v=1'
     }
   ];
 
