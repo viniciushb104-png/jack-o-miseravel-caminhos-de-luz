@@ -1258,7 +1258,9 @@ const PLATFORM_VISUAL_FOOT_OFFSETS=Object.freeze({
  "2c":12,
  "2d":9,
  "2e":7,
- "2f":14,
+ // Praça dos Nomes Roubados: a arte 2F possui borda/perspectiva mais profunda.
+ // 24 px alinha personagens, sombras, checkpoint e props ao topo realmente pintado.
+ "2f":24,
  "2g":11,
  "2h":12
 });
@@ -3192,6 +3194,9 @@ function drawPlazaImageFit(im,cx,cy,maxW,maxH,alpha=1,tilt=0,screen=false){
  ctx.restore();
  return true;
 }
+function plazaVisualGroundY(x){
+ return 590+visualFootOffsetAt(x,590,42);
+}
 function drawPlazaImageBottom(im,cx,bottomY,targetH,alpha=1,flip=false,screen=false){
  if(!im)return false;
  const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
@@ -3231,11 +3236,11 @@ function drawStolenNamesPlazaAtmosphere(){
  ctx.save();ctx.translate(-cam,0);
 
  // A Praça parece um depósito público de identidades confiscadas.
- drawPlazaImageBottom(plazaAtmosImgs[1],7995,590,188,.46,false,false);
- drawPlazaImageBottom(plazaAtmosImgs[4],8215,590,176,.38,false,false);
- drawPlazaImageBottom(plazaAtmosImgs[2],8495,590,164,.34,false,false);
- drawPlazaImageBottom(plazaAtmosImgs[3],8710,555,160,.32,false,false);
- drawPlazaImageBottom(plazaAtmosImgs[5],8995,590,208,.42,false,false);
+ drawPlazaImageBottom(plazaAtmosImgs[1],7995,plazaVisualGroundY(7995),188,.46,false,false);
+ drawPlazaImageBottom(plazaAtmosImgs[4],8215,plazaVisualGroundY(8215),176,.38,false,false);
+ drawPlazaImageBottom(plazaAtmosImgs[2],8495,plazaVisualGroundY(8495),164,.34,false,false);
+ drawPlazaImageBottom(plazaAtmosImgs[3],8710,plazaVisualGroundY(8710)-35,160,.32,false,false);
+ drawPlazaImageBottom(plazaAtmosImgs[5],8995,plazaVisualGroundY(8995),208,.42,false,false);
 
  ctx.restore();
 }
@@ -3265,8 +3270,9 @@ function drawPlazaNameGate(){
  const gx=8880;
  if(im){
    const glow=idx>0?.08+.05*Math.sin(p.anim*2.1):0;
-   if(glow>0)drawPlazaImageBottom(im,gx,590,338,glow,false,true);
-   drawPlazaImageBottom(im,gx,590,338,plazaSolved?.88:.96,false,false);
+   const gy=plazaVisualGroundY(gx);
+   if(glow>0)drawPlazaImageBottom(im,gx,gy,338,glow,false,true);
+   drawPlazaImageBottom(im,gx,gy,338,plazaSolved?.88:.96,false,false);
    return;
  }
  // Fallback de segurança.
@@ -3303,14 +3309,15 @@ function drawStolenNamesPlaza(){
    if(im){
      if(on){
        ctx.save();ctx.shadowColor="rgba(238,202,112,.68)";ctx.shadowBlur=22;
-       drawPlazaImageBottom(im,x,590,heights[i],.96,false,false);
+       drawPlazaImageBottom(im,x,plazaVisualGroundY(x),heights[i],.96,false,false);
        ctx.restore();
      }else{
-       drawPlazaImageBottom(im,x,590,heights[i],clear?.90:.72,false,false);
+       drawPlazaImageBottom(im,x,plazaVisualGroundY(x),heights[i],clear?.90:.72,false,false);
      }
    }else{
+     const gy=plazaVisualGroundY(x);
      ctx.save();ctx.strokeStyle=on?"#e4c57b":"#6c6049";ctx.lineWidth=2;
-     ctx.beginPath();ctx.ellipse(x,557,68,18,0,0,Math.PI*2);ctx.stroke();ctx.restore();
+     ctx.beginPath();ctx.ellipse(x,gy-33,68,18,0,0,Math.PI*2);ctx.stroke();ctx.restore();
    }
 
    drawPlazaEchoFx(i,x,on);
