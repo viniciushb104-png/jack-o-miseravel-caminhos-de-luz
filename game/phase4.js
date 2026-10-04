@@ -134,7 +134,7 @@ let saveData=null;if(journeyMode&&!replayMode){try{saveData=JSON.parse(localStor
 
 const input={left:false,right:false,down:false,run:false,jump:false};
 let running=false,last=performance.now(),cam=0,section=-1,jack=null,keyImg=null,jackFrameOverrides={};
-let phase4SignImgs=Array(4).fill(null),signlessRoadPostImgs=Array(3).fill(null),eraserGameplaySprites=Array(10).fill(null),traceFootprintImgs=Array.from({length:3},()=>[null,null]),traceMemoryImgs=Array(3).fill(null),traceMemoryLoading=Array(3).fill(false),traceMemoryRetryAt=Array(3).fill(0),archiveEvidenceImgs=Array.from({length:3},()=>[null,null]),archivePropImgs=Array(6).fill(null),archiveFxImgs=Array(4).fill(null),checkpointOffImg=null,checkpointOnImg=null;
+let phase4SignImgs=Array(4).fill(null),signlessRoadPostImgs=Array(3).fill(null),eraserGameplaySprites=Array(10).fill(null),hollowGameplaySprites=Array(10).fill(null),traceFootprintImgs=Array.from({length:3},()=>[null,null]),traceMemoryImgs=Array(3).fill(null),traceMemoryLoading=Array(3).fill(false),traceMemoryRetryAt=Array(3).fill(0),archiveEvidenceImgs=Array.from({length:3},()=>[null,null]),archivePropImgs=Array(6).fill(null),archiveFxImgs=Array(4).fill(null),checkpointOffImg=null,checkpointOnImg=null;
 let bellNormalImg=null,bellGlowImg=null,memoryDoorImg=null;
 let nonexistentDoorImg=null,nonexistentDoorRevealFxImg=null,doorRevealFx=0;
 let idleTime=0,waitSitFrame=0,waitSitClock=0,waitSitActive=false,waitSitImages=[];
@@ -834,6 +834,23 @@ const eraserGameplayReady=Promise.allSettled(eraserGameplayFiles.map(src=>img(sr
  return eraserGameplaySprites;
 });
 
+const hollowGameplayFiles=[
+ "../assets/game/phase4/enemies/hollow-pilgrim/gameplay/phase4-hollow-pilgrim-01-idle-a.png",
+ "../assets/game/phase4/enemies/hollow-pilgrim/gameplay/phase4-hollow-pilgrim-02-idle-b.png",
+ "../assets/game/phase4/enemies/hollow-pilgrim/gameplay/phase4-hollow-pilgrim-03-patrol-a.png",
+ "../assets/game/phase4/enemies/hollow-pilgrim/gameplay/phase4-hollow-pilgrim-04-patrol-b.png",
+ "../assets/game/phase4/enemies/hollow-pilgrim/gameplay/phase4-hollow-pilgrim-05-alert.png",
+ "../assets/game/phase4/enemies/hollow-pilgrim/gameplay/phase4-hollow-pilgrim-06-attack-windup.png",
+ "../assets/game/phase4/enemies/hollow-pilgrim/gameplay/phase4-hollow-pilgrim-07-attack-strike.png",
+ "../assets/game/phase4/enemies/hollow-pilgrim/gameplay/phase4-hollow-pilgrim-08-attack-recover.png",
+ "../assets/game/phase4/enemies/hollow-pilgrim/gameplay/phase4-hollow-pilgrim-09-light-hit.png",
+ "../assets/game/phase4/enemies/hollow-pilgrim/gameplay/phase4-hollow-pilgrim-10-dissolve.png"
+];
+const hollowGameplayReady=Promise.allSettled(hollowGameplayFiles.map(src=>img(src))).then(rs=>{
+ hollowGameplaySprites=rs.map(r=>r.status==="fulfilled"?r.value:null);
+ return hollowGameplaySprites;
+});
+
 const traceFootprintFiles=[
  "../assets/game/phase4/puzzles/footprint-field/traces/trace-01-dormant.png",
  "../assets/game/phase4/puzzles/footprint-field/traces/trace-01-revealed.png",
@@ -965,7 +982,7 @@ const nonexistentDoorReady=Promise.allSettled([
 });
 
 const phase4PropReady=Promise.allSettled([
- phase4SignReady,signlessRoadPostReady,eraserGameplayReady,traceFootprintReady,traceMemoryReady,archiveEvidenceReady,archivePropReady,archiveFxReady,checkpointArtReady,bellArtReady,memoryDoorReady,nonexistentDoorReady
+ phase4SignReady,signlessRoadPostReady,eraserGameplayReady,hollowGameplayReady,traceFootprintReady,traceMemoryReady,archiveEvidenceReady,archivePropReady,archiveFxReady,checkpointArtReady,bellArtReady,memoryDoorReady,nonexistentDoorReady
 ]);
 
 const jackPortraitFiles=["jack-00-neutral.png","jack-01-serious.png","jack-02-smirk.png","jack-03-surprised.png","jack-04-determined.png","jack-05-resolved.png"];
@@ -2172,6 +2189,78 @@ function drawAshHoundEnemy(e){
  ctx.fillStyle="rgba(171,164,145,.35)";
  for(let i=0;i<4;i++){const yy=-24-i*7-Math.sin(p.anim*3+i)*4;ctx.beginPath();ctx.arc(-18+i*11,yy,3+i*.4,0,Math.PI*2);ctx.fill()}
 }
+const HOLLOW_SPRITE_INDEX=Object.freeze({
+ idle:[0,1],
+ patrol:[2,3],
+ alert:[4],
+ chase:[2,3],
+ hit:[8],
+ dissolve:[9]
+});
+function hollowSpriteIndex(e){
+ if(e.state==="attack"){
+   const total=e.cfg.attackWindup+e.cfg.attackActive+e.cfg.attackRecover;
+   const elapsed=Math.max(0,total-e.stateTimer);
+   if(elapsed<e.cfg.attackWindup)return 5;
+   if(elapsed<e.cfg.attackWindup+e.cfg.attackActive)return 6;
+   return 7;
+ }
+ if(e.state==="dissolve")return 9;
+ if(e.state==="hit"||e.hitFlash>0)return 8;
+ const seq=HOLLOW_SPRITE_INDEX[e.state]||HOLLOW_SPRITE_INDEX.idle;
+ if(seq.length===1)return seq[0];
+ const fps=e.state==="chase"?5.4:(e.state==="patrol"?3.2:1.8);
+ return seq[Math.floor((p.anim+e.spawnX*.001)*fps)%seq.length];
+}
+function drawHollowSprite(e){
+ const index=hollowSpriteIndex(e);
+ const im=hollowGameplaySprites[index];
+ if(!im)return false;
+ const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+ if(!iw||!ih)return false;
+
+ const attacking=e.state==="attack";
+ const chasing=e.state==="chase";
+ const exposed=e.exposedTimer>0;
+ const targetH=e.state==="dissolve"?188:(attacking?188:(chasing?182:176));
+ const targetW=iw*(targetH/ih);
+ const bottom=e.h/2+7;
+ const bob=(e.state==="idle"||e.state==="patrol")?Math.sin(p.anim*2.25+e.spawnX*.01)*1.4:0;
+ const forward=attacking?9:(chasing?4:0);
+ const dx=-targetW/2+forward;
+ const dy=bottom-targetH+bob;
+
+ ctx.save();
+ ctx.imageSmoothingEnabled=true;
+ ctx.imageSmoothingQuality="high";
+ ctx.shadowColor=e.hitFlash>0?"rgba(249,224,157,.98)":(exposed?"rgba(232,199,109,.65)":"rgba(0,0,0,.74)");
+ ctx.shadowBlur=e.hitFlash>0?27:(exposed?18:11);
+
+ // A primeira Luz não causa dano, mas revela o vazio. O PNG continua intacto
+ // e recebe somente um halo suave enquanto a janela de exposição está ativa.
+ if(exposed&&e.state!=="dissolve"){
+   const pulse=.48+.18*Math.sin(p.anim*5.2);
+   ctx.save();
+   ctx.globalAlpha=pulse;
+   ctx.globalCompositeOperation="screen";
+   ctx.shadowColor="rgba(241,208,119,.9)";
+   ctx.shadowBlur=22;
+   ctx.drawImage(im,dx,dy,targetW,targetH);
+   ctx.restore();
+ }
+
+ ctx.drawImage(im,dx,dy,targetW,targetH);
+
+ if(e.hitFlash>0){
+   ctx.globalCompositeOperation="screen";
+   ctx.globalAlpha=Math.min(.30,e.hitFlash*1.22);
+   ctx.shadowColor="rgba(252,224,146,.98)";
+   ctx.shadowBlur=30;
+   ctx.drawImage(im,dx,dy,targetW,targetH);
+ }
+ ctx.restore();
+ return true;
+}
 function drawHollowEnemy(e){
  const exposed=e.exposedTimer>0;
  const sway=Math.sin(p.anim*2.5+e.spawnX)*3;
@@ -2242,17 +2331,21 @@ function drawEnemy(e){
    ctx.beginPath();ctx.moveTo(e.w*.25,-22);ctx.lineTo(e.w*.82,0);ctx.lineTo(e.w*.25,22);ctx.closePath();ctx.fill();
  }
 
+ let hollowSpriteDrawn=false;
  if(e.kind==="ashHound")drawAshHoundEnemy(e);
- else if(e.kind==="hollow")drawHollowEnemy(e);
+ else if(e.kind==="hollow"){
+   hollowSpriteDrawn=drawHollowSprite(e);
+   if(!hollowSpriteDrawn)drawHollowEnemy(e);
+ }
  else if(e.kind==="crow")drawCrowEnemy(e);
  else if(!drawEraserSprite(e))drawEraserEnemyFallback(e);
 
- if(state==="dissolve")drawEnemyDissolve(e);
+ if(state==="dissolve"&&!(e.kind==="hollow"&&hollowSpriteDrawn))drawEnemyDissolve(e);
  ctx.restore();
 
  if(state!=="dissolve"){
    ctx.save();ctx.textAlign="center";
-   const enemyLabelY=e.kind==="eraser"?visualY-92:visualY-14;
+   const enemyLabelY=e.kind==="eraser"?visualY-92:(e.kind==="hollow"?visualY-118:visualY-14);
    ctx.fillStyle="#b9aa89";ctx.font="700 9px Georgia";ctx.fillText(e.label,ex+e.w/2,enemyLabelY);
    const stateLabel={
      idle:"à espreita",patrol:"patrulha",alert:"percebeu Jack",
@@ -2264,7 +2357,7 @@ function drawEnemy(e){
      ctx.fillStyle="#ddc576";ctx.font="700 8px Georgia";ctx.fillText("EXPOSTO",ex+e.w/2,visualY+e.h+14);
    }
    if(e.hp<e.maxHp){
-     const bw=46,bx=ex+e.w/2-bw/2,by=e.kind==="eraser"?enemyLabelY-11:visualY-29;
+     const bw=46,bx=ex+e.w/2-bw/2,by=(e.kind==="eraser"||e.kind==="hollow")?enemyLabelY-11:visualY-29;
      ctx.fillStyle="rgba(0,0,0,.55)";ctx.fillRect(bx,by,bw,4);
      ctx.fillStyle="#d6b968";ctx.fillRect(bx,by,bw*(e.hp/e.maxHp),4);
    }
