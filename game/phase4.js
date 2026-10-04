@@ -1289,10 +1289,12 @@ function visualFootOffsetAt(cx,bottomY,tolerance=34){
 }
 
 const PLAZA_CRACK_HOLE=Object.freeze({
- left:8310,
- right:8460,
- fromX:8272,
- toX:8498
+ // Centro geométrico da plataforma principal 2F (7900..8830).
+ // Mantém o Eco II no lábio direito, mas transforma a abertura central em queda real.
+ left:8315,
+ right:8418,
+ fromX:8278,
+ toX:8455
 });
 function plazaCrackOpen(){
  return !!plazaSolved;
