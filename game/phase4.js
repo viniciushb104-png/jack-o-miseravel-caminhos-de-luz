@@ -1289,6 +1289,14 @@ function platformVisualFootOffset(q){
  // A colisão permanece em q.y, portanto salto e física não mudam.
  if(q.artGroup==="2e"&&q.x===6070&&q.h>=100)return 16;
 
+ // Praça dos Nomes Roubados:
+ // ao resolver os 3 ecos, o renderer troca 2F-01/02/03 por 2F-04/05/06.
+ // Nas artes rachadas, a faixa realmente caminhável está cerca de 14 px mais baixa.
+ // O estado normal continua em 34; o estado resolvido usa 48.
+ // Como Jack, Peregrina, checkpoint e poços consultam este mesmo helper,
+ // todos passam a tocar a MESMA superfície visual.
+ if(q.artGroup==="2f")return plazaSolved?48:34;
+
  return PLATFORM_VISUAL_FOOT_OFFSETS[q.artGroup]||0;
 }
 function visualFootOffsetAt(cx,bottomY,tolerance=34){
