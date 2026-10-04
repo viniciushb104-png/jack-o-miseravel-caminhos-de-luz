@@ -1740,11 +1740,50 @@ function updatePilgrim(dt){
  pilgrimX+=pilgrimDir*Math.min(ad,pilgrimMoveSpeed*dt);
  pilgrimFeetY=590;
 }
+function traceHostPlatform(t){
+ const elevated=platforms.filter(q=>q.kind==="traces"&&q.h<100&&!q.broken);
+ let host=elevated.find(q=>t.x>=q.x-4&&t.x<=q.x+q.w+4);
+ if(!host){
+   let best=null,bestDist=Infinity;
+   for(const q of elevated){
+     const edge=Math.max(q.x,Math.min(q.x+q.w,t.x));
+     const d=Math.abs(t.x-edge);
+     if(d<bestDist){best=q;bestDist=d}
+   }
+   if(bestDist<=120)host=best;
+ }
+ if(host)return host;
+ return platforms.find(q=>q.kind==="traces"&&q.h>=100&&t.x>=q.x&&t.x<=q.x+q.w)||null;
+}
+function traceSurfaceY(t){
+ const q=traceHostPlatform(t);
+ return q?(q.y+platformVisualFootOffset(q)):590;
+}
+function traceSceneX(t){
+ const q=traceHostPlatform(t);
+ if(!q)return t.x;
+ // As memórias ocupam largura. Como os três enigmas ficam perto da borda direita,
+ // puxamos a cena alguns pixels para dentro da plataforma sem mudar o ponto de interação.
+ const margin=Math.min(74,Math.max(48,q.w*.32));
+ return Math.max(q.x+margin,Math.min(q.x+q.w-margin,t.x-28));
+}
+function traceFootPositions(t){
+ const q=traceHostPlatform(t);
+ const count=6;
+ if(!q)return Array.from({length:count},(_,k)=>({x:t.x-125+k*23,y:586-(k%2)*2}));
+ const right=Math.min(t.x-8,q.x+q.w-12);
+ const left=Math.max(q.x+12,right-(count-1)*23);
+ const step=(right-left)/(count-1);
+ const y=q.y+platformVisualFootOffset(q)-5;
+ return Array.from({length:count},(_,k)=>({x:left+k*step,y:y-(k%2)*2}));
+}
 function drawTraceFoot(x,y,angle,alpha=1,scale=1){
  ctx.save();ctx.translate(x,y);ctx.rotate(angle);ctx.scale(scale,scale);ctx.globalAlpha=alpha;
  ctx.fillStyle="#e6cc83";
- ctx.beginPath();ctx.ellipse(0,0,7,13,.08,0,Math.PI*2);ctx.fill();
- ctx.beginPath();ctx.ellipse(7,-8,3.2,4.5,.35,0,Math.PI*2);ctx.fill();
+ ctx.shadowColor="rgba(231,200,119,.28)";ctx.shadowBlur=5;
+ // Pegada achatada: parece impressa no piso, não um ícone flutuando.
+ ctx.beginPath();ctx.ellipse(0,0,6.5,10,.08,0,Math.PI*2);ctx.fill();
+ ctx.beginPath();ctx.ellipse(6,-6,2.8,3.7,.35,0,Math.PI*2);ctx.fill();
  ctx.restore();
 }
 function drawTraceFigure(x,y,opts={}){
@@ -1765,79 +1804,85 @@ function drawTraceMemoryScene(i,t){
  const burst=Math.min(1,traceRevealFx[i]/1.15);
  const breathe=.76+.16*Math.sin(p.anim*1.7+i);
  const alpha=Math.min(.92,.46+breathe*.25+burst*.25);
- const baseX=t.x,baseY=500;
+ const baseX=traceSceneX(t),surfaceY=traceSurfaceY(t),baseY=surfaceY-4;
 
  ctx.save();
- // Halo that turns each clue into a readable "memory island".
- const g=ctx.createRadialGradient(baseX,baseY-80,10,baseX,baseY-80,135);
+ // A memória nasce exatamente acima da plataforma que contém o rastro.
+ const g=ctx.createRadialGradient(baseX,baseY-78,10,baseX,baseY-78,132);
  g.addColorStop(0,"rgba(234,204,119,"+(alpha*.17)+")");
  g.addColorStop(1,"rgba(234,204,119,0)");
- ctx.fillStyle=g;ctx.beginPath();ctx.arc(baseX,baseY-80,135,0,Math.PI*2);ctx.fill();
+ ctx.fillStyle=g;ctx.beginPath();ctx.arc(baseX,baseY-78,132,0,Math.PI*2);ctx.fill();
 
  ctx.strokeStyle="rgba(224,198,127,"+(alpha*.34)+")";ctx.lineWidth=2;
- ctx.beginPath();ctx.arc(baseX,baseY-82,88+Math.sin(p.anim*1.4+i)*3,0,Math.PI*2);ctx.stroke();
+ ctx.beginPath();ctx.ellipse(baseX,baseY-7,82+Math.sin(p.anim*1.4+i)*3,15,0,0,Math.PI*2);ctx.stroke();
 
  if(i===0){
    // I — ela chega à vala e decide voltar.
    ctx.strokeStyle="rgba(126,111,78,.72)";ctx.lineWidth=4;
-   ctx.beginPath();ctx.moveTo(baseX+42,548);ctx.lineTo(baseX+70,524);ctx.lineTo(baseX+92,552);ctx.stroke();
-   drawTraceFigure(baseX+18,baseY-8,{alpha,dir:-1,lean:-.08,phase:.3});
+   ctx.beginPath();ctx.moveTo(baseX+38,baseY);ctx.lineTo(baseX+58,baseY-24);ctx.lineTo(baseX+72,baseY);ctx.stroke();
+   drawTraceFigure(baseX+12,baseY-2,{alpha,dir:-1,lean:-.08,phase:.3});
    ctx.strokeStyle="rgba(235,207,125,"+(alpha*.5)+")";ctx.lineWidth=2;
-   ctx.beginPath();ctx.moveTo(baseX+2,baseY-45);ctx.quadraticCurveTo(baseX-28,baseY-65,baseX-48,baseY-38);ctx.stroke();
-   ctx.beginPath();ctx.moveTo(baseX-48,baseY-38);ctx.lineTo(baseX-37,baseY-43);ctx.moveTo(baseX-48,baseY-38);ctx.lineTo(baseX-43,baseY-27);ctx.stroke();
+   ctx.beginPath();ctx.moveTo(baseX-2,baseY-39);ctx.quadraticCurveTo(baseX-28,baseY-58,baseX-48,baseY-34);ctx.stroke();
+   ctx.beginPath();ctx.moveTo(baseX-48,baseY-34);ctx.lineTo(baseX-37,baseY-39);ctx.moveTo(baseX-48,baseY-34);ctx.lineTo(baseX-43,baseY-23);ctx.stroke();
  }else if(i===1){
    // II — duas pessoas; uma manca, a outra reduz o passo e sustenta.
-   drawTraceFigure(baseX-23,baseY-7,{alpha,dir:1,lean:.02,phase:.2});
-   drawTraceFigure(baseX+27,baseY-4,{alpha:alpha*.82,dir:1,lean:.15,limp:true,phase:1.1});
+   drawTraceFigure(baseX-23,baseY-1,{alpha,dir:1,lean:.02,phase:.2});
+   drawTraceFigure(baseX+27,baseY+2,{alpha:alpha*.82,dir:1,lean:.15,limp:true,phase:1.1});
    ctx.strokeStyle="rgba(236,209,131,"+(alpha*.72)+")";ctx.lineWidth=5;ctx.lineCap="round";
-   ctx.beginPath();ctx.moveTo(baseX-8,baseY-50);ctx.lineTo(baseX+19,baseY-45);ctx.stroke();
+   ctx.beginPath();ctx.moveTo(baseX-8,baseY-44);ctx.lineTo(baseX+19,baseY-39);ctx.stroke();
  }else{
    // III — a pessoa ferida segue para longe; ela volta sozinha ao perigo.
-   drawTraceFigure(baseX+42,baseY-10,{alpha:alpha*.4,dir:1,limp:true,phase:.8});
-   drawTraceFigure(baseX-26,baseY-7,{alpha,dir:-1,lean:-.05,phase:.1});
+   drawTraceFigure(baseX+35,baseY-2,{alpha:alpha*.4,dir:1,limp:true,phase:.8});
+   drawTraceFigure(baseX-26,baseY-1,{alpha,dir:-1,lean:-.05,phase:.1});
    ctx.strokeStyle="rgba(235,207,125,"+(alpha*.52)+")";ctx.lineWidth=2;
-   ctx.beginPath();ctx.moveTo(baseX-3,baseY-42);ctx.lineTo(baseX-58,baseY-42);ctx.stroke();
-   ctx.beginPath();ctx.moveTo(baseX-58,baseY-42);ctx.lineTo(baseX-47,baseY-49);ctx.moveTo(baseX-58,baseY-42);ctx.lineTo(baseX-47,baseY-35);ctx.stroke();
+   ctx.beginPath();ctx.moveTo(baseX-3,baseY-36);ctx.lineTo(baseX-58,baseY-36);ctx.stroke();
+   ctx.beginPath();ctx.moveTo(baseX-58,baseY-36);ctx.lineTo(baseX-47,baseY-43);ctx.moveTo(baseX-58,baseY-36);ctx.lineTo(baseX-47,baseY-29);ctx.stroke();
  }
  ctx.restore();
 
  ctx.save();ctx.textAlign="center";
  ctx.fillStyle="rgba(243,220,154,"+(.68+burst*.2)+")";
  ctx.font="700 10px Georgia";
- ctx.fillText(t.memoryLabel||t.title,baseX,390);
+ ctx.fillText(t.memoryLabel||t.title,baseX,Math.max(330,baseY-118));
  ctx.restore();
 }
 function drawTraces(){
  ctx.save();ctx.translate(-cam,0);
 
- // Ligação entre as descobertas: quando dois rastros existem, a história começa a "fechar".
+ // Ligações acompanham a altura real de cada plataforma.
  for(let i=0;i<story.traces.length-1;i++){
    if(!traces[i]||!traces[i+1])continue;
    const a=story.traces[i],b=story.traces[i+1];
-   ctx.strokeStyle="rgba(229,199,119,.28)";ctx.lineWidth=2;ctx.setLineDash([6,8]);
-   ctx.beginPath();ctx.moveTo(a.x+55,546);ctx.quadraticCurveTo((a.x+b.x)/2,525,b.x-55,546);ctx.stroke();
-   ctx.setLineDash([]);
+   const ay=traceSurfaceY(a)-12,by=traceSurfaceY(b)-12;
+   ctx.strokeStyle="rgba(229,199,119,.25)";ctx.lineWidth=2;ctx.setLineDash([6,8]);
+   ctx.beginPath();
+   ctx.moveTo(a.x-10,ay);
+   ctx.bezierCurveTo(a.x+75,ay-55,b.x-75,by-55,b.x-10,by);
+   ctx.stroke();ctx.setLineDash([]);
  }
 
  story.traces.forEach((t,i)=>{
    const on=traces[i],pulse=.5+.5*Math.sin(p.anim*2+i);
    const baseAlpha=on?.92:.18;
+   const surfaceY=traceSurfaceY(t);
+   const footprints=traceFootPositions(t);
 
-   // Antes da revelação há só marcas quase apagadas.
-   for(let k=0;k<6;k++){
+   // Todas as pegadas ficam contidas no topo visual da plataforma 2C correspondente.
+   footprints.forEach((fp,k)=>{
      const side=k%2?-1:1;
-     drawTraceFoot(t.x+(k-2.5)*23,553-(k%2)*5,side*.2,baseAlpha,on?1:0.92);
-   }
+     drawTraceFoot(fp.x,fp.y,side*.16,baseAlpha,on?1:0.92);
+   });
 
    if(on){
+     // Halo em perspectiva, apoiado no chão em vez de um círculo vertical.
      ctx.strokeStyle="rgba(232,201,117,"+(.22+pulse*.22)+")";ctx.lineWidth=2;
-     ctx.beginPath();ctx.arc(t.x,548,54+pulse*5,0,Math.PI*2);ctx.stroke();
+     ctx.beginPath();ctx.ellipse(t.x-26,surfaceY-6,58+pulse*5,14+pulse*2,0,0,Math.PI*2);ctx.stroke();
      drawTraceMemoryScene(i,t);
    }else{
      const pc=p.x+p.w/2;
      if(Math.abs(pc-t.x)<190){
-       ctx.fillStyle="rgba(232,214,167,.82)";ctx.font="700 10px Georgia";ctx.textAlign="center";
-       ctx.fillText("F · ILUMINAR RASTRO",t.x,505);
+       ctx.fillStyle="rgba(232,214,167,.86)";ctx.font="700 10px Georgia";ctx.textAlign="center";
+       ctx.fillText("F · ILUMINAR RASTRO",traceSceneX(t),surfaceY-48);
      }
    }
  });
@@ -1846,7 +1891,7 @@ function drawTraces(){
  if(tracesSolved){
    ctx.save();ctx.textAlign="center";
    ctx.fillStyle="rgba(238,216,153,.78)";ctx.font="italic 12px Georgia";
-   ctx.fillText("Ela voltou. Amparou. E voltou outra vez.",3910,358);
+   ctx.fillText("Ela voltou. Amparou. E voltou outra vez.",3910,340);
    ctx.restore();
  }
  ctx.restore();
