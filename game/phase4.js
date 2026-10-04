@@ -134,7 +134,7 @@ let saveData=null;if(journeyMode&&!replayMode){try{saveData=JSON.parse(localStor
 
 const input={left:false,right:false,down:false,run:false,jump:false};
 let running=false,last=performance.now(),cam=0,section=-1,jack=null,keyImg=null,jackFrameOverrides={};
-let phase4SignImgs=Array(4).fill(null),signlessRoadPostImgs=Array(3).fill(null),eraserGameplaySprites=Array(10).fill(null),traceFootprintImgs=Array.from({length:3},()=>[null,null]),traceMemoryImgs=Array(3).fill(null),traceMemoryLoading=Array(3).fill(false),traceMemoryRetryAt=Array(3).fill(0),checkpointOffImg=null,checkpointOnImg=null;
+let phase4SignImgs=Array(4).fill(null),signlessRoadPostImgs=Array(3).fill(null),eraserGameplaySprites=Array(10).fill(null),traceFootprintImgs=Array.from({length:3},()=>[null,null]),traceMemoryImgs=Array(3).fill(null),traceMemoryLoading=Array(3).fill(false),traceMemoryRetryAt=Array(3).fill(0),archiveEvidenceImgs=Array.from({length:3},()=>[null,null]),archivePropImgs=Array(6).fill(null),archiveFxImgs=Array(4).fill(null),checkpointOffImg=null,checkpointOnImg=null;
 let bellNormalImg=null,bellGlowImg=null,memoryDoorImg=null;
 let nonexistentDoorImg=null,nonexistentDoorRevealFxImg=null,doorRevealFx=0;
 let idleTime=0,waitSitFrame=0,waitSitClock=0,waitSitActive=false,waitSitImages=[];
@@ -883,6 +883,48 @@ function ensureTraceMemoryImage(i){
  return null;
 }
 
+const archiveEvidenceFiles=[
+ "../assets/game/phase4/puzzles/erased-archive/evidence/archive-evidence-01-dormant.png",
+ "../assets/game/phase4/puzzles/erased-archive/evidence/archive-evidence-01-revealed.png",
+ "../assets/game/phase4/puzzles/erased-archive/evidence/archive-evidence-02-dormant.png",
+ "../assets/game/phase4/puzzles/erased-archive/evidence/archive-evidence-02-revealed.png",
+ "../assets/game/phase4/puzzles/erased-archive/evidence/archive-evidence-03-dormant.png",
+ "../assets/game/phase4/puzzles/erased-archive/evidence/archive-evidence-03-revealed.png"
+];
+const archiveEvidenceReady=Promise.allSettled(archiveEvidenceFiles.map(src=>img(src))).then(rs=>{
+ const loaded=rs.map(r=>r.status==="fulfilled"?r.value:null);
+ archiveEvidenceImgs=[
+   [loaded[0],loaded[1]],
+   [loaded[2],loaded[3]],
+   [loaded[4],loaded[5]]
+ ];
+ return archiveEvidenceImgs;
+});
+
+const archivePropFiles=[
+ "../assets/game/phase4/puzzles/erased-archive/props/archive-prop-01-ruined-shelf.png",
+ "../assets/game/phase4/puzzles/erased-archive/props/archive-prop-02-card-cabinet.png",
+ "../assets/game/phase4/puzzles/erased-archive/props/archive-prop-03-document-lectern.png",
+ "../assets/game/phase4/puzzles/erased-archive/props/archive-prop-04-stacked-files.png",
+ "../assets/game/phase4/puzzles/erased-archive/props/archive-prop-05-empty-label-board.png",
+ "../assets/game/phase4/puzzles/erased-archive/props/archive-prop-06-archive-mound.png"
+];
+const archivePropReady=Promise.allSettled(archivePropFiles.map(src=>img(src))).then(rs=>{
+ archivePropImgs=rs.map(r=>r.status==="fulfilled"?r.value:null);
+ return archivePropImgs;
+});
+
+const archiveFxFiles=[
+ "../assets/game/phase4/puzzles/erased-archive/fx/archive-fx-evidence-reveal.png",
+ "../assets/game/phase4/puzzles/erased-archive/fx/archive-fx-nameplates-reveal.png",
+ "../assets/game/phase4/puzzles/erased-archive/fx/archive-fx-inventory-seal.png",
+ "../assets/game/phase4/puzzles/erased-archive/fx/archive-fx-deduction-path.png"
+];
+const archiveFxReady=Promise.allSettled(archiveFxFiles.map(src=>img(src))).then(rs=>{
+ archiveFxImgs=rs.map(r=>r.status==="fulfilled"?r.value:null);
+ return archiveFxImgs;
+});
+
 const checkpointArtReady=Promise.allSettled([
  img("../assets/game/phase4/checkpoints/marco_gótico_com_abóbora_e_bandeira_rasgada.png"),
  img("../assets/game/phase4/checkpoints/marco_gótico_com_lanterna_abóbora.png")
@@ -923,7 +965,7 @@ const nonexistentDoorReady=Promise.allSettled([
 });
 
 const phase4PropReady=Promise.allSettled([
- phase4SignReady,signlessRoadPostReady,eraserGameplayReady,traceFootprintReady,traceMemoryReady,checkpointArtReady,bellArtReady,memoryDoorReady,nonexistentDoorReady
+ phase4SignReady,signlessRoadPostReady,eraserGameplayReady,traceFootprintReady,traceMemoryReady,archiveEvidenceReady,archivePropReady,archiveFxReady,checkpointArtReady,bellArtReady,memoryDoorReady,nonexistentDoorReady
 ]);
 
 const jackPortraitFiles=["jack-00-neutral.png","jack-01-serious.png","jack-02-smirk.png","jack-03-surprised.png","jack-04-determined.png","jack-05-resolved.png"];
@@ -2234,76 +2276,160 @@ function archiveGuardDefeated(i){
  const e=enemies.find(v=>v.id===id);
  return !e||e.defeated||e.state==="dead"||e.state==="dissolve";
 }
+function archiveEvidenceHost(ev){
+ const candidates=platforms.filter(q=>q.kind==="archive"&&q.h<100&&!q.broken);
+ let best=null,bestDist=Infinity;
+ for(const q of candidates){
+   const edge=Math.max(q.x,Math.min(q.x+q.w,ev.x));
+   const d=Math.abs(ev.x-edge);
+   if(d<bestDist){best=q;bestDist=d}
+ }
+ return bestDist<=150?best:null;
+}
+function drawArchiveImageByHeight(im,cx,bottomY,targetH,alpha=1,glow=false){
+ if(!im)return null;
+ const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+ if(!iw||!ih)return null;
+ const targetW=iw*(targetH/ih),dx=cx-targetW/2,dy=bottomY-targetH;
+ ctx.save();
+ ctx.globalAlpha=alpha;
+ ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";
+ if(glow){
+   ctx.shadowColor="rgba(235,200,111,.58)";
+   ctx.shadowBlur=15;
+ }
+ ctx.drawImage(im,dx,dy,targetW,targetH);
+ ctx.restore();
+ return {x:dx,y:dy,w:targetW,h:targetH};
+}
+function drawArchiveEnvironment(){
+ // Camada de cenário: transforma as ruínas em um arquivo violado,
+ // sem cobrir as evidências nem os inimigos.
+ const layout=[
+   {i:0,x:4825,b:590,h:205,a:.74,flip:false},
+   {i:3,x:5170,b:590,h:150,a:.72,flip:false},
+   {i:1,x:5480,b:590,h:190,a:.70,flip:false},
+   {i:5,x:5895,b:590,h:150,a:.74,flip:false},
+   {i:4,x:5250,b:420,h:122,a:.62,flip:false},
+   {i:2,x:5985,b:590,h:172,a:.72,flip:true}
+ ];
+ for(const q of layout){
+   const im=archivePropImgs[q.i];
+   if(!im)continue;
+   drawArchiveImageByHeight(im,q.x,q.b,q.h,q.a,false);
+ }
+}
+function drawArchiveEvidenceFallback(i,x,solved){
+ ctx.save();ctx.translate(x,0);
+ ctx.globalAlpha=.72;
+ if(i===0){
+   ctx.fillStyle="#b8aa88";ctx.fillRect(-31,474,62,48);
+   ctx.fillStyle="#242622";ctx.fillRect(-25,483,49,8);
+ }else if(i===1){
+   ctx.strokeStyle="#8d7d5d";ctx.lineWidth=3;
+   for(let yy=470;yy<=512;yy+=21)ctx.strokeRect(-34,yy,68,14);
+ }else{
+   ctx.fillStyle="#9f9275";ctx.fillRect(-35,468,70,55);
+   ctx.fillStyle=solved?"#d9bd73":"#695f4b";ctx.font="700 7px Georgia";ctx.textAlign="center";
+   ctx.fillText("RECEBIDO",10,492);
+ }
+ ctx.restore();
+}
+function drawArchiveEvidenceAsset(i,ev,solved){
+ const im=archiveEvidenceImgs[i]?.[solved?1:0];
+ if(!im)return null;
+ const host=archiveEvidenceHost(ev);
+ const visualTop=host?(host.y+platformVisualFootOffset(host)):590;
+ const heights=[132,168,145];
+ // Recorte e Inventário parecem objetos apoiados; Marcas é um painel vertical.
+ const bottomAdjust=[-4,-8,-5];
+ const targetH=heights[i];
+ const bottomY=visualTop+bottomAdjust[i];
+ return drawArchiveImageByHeight(im,ev.x,bottomY,targetH,solved?.98:.90,solved);
+}
+function drawArchiveRevealFx(i,ev,fx){
+ if(fx<=0)return;
+ const im=archiveFxImgs[Math.min(i,2)];
+ if(!im)return;
+ const host=archiveEvidenceHost(ev);
+ const visualTop=host?(host.y+platformVisualFootOffset(host)):590;
+ const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+ if(!iw||!ih)return;
+ const targetW=[210,235,220][i];
+ const targetH=targetW*(ih/iw);
+ const alpha=Math.min(.78,fx*.78);
+ ctx.save();
+ ctx.globalCompositeOperation="screen";
+ ctx.globalAlpha=alpha;
+ ctx.shadowColor="rgba(255,223,145,.92)";
+ ctx.shadowBlur=20;
+ ctx.drawImage(im,ev.x-targetW/2,visualTop-targetH*.78,targetW,targetH);
+ ctx.restore();
+}
+function drawArchiveDeduction(){
+ if(!archiveSolved)return;
+ const im=archiveFxImgs[3];
+ if(im){
+   const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+   if(iw&&ih){
+     const targetW=1040,targetH=targetW*(ih/iw);
+     const pulse=.52+.08*Math.sin(p.anim*1.45);
+     ctx.save();
+     ctx.globalCompositeOperation="screen";
+     ctx.globalAlpha=pulse;
+     ctx.shadowColor="rgba(239,205,118,.65)";
+     ctx.shadowBlur=16;
+     ctx.drawImage(im,5480-targetW/2,392,targetW,targetH);
+     ctx.restore();
+   }
+ }else{
+   ctx.strokeStyle="rgba(231,199,113,.42)";ctx.lineWidth=2;ctx.setLineDash([7,8]);
+   ctx.beginPath();ctx.moveTo(5005,438);ctx.quadraticCurveTo(5380,400,5760,438);ctx.stroke();
+   ctx.beginPath();ctx.moveTo(5760,438);ctx.lineTo(6005,438);ctx.stroke();
+   ctx.setLineDash([]);
+ }
+ ctx.save();ctx.textAlign="center";
+ ctx.fillStyle="rgba(238,211,143,.86)";
+ ctx.shadowColor="rgba(231,197,111,.42)";ctx.shadowBlur=7;
+ ctx.font="italic 11px Georgia";
+ ctx.fillText("os nomes seguiram adiante",5680,404);
+ ctx.restore();
+}
 function drawArchiveEvidence(){
  if(!prototypeEndPlayed)return;
  const pc=p.x+p.w/2;
  ctx.save();ctx.translate(-cam,0);
 
+ drawArchiveEnvironment();
+
  story.archiveEvidence.forEach((ev,i)=>{
    const solved=archiveEvidence[i],guardClear=archiveGuardDefeated(i);
    const x=ev.x,pulse=.5+.5*Math.sin(p.anim*2.1+i*.8),fx=Math.min(1,archiveRevealFx[i]/1.2);
+   const art=drawArchiveEvidenceAsset(i,ev,solved);
+   if(!art)drawArchiveEvidenceFallback(i,x,solved);
 
-   ctx.save();ctx.translate(x,0);
-
-   // Pedestal / base common to the three proof objects.
-   ctx.fillStyle="#242622";ctx.fillRect(-48,520,96,70);
-   ctx.strokeStyle=solved?"rgba(224,193,112,.85)":"rgba(105,94,70,.72)";
-   ctx.lineWidth=2;ctx.strokeRect(-48,520,96,70);
-   ctx.fillStyle=solved?"rgba(225,197,116,.12)":"rgba(190,174,136,.05)";
-   ctx.fillRect(-42,526,84,58);
-
-   if(i===0){
-     // Page with an unnaturally precise missing name strip.
-     ctx.fillStyle="#b8aa88";ctx.fillRect(-31,474,62,48);
-     ctx.fillStyle="#242622";ctx.fillRect(-25,483,49,8);
-     ctx.strokeStyle="rgba(73,65,49,.65)";ctx.lineWidth=2;
-     for(let yy=499;yy<516;yy+=7){ctx.beginPath();ctx.moveTo(-23,yy);ctx.lineTo(23,yy);ctx.stroke()}
-   }else if(i===1){
-     // Three empty nameplate mounts, screws bent outward.
-     ctx.strokeStyle="#8d7d5d";ctx.lineWidth=3;
-     for(let yy=470;yy<=512;yy+=21){
-       ctx.strokeRect(-34,yy,68,14);
-       ctx.beginPath();ctx.moveTo(-38,yy+7);ctx.lineTo(-44,yy+2);ctx.moveTo(38,yy+7);ctx.lineTo(45,yy+12);ctx.stroke();
-     }
-   }else{
-     // Inventory ledger; entries remain while name column is absent.
-     ctx.fillStyle="#9f9275";ctx.fillRect(-35,468,70,55);
-     ctx.strokeStyle="#544b3b";ctx.lineWidth=2;
-     ctx.beginPath();ctx.moveTo(-10,472);ctx.lineTo(-10,519);ctx.stroke();
-     for(let yy=480;yy<516;yy+=10){ctx.beginPath();ctx.moveTo(-30,yy);ctx.lineTo(29,yy);ctx.stroke()}
-     ctx.fillStyle="#262622";ctx.fillRect(-30,474,17,43);
-     ctx.fillStyle=solved?"#d9bd73":"#695f4b";ctx.font="700 7px Georgia";ctx.textAlign="center";
-     ctx.fillText("RECEBIDO",12,491);ctx.fillText("RECEBIDO",12,511);
-   }
-
+   // Leitura de gameplay fica acima da arte, sem pedestal genérico.
    if(solved){
-     ctx.strokeStyle="rgba(238,205,119,"+(.45+pulse*.35)+")";ctx.lineWidth=2;
-     ctx.beginPath();ctx.arc(0,493,52+4*pulse,0,Math.PI*2);ctx.stroke();
-     ctx.fillStyle="rgba(240,215,150,.9)";ctx.font="700 9px Georgia";ctx.textAlign="center";
-     ctx.fillText("PROVA REGISTRADA",0,451);
+     ctx.save();ctx.textAlign="center";
+     ctx.fillStyle="rgba(240,215,150,"+(.82+pulse*.08)+")";
+     ctx.shadowColor="rgba(226,191,102,.45)";ctx.shadowBlur=7;
+     ctx.font="700 9px Georgia";
+     ctx.fillText("PROVA REGISTRADA",x,art?art.y-8:451);
+     ctx.restore();
    }else if(Math.abs(pc-x)<150){
-     ctx.fillStyle=guardClear?"rgba(238,220,166,.92)":"rgba(187,169,128,.7)";
-     ctx.font="700 9px Georgia";ctx.textAlign="center";
-     ctx.fillText(guardClear?ev.prompt:"A PROVA ESTÁ SOB ATAQUE",0,451);
+     const labelY=art?art.y-8:451;
+     ctx.save();ctx.textAlign="center";
+     ctx.fillStyle=guardClear?"rgba(238,220,166,.94)":"rgba(187,169,128,.74)";
+     ctx.shadowColor="rgba(0,0,0,.7)";ctx.shadowBlur=4;
+     ctx.font="700 9px Georgia";
+     ctx.fillText(guardClear?ev.prompt:"A PROVA ESTÁ SOB ATAQUE",x,labelY);
+     ctx.restore();
    }
 
-   if(fx>0){
-     ctx.globalAlpha=fx*.55;ctx.strokeStyle="#f1d38b";ctx.lineWidth=4;
-     ctx.beginPath();ctx.arc(0,493,66+(1-fx)*26,0,Math.PI*2);ctx.stroke();
-   }
-   ctx.restore();
+   drawArchiveRevealFx(i,ev,fx);
  });
 
- if(archiveSolved){
-   // Visual deduction: the three clues converge toward the road ahead.
-   ctx.strokeStyle="rgba(231,199,113,.42)";ctx.lineWidth=2;ctx.setLineDash([7,8]);
-   ctx.beginPath();ctx.moveTo(5005,438);ctx.quadraticCurveTo(5380,400,5760,438);ctx.stroke();
-   ctx.beginPath();ctx.moveTo(5760,438);ctx.lineTo(6005,438);ctx.stroke();
-   ctx.setLineDash([]);
-   ctx.fillStyle="rgba(238,211,143,.82)";ctx.font="italic 11px Georgia";ctx.textAlign="center";
-   ctx.fillText("os nomes seguiram adiante",5680,410);
-   ctx.beginPath();ctx.moveTo(6005,438);ctx.lineTo(5988,430);ctx.moveTo(6005,438);ctx.lineTo(5988,446);ctx.stroke();
- }
+ drawArchiveDeduction();
  ctx.restore();
 }
 
