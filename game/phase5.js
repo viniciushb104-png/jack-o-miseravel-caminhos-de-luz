@@ -70,10 +70,10 @@ const clockMirrors=[
 const gardenItems=[
  {id:"letter",x:5510,memorialX:5690,title:"CARTA"},
  {id:"key",x:6110,memorialX:6290,title:"CHAVE"},
- {id:"portrait",x:6680,memorialX:6860,title:"RETRATO"}
+ {id:"portrait",x:6800,memorialX:7040,title:"RETRATO"}
 ];
 const cityMarks=[
- {x:7560,label:"ESPEROU"},{x:8080,label:"CONTINUOU"},
+ {x:7560,label:"ESPEROU"},{x:8200,label:"CONTINUOU"},
  {x:8600,label:"DEIXOU IR"},{x:9150,label:"ATRAVESSOU"}
 ];
 const promiseAltars=[
