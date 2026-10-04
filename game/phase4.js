@@ -134,7 +134,7 @@ let saveData=null;if(journeyMode&&!replayMode){try{saveData=JSON.parse(localStor
 
 const input={left:false,right:false,down:false,run:false,jump:false};
 let running=false,last=performance.now(),cam=0,section=-1,jack=null,keyImg=null,jackFrameOverrides={};
-let phase4SignImgs=Array(4).fill(null),signlessRoadPostImgs=Array(3).fill(null),eraserGameplaySprites=Array(10).fill(null),hollowGameplaySprites=Array(10).fill(null),ashHoundGameplaySprites=Array(10).fill(null),crowGameplaySprites=Array(10).fill(null),traceFootprintImgs=Array.from({length:3},()=>[null,null]),traceMemoryImgs=Array(3).fill(null),traceMemoryLoading=Array(3).fill(false),traceMemoryRetryAt=Array(3).fill(0),archiveEvidenceImgs=Array.from({length:3},()=>[null,null]),archivePropImgs=Array(6).fill(null),archiveFxImgs=Array(4).fill(null),bridgePlatformFxImgs=Array(5).fill(null),bridgeRegisterImgs=Array(4).fill(null),bridgeAtmosImgs=Array(6).fill(null),checkpointOffImg=null,checkpointOnImg=null;
+let phase4SignImgs=Array(4).fill(null),signlessRoadPostImgs=Array(3).fill(null),eraserGameplaySprites=Array(10).fill(null),hollowGameplaySprites=Array(10).fill(null),ashHoundGameplaySprites=Array(10).fill(null),crowGameplaySprites=Array(10).fill(null),traceFootprintImgs=Array.from({length:3},()=>[null,null]),traceMemoryImgs=Array(3).fill(null),traceMemoryLoading=Array(3).fill(false),traceMemoryRetryAt=Array(3).fill(0),archiveEvidenceImgs=Array.from({length:3},()=>[null,null]),archivePropImgs=Array(6).fill(null),archiveFxImgs=Array(4).fill(null),bridgePlatformFxImgs=Array(5).fill(null),bridgeRegisterImgs=Array(4).fill(null),bridgeAtmosImgs=Array(6).fill(null),plazaNameplateImgs=Array(8).fill(null),plazaEchoImgs=Array.from({length:3},()=>[null,null]),plazaEchoFxImgs=Array(4).fill(null),plazaNameGateImgs=Array(4).fill(null),plazaAtmosImgs=Array(6).fill(null),checkpointOffImg=null,checkpointOnImg=null;
 let bellNormalImg=null,bellGlowImg=null,memoryDoorImg=null;
 let nonexistentDoorImg=null,nonexistentDoorRevealFxImg=null,doorRevealFx=0;
 let idleTime=0,waitSitFrame=0,waitSitClock=0,waitSitActive=false,waitSitImages=[];
@@ -922,6 +922,70 @@ const bridgeAtmosReady=Promise.allSettled(bridgeAtmosFiles.map(src=>img(src))).t
  return bridgeAtmosImgs;
 });
 
+const plazaNameplateFiles=[
+ "../assets/game/phase4/puzzles/stolen-names-plaza/nameplates/plaza-stolen-nameplate-01.png",
+ "../assets/game/phase4/puzzles/stolen-names-plaza/nameplates/plaza-stolen-nameplate-02.png",
+ "../assets/game/phase4/puzzles/stolen-names-plaza/nameplates/plaza-stolen-nameplate-03.png",
+ "../assets/game/phase4/puzzles/stolen-names-plaza/nameplates/plaza-stolen-nameplate-04.png",
+ "../assets/game/phase4/puzzles/stolen-names-plaza/nameplates/plaza-stolen-nameplate-05.png",
+ "../assets/game/phase4/puzzles/stolen-names-plaza/nameplates/plaza-stolen-nameplate-06.png",
+ "../assets/game/phase4/puzzles/stolen-names-plaza/nameplates/plaza-stolen-nameplate-07.png",
+ "../assets/game/phase4/puzzles/stolen-names-plaza/nameplates/plaza-stolen-nameplate-08.png"
+];
+const plazaNameplateReady=Promise.allSettled(plazaNameplateFiles.map(src=>img(src))).then(rs=>{
+ plazaNameplateImgs=rs.map(r=>r.status==="fulfilled"?r.value:null);
+ return plazaNameplateImgs;
+});
+
+const plazaEchoFiles=[
+ "../assets/game/phase4/puzzles/stolen-names-plaza/echoes/plaza-echo-01-dormant.png",
+ "../assets/game/phase4/puzzles/stolen-names-plaza/echoes/plaza-echo-01-awake.png",
+ "../assets/game/phase4/puzzles/stolen-names-plaza/echoes/plaza-echo-02-dormant.png",
+ "../assets/game/phase4/puzzles/stolen-names-plaza/echoes/plaza-echo-02-awake.png",
+ "../assets/game/phase4/puzzles/stolen-names-plaza/echoes/plaza-echo-03-dormant.png",
+ "../assets/game/phase4/puzzles/stolen-names-plaza/echoes/plaza-echo-03-awake.png"
+];
+const plazaEchoReady=Promise.allSettled(plazaEchoFiles.map(src=>img(src))).then(rs=>{
+ const a=rs.map(r=>r.status==="fulfilled"?r.value:null);
+ plazaEchoImgs=[[a[0],a[1]],[a[2],a[3]],[a[4],a[5]]];
+ return plazaEchoImgs;
+});
+
+const plazaEchoFxFiles=[
+ "../assets/game/phase4/puzzles/stolen-names-plaza/fx/plaza-echo-fx-reveal.png",
+ "../assets/game/phase4/puzzles/stolen-names-plaza/fx/plaza-echo-fx-memory-wisp.png",
+ "../assets/game/phase4/puzzles/stolen-names-plaza/fx/plaza-echo-fx-broken-letters.png",
+ "../assets/game/phase4/puzzles/stolen-names-plaza/fx/plaza-echo-fx-complete.png"
+];
+const plazaEchoFxReady=Promise.allSettled(plazaEchoFxFiles.map(src=>img(src))).then(rs=>{
+ plazaEchoFxImgs=rs.map(r=>r.status==="fulfilled"?r.value:null);
+ return plazaEchoFxImgs;
+});
+
+const plazaNameGateFiles=[
+ "../assets/game/phase4/puzzles/stolen-names-plaza/name-gate/plaza-name-gate-closed.png",
+ "../assets/game/phase4/puzzles/stolen-names-plaza/name-gate/plaza-name-gate-weakened-01.png",
+ "../assets/game/phase4/puzzles/stolen-names-plaza/name-gate/plaza-name-gate-weakened-02.png",
+ "../assets/game/phase4/puzzles/stolen-names-plaza/name-gate/plaza-name-gate-open.png"
+];
+const plazaNameGateReady=Promise.allSettled(plazaNameGateFiles.map(src=>img(src))).then(rs=>{
+ plazaNameGateImgs=rs.map(r=>r.status==="fulfilled"?r.value:null);
+ return plazaNameGateImgs;
+});
+
+const plazaAtmosFiles=[
+ "../assets/game/phase4/puzzles/stolen-names-plaza/atmosphere/collector-glimpse-shadow.png",
+ "../assets/game/phase4/puzzles/stolen-names-plaza/atmosphere/plaza-prop-confiscated-pile.png",
+ "../assets/game/phase4/puzzles/stolen-names-plaza/atmosphere/plaza-prop-empty-name-frame.png",
+ "../assets/game/phase4/puzzles/stolen-names-plaza/atmosphere/plaza-prop-hanging-tags.png",
+ "../assets/game/phase4/puzzles/stolen-names-plaza/atmosphere/plaza-prop-name-hooks.png",
+ "../assets/game/phase4/puzzles/stolen-names-plaza/atmosphere/plaza-prop-broken-register.png"
+];
+const plazaAtmosReady=Promise.allSettled(plazaAtmosFiles.map(src=>img(src))).then(rs=>{
+ plazaAtmosImgs=rs.map(r=>r.status==="fulfilled"?r.value:null);
+ return plazaAtmosImgs;
+});
+
 const traceFootprintFiles=[
  "../assets/game/phase4/puzzles/footprint-field/traces/trace-01-dormant.png",
  "../assets/game/phase4/puzzles/footprint-field/traces/trace-01-revealed.png",
@@ -1053,7 +1117,7 @@ const nonexistentDoorReady=Promise.allSettled([
 });
 
 const phase4PropReady=Promise.allSettled([
- phase4SignReady,signlessRoadPostReady,eraserGameplayReady,hollowGameplayReady,ashHoundGameplayReady,crowGameplayReady,bridgePlatformFxReady,bridgeRegisterReady,bridgeAtmosReady,traceFootprintReady,traceMemoryReady,archiveEvidenceReady,archivePropReady,archiveFxReady,checkpointArtReady,bellArtReady,memoryDoorReady,nonexistentDoorReady
+ phase4SignReady,signlessRoadPostReady,eraserGameplayReady,hollowGameplayReady,ashHoundGameplayReady,crowGameplayReady,bridgePlatformFxReady,bridgeRegisterReady,bridgeAtmosReady,plazaNameplateReady,plazaEchoReady,plazaEchoFxReady,plazaNameGateReady,plazaAtmosReady,traceFootprintReady,traceMemoryReady,archiveEvidenceReady,archivePropReady,archiveFxReady,checkpointArtReady,bellArtReady,memoryDoorReady,nonexistentDoorReady
 ]);
 
 const jackPortraitFiles=["jack-00-neutral.png","jack-01-serious.png","jack-02-smirk.png","jack-03-surprised.png","jack-04-determined.png","jack-05-resolved.png"];
@@ -3112,87 +3176,168 @@ function plazaEchoGuardDefeated(i){
  const e=enemies.find(v=>v.id===id);
  return !e||e.defeated||e.state==="dead"||e.state==="dissolve";
 }
-function drawStolenNamePlate(x,y,w=74,h=24,alpha=.72,tilt=0){
+function drawPlazaImageFit(im,cx,cy,maxW,maxH,alpha=1,tilt=0,screen=false){
+ if(!im)return false;
+ const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+ if(!iw||!ih)return false;
+ const scale=Math.min(maxW/iw,maxH/ih);
+ const w=iw*scale,h=ih*scale;
+ ctx.save();
+ ctx.translate(cx,cy);
+ ctx.rotate(tilt);
+ ctx.globalAlpha=Math.max(0,Math.min(1,alpha));
+ if(screen)ctx.globalCompositeOperation="screen";
+ ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";
+ ctx.drawImage(im,-w/2,-h/2,w,h);
+ ctx.restore();
+ return true;
+}
+function drawPlazaImageBottom(im,cx,bottomY,targetH,alpha=1,flip=false,screen=false){
+ if(!im)return false;
+ const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+ if(!iw||!ih)return false;
+ const w=iw*(targetH/ih),x=cx-w/2,y=bottomY-targetH;
+ ctx.save();ctx.globalAlpha=Math.max(0,Math.min(1,alpha));
+ if(screen)ctx.globalCompositeOperation="screen";
+ ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";
+ if(flip){ctx.translate(x+w,0);ctx.scale(-1,1);ctx.drawImage(im,0,y,w,targetH)}
+ else ctx.drawImage(im,x,y,w,targetH);
+ ctx.restore();
+ return true;
+}
+function plazaEchoGuardDefeated(i){
+ const id=plazaEchoGuards[i];
+ const e=enemies.find(v=>v.id===id);
+ return !e||e.defeated||e.state==="dead"||e.state==="dissolve";
+}
+function drawStolenNamePlate(x,y,w=74,h=24,alpha=.72,tilt=0,imageIndex=null){
+ const idx=imageIndex==null
+   ?Math.abs(Math.floor(w*3+h*7))%Math.max(1,plazaNameplateImgs.length)
+   :Math.abs(imageIndex)%Math.max(1,plazaNameplateImgs.length);
+ const im=plazaNameplateImgs[idx];
+ if(im&&drawPlazaImageFit(im,x,y,w,Math.max(h,18),alpha,tilt,false))return true;
+
+ // Fallback simples apenas se o PNG falhar.
  ctx.save();ctx.translate(x,y);ctx.rotate(tilt);ctx.globalAlpha=alpha;
  ctx.fillStyle="#302d27";ctx.strokeStyle="#8d7650";ctx.lineWidth=2;
  ctx.fillRect(-w/2,-h/2,w,h);ctx.strokeRect(-w/2,-h/2,w,h);
  ctx.fillStyle="rgba(210,188,134,.28)";
- ctx.fillRect(-w*.32,-1,w*.64,2);
- ctx.fillRect(-w*.24,5,w*.38,2);
+ ctx.fillRect(-w*.32,-1,w*.64,2);ctx.fillRect(-w*.24,5,w*.38,2);
  ctx.restore();
+ return false;
+}
+function drawStolenNamesPlazaAtmosphere(){
+ if(!bridgeCrossedPlayed||cam+W<7820||cam>9300)return;
+ ctx.save();ctx.translate(-cam,0);
+
+ // A Praça parece um depósito público de identidades confiscadas.
+ drawPlazaImageBottom(plazaAtmosImgs[1],7995,590,188,.46,false,false);
+ drawPlazaImageBottom(plazaAtmosImgs[4],8215,590,176,.38,false,false);
+ drawPlazaImageBottom(plazaAtmosImgs[2],8495,590,164,.34,false,false);
+ drawPlazaImageBottom(plazaAtmosImgs[3],8710,555,160,.32,false,false);
+ drawPlazaImageBottom(plazaAtmosImgs[5],8995,590,208,.42,false,false);
+
+ ctx.restore();
+}
+function drawPlazaEchoFx(i,x,on){
+ const fx=Math.min(1,plazaEchoFx[i]/2.4);
+ const pulse=.5+.5*Math.sin(p.anim*2.4+i*.8);
+
+ if(on){
+   // Memória continua respirando depois de ouvida.
+   drawPlazaImageFit(plazaEchoFxImgs[1],x,470,155,210,.12+.07*pulse,0,true);
+   drawPlazaImageFit(plazaEchoFxImgs[2],x,474,170,170,.08+.05*pulse,0,true);
+ }
+ if(fx<=0)return;
+
+ const reveal=Math.min(1,fx*1.65);
+ const finish=Math.max(0,1-Math.abs(fx-.28)/.28);
+ drawPlazaImageFit(plazaEchoFxImgs[0],x,485,205,225,.66*reveal,0,true);
+ drawPlazaImageFit(plazaEchoFxImgs[1],x,470,190,240,.56*reveal,0,true);
+ drawPlazaImageFit(plazaEchoFxImgs[2],x,470,185,190,.44*reveal,0,true);
+ if(finish>0)drawPlazaImageFit(plazaEchoFxImgs[3],x,490,230,230,.42*finish,0,true);
+}
+function drawPlazaNameGate(){
+ if(!stolenPlazaPlayed)return;
+ const heard=plazaEchoes.filter(Boolean).length;
+ const idx=plazaSolved?3:Math.min(2,heard);
+ const im=plazaNameGateImgs[idx];
+ const gx=8880;
+ if(im){
+   const glow=idx>0?.08+.05*Math.sin(p.anim*2.1):0;
+   if(glow>0)drawPlazaImageBottom(im,gx,590,338,glow,false,true);
+   drawPlazaImageBottom(im,gx,590,338,plazaSolved?.88:.96,false,false);
+   return;
+ }
+ // Fallback de segurança.
+ ctx.save();ctx.strokeStyle="rgba(115,96,62,.75)";ctx.lineWidth=4;
+ ctx.strokeRect(gx-65,310,130,280);ctx.restore();
 }
 function drawStolenNamesPlaza(){
  if(!bridgeCrossedPlayed)return;
  const pc=p.x+p.w/2;
  ctx.save();ctx.translate(-cam,0);
 
- // Suspended names: present as possessions, deliberately separated from voices.
+ // As oito placas agora são objetos únicos, não retângulos genéricos.
  const plateSeed=[
    [8030,345,-.08],[8140,310,.06],[8260,365,-.04],[8385,300,.09],
-   [8510,350,-.07],[8625,315,.05],[8750,370,-.1],[8820,325,.08]
+   [8510,350,-.07],[8625,315,.05],[8750,370,-.10],[8820,325,.08]
  ];
  plateSeed.forEach((a,i)=>{
    const drift=plazaSolved&&collectorGlimpseTimer>0?Math.min(85,(6.5-collectorGlimpseTimer)*14):0;
-   const bob=Math.sin(p.anim*1.4+i)*5;
-   ctx.strokeStyle="rgba(103,88,61,.5)";ctx.lineWidth=1.5;
-   ctx.beginPath();ctx.moveTo(a[0]+drift,a[1]-72);ctx.lineTo(a[0]+drift,a[1]+bob-13);ctx.stroke();
-   drawStolenNamePlate(a[0]+drift,a[1]+bob,76,24,.72,a[2]);
+   const bob=Math.sin(p.anim*1.35+i)*4.2;
+   const px=a[0]+drift,py=a[1]+bob;
+   ctx.save();
+   ctx.strokeStyle="rgba(103,88,61,.44)";ctx.lineWidth=1.5;
+   ctx.beginPath();ctx.moveTo(px,a[1]-82);ctx.lineTo(px,py-30);ctx.stroke();
+   ctx.restore();
+   drawStolenNamePlate(px,py,104,72,.76,a[2],i);
  });
 
- // Three voice wells. The plaques above them never identify which voice belongs to whom.
+ // Três relicários: dormente enquanto o eco está preso, desperto depois da Luz.
  story.plazaEchoes?.forEach((ev,i)=>{
    const on=plazaEchoes[i],clear=plazaEchoGuardDefeated(i);
-   const x=ev.x,pulse=.5+.5*Math.sin(p.anim*2+i*.9),fx=Math.min(1,plazaEchoFx[i]/1.25);
-   ctx.save();ctx.translate(x,0);
-
-   ctx.strokeStyle=on?"rgba(232,201,116,.8)":"rgba(108,96,73,.55)";
-   ctx.lineWidth=2;
-   ctx.beginPath();ctx.ellipse(0,557,68,18,0,0,Math.PI*2);ctx.stroke();
-
-   const g=ctx.createRadialGradient(0,520,5,0,520,75);
-   g.addColorStop(0,on?"rgba(236,207,126,.28)":"rgba(185,179,159,.08)");
-   g.addColorStop(1,"rgba(200,190,160,0)");
-   ctx.fillStyle=g;ctx.beginPath();ctx.arc(0,520,75,0,Math.PI*2);ctx.fill();
-
-   // Voice wisps rise while the matching nameplate stays elsewhere.
-   const wispAlpha=on?.55:.13;
-   ctx.strokeStyle="rgba(231,220,185,"+wispAlpha+")";ctx.lineWidth=2;
-   for(let k=0;k<3;k++){
-     const yy=545-k*25-Math.sin(p.anim*1.8+k+i)*5;
-     ctx.beginPath();ctx.moveTo(-18+k*16,yy);
-     ctx.bezierCurveTo(-28+k*18,yy-16,14-k*9,yy-25,4+k*6,yy-42);ctx.stroke();
+   const x=ev.x;
+   const im=plazaEchoImgs[i]?.[on?1:0]||plazaEchoImgs[i]?.[0];
+   const heights=[205,205,218];
+   if(im){
+     if(on){
+       ctx.save();ctx.shadowColor="rgba(238,202,112,.68)";ctx.shadowBlur=22;
+       drawPlazaImageBottom(im,x,590,heights[i],.96,false,false);
+       ctx.restore();
+     }else{
+       drawPlazaImageBottom(im,x,590,heights[i],clear?.90:.72,false,false);
+     }
+   }else{
+     ctx.save();ctx.strokeStyle=on?"#e4c57b":"#6c6049";ctx.lineWidth=2;
+     ctx.beginPath();ctx.ellipse(x,557,68,18,0,0,Math.PI*2);ctx.stroke();ctx.restore();
    }
 
-   if(on){
-     ctx.fillStyle="rgba(240,216,151,.88)";ctx.font="700 9px Georgia";ctx.textAlign="center";
-     ctx.fillText(ev.short,0,456);
-     if(i===0)ctx.fillText("“...pão...”",0,482);
-     if(i===1)ctx.fillText("“...ria...”",0,482);
-     if(i===2)ctx.fillText("“...tempestade...”",0,482);
-   }else if(Math.abs(pc-x)<165){
-     ctx.fillStyle=clear?"rgba(240,221,166,.92)":"rgba(178,163,127,.72)";
-     ctx.font="700 9px Georgia";ctx.textAlign="center";
-     ctx.fillText(clear?"F · OUVIR O ECO":"O ECO ESTÁ SOB VIGILÂNCIA",0,456);
-   }
+   drawPlazaEchoFx(i,x,on);
 
-   if(fx>0){
-     ctx.globalAlpha=fx*.6;ctx.strokeStyle="#efd18a";ctx.lineWidth=4;
-     ctx.beginPath();ctx.arc(0,520,72+(1-fx)*28,0,Math.PI*2);ctx.stroke();
+   // Só a instrução de gameplay continua como texto; a memória em si vive na arte e no diálogo.
+   if(!on&&Math.abs(pc-x)<165){
+     ctx.save();
+     ctx.fillStyle=clear?"rgba(246,221,158,.96)":"rgba(185,168,126,.82)";
+     ctx.font="700 10px Georgia";ctx.textAlign="center";
+     ctx.shadowColor="rgba(0,0,0,.95)";ctx.shadowBlur=5;
+     ctx.fillText(clear?"F · OUVIR O ECO":"O ECO ESTÁ SOB VIGILÂNCIA",x,382);
+     ctx.restore();
+   }else if(on){
+     ctx.save();
+     ctx.fillStyle="rgba(241,216,149,.83)";ctx.font="700 9px Georgia";ctx.textAlign="center";
+     ctx.shadowColor="rgba(0,0,0,.9)";ctx.shadowBlur=4;
+     ctx.fillText(ev.short,x,382);
+     ctx.restore();
    }
-   ctx.restore();
  });
 
- // Barrier of confiscated nameplates blocks the road until all voices are heard.
- if(stolenPlazaPlayed&&!plazaSolved){
-   const gx=8880;
-   ctx.strokeStyle="rgba(115,96,62,.75)";ctx.lineWidth=3;
-   for(let i=0;i<4;i++){
-     const yy=365+i*55;
-     ctx.beginPath();ctx.moveTo(gx-52,yy-38);ctx.lineTo(gx+52,yy+18);ctx.stroke();
-     drawStolenNamePlate(gx+(i%2?20:-20),yy,92,27,.88,(i%2?1:-1)*.08);
-   }
-   ctx.fillStyle="rgba(225,201,139,.75)";ctx.font="italic 10px Georgia";ctx.textAlign="center";
-   ctx.fillText("nomes sem vozes",gx,338);
+ drawPlazaNameGate();
+
+ // Quando os três ecos se completam, um sigilo muito sutil confirma a ruptura entre nome e pessoa.
+ if(plazaSolved&&plazaEchoFxImgs[3]){
+   const a=.05+.025*Math.sin(p.anim*1.8);
+   drawPlazaImageFit(plazaEchoFxImgs[3],8735,455,250,250,a,0,true);
  }
 
  ctx.restore();
@@ -3201,35 +3346,27 @@ function drawCollectorGlimpse(){
  if(collectorGlimpseTimer<=0)return;
  const x=9080,y=590;
  const fade=Math.min(1,collectorGlimpseTimer/1.2);
- ctx.save();ctx.translate(x-cam,y);ctx.globalAlpha=.78*fade;
+ const im=plazaAtmosImgs[0];
 
- // Only a partial silhouette: shoulders, one long hand, no readable face.
- ctx.shadowColor="rgba(0,0,0,.9)";ctx.shadowBlur=22;
- ctx.fillStyle="#111310";
- ctx.beginPath();ctx.moveTo(-86,0);ctx.lineTo(-62,-176);ctx.quadraticCurveTo(-38,-246,0,-254);
- ctx.quadraticCurveTo(38,-246,62,-176);ctx.lineTo(86,0);ctx.closePath();ctx.fill();
- ctx.fillStyle="#070908";ctx.beginPath();ctx.ellipse(0,-225,31,40,0,0,Math.PI*2);ctx.fill();
+ ctx.save();ctx.translate(-cam,0);
+ if(im){
+   const pulse=.74+.06*Math.sin(p.anim*1.7);
+   ctx.save();
+   ctx.shadowColor="rgba(0,0,0,.92)";ctx.shadowBlur=24;
+   drawPlazaImageBottom(im,x,y,330,.82*fade*pulse,false,false);
+   ctx.restore();
 
- // Long arm reaches toward a stolen plate.
- ctx.strokeStyle="#151814";ctx.lineWidth=20;ctx.lineCap="round";
- ctx.beginPath();ctx.moveTo(-48,-155);ctx.quadraticCurveTo(-105,-110,-125,-62);ctx.stroke();
- ctx.lineWidth=7;for(let i=0;i<4;i++){
-   ctx.beginPath();ctx.moveTo(-124+i*3,-64);ctx.lineTo(-151+i*8,-44+i*3);ctx.stroke();
+   // Névoa baixa preserva a ideia de que ainda não vemos o Coletor por inteiro.
+   const g=ctx.createLinearGradient(0,430,0,600);
+   g.addColorStop(0,"rgba(175,176,162,0)");
+   g.addColorStop(.74,"rgba(175,176,162,.08)");
+   g.addColorStop(1,"rgba(175,176,162,.24)");
+   ctx.fillStyle=g;ctx.globalAlpha=fade;ctx.fillRect(x-185,420,370,180);
+ }else{
+   // Silhueta mínima de fallback.
+   ctx.globalAlpha=.78*fade;ctx.fillStyle="#111310";
+   ctx.beginPath();ctx.moveTo(x-86,y);ctx.lineTo(x-62,y-176);ctx.quadraticCurveTo(x,y-290,x+62,y-176);ctx.lineTo(x+86,y);ctx.closePath();ctx.fill();
  }
-
- // Plates attached to the body without revealing any name.
- const plates=[[-36,-170,.08],[31,-151,-.07],[-20,-111,-.04],[37,-82,.06]];
- plates.forEach(v=>drawStolenNamePlate(v[0],v[1],58,19,.95,v[2]));
-
- ctx.fillStyle="rgba(227,197,116,.72)";ctx.font="700 10px Georgia";ctx.textAlign="center";
- ctx.fillText("???",0,-286);
-
- // Fog cuts the silhouette so the full body is never readable.
- const fog=ctx.createLinearGradient(0,-210,0,10);
- fog.addColorStop(0,"rgba(184,184,166,0)");
- fog.addColorStop(.72,"rgba(184,184,166,.10)");
- fog.addColorStop(1,"rgba(184,184,166,.32)");
- ctx.fillStyle=fog;ctx.fillRect(-165,-210,330,220);
  ctx.restore();
 }
 
@@ -3909,6 +4046,7 @@ function drawPhase4SkeletonLandmarks(){
 
 function drawWorld(){
  drawNobodyBridgeAtmosphere();
+ drawStolenNamesPlazaAtmosphere();
  drawRoad();
  if(!hasPhase4BackgroundAt(p.x))drawPhase4SkeletonLandmarks();
  drawSigns();drawDoor();drawArchiveEvidence();drawNobodyBridgeFog();drawBridgeIdentityPlate();drawStolenNamesPlaza();drawCollectorGlimpse();
