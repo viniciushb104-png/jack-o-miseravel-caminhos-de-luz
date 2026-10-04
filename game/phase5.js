@@ -140,8 +140,41 @@ let reflectedFx=[],hazards=[],shots=[],messageTimer=0,bannerTimer=0,bossShotCd=1
 const input={left:false,right:false,down:false,jump:false,run:false};
 
 const atlas=new Image();atlas.src="../assets/game/phase1/sprites-hd/jack-atlas-hd.png";
-let atlasReady=false;atlas.onload=()=>atlasReady=true;
+let atlasReady=false;
 const JA=window.JACK_ANIMATIONS||null;
+let jackFrameOverrides={};
+
+function buildCleanJackFrame(image,frame,eraseRects=[]){
+ const cfg=window.JACK_ANIMATIONS;
+ const cell=cfg?.cell||320,cols=cfg?.cols||8;
+ const cv=document.createElement("canvas");
+ cv.width=cell;cv.height=cell;
+ const cx=cv.getContext("2d");
+ const col=frame%cols,row=Math.floor(frame/cols);
+ cx.clearRect(0,0,cell,cell);
+ cx.drawImage(image,col*cell,row*cell,cell,cell,0,0,cell,cell);
+ eraseRects.forEach(([rx,ry,rw,rh])=>cx.clearRect(rx,ry,rw,rh));
+ return cv;
+}
+function buildJackFrameOverrides(image){
+ // Mesma limpeza testada nas Fases 1, 2 e 3.
+ // 25: remove resíduo lateral da célula vizinha.
+ // 26: remove o boot/pé que aparece acima da cabeça quando Jack ergue a lanterna.
+ return {
+  25:buildCleanJackFrame(image,25,[
+   [260,0,60,320]
+  ]),
+  26:buildCleanJackFrame(image,26,[
+   [126,0,76,82],
+   [126,82,54,30],
+   [202,0,28,32]
+  ])
+ };
+}
+atlas.onload=()=>{
+ atlasReady=true;
+ jackFrameOverrides=buildJackFrameOverrides(atlas);
+};
 
 const PHASE5_BACKGROUND_FILES=Object.freeze({
  return:"../assets/game/phase5/backgrounds/01-village-carnival/phase5-village-halloween-01.png",
@@ -838,9 +871,16 @@ function drawJack(){
  if(atlasReady&&JA){
   const f=jackFrame(),cell=JA.cell,cols=JA.cols,sx=(f%cols)*cell,sy=Math.floor(f/cols)*cell;
   const h=170,w=170,dx=cx-w/2,dy=ground-h+10;
+  const cleanFrame=jackFrameOverrides[f];
   ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";
-  if(p.dir<0){ctx.translate(dx+w,0);ctx.scale(-1,1);ctx.drawImage(atlas,sx,sy,cell,cell,0,dy,w,h)}
-  else ctx.drawImage(atlas,sx,sy,cell,cell,dx,dy,w,h);
+  if(p.dir<0){
+   ctx.translate(dx+w,0);ctx.scale(-1,1);
+   if(cleanFrame)ctx.drawImage(cleanFrame,0,0,cleanFrame.width,cleanFrame.height,0,dy,w,h);
+   else ctx.drawImage(atlas,sx,sy,cell,cell,0,dy,w,h);
+  }else{
+   if(cleanFrame)ctx.drawImage(cleanFrame,0,0,cleanFrame.width,cleanFrame.height,dx,dy,w,h);
+   else ctx.drawImage(atlas,sx,sy,cell,cell,dx,dy,w,h);
+  }
  }else{
   ctx.fillStyle="#2b2b27";ctx.fillRect(cx-18,ground-76,36,76);ctx.fillStyle="#d18f35";ctx.beginPath();ctx.arc(cx,ground-92,23,0,Math.PI*2);ctx.fill();
  }
