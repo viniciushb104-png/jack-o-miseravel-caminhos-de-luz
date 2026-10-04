@@ -407,11 +407,11 @@ const ENEMY_ARCHETYPES=Object.freeze({
  ashHound:Object.freeze({
    label:"CÃO DE CINZA",defeatMessage:"O corpo se rompeu em cinza morna e desapareceu no vento.",
    hitMessage:"A Luz incendiou as rachaduras de cinza.",
-   width:76,height:46,patrolSpeed:62,chaseSpeed:188,attackSpeed:315,
-   detectRange:525,loseRange:760,attackRange:82,lightRange:220,
-   alertTime:.16,idleTime:.42,patrolTime:1.55,
-   attackWindup:.22,attackActive:.19,attackRecover:.48,
-   attackCooldown:.68,hitTime:.22,dissolveTime:.66,
+   width:76,height:46,patrolSpeed:68,chaseSpeed:205,attackSpeed:340,
+   detectRange:525,loseRange:760,attackRange:86,lightRange:220,
+   alertTime:.13,idleTime:.36,patrolTime:1.42,
+   attackWindup:.18,attackActive:.24,attackRecover:.30,
+   attackCooldown:.60,hitTime:.20,dissolveTime:.66,
    knockbackX:340,knockbackY:-285
  }),
  hollow:Object.freeze({
@@ -2193,6 +2193,8 @@ const ASH_HOUND_SPRITE_INDEX=Object.freeze({
  dissolve:[9]
 });
 function ashHoundSpriteIndex(e){
+ if(e.state==="dissolve")return 9;
+ if(e.state==="hit"||e.hitFlash>0)return 8;
  if(e.state==="attack"){
    const total=e.cfg.attackWindup+e.cfg.attackActive+e.cfg.attackRecover;
    const elapsed=Math.max(0,total-e.stateTimer);
@@ -2200,43 +2202,158 @@ function ashHoundSpriteIndex(e){
    if(elapsed<e.cfg.attackWindup+e.cfg.attackActive)return 6;
    return 7;
  }
- if(e.state==="dissolve")return 9;
- if(e.state==="hit"||e.hitFlash>0)return 8;
  const seq=ASH_HOUND_SPRITE_INDEX[e.state]||ASH_HOUND_SPRITE_INDEX.idle;
  if(seq.length===1)return seq[0];
  const fps=e.state==="chase"?10.5:(e.state==="patrol"?6.5:2.4);
  return seq[Math.floor((p.anim+e.spawnX*.001)*fps)%seq.length];
 }
 function drawAshHoundSprite(e){
- const index=ashHoundSpriteIndex(e);
- const im=ashHoundGameplaySprites[index];
- if(!im)return false;
- const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
- if(!iw||!ih)return false;
-
+ const moving=e.state==="patrol"||e.state==="chase";
  const attacking=e.state==="attack";
  const chasing=e.state==="chase";
- const targetW=e.state==="dissolve"?176:(attacking?184:(chasing?174:164));
- const targetH=ih*(targetW/iw);
+ const baseIndex=ashHoundSpriteIndex(e);
+ const baseIm=ashHoundGameplaySprites[baseIndex];
+ if(!baseIm)return false;
+
+ const baseWidth=e.state==="dissolve"?176:(attacking?184:(chasing?174:164));
  const bottom=e.h/2+12;
- const strideBob=(e.state==="patrol"||e.state==="chase")?Math.sin(p.anim*(chasing?10:6.2)+e.spawnX*.01)*2.1:0;
- const forward=attacking?10:(chasing?5:0);
- const dx=-targetW/2+forward;
- const dy=bottom-targetH+strideBob;
+ let bodyX=0,bodyY=0,rotation=0,scaleX=1,scaleY=1;
+ let frames=[];
+
+ const addFrame=(index,alpha=1)=>{
+   const im=ashHoundGameplaySprites[index];
+   if(im&&alpha>.001)frames.push({im,alpha});
+ };
+
+ if(moving){
+   // Corrida em três poses. Cada pose permanece sólida e só cruza
+   // rapidamente para a próxima no fim do passo.
+   const speed=chasing?11.8:7.2;
+   const clock=(p.anim+e.spawnX*.001)*speed;
+   const step=Math.floor(clock);
+   const frac=clock-step;
+   const current=2+(step%3);
+   const next=2+((step+1)%3);
+   const transitionStart=.70;
+   if(frac<transitionStart){
+     addFrame(current,1);
+   }else{
+     const t=(frac-transitionStart)/(1-transitionStart);
+     const ease=t*t*(3-2*t);
+     addFrame(current,1-ease);
+     addFrame(next,ease);
+   }
+   const gait=Math.sin(clock*Math.PI);
+   bodyY=-Math.abs(gait)*(chasing?2.8:2.0);
+   bodyX=Math.sin(clock*Math.PI*2)*(chasing?2.8:1.8);
+   rotation=Math.sin(clock*Math.PI*2)*(chasing?.018:.012);
+   scaleX=1+.025*Math.abs(gait);
+   scaleY=1-.018*Math.abs(gait);
+ }else if(attacking){
+   const total=e.cfg.attackWindup+e.cfg.attackActive+e.cfg.attackRecover;
+   const elapsed=Math.max(0,total-e.stateTimer);
+
+   if(elapsed<e.cfg.attackWindup){
+     // Run/alert -> crouch de preparação.
+     const t=Math.min(1,elapsed/e.cfg.attackWindup);
+     const ease=t*t*(3-2*t);
+     addFrame(1,1-ease);
+     addFrame(5,ease);
+     bodyX=-10*ease;
+     bodyY=5*ease;
+     rotation=-.045*ease;
+     scaleX=1-.05*ease;
+     scaleY=1+.045*ease;
+   }else if(elapsed<e.cfg.attackWindup+e.cfg.attackActive){
+     // Bote real: windup -> lunge, com alongamento e avanço.
+     const t=Math.min(1,(elapsed-e.cfg.attackWindup)/e.cfg.attackActive);
+     const ease=1-Math.pow(1-t,3);
+     const blend=Math.min(1,t/.24);
+     addFrame(5,1-blend);
+     addFrame(6,blend);
+     bodyX=-10+34*ease;
+     bodyY=-5*Math.sin(t*Math.PI);
+     rotation=.055*ease;
+     scaleX=1+.09*Math.sin(t*Math.PI);
+     scaleY=1-.055*Math.sin(t*Math.PI);
+   }else{
+     // Aterrissagem: lunge -> recover -> idle. Sem segurar recover parado.
+     const t=Math.min(1,(elapsed-e.cfg.attackWindup-e.cfg.attackActive)/e.cfg.attackRecover);
+     if(t<.62){
+       const q=t/.62, ease=q*q*(3-2*q);
+       addFrame(6,1-ease);
+       addFrame(7,ease);
+     }else{
+       const q=(t-.62)/.38, ease=q*q*(3-2*q);
+       addFrame(7,1-ease);
+       addFrame(0,ease);
+     }
+     bodyX=24*(1-t);
+     bodyY=Math.sin(t*Math.PI)*3.2;
+     rotation=.05*(1-t)-.02*Math.sin(t*Math.PI);
+     scaleX=1+.035*(1-t);
+     scaleY=1-.02*(1-t);
+   }
+ }else{
+   addFrame(baseIndex,1);
+   if(e.state==="idle"){
+     bodyY=Math.sin(p.anim*3.0+e.spawnX*.01)*1.2;
+     rotation=Math.sin(p.anim*1.8+e.spawnX*.007)*.009;
+   }else if(e.state==="alert"){
+     bodyY=2;
+     rotation=-.018;
+     scaleX=.98;
+     scaleY=1.025;
+   }else if(e.state==="hit"){
+     bodyX=-6;
+     bodyY=-2;
+     rotation=-.035;
+   }
+ }
+
+ // A Luz interrompe visualmente qualquer ação e mostra o frame específico.
+ if(e.hitFlash>0&&e.state!=="dissolve"){
+   frames=[];
+   addFrame(8,1);
+   bodyX=-6;
+   bodyY=-3;
+   rotation=-.035;
+   scaleX=.97;
+   scaleY=1.035;
+ }
+
+ const drawFrame=(fr,alphaMul=1,composite=null)=>{
+   const im=fr.im;
+   const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+   if(!iw||!ih)return;
+   const w=baseWidth*scaleX;
+   const h=ih*(w/iw)*scaleY;
+   const dx=-w/2;
+   const dy=bottom-h;
+
+   ctx.save();
+   ctx.globalAlpha=Math.max(0,Math.min(1,fr.alpha*alphaMul));
+   if(composite)ctx.globalCompositeOperation=composite;
+   ctx.drawImage(im,dx,dy,w,h);
+   ctx.restore();
+ };
 
  ctx.save();
+ ctx.translate(bodyX,bodyY);
+ ctx.rotate(rotation);
  ctx.imageSmoothingEnabled=true;
  ctx.imageSmoothingQuality="high";
  ctx.shadowColor=e.hitFlash>0?"rgba(251,224,150,.98)":"rgba(0,0,0,.74)";
  ctx.shadowBlur=e.hitFlash>0?25:11;
- ctx.drawImage(im,dx,dy,targetW,targetH);
+
+ for(const fr of frames)drawFrame(fr,1);
 
  if(e.hitFlash>0){
-   ctx.globalCompositeOperation="screen";
-   ctx.globalAlpha=Math.min(.30,e.hitFlash*1.25);
+   ctx.save();
    ctx.shadowColor="rgba(250,215,126,.98)";
    ctx.shadowBlur=28;
-   ctx.drawImage(im,dx,dy,targetW,targetH);
+   for(const fr of frames)drawFrame(fr,Math.min(.30,e.hitFlash*1.25),"screen");
+   ctx.restore();
  }
  ctx.restore();
  return true;
