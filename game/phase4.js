@@ -459,6 +459,7 @@ function createEnemy(id,kind,x,y,options={}){
    state:defeated?"dead":"idle",
    stateTimer:defeated?0:.35+(x%5)*.07,
    attackCooldown:0,attackHit:false,
+   animClock:(x%317)/317,
    attackTargetX:x,attackTargetY:y,
    alive:!defeated,defeated,
    alpha:defeated?0:1,
@@ -515,7 +516,7 @@ const enemies=[
  // Arquivo Rasurado — combinação de grupo, velocidade e defesa.
  createEnemy("eraser-2","eraser",4990,532,{hp:2,dir:1,minX:4810,maxX:5220}),
  createEnemy("hollow-1","hollow",5450,494,{hp:4,dir:-1,minX:5280,maxX:5600}),
- createEnemy("hound-1","ashHound",5750,544,{hp:3,dir:1,minX:5630,maxX:5890}),
+ createEnemy("hound-1","ashHound",5715,439,{hp:3,dir:1,minX:5665,maxX:5790}),
 
  // Ponte dos Ninguém — ameaça aérea enquanto o jogador plataforma.
  createEnemy("crow-1","crow",6690,315,{hp:2,dir:1,minX:6380,maxX:7190,minY:250,maxY:400}),
@@ -1199,7 +1200,7 @@ const PLATFORM_VISUAL_FOOT_OFFSETS=Object.freeze({
 });
 const ENEMY_VISUAL_FOOT_EXTRA=Object.freeze({
  eraser:1,
- ashHound:2,
+ ashHound:0,
  hollow:3
 });
 function supportPlatformAt(cx,bottomY,tolerance=34){
@@ -2285,6 +2286,22 @@ const ASH_HOUND_SPRITE_INDEX=Object.freeze({
  hit:[8],
  dissolve:[9]
 });
+
+// Os PNGs foram gerados individualmente e cada pose ocupa uma região diferente
+// do canvas. cx centraliza a massa do animal; foot alinha as patas à plataforma.
+// Isso remove o "salto" vertical/horizontal entre frames sem recortar a arte.
+const ASH_HOUND_FRAME_META=Object.freeze([
+ Object.freeze({cx:.523,foot:.806}),
+ Object.freeze({cx:.544,foot:.852}),
+ Object.freeze({cx:.533,foot:.813}),
+ Object.freeze({cx:.525,foot:.819}),
+ Object.freeze({cx:.545,foot:.804}),
+ Object.freeze({cx:.501,foot:.911}),
+ Object.freeze({cx:.526,foot:.848}),
+ Object.freeze({cx:.540,foot:.884}),
+ Object.freeze({cx:.531,foot:.928}),
+ Object.freeze({cx:.507,foot:.925})
+]);
 function ashHoundSpriteIndex(e){
  if(e.state==="dissolve")return 9;
  if(e.state==="hit"||e.hitFlash>0)return 8;
@@ -2297,8 +2314,8 @@ function ashHoundSpriteIndex(e){
  }
  const seq=ASH_HOUND_SPRITE_INDEX[e.state]||ASH_HOUND_SPRITE_INDEX.idle;
  if(seq.length===1)return seq[0];
- const fps=e.state==="chase"?10.5:(e.state==="patrol"?6.5:2.4);
- return seq[Math.floor((p.anim+e.spawnX*.001)*fps)%seq.length];
+ const clock=e.animClock||0;
+ return seq[Math.floor(clock)%seq.length];
 }
 function drawAshHoundSprite(e){
  const moving=e.state==="patrol"||e.state==="chase";
@@ -2308,26 +2325,27 @@ function drawAshHoundSprite(e){
  const baseIm=ashHoundGameplaySprites[baseIndex];
  if(!baseIm)return false;
 
- const baseWidth=e.state==="dissolve"?176:(attacking?184:(chasing?174:164));
- const bottom=e.h/2+12;
+ // O ponto de contato é exatamente o pé da hitbox. O offset visual da plataforma
+ // é aplicado fora desta função por drawEnemy().
+ const ground=e.h/2;
+ const baseWidth=e.state==="dissolve"?154:(attacking?162:(chasing?158:150));
  let bodyX=0,bodyY=0,rotation=0,scaleX=1,scaleY=1;
  let frames=[];
 
  const addFrame=(index,alpha=1)=>{
    const im=ashHoundGameplaySprites[index];
-   if(im&&alpha>.001)frames.push({im,alpha});
+   if(im&&alpha>.001)frames.push({im,index,alpha});
  };
 
  if(moving){
-   // Corrida em três poses. Cada pose permanece sólida e só cruza
-   // rapidamente para a próxima no fim do passo.
-   const speed=chasing?11.8:7.2;
-   const clock=(p.anim+e.spawnX*.001)*speed;
+   // O ciclo agora segue um relógio próprio do Cão e a velocidade física.
+   // A fusão ocupa só o fim do passo para não criar duas silhuetas sobrepostas.
+   const clock=e.animClock||0;
    const step=Math.floor(clock);
    const frac=clock-step;
    const current=2+(step%3);
    const next=2+((step+1)%3);
-   const transitionStart=.70;
+   const transitionStart=.90;
    if(frac<transitionStart){
      addFrame(current,1);
    }else{
@@ -2337,92 +2355,75 @@ function drawAshHoundSprite(e){
      addFrame(next,ease);
    }
    const gait=Math.sin(clock*Math.PI);
-   bodyY=-Math.abs(gait)*(chasing?2.8:2.0);
-   bodyX=Math.sin(clock*Math.PI*2)*(chasing?2.8:1.8);
-   rotation=Math.sin(clock*Math.PI*2)*(chasing?.018:.012);
-   scaleX=1+.025*Math.abs(gait);
-   scaleY=1-.018*Math.abs(gait);
+   bodyY=-Math.abs(gait)*(chasing?1.0:.65);
+   rotation=Math.sin(clock*Math.PI*2)*(chasing?.008:.005);
  }else if(attacking){
    const total=e.cfg.attackWindup+e.cfg.attackActive+e.cfg.attackRecover;
    const elapsed=Math.max(0,total-e.stateTimer);
 
    if(elapsed<e.cfg.attackWindup){
-     // Run/alert -> crouch de preparação.
      const t=Math.min(1,elapsed/e.cfg.attackWindup);
      const ease=t*t*(3-2*t);
      addFrame(1,1-ease);
      addFrame(5,ease);
-     bodyX=-10*ease;
-     bodyY=5*ease;
-     rotation=-.045*ease;
-     scaleX=1-.05*ease;
-     scaleY=1+.045*ease;
+     bodyX=-3*ease;
+     bodyY=1.2*ease;
+     rotation=-.018*ease;
    }else if(elapsed<e.cfg.attackWindup+e.cfg.attackActive){
-     // Bote real: windup -> lunge, com alongamento e avanço.
+     // O deslocamento principal já acontece em updateGroundEnemyState().
+     // Aqui só existe antecipação visual curta, evitando o antigo "teleporte duplo".
      const t=Math.min(1,(elapsed-e.cfg.attackWindup)/e.cfg.attackActive);
-     const ease=1-Math.pow(1-t,3);
-     const blend=Math.min(1,t/.24);
+     const blend=Math.min(1,t/.18);
      addFrame(5,1-blend);
      addFrame(6,blend);
-     bodyX=-10+34*ease;
-     bodyY=-5*Math.sin(t*Math.PI);
-     rotation=.055*ease;
-     scaleX=1+.09*Math.sin(t*Math.PI);
-     scaleY=1-.055*Math.sin(t*Math.PI);
+     bodyX=5*t;
+     bodyY=-1.2*Math.sin(t*Math.PI);
+     rotation=.018*t;
    }else{
-     // Aterrissagem: lunge -> recover -> idle. Sem segurar recover parado.
      const t=Math.min(1,(elapsed-e.cfg.attackWindup-e.cfg.attackActive)/e.cfg.attackRecover);
-     if(t<.62){
-       const q=t/.62, ease=q*q*(3-2*q);
+     if(t<.58){
+       const q=t/.58,ease=q*q*(3-2*q);
        addFrame(6,1-ease);
        addFrame(7,ease);
      }else{
-       const q=(t-.62)/.38, ease=q*q*(3-2*q);
+       const q=(t-.58)/.42,ease=q*q*(3-2*q);
        addFrame(7,1-ease);
        addFrame(0,ease);
      }
-     bodyX=24*(1-t);
-     bodyY=Math.sin(t*Math.PI)*3.2;
-     rotation=.05*(1-t)-.02*Math.sin(t*Math.PI);
-     scaleX=1+.035*(1-t);
-     scaleY=1-.02*(1-t);
+     bodyX=4*(1-t);
+     bodyY=Math.sin(t*Math.PI)*.8;
+     rotation=.018*(1-t);
    }
  }else{
    addFrame(baseIndex,1);
    if(e.state==="idle"){
-     bodyY=Math.sin(p.anim*3.0+e.spawnX*.01)*1.2;
-     rotation=Math.sin(p.anim*1.8+e.spawnX*.007)*.009;
+     bodyY=Math.sin((e.animClock||0)*Math.PI)*.45;
+     rotation=Math.sin((e.animClock||0)*1.5)*.004;
    }else if(e.state==="alert"){
-     bodyY=2;
-     rotation=-.018;
-     scaleX=.98;
-     scaleY=1.025;
+     bodyY=.5;
+     rotation=-.006;
    }else if(e.state==="hit"){
-     bodyX=-6;
-     bodyY=-2;
-     rotation=-.035;
+     bodyX=-2;
+     bodyY=-1;
+     rotation=-.012;
    }
  }
 
- // A Luz interrompe visualmente qualquer ação e mostra o frame específico.
  if(e.hitFlash>0&&e.state!=="dissolve"){
    frames=[];
    addFrame(8,1);
-   bodyX=-6;
-   bodyY=-3;
-   rotation=-.035;
-   scaleX=.97;
-   scaleY=1.035;
+   bodyX=-2;bodyY=-1.5;rotation=-.012;
  }
 
  const drawFrame=(fr,alphaMul=1,composite=null)=>{
    const im=fr.im;
    const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
    if(!iw||!ih)return;
+   const meta=ASH_HOUND_FRAME_META[fr.index]||ASH_HOUND_FRAME_META[0];
    const w=baseWidth*scaleX;
    const h=ih*(w/iw)*scaleY;
-   const dx=-w/2;
-   const dy=bottom-h;
+   const dx=-w*meta.cx;
+   const dy=ground-h*meta.foot;
 
    ctx.save();
    ctx.globalAlpha=Math.max(0,Math.min(1,fr.alpha*alphaMul));
@@ -2437,7 +2438,7 @@ function drawAshHoundSprite(e){
  ctx.imageSmoothingEnabled=true;
  ctx.imageSmoothingQuality="high";
  ctx.shadowColor=e.hitFlash>0?"rgba(251,224,150,.98)":"rgba(0,0,0,.74)";
- ctx.shadowBlur=e.hitFlash>0?25:11;
+ ctx.shadowBlur=e.hitFlash>0?25:10;
 
  for(const fr of frames)drawFrame(fr,1);
 
@@ -2445,7 +2446,7 @@ function drawAshHoundSprite(e){
    ctx.save();
    ctx.shadowColor="rgba(250,215,126,.98)";
    ctx.shadowBlur=28;
-   for(const fr of frames)drawFrame(fr,Math.min(.30,e.hitFlash*1.25),"screen");
+   for(const fr of frames)drawFrame(fr,Math.min(.28,e.hitFlash*1.25),"screen");
    ctx.restore();
  }
  ctx.restore();
@@ -4270,6 +4271,13 @@ function updateEnemyState(e,dt,pc){
  e.attackCooldown=Math.max(0,e.attackCooldown-dt);
  e.hitFlash=Math.max(0,e.hitFlash-dt);
  e.exposedTimer=Math.max(0,e.exposedTimer-dt);
+
+ if(e.kind==="ashHound"){
+   const motion=Math.abs(e.vx||0);
+   const rate=e.state==="chase"?Math.max(7.2,motion/24):
+     (e.state==="patrol"?Math.max(4.4,motion/18):1.45);
+   e.animClock=(e.animClock||0)+dt*rate;
+ }
 
  if(e.state==="dead")return;
  if(e.state==="dissolve"){
