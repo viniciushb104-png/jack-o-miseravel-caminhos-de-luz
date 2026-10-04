@@ -1187,7 +1187,9 @@ function jackFrame(){
 }
 const PLATFORM_VISUAL_FOOT_OFFSETS=Object.freeze({
  "2a":6,
- "2b":7,
+ // Povoado sem Nomes: a superfície pintada da arte 2B fica mais baixa
+ // que a linha geométrica de colisão. Este offset alinha pés e sombras à pedra.
+ "2b":17,
  "2c":12,
  "2d":9,
  "2e":7,
