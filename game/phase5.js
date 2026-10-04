@@ -139,6 +139,26 @@ const atlas=new Image();atlas.src="../assets/game/phase1/sprites-hd/jack-atlas-h
 let atlasReady=false;atlas.onload=()=>atlasReady=true;
 const JA=window.JACK_ANIMATIONS||null;
 
+const PHASE5_BACKGROUND_FILES=Object.freeze({
+ return:"../assets/game/phase5/backgrounds/01-village-carnival/phase5-village-halloween-01.png",
+ houses:"../assets/game/phase5/backgrounds/01-village-carnival/phase5-village-carnival-02.png",
+ clock:"../assets/game/phase5/backgrounds/02-clocks-reflections/phase5-clock-reflection-01.png",
+ garden:"../assets/game/phase5/backgrounds/02-clocks-reflections/phase5-clock-reflection-03.png",
+ city:"../assets/game/phase5/backgrounds/01-village-carnival/phase5-village-carnival-03.png",
+ promise:"../assets/game/phase5/backgrounds/02-clocks-reflections/phase5-clock-reflection-02.png",
+ final:"../assets/game/phase5/backgrounds/03-boss-mirror-hall/phase5-boss-mirror-hall-01.png"
+});
+const phase5BackgroundImgs={};
+const phase5BackgroundReady={};
+Object.entries(PHASE5_BACKGROUND_FILES).forEach(([key,src])=>{
+ const im=new Image();
+ phase5BackgroundImgs[key]=im;
+ phase5BackgroundReady[key]=false;
+ im.onload=()=>{phase5BackgroundReady[key]=true};
+ im.onerror=()=>{phase5BackgroundReady[key]=false};
+ im.src=src+"?v=phase5-bg-1";
+});
+
 const ambient=new Audio("../assets/audio/phase4/phase4-road-continues-finale.mp3?v=1");
 ambient.loop=true;ambient.preload="metadata";ambient.volume=.38;
 let musicOn=localStorage.getItem("jack-phase5-music-muted")!=="1";
@@ -569,8 +589,39 @@ function update(dt){
  syncHud();save();
 }
 
+function drawBackgroundCover(im,alpha=1,pan=0,zoom=1.04){
+ if(!im||!im.complete||!(im.naturalWidth||im.width))return false;
+ const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+ const scale=Math.max(W/iw,H/ih)*zoom;
+ const dw=iw*scale,dh=ih*scale;
+ const overflowX=Math.max(0,dw-W),overflowY=Math.max(0,dh-H);
+ const clamped=Math.max(0,Math.min(1,pan));
+ const dx=-overflowX*clamped;
+ const dy=-overflowY*.48;
+ ctx.save();
+ ctx.globalAlpha=Math.max(0,Math.min(1,alpha));
+ ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";
+ ctx.drawImage(im,dx,dy,dw,dh);
+ ctx.restore();
+ return true;
+}
+function phase5BackgroundState(){
+ const px=p.x+p.w/2;
+ const idx=Math.max(0,Math.min(SECTIONS.length-1,sectionFor(px)));
+ const sec=SECTIONS[idx],span=Math.max(1,sec.end-sec.start);
+ const progress=Math.max(0,Math.min(1,(px-sec.start)/span));
+ const transitionStart=.86;
+ let next=null,blend=0;
+ if(idx<SECTIONS.length-1&&progress>transitionStart){
+   next=SECTIONS[idx+1];
+   blend=(progress-transitionStart)/(1-transitionStart);
+   blend=blend*blend*(3-2*blend);
+ }
+ return {sec,next,progress,blend};
+}
 function drawBackdrop(){
- const sec=currentSection().id;
+ const bg=phase5BackgroundState();
+ const sec=bg.sec.id;
  const palettes={
   return:["#071015","#152027","#302c2c"],
   houses:["#0a0e12","#1d1820","#3a2823"],
@@ -583,16 +634,44 @@ function drawBackdrop(){
  const pal=palettes[sec]||palettes.return;
  const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,pal[0]);g.addColorStop(.6,pal[1]);g.addColorStop(1,pal[2]);
  ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
- ctx.save();ctx.globalAlpha=.18;ctx.fillStyle="#d8c27c";
- for(let i=0;i<28;i++){const x=(i*173-cam*.12)%1380,y=80+(i*97)%360;ctx.fillRect(x,y,2,2)}
- ctx.restore();
+
+ const primary=phase5BackgroundImgs[sec];
+ const basePan=.16+bg.progress*.68;
+ const drew=drawBackgroundCover(primary,1,basePan,sec==="final"?1.02:1.055);
+ if(bg.next&&bg.blend>0){
+   const nextIm=phase5BackgroundImgs[bg.next.id];
+   drawBackgroundCover(nextIm,bg.blend,.12+bg.blend*.20,bg.next.id==="final"?1.02:1.055);
+ }
+
+ // Mantém Jack, inimigos e plataformas legíveis sobre cenários muito detalhados.
+ const floorShade=ctx.createLinearGradient(0,300,0,H);
+ floorShade.addColorStop(0,"rgba(3,4,5,0)");
+ floorShade.addColorStop(.52,sec==="final"?"rgba(3,3,4,.08)":"rgba(3,4,5,.05)");
+ floorShade.addColorStop(1,sec==="final"?"rgba(3,3,4,.42)":"rgba(3,4,5,.34)");
+ ctx.fillStyle=floorShade;ctx.fillRect(0,0,W,H);
+
+ // Encruzilhada: o panorama surreal permanece, mas recua para a revelação da promessa.
+ if(sec==="promise"){
+   ctx.fillStyle="rgba(8,8,9,.18)";ctx.fillRect(0,0,W,H);
+ }
+
+ // Vignette cinematográfica bem leve.
+ const vg=ctx.createRadialGradient(W*.5,H*.48,H*.18,W*.5,H*.48,W*.72);
+ vg.addColorStop(.58,"rgba(0,0,0,0)");vg.addColorStop(1,"rgba(0,0,0,.31)");
+ ctx.fillStyle=vg;ctx.fillRect(0,0,W,H);
+
+ if(!drew){
+   ctx.save();ctx.globalAlpha=.18;ctx.fillStyle="#d8c27c";
+   for(let i=0;i<28;i++){const x=(i*173-cam*.12)%1380,y=80+(i*97)%360;ctx.fillRect(x,y,2,2)}
+   ctx.restore();
+ }
 }
 function drawGround(){
  ctx.save();ctx.translate(-cam,0);
  for(const r of GROUND){
   const x=r[0],w=r[1]-r[0];
-  ctx.fillStyle="#161713";ctx.fillRect(x,FLOOR,w,140);
-  ctx.fillStyle="#544a38";ctx.fillRect(x,FLOOR,w,5);
+  ctx.fillStyle="rgba(18,18,16,.88)";ctx.fillRect(x,FLOOR,w,140);
+  ctx.fillStyle="rgba(139,119,82,.92)";ctx.fillRect(x,FLOOR,w,5);
   ctx.strokeStyle="rgba(10,8,6,.65)";ctx.lineWidth=3;
   for(let xx=x+60;xx<x+w;xx+=120){ctx.beginPath();ctx.moveTo(xx,FLOOR+8);ctx.lineTo(xx-24,FLOOR+48);ctx.stroke()}
  }
@@ -628,11 +707,8 @@ function drawSectionProps(){
   if(roadBlockedSeen&&!returnOpened){ctx.fillStyle="#d4bc72";ctx.font="700 20px Georgia";ctx.fillText("←",260,420)}
  }
  if(sec==="houses"){
-  for(let i=0;i<5;i++){
-   const x=1760+i*350;ctx.fillStyle="#171418";ctx.fillRect(x,315,240,275);
-   ctx.fillStyle="rgba(237,185,80,.18)";ctx.fillRect(x+42,360,56,72);ctx.fillRect(x+142,360,56,72);
-   ctx.fillStyle="#09090a";ctx.fillRect(x+92,470,58,120);
-  }
+  // As casas agora pertencem ao panorama final; em primeiro plano ficam apenas
+  // as cinco lanternas que fazem parte do enigma.
   housesLamps.forEach((l,i)=>{
    ctx.fillStyle="#332718";ctx.fillRect(l.x-4,500,8,90);
    ctx.fillStyle=l.on?(l.type==="path"?"#e7c064":"#e28b49"):"#302a24";
@@ -658,7 +734,8 @@ function drawSectionProps(){
   [{x:5730,targetX:5840},{x:6710,targetX:6880}].forEach(m=>drawMirror({x:m.x,y:520,targetX:m.targetX,targetY:520},false));
  }
  if(sec==="city"){
-  for(let x=7420,i=0;x<9460;x+=280,i++){ctx.fillStyle="#17191b";ctx.fillRect(x,300,210,290);ctx.strokeStyle="#6f6656";ctx.strokeRect(x+22,335,166,55);ctx.fillStyle="#84755f";ctx.font="11px Georgia";ctx.textAlign="center";ctx.fillText(i%2?"RUA DE ALGUÉM":"NOME REGISTRADO",x+105,368)}
+  // Fachadas, parque e circo já estão no cenário final; mantemos apenas
+  // as quatro marcas jogáveis da identidade de Jack.
   cityMarks.forEach((m,i)=>{
    ctx.strokeStyle=cityLit.has(i)?"#e3c66e":"#5a5144";ctx.lineWidth=3;ctx.strokeRect(m.x-62,520,124,46);
    ctx.fillStyle=cityLit.has(i)?"#ead58d":"#786d58";ctx.font="700 11px Georgia";ctx.textAlign="center";ctx.fillText(m.label,m.x,548);
@@ -686,7 +763,13 @@ function drawMirror(m,charged){
 }
 function drawBossScene(){
  const bx=11740;
- ctx.fillStyle="rgba(0,0,0,.5)";ctx.fillRect(10850,180,1750,410);
+ // A Sala de Espelhos é o próprio palco narrativo do boss.
+ // Apenas um véu sutil concentra a leitura no centro sem esconder a arte.
+ const veil=ctx.createLinearGradient(10850,0,12600,0);
+ veil.addColorStop(0,"rgba(0,0,0,.20)");
+ veil.addColorStop(.48,"rgba(0,0,0,.10)");
+ veil.addColorStop(1,"rgba(0,0,0,.22)");
+ ctx.fillStyle=veil;ctx.fillRect(10850,180,1750,410);
  if(!bossStarted)return;
  ctx.save();ctx.translate(bx,500);
  ctx.fillStyle=bossAct===3?"#1e1d1a":"#0b0b0c";ctx.shadowColor="rgba(0,0,0,.9)";ctx.shadowBlur=28;
