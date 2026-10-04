@@ -1282,6 +1282,13 @@ function supportPlatformAt(cx,bottomY,tolerance=34){
 }
 function platformVisualFootOffset(q){
  if(!q)return 0;
+
+ // Ponte dos Ninguém — cabeceira inicial (6070..6430):
+ // a superfície pintada da peça 2E-01 fica mais baixa que a linha geométrica.
+ // Corrigimos apenas o baseline VISUAL, como na ponte da Fase 1.
+ // A colisão permanece em q.y, portanto salto e física não mudam.
+ if(q.artGroup==="2e"&&q.x===6070&&q.h>=100)return 16;
+
  return PLATFORM_VISUAL_FOOT_OFFSETS[q.artGroup]||0;
 }
 function visualFootOffsetAt(cx,bottomY,tolerance=34){
