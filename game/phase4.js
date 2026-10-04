@@ -134,7 +134,7 @@ let saveData=null;if(journeyMode&&!replayMode){try{saveData=JSON.parse(localStor
 
 const input={left:false,right:false,down:false,run:false,jump:false};
 let running=false,last=performance.now(),cam=0,section=-1,jack=null,keyImg=null,jackFrameOverrides={};
-let phase4SignImgs=Array(4).fill(null),signlessRoadPostImgs=Array(3).fill(null),eraserGameplaySprites=Array(10).fill(null),hollowGameplaySprites=Array(10).fill(null),ashHoundGameplaySprites=Array(10).fill(null),traceFootprintImgs=Array.from({length:3},()=>[null,null]),traceMemoryImgs=Array(3).fill(null),traceMemoryLoading=Array(3).fill(false),traceMemoryRetryAt=Array(3).fill(0),archiveEvidenceImgs=Array.from({length:3},()=>[null,null]),archivePropImgs=Array(6).fill(null),archiveFxImgs=Array(4).fill(null),checkpointOffImg=null,checkpointOnImg=null;
+let phase4SignImgs=Array(4).fill(null),signlessRoadPostImgs=Array(3).fill(null),eraserGameplaySprites=Array(10).fill(null),hollowGameplaySprites=Array(10).fill(null),ashHoundGameplaySprites=Array(10).fill(null),crowGameplaySprites=Array(10).fill(null),traceFootprintImgs=Array.from({length:3},()=>[null,null]),traceMemoryImgs=Array(3).fill(null),traceMemoryLoading=Array(3).fill(false),traceMemoryRetryAt=Array(3).fill(0),archiveEvidenceImgs=Array.from({length:3},()=>[null,null]),archivePropImgs=Array(6).fill(null),archiveFxImgs=Array(4).fill(null),bridgePlatformFxImgs=Array(5).fill(null),bridgeRegisterImgs=Array(4).fill(null),bridgeAtmosImgs=Array(6).fill(null),checkpointOffImg=null,checkpointOnImg=null;
 let bellNormalImg=null,bellGlowImg=null,memoryDoorImg=null;
 let nonexistentDoorImg=null,nonexistentDoorRevealFxImg=null,doorRevealFx=0;
 let idleTime=0,waitSitFrame=0,waitSitClock=0,waitSitActive=false,waitSitImages=[];
@@ -868,6 +868,59 @@ const ashHoundGameplayReady=Promise.allSettled(ashHoundGameplayFiles.map(src=>im
  return ashHoundGameplaySprites;
 });
 
+const crowGameplayFiles=[
+ "../assets/game/phase4/enemies/forgetting-crow/gameplay/phase4-forgetting-crow-01-hover-a.png",
+ "../assets/game/phase4/enemies/forgetting-crow/gameplay/phase4-forgetting-crow-02-hover-b.png",
+ "../assets/game/phase4/enemies/forgetting-crow/gameplay/phase4-forgetting-crow-03-flight-a.png",
+ "../assets/game/phase4/enemies/forgetting-crow/gameplay/phase4-forgetting-crow-04-flight-b.png",
+ "../assets/game/phase4/enemies/forgetting-crow/gameplay/phase4-forgetting-crow-05-alert.png",
+ "../assets/game/phase4/enemies/forgetting-crow/gameplay/phase4-forgetting-crow-06-dive-windup.png",
+ "../assets/game/phase4/enemies/forgetting-crow/gameplay/phase4-forgetting-crow-07-dive.png",
+ "../assets/game/phase4/enemies/forgetting-crow/gameplay/phase4-forgetting-crow-08-recover.png",
+ "../assets/game/phase4/enemies/forgetting-crow/gameplay/phase4-forgetting-crow-09-light-hit.png",
+ "../assets/game/phase4/enemies/forgetting-crow/gameplay/phase4-forgetting-crow-10-dissolve.png"
+];
+const crowGameplayReady=Promise.allSettled(crowGameplayFiles.map(src=>img(src))).then(rs=>{
+ crowGameplaySprites=rs.map(r=>r.status==="fulfilled"?r.value:null);
+ return crowGameplaySprites;
+});
+
+const bridgePlatformFxFiles=[
+ "../assets/game/phase4/puzzles/nobody-bridge/fx/platform-memory/bridge-forget-fx-01.png",
+ "../assets/game/phase4/puzzles/nobody-bridge/fx/platform-memory/bridge-forget-fx-02.png",
+ "../assets/game/phase4/puzzles/nobody-bridge/fx/platform-memory/bridge-forget-fx-03.png",
+ "../assets/game/phase4/puzzles/nobody-bridge/fx/platform-memory/bridge-restore-light-fx.png",
+ "../assets/game/phase4/puzzles/nobody-bridge/fx/platform-memory/bridge-stable-glow-fx.png"
+];
+const bridgePlatformFxReady=Promise.allSettled(bridgePlatformFxFiles.map(src=>img(src))).then(rs=>{
+ bridgePlatformFxImgs=rs.map(r=>r.status==="fulfilled"?r.value:null);
+ return bridgePlatformFxImgs;
+});
+
+const bridgeRegisterFiles=[
+ "../assets/game/phase4/puzzles/nobody-bridge/register/bridge-register-dormant.png",
+ "../assets/game/phase4/puzzles/nobody-bridge/register/bridge-register-awake.png",
+ "../assets/game/phase4/puzzles/nobody-bridge/register/bridge-register-j-glitch.png",
+ "../assets/game/phase4/puzzles/nobody-bridge/register/bridge-register-erased.png"
+];
+const bridgeRegisterReady=Promise.allSettled(bridgeRegisterFiles.map(src=>img(src))).then(rs=>{
+ bridgeRegisterImgs=rs.map(r=>r.status==="fulfilled"?r.value:null);
+ return bridgeRegisterImgs;
+});
+
+const bridgeAtmosFiles=[
+ "../assets/game/phase4/puzzles/nobody-bridge/atmosphere/bridge-atmo-fog-bank.png",
+ "../assets/game/phase4/puzzles/nobody-bridge/atmosphere/bridge-atmo-fog-column.png",
+ "../assets/game/phase4/puzzles/nobody-bridge/atmosphere/bridge-atmo-broken-railing.png",
+ "../assets/game/phase4/puzzles/nobody-bridge/atmosphere/bridge-atmo-hanging-chains.png",
+ "../assets/game/phase4/puzzles/nobody-bridge/atmosphere/bridge-atmo-ruined-pillar.png",
+ "../assets/game/phase4/puzzles/nobody-bridge/atmosphere/bridge-atmo-collapse-fragments.png"
+];
+const bridgeAtmosReady=Promise.allSettled(bridgeAtmosFiles.map(src=>img(src))).then(rs=>{
+ bridgeAtmosImgs=rs.map(r=>r.status==="fulfilled"?r.value:null);
+ return bridgeAtmosImgs;
+});
+
 const traceFootprintFiles=[
  "../assets/game/phase4/puzzles/footprint-field/traces/trace-01-dormant.png",
  "../assets/game/phase4/puzzles/footprint-field/traces/trace-01-revealed.png",
@@ -999,7 +1052,7 @@ const nonexistentDoorReady=Promise.allSettled([
 });
 
 const phase4PropReady=Promise.allSettled([
- phase4SignReady,signlessRoadPostReady,eraserGameplayReady,hollowGameplayReady,ashHoundGameplayReady,traceFootprintReady,traceMemoryReady,archiveEvidenceReady,archivePropReady,archiveFxReady,checkpointArtReady,bellArtReady,memoryDoorReady,nonexistentDoorReady
+ phase4SignReady,signlessRoadPostReady,eraserGameplayReady,hollowGameplayReady,ashHoundGameplayReady,crowGameplayReady,bridgePlatformFxReady,bridgeRegisterReady,bridgeAtmosReady,traceFootprintReady,traceMemoryReady,archiveEvidenceReady,archivePropReady,archiveFxReady,checkpointArtReady,bellArtReady,memoryDoorReady,nonexistentDoorReady
 ]);
 
 const jackPortraitFiles=["jack-00-neutral.png","jack-01-serious.png","jack-02-smirk.png","jack-03-surprised.png","jack-04-determined.png","jack-05-resolved.png"];
@@ -1304,6 +1357,51 @@ function stabilizeBridgePlatforms(pc,pcy){
  if(count){memoryPulse=Math.max(memoryPulse,.9)}
  return count;
 }
+function drawBridgePlatformImage(im,q,targetW,alpha=1,screen=false,yOffset=0){
+ if(!im)return false;
+ const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+ if(!iw||!ih)return false;
+ const w=targetW,h=ih*(w/iw);
+ const cx=q.x+q.w/2,baseY=q.y+q.h/2+yOffset;
+ ctx.save();
+ ctx.globalAlpha=Math.max(0,Math.min(1,alpha));
+ if(screen)ctx.globalCompositeOperation="screen";
+ ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";
+ ctx.drawImage(im,cx-w/2,baseY-h/2,w,h);
+ ctx.restore();
+ return true;
+}
+function drawBridgePlatformFx(q,platformAlpha){
+ if(!q?.unstable)return false;
+
+ // Luz de Jack: primeiro reconstrução intensa, depois memória dourada estável.
+ if((q.lightTimer||0)>0){
+   const restore=Math.max(0,Math.min(1,((q.lightTimer||0)-3.45)/.90));
+   const stable=bridgePlatformFxImgs[4];
+   if(stable)drawBridgePlatformImage(stable,q,q.w*1.43,.26+.16*Math.sin(p.anim*4.1+q.x*.01),true,-4);
+   const restoreIm=bridgePlatformFxImgs[3];
+   if(restoreIm&&restore>0){
+     ctx.save();
+     ctx.shadowColor="rgba(255,220,130,.92)";ctx.shadowBlur=22;
+     drawBridgePlatformImage(restoreIm,q,q.w*1.62,restore*.72,true,-8);
+     ctx.restore();
+   }
+   return true;
+ }
+
+ const ph=bridgePlatformPhase(q);
+ if(ph<3.02)return false;
+ let index=0,amount=0;
+ if(ph<3.48){index=0;amount=(ph-3.02)/.46}
+ else if(ph<3.86){index=1;amount=(ph-3.48)/.38}
+ else{index=2;amount=Math.min(1,(ph-3.86)/.38+.46)}
+ const im=bridgePlatformFxImgs[index];
+ if(!im)return false;
+ const alpha=Math.min(.78,.28+amount*.48+(1-platformAlpha)*.18);
+ drawBridgePlatformImage(im,q,q.w*(1.50+index*.08),alpha,false,-7-index*3);
+ return true;
+}
+
 function drawRoad(){
  warmPlatformArt(p.x);
  ctx.save();ctx.translate(-cam,0);
@@ -1346,15 +1444,8 @@ function drawRoad(){
      ctx.restore();
    }
 
-   // Gameplay readability stays above the sprite art.
-   if(!q.broken&&q.kind==="bridge"&&q.unstable){
-     ctx.save();
-     ctx.globalAlpha=Math.min(1,alpha+.15);
-     ctx.setLineDash([7,7]);
-     ctx.strokeStyle=(q.lightTimer||0)>0?"rgba(239,205,119,.88)":"rgba(222,214,191,.48)";
-     ctx.lineWidth=2;ctx.strokeRect(q.x+3,q.y+3,q.w-6,q.h-6);
-     ctx.setLineDash([]);ctx.restore();
-   }
+   // Arte final da Ponte: o apagamento e a reconstrução substituem o antigo retângulo tracejado.
+   if(!q.broken&&q.kind==="bridge"&&q.unstable)drawBridgePlatformFx(q,alpha);
  }
  ctx.restore();
 }
@@ -2577,6 +2668,110 @@ function drawHollowEnemy(e){
    ctx.fillStyle="rgba(4,5,5,.92)";ctx.beginPath();ctx.ellipse(0,1,14,28,0,0,Math.PI*2);ctx.fill();
  }
 }
+const CROW_SPRITE_INDEX=Object.freeze({
+ idle:[0,1],
+ patrol:[2,3],
+ alert:[4],
+ chase:[2,3],
+ hit:[8],
+ dissolve:[9]
+});
+function crowSpriteIndex(e){
+ if(e.state==="dissolve")return 9;
+ if(e.state==="hit"||e.hitFlash>0)return 8;
+ if(e.state==="attack"){
+   const total=e.cfg.attackWindup+e.cfg.attackActive+e.cfg.attackRecover;
+   const elapsed=Math.max(0,total-e.stateTimer);
+   if(elapsed<e.cfg.attackWindup)return 5;
+   if(elapsed<e.cfg.attackWindup+e.cfg.attackActive)return 6;
+   return 7;
+ }
+ const seq=CROW_SPRITE_INDEX[e.state]||CROW_SPRITE_INDEX.idle;
+ if(seq.length===1)return seq[0];
+ const fps=e.state==="chase"?7.8:(e.state==="patrol"?5.8:2.4);
+ return seq[Math.floor((p.anim+e.spawnX*.001)*fps)%seq.length];
+}
+function drawCrowSprite(e){
+ const moving=e.state==="patrol"||e.state==="chase";
+ const attacking=e.state==="attack";
+ const baseIndex=crowSpriteIndex(e);
+ const baseIm=crowGameplaySprites[baseIndex];
+ if(!baseIm)return false;
+
+ let frames=[],bodyX=0,bodyY=0,rot=0,scaleX=1,scaleY=1;
+ const add=(idx,a=1)=>{const im=crowGameplaySprites[idx];if(im&&a>.001)frames.push({im,alpha:a})};
+
+ if(moving){
+   const speed=e.state==="chase"?8.4:6.2;
+   const clock=(p.anim+e.spawnX*.001)*speed;
+   const step=Math.floor(clock),frac=clock-step,current=(step&1)?3:2,next=current===2?3:2;
+   if(frac<.72)add(current,1);
+   else{
+     const t=(frac-.72)/.28,ease=t*t*(3-2*t);
+     add(current,1-ease);add(next,ease);
+   }
+   bodyY=Math.sin(clock*Math.PI)*3.2;
+   rot=Math.sin(clock*Math.PI*2)*.018;
+ }else if(attacking){
+   const total=e.cfg.attackWindup+e.cfg.attackActive+e.cfg.attackRecover;
+   const elapsed=Math.max(0,total-e.stateTimer);
+   if(elapsed<e.cfg.attackWindup){
+     const t=Math.min(1,elapsed/e.cfg.attackWindup),ease=t*t*(3-2*t);
+     add(4,1-ease);add(5,ease);
+     bodyY=-8*ease;bodyX=-7*ease;rot=-.06*ease;
+     scaleX=1-.035*ease;scaleY=1+.035*ease;
+   }else if(elapsed<e.cfg.attackWindup+e.cfg.attackActive){
+     const t=Math.min(1,(elapsed-e.cfg.attackWindup)/e.cfg.attackActive);
+     const blend=Math.min(1,t/.22);
+     add(5,1-blend);add(6,blend);
+     bodyX=15*t;bodyY=8*t;rot=.12*t;
+     scaleX=1+.05*Math.sin(t*Math.PI);scaleY=1-.035*Math.sin(t*Math.PI);
+   }else{
+     const t=Math.min(1,(elapsed-e.cfg.attackWindup-e.cfg.attackActive)/e.cfg.attackRecover);
+     if(t<.58){
+       const q=t/.58,ease=q*q*(3-2*q);
+       add(6,1-ease);add(7,ease);
+     }else{
+       const q=(t-.58)/.42,ease=q*q*(3-2*q);
+       add(7,1-ease);add(0,ease);
+     }
+     bodyX=15*(1-t);bodyY=6*(1-t);rot=.12*(1-t);
+   }
+ }else{
+   add(baseIndex,1);
+   if(e.state==="idle")bodyY=Math.sin(p.anim*2.6+e.spawnX*.01)*2.2;
+   if(e.state==="alert"){bodyY=-4;scaleX=1.02;scaleY=1.02}
+ }
+
+ if(e.hitFlash>0&&e.state!=="dissolve"){
+   frames=[];add(8,1);bodyX=-5;bodyY=-4;rot=-.05;scaleX=.98;scaleY=1.02;
+ }
+
+ const width=e.state==="dissolve"?166:(attacking?178:(e.state==="chase"?170:158));
+ const drawFrame=(fr,alphaMul=1,screen=false)=>{
+   const im=fr.im,iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+   if(!iw||!ih)return;
+   const w=width*scaleX,h=ih*(w/iw)*scaleY;
+   ctx.save();
+   ctx.globalAlpha=Math.max(0,Math.min(1,fr.alpha*alphaMul));
+   if(screen)ctx.globalCompositeOperation="screen";
+   ctx.drawImage(im,-w/2,-h/2,w,h);
+   ctx.restore();
+ };
+
+ ctx.save();
+ ctx.translate(bodyX,bodyY);ctx.rotate(rot);
+ ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";
+ ctx.shadowColor=e.hitFlash>0?"rgba(249,221,145,.96)":"rgba(0,0,0,.72)";
+ ctx.shadowBlur=e.hitFlash>0?24:10;
+ for(const fr of frames)drawFrame(fr,1,false);
+ if(e.hitFlash>0){
+   ctx.shadowColor="rgba(255,220,128,.98)";ctx.shadowBlur=27;
+   for(const fr of frames)drawFrame(fr,Math.min(.28,e.hitFlash*1.2),true);
+ }
+ ctx.restore();
+ return true;
+}
 function drawCrowEnemy(e){
  const flap=Math.sin(p.anim*(e.state==="attack"?19:11)+e.spawnX)*13;
  ctx.shadowColor=e.hitFlash>0?"rgba(247,221,149,.9)":"rgba(0,0,0,.75)";
@@ -2627,7 +2822,7 @@ function drawEnemy(e){
    ctx.beginPath();ctx.moveTo(e.w*.25,-22);ctx.lineTo(e.w*.82,0);ctx.lineTo(e.w*.25,22);ctx.closePath();ctx.fill();
  }
 
- let hollowSpriteDrawn=false,ashHoundSpriteDrawn=false;
+ let hollowSpriteDrawn=false,ashHoundSpriteDrawn=false,crowSpriteDrawn=false;
  if(e.kind==="ashHound"){
    ashHoundSpriteDrawn=drawAshHoundSprite(e);
    if(!ashHoundSpriteDrawn)drawAshHoundEnemy(e);
@@ -2636,15 +2831,18 @@ function drawEnemy(e){
    hollowSpriteDrawn=drawHollowSprite(e);
    if(!hollowSpriteDrawn)drawHollowEnemy(e);
  }
- else if(e.kind==="crow")drawCrowEnemy(e);
+ else if(e.kind==="crow"){
+   crowSpriteDrawn=drawCrowSprite(e);
+   if(!crowSpriteDrawn)drawCrowEnemy(e);
+ }
  else if(!drawEraserSprite(e))drawEraserEnemyFallback(e);
 
- if(state==="dissolve"&&!((e.kind==="hollow"&&hollowSpriteDrawn)||(e.kind==="ashHound"&&ashHoundSpriteDrawn)))drawEnemyDissolve(e);
+ if(state==="dissolve"&&!((e.kind==="hollow"&&hollowSpriteDrawn)||(e.kind==="ashHound"&&ashHoundSpriteDrawn)||(e.kind==="crow"&&crowSpriteDrawn)))drawEnemyDissolve(e);
  ctx.restore();
 
  if(state!=="dissolve"){
    ctx.save();ctx.textAlign="center";
-   const enemyLabelY=e.kind==="eraser"?visualY-108:(e.kind==="hollow"?visualY-136:(e.kind==="ashHound"?visualY-104:visualY-14));
+   const enemyLabelY=e.kind==="eraser"?visualY-108:(e.kind==="hollow"?visualY-136:(e.kind==="ashHound"?visualY-104:(e.kind==="crow"?visualY-102:visualY-14)));
    ctx.fillStyle="#b9aa89";ctx.font="700 9px Georgia";ctx.fillText(e.label,ex+e.w/2,enemyLabelY);
    const stateLabel={
      idle:"à espreita",patrol:"patrulha",alert:"percebeu Jack",
@@ -2656,7 +2854,7 @@ function drawEnemy(e){
      ctx.fillStyle="#ddc576";ctx.font="700 8px Georgia";ctx.fillText("EXPOSTO",ex+e.w/2,visualY+e.h+14);
    }
    if(e.hp<e.maxHp){
-     const bw=46,bx=ex+e.w/2-bw/2,by=(e.kind==="eraser"||e.kind==="hollow"||e.kind==="ashHound")?enemyLabelY-11:visualY-29;
+     const bw=46,bx=ex+e.w/2-bw/2,by=(e.kind==="eraser"||e.kind==="hollow"||e.kind==="ashHound"||e.kind==="crow")?enemyLabelY-11:visualY-29;
      ctx.fillStyle="rgba(0,0,0,.55)";ctx.fillRect(bx,by,bw,4);
      ctx.fillStyle="#d6b968";ctx.fillRect(bx,by,bw*(e.hp/e.maxHp),4);
    }
@@ -2825,56 +3023,84 @@ function drawArchiveEvidence(){
  ctx.restore();
 }
 
-function drawNobodyBridgeFog(){
- if(!bridgeFearPlayed)return;
+function drawBridgeAtmosAsset(im,cx,bottomY,targetW,alpha=.7,flip=false,screen=false){
+ if(!im)return null;
+ const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+ if(!iw||!ih)return null;
+ const w=targetW,h=ih*(w/iw),x=cx-w/2,y=bottomY-h;
+ ctx.save();
+ ctx.globalAlpha=alpha;
+ if(screen)ctx.globalCompositeOperation="screen";
+ ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";
+ if(flip){ctx.translate(x+w,0);ctx.scale(-1,1);ctx.drawImage(im,0,y,w,h)}
+ else ctx.drawImage(im,x,y,w,h);
+ ctx.restore();
+ return {x,y,w,h};
+}
+function drawNobodyBridgeAtmosphere(){
+ if(!archiveSolved||cam+W<5980||cam>8030)return;
  ctx.save();ctx.translate(-cam,0);
 
- // Fog moves horizontally and thickens around the unstable bridge segments.
- for(let i=0;i<7;i++){
-   const y=405+i*24+Math.sin(p.anim*.8+i)*8;
-   const drift=((bridgeFogClock*42+i*91)%420)-210;
-   const g=ctx.createLinearGradient(6200+drift,y,7870+drift,y);
-   g.addColorStop(0,"rgba(184,187,177,0)");
-   g.addColorStop(.22,"rgba(184,187,177,.08)");
-   g.addColorStop(.6,"rgba(184,187,177,.16)");
-   g.addColorStop(1,"rgba(184,187,177,0)");
-   ctx.fillStyle=g;ctx.fillRect(6100,y,1800,30);
+ // Arquitetura quebrada reforça a altura sem alterar colisão.
+ drawBridgeAtmosAsset(bridgeAtmosImgs[4],6335,620,205,.54,false,false);
+ drawBridgeAtmosAsset(bridgeAtmosImgs[2],6575,526,285,.58,false,false);
+ drawBridgeAtmosAsset(bridgeAtmosImgs[3],7165,570,235,.54,false,false);
+ drawBridgeAtmosAsset(bridgeAtmosImgs[4],7475,620,178,.38,true,false);
+ drawBridgeAtmosAsset(bridgeAtmosImgs[5],7740,575,320,.34,false,false);
+
+ ctx.restore();
+}
+function drawNobodyBridgeFog(){
+ if(!bridgeFearPlayed||cam+W<6000||cam>8020)return;
+ ctx.save();ctx.translate(-cam,0);
+
+ // Névoa final em camadas. Pequeno deslocamento mantém a ponte viva sem parecer um filtro retangular.
+ const drift=Math.sin(bridgeFogClock*.42)*42;
+ const bank=bridgeAtmosImgs[0],column=bridgeAtmosImgs[1];
+ drawBridgeAtmosAsset(bank,6660+drift,645,690,.34,false,false);
+ drawBridgeAtmosAsset(bank,7480-drift*.55,630,640,.28,true,false);
+ drawBridgeAtmosAsset(column,6960+Math.sin(bridgeFogClock*.31)*24,650,240,.24,false,false);
+ drawBridgeAtmosAsset(column,7665-Math.sin(bridgeFogClock*.27)*18,645,210,.18,true,false);
+
+ // As plataformas prestes a desaparecer recebem apenas uma bruma localizada.
+ for(const q of platforms){
+   if(!q.unstable||(q.lightTimer||0)>0)continue;
+   const fade=1-bridgePlatformAlpha(q);
+   if(fade<=.06)continue;
+   if(bank)drawBridgeAtmosAsset(bank,q.x+q.w/2,q.y+56,q.w*1.72,Math.min(.34,.10+fade*.28),q.bridgeId==="bridge-b",false);
  }
 
- for(const q of platforms){
-   if(!q.unstable)continue;
-   const a=1-bridgePlatformAlpha(q);
-   if(a<=.08)continue;
-   ctx.fillStyle="rgba(203,205,195,"+Math.min(.34,a*.38)+")";
-   ctx.fillRect(q.x-24,q.y-20,q.w+48,55);
- }
  ctx.restore();
 }
 function drawBridgeIdentityPlate(){
- if(!bridgeCrossedPlayed&&!bridgeNameGlitchPlayed)return;
+ if(!bridgeFearPlayed)return;
  const x=7830,ground=590;
- const im=bridgeNameGlitchPlayed?(phase4SignImgs[2]||phase4SignImgs[1]):(phase4SignImgs[1]||phase4SignImgs[0]);
+ let index=0;
 
- ctx.save();ctx.translate(-cam,0);
- if(im){
-   if(bridgeNameGlitchPlayed){ctx.shadowColor="rgba(235,193,92,.58)";ctx.shadowBlur=18}
-   drawPropByHeight(im,x,ground,158,.96);
- }else{
-   ctx.strokeStyle="#5f533f";ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(x,ground);ctx.lineTo(x,512);ctx.stroke();
-   ctx.fillStyle="#302f2b";ctx.fillRect(x-68,479,136,42);
-   ctx.strokeStyle="rgba(143,119,77,.8)";ctx.lineWidth=2;ctx.strokeRect(x-68,479,136,42);
+ if(bridgeCrossedPlayed){
+   index=3; // a estrada falhou e apagou o registro
+ }else if(bridgeNameGlitchPlayed){
+   // Durante a conversa, o J aparece e desaparece sem texto de Canvas.
+   index=(Math.floor(p.anim*3.2)%3===1)?3:2;
+ }else if(pilgrimBridgeDone||p.x>7700){
+   index=1;
  }
 
- ctx.textAlign="center";
- if(bridgeNameGlitchPlayed){
-   ctx.fillStyle="rgba(246,208,112,.94)";ctx.font="700 11px Georgia";
-   ctx.shadowColor="rgba(234,181,58,.75)";ctx.shadowBlur=10;
-   const blink=Math.floor(p.anim*1.8)%3;
-   ctx.fillText(blink===0?"J...":(blink===1?"J":""),x,505);
+ const im=bridgeRegisterImgs[index];
+ ctx.save();ctx.translate(-cam,0);
+ if(im){
+   const glow=index===1||index===2;
+   if(glow){ctx.shadowColor="rgba(236,195,92,.68)";ctx.shadowBlur=index===2?24:15}
+   drawPropByHeight(im,x,ground,226,index===0?.82:.96,false);
  }else{
-   ctx.fillStyle="rgba(214,198,157,.72)";ctx.font="italic 9px Georgia";
-   ctx.shadowColor="rgba(0,0,0,.85)";ctx.shadowBlur=4;
-   ctx.fillText("QUEM PASSOU?",x,505);
+   // Fallback antigo só existe se os novos PNGs não carregarem.
+   ctx.strokeStyle="#5f533f";ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(x,ground);ctx.lineTo(x,498);ctx.stroke();
+   ctx.fillStyle="#302f2b";ctx.fillRect(x-68,466,136,48);
+   ctx.strokeStyle="rgba(143,119,77,.8)";ctx.lineWidth=2;ctx.strokeRect(x-68,466,136,48);
+   if(index===2){
+     ctx.fillStyle="rgba(246,208,112,.94)";ctx.font="700 14px Georgia";ctx.textAlign="center";
+     ctx.fillText("J...",x,496);
+   }
  }
  ctx.restore();
 }
@@ -3679,6 +3905,7 @@ function drawPhase4SkeletonLandmarks(){
 }
 
 function drawWorld(){
+ drawNobodyBridgeAtmosphere();
  drawRoad();
  if(!hasPhase4BackgroundAt(p.x))drawPhase4SkeletonLandmarks();
  drawSigns();drawDoor();drawArchiveEvidence();drawNobodyBridgeFog();drawBridgeIdentityPlate();drawStolenNamesPlaza();drawCollectorGlimpse();
