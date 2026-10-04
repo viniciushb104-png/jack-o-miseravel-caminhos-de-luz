@@ -252,18 +252,21 @@
   function syncJourneyUI() {
     if (!journey) return;
 
-    const active = journey.isActive();
-    const waitingForPhaseFive = active &&
-      journey.currentPhase() === 4 &&
-      localStorage.getItem('jack-phase4-complete') === 'yes' &&
-      journey.isPhaseUnlocked(5);
+    let active = journey.isActive();
+    if (active &&
+        journey.currentPhase() === 4 &&
+        localStorage.getItem('jack-phase4-complete') === 'yes' &&
+        journey.isPhaseUnlocked(5)) {
+      journey.advanceTo(5);
+      active = true;
+    }
     if (continueJourneyButton) {
-      continueJourneyButton.hidden = !active || waitingForPhaseFive;
-      if (active && !waitingForPhaseFive) {
+      continueJourneyButton.hidden = !active;
+      if (active) {
         continueJourneyButton.href = './game/' + journey.continueFile() + '?journey=1';
         const label = continueJourneyButton.querySelector('span:nth-child(2)');
         if (label) label.textContent = 'Continuar Jornada';
-      } else if (waitingForPhaseFive) {
+      } else {
         continueJourneyButton.removeAttribute('href');
       }
     }
@@ -324,15 +327,19 @@
 
     if (chapterFive) {
       const unlocked = journey.isPhaseUnlocked(5);
+      const completed = localStorage.getItem('jack-phase5-complete') === 'yes';
       chapterFive.classList.toggle('chapter-card--open', unlocked);
-      chapterFive.disabled = !unlocked;
       chapterFive.setAttribute('aria-disabled', unlocked ? 'false' : 'true');
       const status = chapterFive.querySelector('[data-phase-status]');
       const arrow = chapterFive.querySelector('[data-phase-arrow]');
       if (unlocked) {
-        if (status) status.textContent = 'Desbloqueada · em desenvolvimento';
-        if (arrow) arrow.textContent = '…';
+        chapterFive.href = completed
+          ? './game/phase5.html?replay=1&new=1'
+          : './game/phase5.html?journey=1';
+        if (status) status.textContent = completed ? 'Concluída · rejogar esta fase' : 'Desbloqueada · protótipo jogável';
+        if (arrow) arrow.textContent = '›';
       } else {
+        chapterFive.removeAttribute('href');
         if (status) status.textContent = 'Conclua o Halloween IV para desbloquear';
         if (arrow) arrow.textContent = '🔒';
       }
@@ -398,10 +405,14 @@
     }
   });
 
-  chapterFive?.addEventListener('click', () => {
-    if (chapterFive.getAttribute('aria-disabled') === 'false') {
-      showToast('Halloween V foi desbloqueado. A próxima estrada ainda está sendo construída.');
+  chapterFive?.addEventListener('click', event => {
+    if (chapterFive.getAttribute('aria-disabled') === 'true') {
+      event.preventDefault();
+      showToast('Conclua o Halloween IV para abrir A Última Lanterna.');
+      return;
     }
+    event.preventDefault();
+    openJourneyWithLight(chapterFive.href, 'SEGUINDO PARA A ÚLTIMA LANTERNA...');
   });
 
   syncJourneyUI();
