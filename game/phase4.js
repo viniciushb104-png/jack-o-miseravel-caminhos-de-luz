@@ -3664,7 +3664,8 @@ function finishPhase4Progress(){
    localStorage.setItem(PHASE5_KEY,"yes");
    localStorage.setItem(BELL_KEY,"yes");
    localStorage.setItem("jack-phase4-completed-at",String(Date.now()));
-   journey?.unlockPhase(5);
+   if(journeyMode)journey?.advanceTo(5);
+   else journey?.unlockPhase(5);
  }
  banner("HALLOWEEN IV CONCLUÍDO");
  say("Ser esquecido não significa nunca ter existido.");
@@ -4846,7 +4847,10 @@ document.getElementById("startGame").onclick=()=>{
  if(phase4Complete){setTimeout(()=>{if(ui.prototype)ui.prototype.hidden=false},420);return}
  if(!introPlayed){introPlayed=true;setTimeout(()=>dialogue.open(story.opening,()=>{say("A Chave de Madeira de Mara começou a aquecer.");save()}),300)}
 };
-document.getElementById("phase4Continue")?.addEventListener("click",()=>ui.prototype.hidden=true);
+document.getElementById("phase4Continue")?.addEventListener("click",()=>{
+ if(journeyMode&&!replayMode)journey?.advanceTo(5);
+ location.href="phase5.html"+(journeyMode&&!replayMode?"?journey=1&new=1":"?replay=1&new=1");
+});
 document.getElementById("phase4Menu")?.addEventListener("click",()=>location.href="../index.html#fases");
 document.getElementById("phase4Replay")?.addEventListener("click",()=>{location.href="phase4.html?replay=1&new=1"});
 
