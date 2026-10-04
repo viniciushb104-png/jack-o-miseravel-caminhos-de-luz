@@ -196,10 +196,78 @@ Object.entries(PHASE5_BACKGROUND_FILES).forEach(([key,src])=>{
  im.src=src+"?v=phase5-bg-1";
 });
 
-const ambient=new Audio("../assets/audio/phase4/phase4-road-continues-finale.mp3?v=1");
-ambient.loop=true;ambient.preload="metadata";ambient.volume=.38;
+const PHASE5_MUSIC=Object.freeze({
+ return:{src:"../assets/audio/phase5/phase5-01-o-sino-chama-para-tras.mp3?v=1",volume:.40},
+ houses:{src:"../assets/audio/phase5/phase5-02-casas-que-ainda-esperam.mp3?v=1",volume:.40},
+ clock:{src:"../assets/audio/phase5/phase5-03-o-relogio-sem-ontem.mp3?v=1",volume:.40},
+ garden:{src:"../assets/audio/phase5/phase5-04-aquilo-que-nao-precisa-ser-carregado.mp3?v=1",volume:.40},
+ city:{src:"../assets/audio/phase5/phase5-05-a-cidade-sem-jack.mp3?v=1",volume:.42},
+ promise:{src:"../assets/audio/phase5/phase5-06-para-todos-eles.mp3?v=1",volume:.40},
+ final:{src:"../assets/audio/phase5/phase5-06-para-todos-eles.mp3?v=1",volume:.40},
+ boss1:{src:"../assets/audio/phase5/phase5-07-o-que-voce-fez.mp3?v=1",volume:.47},
+ boss2:{src:"../assets/audio/phase5/phase5-08-o-que-voce-faz-depois.mp3?v=1",volume:.47},
+ finale:{src:"../assets/audio/phase5/phase5-09-a-ultima-lanterna.mp3?v=1",volume:.43}
+});
+const ambient=new Audio();
+ambient.loop=true;ambient.preload="metadata";ambient.volume=.40;
 let musicOn=localStorage.getItem("jack-phase5-music-muted")!=="1";
+let phase5MusicKey="",phase5MusicFadeToken=0;
 const musicBtn=document.getElementById("phase5MusicToggle");
+
+function desiredPhase5Music(){
+ if(ending||phase5Complete||bossResolved)return "finale";
+ if(bossStarted){
+  if(bossAct>=2)return "boss2";
+  return "boss1";
+ }
+ const id=currentSection().id;
+ return PHASE5_MUSIC[id]?id:"return";
+}
+function fadeAmbientTo(target,duration=520,pauseAtEnd=false,token=phase5MusicFadeToken){
+ const from=ambient.volume,started=performance.now();
+ const tick=now=>{
+  if(token!==phase5MusicFadeToken)return;
+  const q=Math.min(1,(now-started)/Math.max(1,duration));
+  const eased=q*(2-q);
+  ambient.volume=from+(target-from)*eased;
+  if(q<1)requestAnimationFrame(tick);
+  else{
+   ambient.volume=target;
+   if(pauseAtEnd&&target<=.001)ambient.pause();
+  }
+ };
+ requestAnimationFrame(tick);
+}
+function setPhase5Music(key,immediate=false){
+ const cfg=PHASE5_MUSIC[key];
+ if(!cfg||key===phase5MusicKey)return;
+ phase5MusicKey=key;
+ const token=++phase5MusicFadeToken;
+ const swap=()=>{
+  if(token!==phase5MusicFadeToken)return;
+  ambient.pause();
+  ambient.src=cfg.src;
+  ambient.loop=true;
+  ambient.currentTime=0;
+  ambient.muted=!musicOn;
+  ambient.volume=immediate?cfg.volume:0;
+  ambient.load();
+  if(running&&musicOn){
+   ambient.play().then(()=>{
+    if(!immediate)fadeAmbientTo(cfg.volume,760,false,token);
+   }).catch(()=>{});
+  }
+ };
+ if(immediate||ambient.paused||!running){
+  swap();
+ }else{
+  fadeAmbientTo(0,380,true,token);
+  setTimeout(swap,400);
+ }
+}
+function syncPhase5Music(immediate=false){
+ setPhase5Music(desiredPhase5Music(),immediate);
+}
 function syncMusic(){
  ambient.muted=!musicOn;
  if(musicBtn){
@@ -208,8 +276,15 @@ function syncMusic(){
  }
 }
 musicBtn?.addEventListener("click",()=>{
- musicOn=!musicOn;localStorage.setItem("jack-phase5-music-muted",musicOn?"0":"1");syncMusic();
- if(musicOn&&running)ambient.play().catch(()=>{});
+ musicOn=!musicOn;
+ localStorage.setItem("jack-phase5-music-muted",musicOn?"0":"1");
+ syncMusic();
+ if(musicOn&&running){
+  syncPhase5Music(true);
+  const cfg=PHASE5_MUSIC[phase5MusicKey]||PHASE5_MUSIC.return;
+  ambient.volume=cfg.volume;
+  ambient.play().catch(()=>{});
+ }else ambient.pause();
 });
 syncMusic();
 
@@ -577,6 +652,7 @@ function updateBoss(dt){
 function completePhase(){
  if(ending||phase5Complete)return;
  ending=true;p.vx=0;input.left=input.right=input.run=false;
+ syncPhase5Music();
  banner("A ÚLTIMA LANTERNA");
  openLines(story.finale,()=>{
   phase5Complete=true;ending=false;
@@ -591,6 +667,7 @@ function completePhase(){
 }
 
 function update(dt){
+ syncPhase5Music();
  if(dialogue.active||phase5Complete){syncHud();return}
  p.anim+=dt;p.attack=Math.max(0,p.attack-dt);p.inv=Math.max(0,p.inv-dt);
  lightPulse=Math.max(0,lightPulse-dt);lightCooldown=Math.max(0,lightCooldown-dt);
@@ -935,7 +1012,12 @@ document.getElementById("interactBtn")?.addEventListener("pointerdown",e=>{e.pre
 document.getElementById("startGame").onclick=()=>{
  if(journeyMode&&!replayMode)journey?.advanceTo(5);
  ui.intro.hidden=true;running=true;last=performance.now();
- if(musicOn)ambient.play().catch(()=>{});
+ syncPhase5Music(true);
+ if(musicOn){
+  const cfg=PHASE5_MUSIC[phase5MusicKey]||PHASE5_MUSIC.return;
+  ambient.volume=cfg.volume;
+  ambient.play().catch(()=>{});
+ }
  if(phase5Complete){setTimeout(()=>{if(ui.complete)ui.complete.hidden=false},350)}
  else if(!sectionSeen.has("opening")){sectionSeen.add("opening");setTimeout(()=>openLines(story.opening,save),260)}
  requestAnimationFrame(loop);
