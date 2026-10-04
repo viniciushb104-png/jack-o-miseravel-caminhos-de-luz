@@ -134,7 +134,7 @@ let saveData=null;if(journeyMode&&!replayMode){try{saveData=JSON.parse(localStor
 
 const input={left:false,right:false,down:false,run:false,jump:false};
 let running=false,last=performance.now(),cam=0,section=-1,jack=null,keyImg=null,jackFrameOverrides={};
-let phase4SignImgs=Array(4).fill(null),signlessRoadPostImgs=Array(3).fill(null),eraserGameplaySprites=Array(10).fill(null),traceFootprintImgs=Array.from({length:3},()=>[null,null]),checkpointOffImg=null,checkpointOnImg=null;
+let phase4SignImgs=Array(4).fill(null),signlessRoadPostImgs=Array(3).fill(null),eraserGameplaySprites=Array(10).fill(null),traceFootprintImgs=Array.from({length:3},()=>[null,null]),traceMemoryImgs=Array(3).fill(null),checkpointOffImg=null,checkpointOnImg=null;
 let bellNormalImg=null,bellGlowImg=null,memoryDoorImg=null;
 let nonexistentDoorImg=null,nonexistentDoorRevealFxImg=null,doorRevealFx=0;
 let idleTime=0,waitSitFrame=0,waitSitClock=0,waitSitActive=false,waitSitImages=[];
@@ -852,6 +852,16 @@ const traceFootprintReady=Promise.allSettled(traceFootprintFiles.map(src=>img(sr
  return traceFootprintImgs;
 });
 
+const traceMemoryFiles=[
+ "../assets/game/phase4/puzzles/footprint-field/memories/trace-memory-01.png",
+ "../assets/game/phase4/puzzles/footprint-field/memories/trace-memory-02.png",
+ "../assets/game/phase4/puzzles/footprint-field/memories/trace-memory-03.png"
+];
+const traceMemoryReady=Promise.allSettled(traceMemoryFiles.map(src=>img(src))).then(rs=>{
+ traceMemoryImgs=rs.map(r=>r.status==="fulfilled"?r.value:null);
+ return traceMemoryImgs;
+});
+
 const checkpointArtReady=Promise.allSettled([
  img("../assets/game/phase4/checkpoints/marco_gótico_com_abóbora_e_bandeira_rasgada.png"),
  img("../assets/game/phase4/checkpoints/marco_gótico_com_lanterna_abóbora.png")
@@ -892,7 +902,7 @@ const nonexistentDoorReady=Promise.allSettled([
 });
 
 const phase4PropReady=Promise.allSettled([
- phase4SignReady,signlessRoadPostReady,eraserGameplayReady,traceFootprintReady,checkpointArtReady,bellArtReady,memoryDoorReady,nonexistentDoorReady
+ phase4SignReady,signlessRoadPostReady,eraserGameplayReady,traceFootprintReady,traceMemoryReady,checkpointArtReady,bellArtReady,memoryDoorReady,nonexistentDoorReady
 ]);
 
 const jackPortraitFiles=["jack-00-neutral.png","jack-01-serious.png","jack-02-smirk.png","jack-03-surprised.png","jack-04-determined.png","jack-05-resolved.png"];
@@ -1873,6 +1883,42 @@ function drawTraceFigure(x,y,opts={}){
  ctx.beginPath();ctx.moveTo(0,-20);ctx.lineTo(-12,-1+(limp?7:step));ctx.moveTo(0,-20);ctx.lineTo(12,-1-(limp?2:step));ctx.stroke();
  ctx.restore();
 }
+function drawTraceMemoryAsset(i,t,alpha,burst){
+ const im=traceMemoryImgs[i];
+ if(!im)return false;
+ const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+ if(!iw||!ih)return false;
+
+ const q=traceHostPlatform(t);
+ const baseX=traceSceneX(t),surfaceY=traceSurfaceY(t);
+ // Memória é visão, não decal: pode ser um pouco mais larga que a plataforma,
+ // mas continua centrada no rastro para não revelar uma "cena completa".
+ const targetW=Math.max(205,Math.min(275,(q?.w||190)+72));
+ const targetH=targetW*(ih/iw);
+ const floatY=surfaceY-targetH-16;
+ const breatheY=Math.sin(p.anim*1.35+i*.9)*2.2;
+ const memoryAlpha=Math.min(.94,alpha*(.90+Math.sin(p.anim*1.6+i)*.04));
+
+ ctx.save();
+ ctx.globalAlpha=memoryAlpha;
+ ctx.imageSmoothingEnabled=true;
+ ctx.imageSmoothingQuality="high";
+ ctx.shadowColor="rgba(236,202,116,.46)";
+ ctx.shadowBlur=12+burst*12;
+ ctx.drawImage(im,baseX-targetW/2,floatY+breatheY,targetW,targetH);
+
+ // No instante da revelação, a lembrança "fecha" por um breve clarão,
+ // mas depois volta ao aspecto frágil e incompleto.
+ if(burst>0){
+   ctx.globalCompositeOperation="screen";
+   ctx.globalAlpha=burst*.28;
+   ctx.shadowColor="rgba(255,229,162,.92)";
+   ctx.shadowBlur=22;
+   ctx.drawImage(im,baseX-targetW/2,floatY+breatheY,targetW,targetH);
+ }
+ ctx.restore();
+ return {topY:floatY+breatheY,height:targetH};
+}
 function drawTraceMemoryScene(i,t){
  const on=traces[i];if(!on)return;
  const burst=Math.min(1,traceRevealFx[i]/1.15);
@@ -1881,43 +1927,48 @@ function drawTraceMemoryScene(i,t){
  const baseX=traceSceneX(t),surfaceY=traceSurfaceY(t),baseY=surfaceY-4;
 
  ctx.save();
- // A memória nasce exatamente acima da plataforma que contém o rastro.
- const g=ctx.createRadialGradient(baseX,baseY-78,10,baseX,baseY-78,132);
- g.addColorStop(0,"rgba(234,204,119,"+(alpha*.17)+")");
+ // Halo discreto: a cena é lembrança, não holograma tecnológico.
+ const g=ctx.createRadialGradient(baseX,baseY-72,8,baseX,baseY-72,130);
+ g.addColorStop(0,"rgba(234,204,119,"+(alpha*.15)+")");
  g.addColorStop(1,"rgba(234,204,119,0)");
- ctx.fillStyle=g;ctx.beginPath();ctx.arc(baseX,baseY-78,132,0,Math.PI*2);ctx.fill();
+ ctx.fillStyle=g;ctx.beginPath();ctx.arc(baseX,baseY-72,130,0,Math.PI*2);ctx.fill();
 
- ctx.strokeStyle="rgba(224,198,127,"+(alpha*.34)+")";ctx.lineWidth=2;
+ ctx.strokeStyle="rgba(224,198,127,"+(alpha*.28)+")";ctx.lineWidth=2;
  ctx.beginPath();ctx.ellipse(baseX,baseY-7,82+Math.sin(p.anim*1.4+i)*3,15,0,0,Math.PI*2);ctx.stroke();
-
- if(i===0){
-   // I — ela chega à vala e decide voltar.
-   ctx.strokeStyle="rgba(126,111,78,.72)";ctx.lineWidth=4;
-   ctx.beginPath();ctx.moveTo(baseX+38,baseY);ctx.lineTo(baseX+58,baseY-24);ctx.lineTo(baseX+72,baseY);ctx.stroke();
-   drawTraceFigure(baseX+12,baseY-2,{alpha,dir:-1,lean:-.08,phase:.3});
-   ctx.strokeStyle="rgba(235,207,125,"+(alpha*.5)+")";ctx.lineWidth=2;
-   ctx.beginPath();ctx.moveTo(baseX-2,baseY-39);ctx.quadraticCurveTo(baseX-28,baseY-58,baseX-48,baseY-34);ctx.stroke();
-   ctx.beginPath();ctx.moveTo(baseX-48,baseY-34);ctx.lineTo(baseX-37,baseY-39);ctx.moveTo(baseX-48,baseY-34);ctx.lineTo(baseX-43,baseY-23);ctx.stroke();
- }else if(i===1){
-   // II — duas pessoas; uma manca, a outra reduz o passo e sustenta.
-   drawTraceFigure(baseX-23,baseY-1,{alpha,dir:1,lean:.02,phase:.2});
-   drawTraceFigure(baseX+27,baseY+2,{alpha:alpha*.82,dir:1,lean:.15,limp:true,phase:1.1});
-   ctx.strokeStyle="rgba(236,209,131,"+(alpha*.72)+")";ctx.lineWidth=5;ctx.lineCap="round";
-   ctx.beginPath();ctx.moveTo(baseX-8,baseY-44);ctx.lineTo(baseX+19,baseY-39);ctx.stroke();
- }else{
-   // III — a pessoa ferida segue para longe; ela volta sozinha ao perigo.
-   drawTraceFigure(baseX+35,baseY-2,{alpha:alpha*.4,dir:1,limp:true,phase:.8});
-   drawTraceFigure(baseX-26,baseY-1,{alpha,dir:-1,lean:-.05,phase:.1});
-   ctx.strokeStyle="rgba(235,207,125,"+(alpha*.52)+")";ctx.lineWidth=2;
-   ctx.beginPath();ctx.moveTo(baseX-3,baseY-36);ctx.lineTo(baseX-58,baseY-36);ctx.stroke();
-   ctx.beginPath();ctx.moveTo(baseX-58,baseY-36);ctx.lineTo(baseX-47,baseY-43);ctx.moveTo(baseX-58,baseY-36);ctx.lineTo(baseX-47,baseY-29);ctx.stroke();
- }
  ctx.restore();
 
+ const memoryAsset=drawTraceMemoryAsset(i,t,alpha,burst);
+
+ // Fallback: se qualquer PNG falhar, preserva a leitura narrativa anterior.
+ if(!memoryAsset){
+   ctx.save();
+   if(i===0){
+     ctx.strokeStyle="rgba(126,111,78,.72)";ctx.lineWidth=4;
+     ctx.beginPath();ctx.moveTo(baseX+38,baseY);ctx.lineTo(baseX+58,baseY-24);ctx.lineTo(baseX+72,baseY);ctx.stroke();
+     drawTraceFigure(baseX+12,baseY-2,{alpha,dir:-1,lean:-.08,phase:.3});
+     ctx.strokeStyle="rgba(235,207,125,"+(alpha*.5)+")";ctx.lineWidth=2;
+     ctx.beginPath();ctx.moveTo(baseX-2,baseY-39);ctx.quadraticCurveTo(baseX-28,baseY-58,baseX-48,baseY-34);ctx.stroke();
+   }else if(i===1){
+     drawTraceFigure(baseX-23,baseY-1,{alpha,dir:1,lean:.02,phase:.2});
+     drawTraceFigure(baseX+27,baseY+2,{alpha:alpha*.82,dir:1,lean:.15,limp:true,phase:1.1});
+     ctx.strokeStyle="rgba(236,209,131,"+(alpha*.72)+")";ctx.lineWidth=5;ctx.lineCap="round";
+     ctx.beginPath();ctx.moveTo(baseX-8,baseY-44);ctx.lineTo(baseX+19,baseY-39);ctx.stroke();
+   }else{
+     drawTraceFigure(baseX+35,baseY-2,{alpha:alpha*.4,dir:1,limp:true,phase:.8});
+     drawTraceFigure(baseX-26,baseY-1,{alpha,dir:-1,lean:-.05,phase:.1});
+     ctx.strokeStyle="rgba(235,207,125,"+(alpha*.52)+")";ctx.lineWidth=2;
+     ctx.beginPath();ctx.moveTo(baseX-3,baseY-36);ctx.lineTo(baseX-58,baseY-36);ctx.stroke();
+   }
+   ctx.restore();
+ }
+
+ // O verbo é a única informação explícita: mostra a ação, nunca a identidade.
+ const labelY=memoryAsset?Math.max(292,memoryAsset.topY-7):Math.max(330,baseY-118);
  ctx.save();ctx.textAlign="center";
  ctx.fillStyle="rgba(243,220,154,"+(.68+burst*.2)+")";
+ ctx.shadowColor="rgba(235,204,125,.38)";ctx.shadowBlur=7;
  ctx.font="700 10px Georgia";
- ctx.fillText(t.memoryLabel||t.title,baseX,Math.max(330,baseY-118));
+ ctx.fillText(t.memoryLabel||t.title,baseX,labelY);
  ctx.restore();
 }
 function drawTraces(){
