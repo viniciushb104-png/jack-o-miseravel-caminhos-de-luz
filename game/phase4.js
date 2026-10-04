@@ -134,7 +134,7 @@ let saveData=null;if(journeyMode&&!replayMode){try{saveData=JSON.parse(localStor
 
 const input={left:false,right:false,down:false,run:false,jump:false};
 let running=false,last=performance.now(),cam=0,section=-1,jack=null,keyImg=null,jackFrameOverrides={};
-let phase4SignImgs=Array(4).fill(null),signlessRoadPostImgs=Array(3).fill(null),eraserGameplaySprites=Array(10).fill(null),hollowGameplaySprites=Array(10).fill(null),traceFootprintImgs=Array.from({length:3},()=>[null,null]),traceMemoryImgs=Array(3).fill(null),traceMemoryLoading=Array(3).fill(false),traceMemoryRetryAt=Array(3).fill(0),archiveEvidenceImgs=Array.from({length:3},()=>[null,null]),archivePropImgs=Array(6).fill(null),archiveFxImgs=Array(4).fill(null),checkpointOffImg=null,checkpointOnImg=null;
+let phase4SignImgs=Array(4).fill(null),signlessRoadPostImgs=Array(3).fill(null),eraserGameplaySprites=Array(10).fill(null),hollowGameplaySprites=Array(10).fill(null),ashHoundGameplaySprites=Array(10).fill(null),traceFootprintImgs=Array.from({length:3},()=>[null,null]),traceMemoryImgs=Array(3).fill(null),traceMemoryLoading=Array(3).fill(false),traceMemoryRetryAt=Array(3).fill(0),archiveEvidenceImgs=Array.from({length:3},()=>[null,null]),archivePropImgs=Array(6).fill(null),archiveFxImgs=Array(4).fill(null),checkpointOffImg=null,checkpointOnImg=null;
 let bellNormalImg=null,bellGlowImg=null,memoryDoorImg=null;
 let nonexistentDoorImg=null,nonexistentDoorRevealFxImg=null,doorRevealFx=0;
 let idleTime=0,waitSitFrame=0,waitSitClock=0,waitSitActive=false,waitSitImages=[];
@@ -851,6 +851,23 @@ const hollowGameplayReady=Promise.allSettled(hollowGameplayFiles.map(src=>img(sr
  return hollowGameplaySprites;
 });
 
+const ashHoundGameplayFiles=[
+ "../assets/game/phase4/enemies/ash-hound/gameplay/phase4-ash-hound-01-idle-a.png",
+ "../assets/game/phase4/enemies/ash-hound/gameplay/phase4-ash-hound-02-idle-b.png",
+ "../assets/game/phase4/enemies/ash-hound/gameplay/phase4-ash-hound-03-run-a.png",
+ "../assets/game/phase4/enemies/ash-hound/gameplay/phase4-ash-hound-04-run-b.png",
+ "../assets/game/phase4/enemies/ash-hound/gameplay/phase4-ash-hound-05-run-c.png",
+ "../assets/game/phase4/enemies/ash-hound/gameplay/phase4-ash-hound-06-attack-windup.png",
+ "../assets/game/phase4/enemies/ash-hound/gameplay/phase4-ash-hound-07-attack-lunge.png",
+ "../assets/game/phase4/enemies/ash-hound/gameplay/phase4-ash-hound-08-attack-recover.png",
+ "../assets/game/phase4/enemies/ash-hound/gameplay/phase4-ash-hound-09-light-hit.png",
+ "../assets/game/phase4/enemies/ash-hound/gameplay/phase4-ash-hound-10-dissolve.png"
+];
+const ashHoundGameplayReady=Promise.allSettled(ashHoundGameplayFiles.map(src=>img(src))).then(rs=>{
+ ashHoundGameplaySprites=rs.map(r=>r.status==="fulfilled"?r.value:null);
+ return ashHoundGameplaySprites;
+});
+
 const traceFootprintFiles=[
  "../assets/game/phase4/puzzles/footprint-field/traces/trace-01-dormant.png",
  "../assets/game/phase4/puzzles/footprint-field/traces/trace-01-revealed.png",
@@ -982,7 +999,7 @@ const nonexistentDoorReady=Promise.allSettled([
 });
 
 const phase4PropReady=Promise.allSettled([
- phase4SignReady,signlessRoadPostReady,eraserGameplayReady,hollowGameplayReady,traceFootprintReady,traceMemoryReady,archiveEvidenceReady,archivePropReady,archiveFxReady,checkpointArtReady,bellArtReady,memoryDoorReady,nonexistentDoorReady
+ phase4SignReady,signlessRoadPostReady,eraserGameplayReady,hollowGameplayReady,ashHoundGameplayReady,traceFootprintReady,traceMemoryReady,archiveEvidenceReady,archivePropReady,archiveFxReady,checkpointArtReady,bellArtReady,memoryDoorReady,nonexistentDoorReady
 ]);
 
 const jackPortraitFiles=["jack-00-neutral.png","jack-01-serious.png","jack-02-smirk.png","jack-03-surprised.png","jack-04-determined.png","jack-05-resolved.png"];
@@ -2124,7 +2141,7 @@ function drawEraserSprite(e){
 
  const attacking=e.state==="attack";
  const chasing=e.state==="chase";
- const targetH=attacking?150:(chasing?144:138);
+ const targetH=attacking?170:(chasing?164:158);
  const targetW=iw*(targetH/ih);
  const bob=(e.state==="idle"||e.state==="patrol")?Math.sin(p.anim*3.2+e.spawnX*.01)*1.8:0;
  const forward=attacking?8:(chasing?4:0);
@@ -2166,6 +2183,63 @@ function drawEraserEnemyFallback(e){
  for(let i=0;i<4;i++){ctx.beginPath();ctx.moveTo(-18+i*12,18);ctx.lineTo(-34+i*20,38+wob*.15);ctx.stroke()}
  ctx.fillStyle=e.state==="alert"||e.state==="chase"||e.state==="attack"?"#f0cc6f":"#d6b968";
  ctx.beginPath();ctx.arc(-8,-5,3,0,Math.PI*2);ctx.arc(8,-5,3,0,Math.PI*2);ctx.fill();
+}
+const ASH_HOUND_SPRITE_INDEX=Object.freeze({
+ idle:[0,1],
+ patrol:[2,3,4],
+ alert:[1],
+ chase:[2,3,4],
+ hit:[8],
+ dissolve:[9]
+});
+function ashHoundSpriteIndex(e){
+ if(e.state==="attack"){
+   const total=e.cfg.attackWindup+e.cfg.attackActive+e.cfg.attackRecover;
+   const elapsed=Math.max(0,total-e.stateTimer);
+   if(elapsed<e.cfg.attackWindup)return 5;
+   if(elapsed<e.cfg.attackWindup+e.cfg.attackActive)return 6;
+   return 7;
+ }
+ if(e.state==="dissolve")return 9;
+ if(e.state==="hit"||e.hitFlash>0)return 8;
+ const seq=ASH_HOUND_SPRITE_INDEX[e.state]||ASH_HOUND_SPRITE_INDEX.idle;
+ if(seq.length===1)return seq[0];
+ const fps=e.state==="chase"?10.5:(e.state==="patrol"?6.5:2.4);
+ return seq[Math.floor((p.anim+e.spawnX*.001)*fps)%seq.length];
+}
+function drawAshHoundSprite(e){
+ const index=ashHoundSpriteIndex(e);
+ const im=ashHoundGameplaySprites[index];
+ if(!im)return false;
+ const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+ if(!iw||!ih)return false;
+
+ const attacking=e.state==="attack";
+ const chasing=e.state==="chase";
+ const targetW=e.state==="dissolve"?176:(attacking?184:(chasing?174:164));
+ const targetH=ih*(targetW/iw);
+ const bottom=e.h/2+12;
+ const strideBob=(e.state==="patrol"||e.state==="chase")?Math.sin(p.anim*(chasing?10:6.2)+e.spawnX*.01)*2.1:0;
+ const forward=attacking?10:(chasing?5:0);
+ const dx=-targetW/2+forward;
+ const dy=bottom-targetH+strideBob;
+
+ ctx.save();
+ ctx.imageSmoothingEnabled=true;
+ ctx.imageSmoothingQuality="high";
+ ctx.shadowColor=e.hitFlash>0?"rgba(251,224,150,.98)":"rgba(0,0,0,.74)";
+ ctx.shadowBlur=e.hitFlash>0?25:11;
+ ctx.drawImage(im,dx,dy,targetW,targetH);
+
+ if(e.hitFlash>0){
+   ctx.globalCompositeOperation="screen";
+   ctx.globalAlpha=Math.min(.30,e.hitFlash*1.25);
+   ctx.shadowColor="rgba(250,215,126,.98)";
+   ctx.shadowBlur=28;
+   ctx.drawImage(im,dx,dy,targetW,targetH);
+ }
+ ctx.restore();
+ return true;
 }
 function drawAshHoundEnemy(e){
  const run=e.state==="chase"||e.state==="attack";
@@ -2213,20 +2287,25 @@ function hollowSpriteIndex(e){
  return seq[Math.floor((p.anim+e.spawnX*.001)*fps)%seq.length];
 }
 function drawHollowSprite(e){
+ const moving=e.state==="patrol"||e.state==="chase";
  const index=hollowSpriteIndex(e);
- const im=hollowGameplaySprites[index];
- if(!im)return false;
- const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+ const primary=hollowGameplaySprites[index];
+ if(!primary)return false;
+ const iw=primary.naturalWidth||primary.width,ih=primary.naturalHeight||primary.height;
  if(!iw||!ih)return false;
 
  const attacking=e.state==="attack";
  const chasing=e.state==="chase";
  const exposed=e.exposedTimer>0;
- const targetH=e.state==="dissolve"?188:(attacking?188:(chasing?182:176));
+ const targetH=e.state==="dissolve"?208:(attacking?208:(chasing?200:194));
  const targetW=iw*(targetH/ih);
- const bottom=e.h/2+7;
- const bob=(e.state==="idle"||e.state==="patrol")?Math.sin(p.anim*2.25+e.spawnX*.01)*1.4:0;
- const forward=attacking?9:(chasing?4:0);
+ const bottom=e.h/2+8;
+ const walkSpeed=chasing?6.4:4.6;
+ const walkClock=(p.anim+e.spawnX*.001)*walkSpeed;
+ const walkFrac=walkClock-Math.floor(walkClock);
+ const smoothStep=walkFrac*walkFrac*(3-2*walkFrac);
+ const bob=moving?Math.sin(walkClock*Math.PI)*2.3:((e.state==="idle")?Math.sin(p.anim*2.25+e.spawnX*.01)*1.5:0);
+ const forward=attacking?10:(chasing?5:0);
  const dx=-targetW/2+forward;
  const dy=bottom-targetH+bob;
 
@@ -2236,27 +2315,45 @@ function drawHollowSprite(e){
  ctx.shadowColor=e.hitFlash>0?"rgba(249,224,157,.98)":(exposed?"rgba(232,199,109,.65)":"rgba(0,0,0,.74)");
  ctx.shadowBlur=e.hitFlash>0?27:(exposed?18:11);
 
- // A primeira Luz não causa dano, mas revela o vazio. O PNG continua intacto
- // e recebe somente um halo suave enquanto a janela de exposição está ativa.
+ // Para patrulha/perseguição, fazemos uma transição curta entre os dois frames.
+ // Isso elimina a sensação de "travada" sem inventar poses novas.
+ const frames=[];
+ if(moving){
+   const aIndex=(Math.floor(walkClock)&1)?3:2;
+   const bIndex=aIndex===2?3:2;
+   const a=hollowGameplaySprites[aIndex],b=hollowGameplaySprites[bIndex];
+   if(a)frames.push({im:a,alpha:1-smoothStep});
+   if(b)frames.push({im:b,alpha:smoothStep});
+ }else{
+   frames.push({im:primary,alpha:1});
+ }
+
  if(exposed&&e.state!=="dissolve"){
-   const pulse=.48+.18*Math.sin(p.anim*5.2);
+   const pulse=.38+.14*Math.sin(p.anim*5.2);
    ctx.save();
-   ctx.globalAlpha=pulse;
    ctx.globalCompositeOperation="screen";
    ctx.shadowColor="rgba(241,208,119,.9)";
    ctx.shadowBlur=22;
-   ctx.drawImage(im,dx,dy,targetW,targetH);
+   for(const fr of frames){
+     ctx.globalAlpha=pulse*fr.alpha;
+     ctx.drawImage(fr.im,dx,dy,targetW,targetH);
+   }
    ctx.restore();
  }
 
- ctx.drawImage(im,dx,dy,targetW,targetH);
+ for(const fr of frames){
+   ctx.globalAlpha=fr.alpha;
+   ctx.drawImage(fr.im,dx,dy,targetW,targetH);
+ }
 
  if(e.hitFlash>0){
    ctx.globalCompositeOperation="screen";
-   ctx.globalAlpha=Math.min(.30,e.hitFlash*1.22);
    ctx.shadowColor="rgba(252,224,146,.98)";
    ctx.shadowBlur=30;
-   ctx.drawImage(im,dx,dy,targetW,targetH);
+   for(const fr of frames){
+     ctx.globalAlpha=Math.min(.30,e.hitFlash*1.22)*fr.alpha;
+     ctx.drawImage(fr.im,dx,dy,targetW,targetH);
+   }
  }
  ctx.restore();
  return true;
@@ -2331,8 +2428,11 @@ function drawEnemy(e){
    ctx.beginPath();ctx.moveTo(e.w*.25,-22);ctx.lineTo(e.w*.82,0);ctx.lineTo(e.w*.25,22);ctx.closePath();ctx.fill();
  }
 
- let hollowSpriteDrawn=false;
- if(e.kind==="ashHound")drawAshHoundEnemy(e);
+ let hollowSpriteDrawn=false,ashHoundSpriteDrawn=false;
+ if(e.kind==="ashHound"){
+   ashHoundSpriteDrawn=drawAshHoundSprite(e);
+   if(!ashHoundSpriteDrawn)drawAshHoundEnemy(e);
+ }
  else if(e.kind==="hollow"){
    hollowSpriteDrawn=drawHollowSprite(e);
    if(!hollowSpriteDrawn)drawHollowEnemy(e);
@@ -2340,12 +2440,12 @@ function drawEnemy(e){
  else if(e.kind==="crow")drawCrowEnemy(e);
  else if(!drawEraserSprite(e))drawEraserEnemyFallback(e);
 
- if(state==="dissolve"&&!(e.kind==="hollow"&&hollowSpriteDrawn))drawEnemyDissolve(e);
+ if(state==="dissolve"&&!((e.kind==="hollow"&&hollowSpriteDrawn)||(e.kind==="ashHound"&&ashHoundSpriteDrawn)))drawEnemyDissolve(e);
  ctx.restore();
 
  if(state!=="dissolve"){
    ctx.save();ctx.textAlign="center";
-   const enemyLabelY=e.kind==="eraser"?visualY-92:(e.kind==="hollow"?visualY-118:visualY-14);
+   const enemyLabelY=e.kind==="eraser"?visualY-108:(e.kind==="hollow"?visualY-136:(e.kind==="ashHound"?visualY-104:visualY-14));
    ctx.fillStyle="#b9aa89";ctx.font="700 9px Georgia";ctx.fillText(e.label,ex+e.w/2,enemyLabelY);
    const stateLabel={
      idle:"à espreita",patrol:"patrulha",alert:"percebeu Jack",
@@ -2357,7 +2457,7 @@ function drawEnemy(e){
      ctx.fillStyle="#ddc576";ctx.font="700 8px Georgia";ctx.fillText("EXPOSTO",ex+e.w/2,visualY+e.h+14);
    }
    if(e.hp<e.maxHp){
-     const bw=46,bx=ex+e.w/2-bw/2,by=(e.kind==="eraser"||e.kind==="hollow")?enemyLabelY-11:visualY-29;
+     const bw=46,bx=ex+e.w/2-bw/2,by=(e.kind==="eraser"||e.kind==="hollow"||e.kind==="ashHound")?enemyLabelY-11:visualY-29;
      ctx.fillStyle="rgba(0,0,0,.55)";ctx.fillRect(bx,by,bw,4);
      ctx.fillStyle="#d6b968";ctx.fillRect(bx,by,bw*(e.hp/e.maxHp),4);
    }
