@@ -324,23 +324,30 @@
     const saved = localStorage.getItem(STORAGE_KEY);
     const initial = SUPPORTED.includes(saved) ? saved : 'pt-BR';
     applyLanguage(initial);
+    let observerQueued = false;
     const observer = new MutationObserver(records => {
-      const current = localStorage.getItem(STORAGE_KEY) === 'en' ? 'en' : 'pt-BR';
-      if (current !== 'en') return;
-      records.forEach(record => {
-        if (record.type === 'characterData' && record.target?.parentElement) {
-          walkTextNodes(record.target.parentElement, current);
-        }
-        record.addedNodes.forEach(node => {
-          if (node.nodeType === Node.ELEMENT_NODE) walkTextNodes(node, current);
+      const savedLang = localStorage.getItem(STORAGE_KEY);
+      const current = SUPPORTED.includes(savedLang) ? savedLang : DEFAULT_LANG;
+      if (current === 'pt-BR' || observerQueued) return;
+      observerQueued = true;
+      requestAnimationFrame(() => {
+        observerQueued = false;
+        const roots = new Set();
+        records.forEach(record => {
+          if (record.type === 'characterData' && record.target?.parentElement) roots.add(record.target.parentElement);
+          record.addedNodes.forEach(node => {
+            if (node.nodeType === Node.ELEMENT_NODE) roots.add(node);
+            else if (node.nodeType === Node.TEXT_NODE && node.parentElement) roots.add(node.parentElement);
+          });
         });
+        roots.forEach(root => walkTextNodes(root, current));
+        if (roots.size) translateAttributes(current);
       });
-      translateAttributes(current);
     });
     observer.observe(document.body, {subtree:true, childList:true, characterData:true});
   }
 
-  window.JackI18n = { applyLanguage, getLanguage: () => localStorage.getItem(STORAGE_KEY) || DEFAULT_LANG, supported:SUPPORTED };
+  window.JackI18n = { applyLanguage, getLanguage: () => localStorage.getItem(STORAGE_KEY) || DEFAULT_LANG, t: (text, lang) => translateText(text, lang || localStorage.getItem(STORAGE_KEY) || DEFAULT_LANG), supported:SUPPORTED };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, {once:true});
   else init();
 })();
