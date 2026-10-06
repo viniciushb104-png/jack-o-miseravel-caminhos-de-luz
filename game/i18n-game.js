@@ -415,7 +415,7 @@
     ['A estrada','The road'],['a estrada','the road'],['A névoa','The fog'],['a névoa','the fog'],
     ['A Peregrina','The Pilgrim'],['o Coletor','the Collector'],['O Coletor','The Collector'],
     ['Árvore-Mãe','Mother Tree'],['ARQUIVISTA ETERNO','ETERNAL ARCHIVIST'],['O Arquivista','The Archivist'],
-    ['Fase concluída','Chapter Complete'],['Próxima fase','Next Chapter']
+    ['ainda protege esta parte do arquivo.','still protects this part of the archive.'],['mantém esta voz presa sob a vigilância.','keeps this voice trapped under watch.'],['Fase concluída','Chapter Complete'],['Próxima fase','Next Chapter']
   ];
 
   const original=new WeakMap();
