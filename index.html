@@ -649,11 +649,15 @@
     document.addEventListener('click', event => {
       const start = event.target.closest('#startJourneyBtn');
       if (start) {
-        // Main script normally handles reset + transition. This fallback only
-        // takes over if that handler failed to navigate.
-        setTimeout(() => {
-          if (document.visibilityState === 'visible') go('./game/phase1.html?journey=1&new=1');
-        }, 1300);
+        // Only rescue Start Journey if the main navigation handlers never
+        // finished binding. This preserves the normal restart confirmation.
+        if (!window.__jackNavigationBound) {
+          setTimeout(() => {
+            if (!window.__jackNavigationBound && document.visibilityState === 'visible') {
+              go('./game/phase1.html?journey=1&new=1');
+            }
+          }, 80);
+        }
         return;
       }
 
@@ -673,6 +677,6 @@
     }, true);
   })();
   </script>
-  <script src="script.js?v=23"></script>
+  <script src="script.js?v=24"></script>
 </body>
 </html>
