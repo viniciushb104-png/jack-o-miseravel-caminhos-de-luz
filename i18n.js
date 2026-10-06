@@ -223,27 +223,52 @@
   ];
 
   const originalText = new WeakMap();
+  const directMaps = new Map();
+  const directPhraseMaps = new Map();
+
+  function getDirectMap(lang) {
+    if (lang === 'pt-BR') return null;
+    if (directMaps.has(lang)) return directMaps.get(lang);
+    const map = new Map();
+    Object.entries(translations).forEach(([pt,en]) => {
+      const finalText = lang === 'en' ? en : (window.JackLocale?.translateEnglish(en, lang) || en);
+      map.set(pt, finalText);
+    });
+    directMaps.set(lang, map);
+
+    const phrases = phraseTranslations.map(([pt,en]) => [
+      pt,
+      lang === 'en' ? en : (window.JackLocale?.translateEnglish(en, lang) || en)
+    ]);
+    directPhraseMaps.set(lang, phrases);
+    return map;
+  }
 
   function translateText(text, lang) {
     if (lang === 'pt-BR') return text;
     const trimmed = text.trim();
     if (!trimmed) return text;
-    const exact = translations[trimmed];
-    let out = exact ? text.replace(trimmed, exact) : text;
-    if (!exact) {
-      phraseTranslations.forEach(([pt,en]) => { out = out.replace(pt,en); });
-      out = out.replace(/‹\s*Voltar/g, '‹ Back');
+
+    const map = getDirectMap(lang);
+    const exact = map?.get(trimmed);
+    if (exact) return text.replace(trimmed, exact);
+
+    let out = text;
+    const phrases = directPhraseMaps.get(lang) || [];
+    for (const [pt,target] of phrases) {
+      if (out.includes(pt)) out = out.replace(pt, target);
     }
-    if (lang !== 'en') out = window.JackLocale?.translateEnglish(out, lang) || out;
+    if (lang === 'en') out = out.replace(/‹\s*Voltar/g, '‹ Back');
     return out;
   }
 
   function walkTextNodes(root, lang) {
+    if (!root) return;
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
       acceptNode(node) {
         if (!node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
         const parent = node.parentElement;
-        if (!parent || ['SCRIPT','STYLE','TEXTAREA'].includes(parent.tagName)) return NodeFilter.FILTER_REJECT;
+        if (!parent || ['SCRIPT','STYLE','TEXTAREA','OPTION'].includes(parent.tagName)) return NodeFilter.FILTER_REJECT;
         return NodeFilter.FILTER_ACCEPT;
       }
     });
@@ -278,7 +303,9 @@
     localStorage.setItem(STORAGE_KEY, normalized);
     document.documentElement.lang = normalized;
     document.documentElement.dataset.language = normalized;
-    walkTextNodes(document.body, normalized);
+    const activeHash = location.hash ? location.hash.slice(1) : 'inicio';
+    const activeRoot = document.getElementById(activeHash) || document.getElementById('inicio') || document.body;
+    walkTextNodes(activeRoot, normalized);
     translateAttributes(normalized);
     updateLanguageControls(normalized);
     const localizedTitle = {
@@ -315,7 +342,12 @@
     const select = wrap.querySelector('#jackLanguageSelect');
     if (select) {
       select.value = localStorage.getItem(STORAGE_KEY) || DEFAULT_LANG;
-      select.addEventListener('change', () => applyLanguage(select.value));
+      select.addEventListener('change', () => {
+        const next = SUPPORTED.includes(select.value) ? select.value : DEFAULT_LANG;
+        if (next === (localStorage.getItem(STORAGE_KEY) || DEFAULT_LANG)) return;
+        localStorage.setItem(STORAGE_KEY, next);
+        location.reload();
+      });
     }
   }
 
@@ -329,7 +361,16 @@
     // characterData mutations and freeze the page when changing language.
   }
 
-  window.JackI18n = { applyLanguage, getLanguage: () => localStorage.getItem(STORAGE_KEY) || DEFAULT_LANG, t: (text, lang) => translateText(text, lang || localStorage.getItem(STORAGE_KEY) || DEFAULT_LANG), supported:SUPPORTED };
+  window.JackI18n = {
+    applyLanguage,
+    getLanguage: () => localStorage.getItem(STORAGE_KEY) || DEFAULT_LANG,
+    t: (text, lang) => translateText(text, lang || localStorage.getItem(STORAGE_KEY) || DEFAULT_LANG),
+    translateRoot: (root, lang) => {
+      const current = lang || localStorage.getItem(STORAGE_KEY) || DEFAULT_LANG;
+      walkTextNodes(root, current);
+    },
+    supported:SUPPORTED
+  };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, {once:true});
   else init();
 })();
