@@ -399,7 +399,8 @@ const PHASE5_SHARED_DECOR=Object.freeze([
  {i:6,x:10680,top:FLOOR,w:245,surface:.42,alpha:.82}
 ]);
 
-ensurePhase5PlatformSection("shared");
+// O lote 5Z é utilitário: carregamos somente as quatro peças usadas agora.
+[2,3,5,6].forEach(i=>loadPhase5Platform("shared",i));
 const initialPlatformReady=ensurePhase5PlatformSection("return");
 window.__PHASE_ASSETS_READY=Promise.allSettled([
  jackDialogueReady,
