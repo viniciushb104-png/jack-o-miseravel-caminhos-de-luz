@@ -1,6 +1,8 @@
 (() => {
   const STORAGE_KEY='jack-language';
-  const EN=()=>localStorage.getItem(STORAGE_KEY)==='en';
+  const SUPPORTED=['pt-BR','en','es','fr','zh-CN','ko','ja'];
+  const currentLang=()=>SUPPORTED.includes(localStorage.getItem(STORAGE_KEY))?localStorage.getItem(STORAGE_KEY):'pt-BR';
+  const BASE=()=>currentLang()!=='pt-BR';
 
   const exact={
     // Shared UI
@@ -419,13 +421,14 @@
   ];
 
   const original=new WeakMap();
-  function lang(){return EN()?'en':'pt-BR'}
+  function lang(){return currentLang()}
   function tr(value){
-    if(!EN()||typeof value!=='string')return value;
+    if(!BASE()||typeof value!=='string')return value;
+    const code=currentLang();
     const trimmed=value.trim();
-    if(exact[trimmed])return value.replace(trimmed,exact[trimmed]);
-    let out=value;
-    for(const [a,b] of phrases)out=out.split(a).join(b);
+    let out=exact[trimmed]?value.replace(trimmed,exact[trimmed]):value;
+    if(!exact[trimmed]) for(const [a,b] of phrases) out=out.split(a).join(b);
+    if(code!=='en') out=window.JackLocale?.translateEnglish(out,code)||out;
     return out;
   }
 
@@ -456,7 +459,7 @@
     for(const n of nodes){
       if(!original.has(n))original.set(n,n.nodeValue);
       const src=original.get(n);
-      n.nodeValue=EN()?tr(src):src;
+      n.nodeValue=BASE()?tr(src):src;
     }
     if(root.querySelectorAll){
       root.querySelectorAll('[aria-label],[title],[alt]').forEach(el=>{
@@ -464,7 +467,7 @@
           if(!el.hasAttribute(attr))return;
           const key='jackI18n'+attr.replace(/-([a-z])/g,(_,c)=>c.toUpperCase()).replace(/^./,c=>c.toUpperCase());
           if(!el.dataset[key])el.dataset[key]=el.getAttribute(attr);
-          el.setAttribute(attr,EN()?tr(el.dataset[key]):el.dataset[key]);
+          el.setAttribute(attr,BASE()?tr(el.dataset[key]):el.dataset[key]);
         });
       });
     }
@@ -474,22 +477,23 @@
     if(document.getElementById('jackPhaseLanguage'))return;
     const box=document.createElement('div');
     box.id='jackPhaseLanguage';box.className='jack-phase-language';box.setAttribute('aria-label','Idioma / Language');
-    box.innerHTML='<button type="button" data-lang="pt-BR">PT</button><span>/</span><button type="button" data-lang="en">EN</button>';
+    box.innerHTML='<select id="jackPhaseLanguageSelect" aria-label="Idioma / Language"><option value="pt-BR">PT · Português</option><option value="en">EN · English</option><option value="es">ES · Español</option><option value="fr">FR · Français</option><option value="zh-CN">中文 · 简体</option><option value="ko">한국어</option><option value="ja">日本語</option></select>';
     document.body.appendChild(box);
-    box.querySelectorAll('button').forEach(btn=>btn.addEventListener('click',()=>{
-      localStorage.setItem(STORAGE_KEY,btn.dataset.lang);location.reload();
-    }));
-    box.querySelectorAll('button').forEach(btn=>btn.classList.toggle('is-active',btn.dataset.lang===lang()));
+    const select=box.querySelector('#jackPhaseLanguageSelect');
+    if(select){
+      select.value=lang();
+      select.addEventListener('change',()=>{localStorage.setItem(STORAGE_KEY,select.value);location.reload();});
+    }
   }
   function addStyle(){
     if(document.getElementById('jackPhaseLanguageStyle'))return;
     const s=document.createElement('style');s.id='jackPhaseLanguageStyle';
-    s.textContent='.jack-phase-language{position:fixed;z-index:999999;top:10px;right:10px;display:flex;align-items:center;gap:3px;padding:4px 6px;background:#080b12dc;border:1px solid #b97a2e88;box-shadow:0 4px 16px #0008;font-family:Georgia,serif}.jack-phase-language button{border:0;background:transparent;color:#8f826d;padding:4px 6px;font-weight:700;font-size:11px;cursor:pointer}.jack-phase-language button.is-active{color:#ffe0a0;text-shadow:0 0 8px #e88b24}.jack-phase-language span{color:#59452e;font-size:10px}';
+    s.textContent='.jack-phase-language{position:fixed;z-index:999999;top:10px;right:10px;padding:4px 6px;background:#080b12dc;border:1px solid #b97a2e88;box-shadow:0 4px 16px #0008;font-family:Georgia,"Noto Serif CJK SC","Noto Serif CJK JP","Noto Serif KR",serif}.jack-phase-language select{max-width:170px;border:0;outline:0;background:#0b1019;color:#ffe0a0;padding:6px 8px;font-weight:700;font-size:11px;cursor:pointer}';
     document.head.appendChild(s);
   }
   function init(){
-    document.documentElement.lang=lang();addStyle();injectSwitcher();translateNode(document.body);
-    if(EN()){
+    document.documentElement.lang=lang();window.JackLocale?.localizeStories(lang());addStyle();injectSwitcher();translateNode(document.body);
+    if(BASE()){
       const observer=new MutationObserver(records=>records.forEach(r=>{
         if(r.type==='characterData')translateNode(r.target);
         r.addedNodes.forEach(n=>{if(n.nodeType===Node.ELEMENT_NODE||n.nodeType===Node.TEXT_NODE)translateNode(n)});
@@ -497,6 +501,6 @@
       observer.observe(document.body,{childList:true,subtree:true,characterData:true});
     }
   }
-  window.JackGameI18n={t:tr,translateNode,getLanguage:lang};
+  window.JackGameI18n={t:tr,translateNode,getLanguage:lang,supported:SUPPORTED};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
