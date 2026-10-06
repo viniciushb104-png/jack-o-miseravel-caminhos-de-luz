@@ -176,6 +176,33 @@ atlas.onload=()=>{
  jackFrameOverrides=buildJackFrameOverrides(atlas);
 };
 
+// Retratos HD do Jack: mesma família visual usada nos diálogos das outras fases.
+const JACK_DIALOGUE_FILES=Object.freeze([
+ "jack-00-neutral.png",
+ "jack-01-serious.png",
+ "jack-02-smirk.png",
+ "jack-03-surprised.png",
+ "jack-04-determined.png",
+ "jack-05-resolved.png"
+]);
+function loadPhase5Image(src){
+ return new Promise((resolve,reject)=>{
+  const im=new Image();
+  im.onload=()=>resolve(im);
+  im.onerror=reject;
+  im.src=src;
+ });
+}
+const jackDialogueReady=Promise.allSettled(
+ JACK_DIALOGUE_FILES.map(file=>loadPhase5Image("../assets/game/phase1/portraits-hd/"+file+"?v=1"))
+).then(results=>{
+ const frames=results.map(r=>r.status==="fulfilled"?r.value:null);
+ dialogue.setAssets({jack:{frames}});
+ return frames;
+});
+// O preloader da fase espera ao menos os retratos de diálogo ficarem definidos.
+window.__PHASE_ASSETS_READY=Promise.allSettled([jackDialogueReady]);
+
 const PHASE5_BACKGROUND_FILES=Object.freeze({
  return:"../assets/game/phase5/backgrounds/01-village-carnival/phase5-village-halloween-01.png",
  houses:"../assets/game/phase5/backgrounds/01-village-carnival/phase5-village-carnival-02.png",
@@ -296,9 +323,31 @@ function say(t){
  ui.msg.textContent=t;ui.msg.classList.add("show");clearTimeout(messageTimer);
  messageTimer=setTimeout(()=>ui.msg.classList.remove("show"),2400);
 }
+function phase5JackExpression(line){
+ const speaker=(line?.speaker||"").toUpperCase();
+ const text=(line?.text||"").toUpperCase();
+ if(speaker==="MEMÓRIA DE JACK")return 1; // sério
+ if(/INFELIZMENTE|VOCABULÁRIO|BOA NOTÍCIA|DESCONFIADO|CANSADO/.test(text))return 2; // ironia
+ if(/SURPRESA|QUE\?|QUEM\?|PARA QUEM|ENTÃO PARA QUEM/.test(text))return 3; // surpresa
+ if(/CONTINUAR|AGORA|ESSA PARTE NÃO|EU NÃO VOU|É O BASTANTE|VENHA PARA A LUZ/.test(text))return 4; // determinado
+ if(/FINALMENTE|SEI COMO|ACHEI QUE|TALVEZ|NADA DISSO|EU FUI MUITAS COISAS/.test(text))return 5; // resolvido/reflexivo
+ if(/EU SEI|JÁ FUI|TAMBÉM|EU DISSE ISSO|PASSEI TEMPO DEMAIS/.test(text))return 1;
+ return 0;
+}
+function phase5DialogueLines(lines){
+ if(!Array.isArray(lines))return lines;
+ return lines.map(line=>{
+  if(!line||line.portrait)return line;
+  const speaker=(line.speaker||"").toUpperCase();
+  if(speaker==="JACK"||speaker==="MEMÓRIA DE JACK"){
+   return {...line,portrait:"jack",expression:phase5JackExpression(line)};
+  }
+  return line;
+ });
+}
 function openLines(lines,cb){
  input.left=input.right=input.down=input.run=false;p.vx=0;
- dialogue.open(lines,cb);
+ dialogue.open(phase5DialogueLines(lines),cb);
 }
 function save(){
  const data={
