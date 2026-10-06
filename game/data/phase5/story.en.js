@@ -1,4 +1,4 @@
-if(localStorage.getItem("jack-language")==="en"){
+if(localStorage.getItem("jack-language")!=="pt-BR"){
 window.PHASE5_STORY=Object.freeze({
  title:"The Last Lantern",
  theme:"Redemption does not erase the past. It changes what we do after it.",
