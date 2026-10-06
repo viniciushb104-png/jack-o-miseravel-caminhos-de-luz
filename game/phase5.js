@@ -200,9 +200,6 @@ const jackDialogueReady=Promise.allSettled(
  dialogue.setAssets({jack:{frames}});
  return frames;
 });
-// O preloader da fase espera ao menos os retratos de diálogo ficarem definidos.
-window.__PHASE_ASSETS_READY=Promise.allSettled([jackDialogueReady]);
-
 const PHASE5_BACKGROUND_FILES=Object.freeze({
  return:"../assets/game/phase5/backgrounds/01-village-carnival/phase5-village-halloween-01.png",
  houses:"../assets/game/phase5/backgrounds/01-village-carnival/phase5-village-carnival-02.png",
@@ -214,14 +211,201 @@ const PHASE5_BACKGROUND_FILES=Object.freeze({
 });
 const phase5BackgroundImgs={};
 const phase5BackgroundReady={};
+const phase5BackgroundPromises={};
 Object.entries(PHASE5_BACKGROUND_FILES).forEach(([key,src])=>{
  const im=new Image();
  phase5BackgroundImgs[key]=im;
  phase5BackgroundReady[key]=false;
- im.onload=()=>{phase5BackgroundReady[key]=true};
- im.onerror=()=>{phase5BackgroundReady[key]=false};
+ phase5BackgroundPromises[key]=new Promise(resolve=>{
+  im.onload=()=>{phase5BackgroundReady[key]=true;resolve(im)};
+  im.onerror=()=>{phase5BackgroundReady[key]=false;resolve(null)};
+ });
  im.src=src+"?v=phase5-bg-1";
 });
+
+/* --------------------------------------------------------------------------
+   HALLOWEEN V · SISTEMA VISUAL DE PLATAFORMAS
+   A física continua usando GROUND/PLATFORMS. As artes abaixo vestem essa
+   geometria sem alterar colisão, puzzles ou checkpoints.
+   -------------------------------------------------------------------------- */
+const PHASE5_PLATFORM_FILES=Object.freeze({
+ return:[
+  "../assets/game/phase5/platforms/5A-estrada-retorno/phase5-5a-01-plataforma-outono-lanternas.png",
+  "../assets/game/phase5/platforms/5A-estrada-retorno/phase5-5a-02-plataforma-outono-ruinas.png",
+  "../assets/game/phase5/platforms/5A-estrada-retorno/phase5-5a-03-ruinas-flutuantes-luar-outono.png",
+  "../assets/game/phase5/platforms/5A-estrada-retorno/phase5-5a-04-plataforma-outono-halloween.png",
+  "../assets/game/phase5/platforms/5A-estrada-retorno/phase5-5a-05-plataforma-flutuante-iluminada.png",
+  "../assets/game/phase5/platforms/5A-estrada-retorno/phase5-5a-06-ponte-outono-lanternas-abobora.png"
+ ],
+ houses:[
+  "../assets/game/phase5/platforms/5B-vila-janelas/phase5-5b-01-plataforma-medieval-outono-iluminada.png",
+  "../assets/game/phase5/platforms/5B-vila-janelas/phase5-5b-02-plataforma-pedra-outonal-lanternas.png",
+  "../assets/game/phase5/platforms/5B-vila-janelas/phase5-5b-03-ponte-rustica-halloween-outono.png",
+  "../assets/game/phase5/platforms/5B-vila-janelas/phase5-5b-04-plataforma-poco-halloween.png",
+  "../assets/game/phase5/platforms/5B-vila-janelas/phase5-5b-05-plataforma-flutuante-gotica-outono.png",
+  "../assets/game/phase5/platforms/5B-vila-janelas/phase5-5b-06-plataforma-outono-sombrio.png"
+ ],
+ clock:[
+  "../assets/game/phase5/platforms/5C-relogios-reflexos/phase5-5c-01-plataforma-relogio-outono.png",
+  "../assets/game/phase5/platforms/5C-relogios-reflexos/phase5-5c-02-plataforma-espelho-lunar.png",
+  "../assets/game/phase5/platforms/5C-relogios-reflexos/phase5-5c-03-plataforma-engrenagens-outono.png",
+  "../assets/game/phase5/platforms/5C-relogios-reflexos/phase5-5c-04-plataforma-relogio-dourado.png",
+  "../assets/game/phase5/platforms/5C-relogios-reflexos/phase5-5c-05-plataforma-tempo-fraturado.png",
+  "../assets/game/phase5/platforms/5C-relogios-reflexos/phase5-5c-06-plataforma-flutuante-outono.png"
+ ],
+ garden:[
+  "../assets/game/phase5/platforms/5D-jardim-memorias/phase5-5d-01-trilha-memorial-principal.png",
+  "../assets/game/phase5/platforms/5D-jardim-memorias/phase5-5d-02-altar-memorial-pequeno.png",
+  "../assets/game/phase5/platforms/5D-jardim-memorias/phase5-5d-03-plataforma-raizes-flores-secas.png",
+  "../assets/game/phase5/platforms/5D-jardim-memorias/phase5-5d-04-pedestal-de-oferta.png",
+  "../assets/game/phase5/platforms/5D-jardim-memorias/phase5-5d-05-ponte-curta-jardim.png",
+  "../assets/game/phase5/platforms/5D-jardim-memorias/phase5-5d-06-saida-contemplativa.png"
+ ],
+ city:[
+  "../assets/game/phase5/platforms/5E-cidade-rotulos/phase5-5e-01-chao-principal-praca.png",
+  "../assets/game/phase5/platforms/5E-cidade-rotulos/phase5-5e-02-plataforma-bases-placas.png",
+  "../assets/game/phase5/platforms/5E-cidade-rotulos/phase5-5e-03-plataforma-moldura-correntes.png",
+  "../assets/game/phase5/platforms/5E-cidade-rotulos/phase5-5e-04-passarela-rachada-praca.png",
+  "../assets/game/phase5/platforms/5E-cidade-rotulos/phase5-5e-05-pequeno-palco-confronto.png",
+  "../assets/game/phase5/platforms/5E-cidade-rotulos/phase5-5e-06-transicao-caminho-final.png"
+ ],
+ promise:[
+  "../assets/game/phase5/platforms/5F-caminho-promessa/phase5-5f-01-caminho-principal-promessa.png",
+  "../assets/game/phase5/platforms/5F-caminho-promessa/phase5-5f-02-plataforma-sigilo-promessa.png",
+  "../assets/game/phase5/platforms/5F-caminho-promessa/phase5-5f-03-plato-circular-flutuante.png",
+  "../assets/game/phase5/platforms/5F-caminho-promessa/phase5-5f-04-passarela-lanternas.png",
+  "../assets/game/phase5/platforms/5F-caminho-promessa/phase5-5f-05-aproximacao-final-escadaria.png"
+ ],
+ final:[
+  "../assets/game/phase5/platforms/5G-sala-espelhos-final/phase5-5g-01-chao-principal-arena.png",
+  "../assets/game/phase5/platforms/5G-sala-espelhos-final/phase5-5g-02-plataforma-lateral-esquerda.png",
+  "../assets/game/phase5/platforms/5G-sala-espelhos-final/phase5-5g-03-plataforma-lateral-direita.png",
+  "../assets/game/phase5/platforms/5G-sala-espelhos-final/phase5-5g-04-plato-central-selo.png",
+  "../assets/game/phase5/platforms/5G-sala-espelhos-final/phase5-5g-05-passarela-circense.png",
+  "../assets/game/phase5/platforms/5G-sala-espelhos-final/phase5-5g-06-base-espelho-pedestal.png",
+  "../assets/game/phase5/platforms/5G-sala-espelhos-final/phase5-5g-07-plataforma-quebrada.png",
+  "../assets/game/phase5/platforms/5G-sala-espelhos-final/phase5-5g-08-limiar-ultima-lanterna.png"
+ ],
+ shared:[
+  "../assets/game/phase5/platforms/5Z-shared/phase5-5z-01-ponte-outonal-encantada.png",
+  "../assets/game/phase5/platforms/5Z-shared/phase5-5z-02-plataforma-outono-decorada.png",
+  "../assets/game/phase5/platforms/5Z-shared/phase5-5z-03-plataforma-luz-outono.png",
+  "../assets/game/phase5/platforms/5Z-shared/phase5-5z-04-limiar-outono-ruinas.png",
+  "../assets/game/phase5/platforms/5Z-shared/phase5-5z-05-plataforma-flutuante-outono.png",
+  "../assets/game/phase5/platforms/5Z-shared/phase5-5z-06-ponte-cristal-mistico.png",
+  "../assets/game/phase5/platforms/5Z-shared/phase5-5z-07-plataforma-halloween-flutuante.png",
+  "../assets/game/phase5/platforms/5Z-shared/phase5-5z-08-plataforma-outono.png",
+  "../assets/game/phase5/platforms/5Z-shared/phase5-5z-09-guirlanda-roxa-dourada.png"
+ ]
+});
+
+const phase5PlatformCache=new Map();
+function phase5PlatformKey(section,index){return section+":"+index}
+function loadPhase5Platform(section,index){
+ const list=PHASE5_PLATFORM_FILES[section]||[];
+ const src=list[index];
+ if(!src)return Promise.resolve(null);
+ const key=phase5PlatformKey(section,index);
+ const cached=phase5PlatformCache.get(key);
+ if(cached?.promise)return cached.promise;
+ const im=new Image();
+ const entry={img:im,ready:false,promise:null};
+ entry.promise=new Promise(resolve=>{
+  im.onload=()=>{entry.ready=true;resolve(entry)};
+  im.onerror=()=>{entry.ready=false;resolve(null)};
+ });
+ phase5PlatformCache.set(key,entry);
+ im.src=src+"?v=1";
+ return entry.promise;
+}
+function ensurePhase5PlatformSection(section){
+ const list=PHASE5_PLATFORM_FILES[section]||[];
+ return Promise.allSettled(list.map((_,i)=>loadPhase5Platform(section,i)));
+}
+function ensurePhase5PlatformWindow(index){
+ const ids=[];
+ for(const n of [index-1,index,index+1]){
+  if(n>=0&&n<SECTIONS.length)ids.push(SECTIONS[n].id);
+ }
+ ids.forEach(id=>ensurePhase5PlatformSection(id));
+ // Mantém no máximo a vizinhança imediata em memória.
+ for(const [key,entry] of phase5PlatformCache){
+  const sec=key.split(":")[0];
+  if(!ids.includes(sec)&&sec!=="shared"){
+   try{entry.img.src=""}catch(_){}
+   phase5PlatformCache.delete(key);
+  }
+ }
+}
+function phase5PlatformImage(section,index){
+ const entry=phase5PlatformCache.get(phase5PlatformKey(section,index));
+ return entry?.ready?entry.img:null;
+}
+function drawPhase5PlatformArt(section,index,x,top,w,surface=.42,alpha=1){
+ const im=phase5PlatformImage(section,index);
+ if(!im||!im.naturalWidth||!im.naturalHeight)return false;
+ const h=w*(im.naturalHeight/im.naturalWidth);
+ ctx.save();
+ ctx.globalAlpha=alpha;
+ ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";
+ ctx.drawImage(im,x,top-h*surface,w,h);
+ ctx.restore();
+ return true;
+}
+
+const PHASE5_GROUND_ART=Object.freeze([
+ // 5A · A Estrada que Volta — seis variações ao longo da mesma estrada.
+ {s:"return",i:0,x:0,w:285},{s:"return",i:1,x:285,w:285},{s:"return",i:2,x:570,w:285},
+ {s:"return",i:3,x:855,w:285},{s:"return",i:4,x:1140,w:280},{s:"return",i:5,x:1420,w:280},
+
+ // 5B · Vila — três trechos de chão separados pelos buracos existentes.
+ {s:"houses",i:0,x:1700,w:490},{s:"houses",i:1,x:2280,w:520},{s:"houses",i:2,x:2890,w:610},
+
+ // 5C · Relógios e Reflexos.
+ {s:"clock",i:0,x:3500,w:700},{s:"clock",i:2,x:4300,w:500},{s:"clock",i:3,x:4900,w:450},
+
+ // 5D · Jardim das Memórias.
+ {s:"garden",i:0,x:5350,w:600},{s:"garden",i:2,x:6050,w:600},{s:"garden",i:5,x:6750,w:600},
+
+ // 5E · Cidade dos Rótulos.
+ {s:"city",i:0,x:7350,w:700},{s:"city",i:1,x:8150,w:550},{s:"city",i:5,x:8800,w:700},
+
+ // 5F · Caminho da Promessa — percurso contínuo e progressivamente mais claro.
+ {s:"promise",i:0,x:9500,w:270},{s:"promise",i:1,x:9770,w:270},{s:"promise",i:2,x:10040,w:270,surface:.34},
+ {s:"promise",i:3,x:10310,w:270},{s:"promise",i:4,x:10580,w:270},
+
+ // 5G · Sala de Espelhos — palco fragmentado em blocos para preservar leitura.
+ {s:"final",i:1,x:10850,w:360,surface:.36},{s:"final",i:4,x:11210,w:300,surface:.36},
+ {s:"final",i:0,x:11510,w:500,surface:.36},{s:"final",i:2,x:12010,w:300,surface:.36},
+ {s:"final",i:7,x:12310,w:290,surface:.36}
+]);
+
+const PHASE5_ELEVATED_ART=Object.freeze([
+ // Vila
+ {p:0,s:"houses",i:3,scale:1.55},{p:1,s:"houses",i:4,scale:1.50},{p:2,s:"houses",i:5,scale:1.52},
+ // Relógios
+ {p:3,s:"clock",i:1,scale:1.55},{p:4,s:"clock",i:4,scale:1.55},{p:5,s:"clock",i:5,scale:1.50},
+ // Jardim
+ {p:6,s:"garden",i:1,scale:1.55},{p:7,s:"garden",i:3,scale:1.48},{p:8,s:"garden",i:4,scale:1.55},
+ // Cidade
+ {p:9,s:"city",i:2,scale:1.55},{p:10,s:"city",i:3,scale:1.55},{p:11,s:"city",i:4,scale:1.50}
+]);
+
+// Elementos utilitários do lote 5Z usados como acabamento de transição.
+const PHASE5_SHARED_DECOR=Object.freeze([
+ {i:3,x:1510,top:FLOOR,w:235,surface:.42,alpha:.88},
+ {i:5,x:5120,top:FLOOR,w:240,surface:.42,alpha:.82},
+ {i:2,x:9285,top:FLOOR,w:240,surface:.42,alpha:.82},
+ {i:6,x:10680,top:FLOOR,w:245,surface:.42,alpha:.82}
+]);
+
+ensurePhase5PlatformSection("shared");
+const initialPlatformReady=ensurePhase5PlatformSection("return");
+window.__PHASE_ASSETS_READY=Promise.allSettled([
+ jackDialogueReady,
+ phase5BackgroundPromises.return,
+ initialPlatformReady
+]);
 
 const PHASE5_MUSIC=Object.freeze({
  return:{src:"../assets/audio/phase5/phase5-01-o-sino-chama-para-tras.mp3?v=1",volume:.40},
@@ -739,7 +923,12 @@ function update(dt){
 
  updateRoadStory();
  const si=sectionFor(cx);
- if(si!==sectionIndex){sectionIndex=si;banner(SECTIONS[si].name);sectionIntro(si)}
+ if(si!==sectionIndex){
+  sectionIndex=si;
+  ensurePhase5PlatformWindow(si);
+  banner(SECTIONS[si].name);
+  sectionIntro(si);
+ }
  updateCheckpoint();
  updateEnemies(dt);
  startBoss();
@@ -831,16 +1020,35 @@ function drawBackdrop(){
 }
 function drawGround(){
  ctx.save();ctx.translate(-cam,0);
+
+ // Base física discreta: permanece como fallback enquanto a arte carrega.
  for(const r of GROUND){
   const x=r[0],w=r[1]-r[0];
-  ctx.fillStyle="rgba(18,18,16,.88)";ctx.fillRect(x,FLOOR,w,140);
-  ctx.fillStyle="rgba(139,119,82,.92)";ctx.fillRect(x,FLOOR,w,5);
-  ctx.strokeStyle="rgba(10,8,6,.65)";ctx.lineWidth=3;
-  for(let xx=x+60;xx<x+w;xx+=120){ctx.beginPath();ctx.moveTo(xx,FLOOR+8);ctx.lineTo(xx-24,FLOOR+48);ctx.stroke()}
+  ctx.fillStyle="rgba(18,18,16,.78)";ctx.fillRect(x,FLOOR,w,140);
+  ctx.fillStyle="rgba(139,119,82,.72)";ctx.fillRect(x,FLOOR,w,4);
  }
- for(const q of PLATFORMS){
-  ctx.fillStyle="#26251f";ctx.fillRect(q.x,q.y,q.w,q.h);
-  ctx.fillStyle="#8d7952";ctx.fillRect(q.x,q.y,q.w,4);
+
+ // Chão artístico por capítulo.
+ for(const a of PHASE5_GROUND_ART){
+  drawPhase5PlatformArt(a.s,a.i,a.x,FLOOR,a.w,a.surface??.42,1);
+ }
+
+ // Plataformas elevadas mantêm exatamente os hitboxes originais.
+ for(const a of PHASE5_ELEVATED_ART){
+  const q=PLATFORMS[a.p];
+  if(!q)continue;
+  const visualW=q.w*(a.scale||1.5);
+  const visualX=q.x-(visualW-q.w)/2;
+  const drew=drawPhase5PlatformArt(a.s,a.i,visualX,q.y,visualW,a.surface??.42,1);
+  if(!drew){
+   ctx.fillStyle="#26251f";ctx.fillRect(q.x,q.y,q.w,q.h);
+   ctx.fillStyle="#8d7952";ctx.fillRect(q.x,q.y,q.w,4);
+  }
+ }
+
+ // Lote 5Z: peças de acabamento nos grandes limiares narrativos.
+ for(const d of PHASE5_SHARED_DECOR){
+  drawPhase5PlatformArt("shared",d.i,d.x,d.top,d.w,d.surface,d.alpha);
  }
  ctx.restore();
 }
