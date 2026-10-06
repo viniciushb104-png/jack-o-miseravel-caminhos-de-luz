@@ -415,6 +415,7 @@
     openJourneyWithLight(chapterFive.href, 'SEGUINDO PARA A ÚLTIMA LANTERNA...');
   });
 
+  window.__jackNavigationBound = true;
   syncJourneyUI();
   window.addEventListener('pageshow', syncJourneyUI);
   window.addEventListener('storage', syncJourneyUI);
