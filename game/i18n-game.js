@@ -1,142 +1,349 @@
 (() => {
-  const STORAGE_KEY = 'jack-language';
-  const exact = {
-    'VIDA':'LIFE',
-    'MÚSICA':'MUSIC',
-    'PAUSAR':'PAUSE',
-    'PAUSA':'PAUSE',
-    'CONTINUAR':'CONTINUE',
-    'RECOMEÇAR':'RESTART',
-    'VOLTAR AO MENU':'BACK TO MENU',
-    'MENU':'MENU',
-    'PULAR':'JUMP',
-    'CORRER':'RUN',
-    'LUZ':'LIGHT',
-    'ATACAR':'ATTACK',
-    'INTERAGIR':'INTERACT',
-    'OBJETIVO':'OBJECTIVE',
-    'NOVO OBJETIVO':'NEW OBJECTIVE',
-    'CHECKPOINT':'CHECKPOINT',
-    'CHECKPOINT ACESO':'CHECKPOINT LIT',
-    'MEMÓRIA':'MEMORY',
-    'MEMÓRIAS':'MEMORIES',
-    'FRAGMENTO':'FRAGMENT',
-    'FRAGMENTOS':'FRAGMENTS',
-    'BLOQUEADO':'LOCKED',
-    'DESBLOQUEADO':'UNLOCKED',
-    'CONCLUÍDO':'COMPLETED',
-    'FASE CONCLUÍDA':'CHAPTER COMPLETE',
-    'JOGAR NOVAMENTE':'PLAY AGAIN',
-    'PRÓXIMA FASE':'NEXT CHAPTER',
-    'VOLTAR':'BACK',
-    'SIM':'YES',
-    'NÃO':'NO',
-    'TOQUE PARA CONTINUAR':'TAP TO CONTINUE',
-    'PRESSIONE PARA CONTINUAR':'PRESS TO CONTINUE',
-    'Carregando...':'Loading...',
-    'Carregando':'Loading',
-    'Preparando a jornada...':'Preparing the journey...',
-    'Você caiu.':'You fell.',
-    'Tente novamente.':'Try again.',
-    'A lanterna se apagou.':'The lantern went out.',
-    'Retornando ao último checkpoint...':'Returning to the last checkpoint...'
+  const STORAGE_KEY='jack-language';
+  const EN=()=>localStorage.getItem(STORAGE_KEY)==='en';
+
+  const exact={
+    // Shared UI
+    'CAMINHOS DE LUZ':'PATHS OF LIGHT','VIDA':'LIFE','MÚSICA':'MUSIC','LUZ':'LIGHT','AÇÃO':'ACTION',
+    'OBJETIVO':'OBJECTIVE','CONTROLES':'CONTROLS','CONVERSAR':'TALK','INTERAGIR':'INTERACT','PULAR':'JUMP',
+    'PAUSA':'PAUSE','PAUSAR':'PAUSE','CONTINUAR':'CONTINUE','RECOMEÇAR':'RESTART','VOLTAR':'BACK',
+    'JOGAR NOVAMENTE':'PLAY AGAIN','REJOGAR HALLOWEEN IV':'REPLAY HALLOWEEN IV','REJOGAR HALLOWEEN V':'REPLAY HALLOWEEN V',
+    'PRÓXIMA FASE':'NEXT CHAPTER','MEMÓRIA':'MEMORY','MEMÓRIAS':'MEMORIES','FRAGMENTO':'FRAGMENT','FRAGMENTOS':'FRAGMENTS',
+    'CONQUISTA DESBLOQUEADA':'ACHIEVEMENT UNLOCKED','♫ AGORA TOCANDO':'♫ NOW PLAYING',
+    'ILUMINANDO O CAMINHO...':'LIGHTING THE PATH...','OUVINDO AS RAÍZES...':'LISTENING TO THE ROOTS...',
+    'PROCURANDO OS RASTROS...':'SEARCHING FOR TRACES...','PROCURANDO O CAMINHO DE VOLTA...':'SEARCHING FOR THE WAY BACK...',
+    '↻ Gire o celular para jogar na horizontal':'↻ Rotate your phone to play in landscape',
+    '‹ MAPA':'‹ MAP','Voltar ao mapa':'Back to Map','⌂ VOLTAR ÀS FASES':'⌂ BACK TO CHAPTERS',
+    '⌂ VOLTAR AO MENU PRINCIPAL':'⌂ BACK TO MAIN MENU',
+    'Silenciar música':'Mute music','Ativar música':'Enable music','Próxima fala':'Next line',
+    'Mover para a esquerda':'Move left','Mover para a direita':'Move right','Abaixar':'Crouch','Usar a luz':'Use Light',
+    'Carregando caminho':'Loading path','Carregando...':'Loading...','Carregando':'Loading',
+    'DISSIPADO PELA LUZ':'DISPELLED BY THE LIGHT','MEMÓRIA REVIVIDA':'MEMORY REVIVED',
+    'MEMÓRIA RECONSTRUÍDA — OS SINOS':'MEMORY REBUILT — THE BELLS',
+    'MEMÓRIA RECONSTRUÍDA — OS RETRATOS':'MEMORY REBUILT — THE PORTRAITS',
+    'MEMÓRIA RECONSTRUÍDA — A VOZ DE MARA':'MEMORY REBUILT — MARA\'S VOICE',
+    'UMA MEMÓRIA QUE NÃO PERTENCE AO BOSQUE':'A MEMORY THAT DOES NOT BELONG TO THE FOREST',
+    'ITEM DA JORNADA — CHAVE DE MADEIRA DE MARA':'JOURNEY ITEM — MARA\'S WOODEN KEY',
+    'MEMÓRIA RECUPERADA — MARA ROWAN':'MEMORY RECOVERED — MARA ROWAN',
+    'MEMÓRIA REVIVIDA — MARA ROWAN':'MEMORY REVIVED — MARA ROWAN',
+    'HALLOWEEN IV CONCLUÍDO':'HALLOWEEN IV COMPLETE','CAMINHOS DE LUZ · CONCLUÍDO':'PATHS OF LIGHT · COMPLETE',
+    'SINO SEM INSCRIÇÃO':'UNINSCRIBED BELL','ITEM · SINO SEM INSCRIÇÃO':'ITEM · UNINSCRIBED BELL',
+    'A ÚLTIMA LANTERNA':'THE LAST LANTERN','O MISERÁVEL':'THE MISERABLE','MISERÁVEL':'MISERABLE',
+    'AGORA':'NOW','ESTRADA':'ROAD','JANELA':'WINDOW','ANTES':'BEFORE','ONTEM':'YESTERDAY','DEPOIS':'AFTER',
+
+    // Halloween I
+    'Halloween I — As Casas dos Perdidos':'Halloween I — The Houses of the Lost',
+    'AS CASAS DOS PERDIDOS':'THE HOUSES OF THE LOST','AS CASAS':'THE HOUSES','DOS PERDIDOS':'OF THE LOST',
+    'As Casas dos Perdidos':'The Houses of the Lost','A Guardiã da Última Lanterna':'The Guardian of the Last Lantern',
+    'GUARDIÃ DA ÚLTIMA LANTERNA':'GUARDIAN OF THE LAST LANTERN',
+    'Siga a única casa iluminada e encontre quem ainda espera.':'Follow the only lit house and find whoever is still waiting.',
+    'A luz de Jack desperta lembranças que alguém tentou apagar.':'Jack\'s light awakens memories someone tried to erase.',
+    '✦ INICIAR JORNADA':'✦ START JOURNEY','✦ O CAMINHO SE ABRIU ✦':'✦ THE PATH HAS OPENED ✦',
+    'Eleanor encontrou a luz':'Eleanor found the light',
+    'A primeira alma foi libertada. A conclusão fica salva — e você pode atravessar esta noite novamente quando quiser.':'The first soul has been freed. Your completion is saved — and you can cross this night again whenever you wish.',
+    '✦ Prosseguir para Halloween II':'✦ Continue to Halloween II','↻ Jogar novamente':'↻ Play Again',
+    'Uma Luz na Escuridão':'A Light in the Darkness','MEMÓRIA REVIVIDA':'MEMORY REVIVED',
+    'A Arena da Guardiã foi aberta.':'The Guardian\'s Arena has opened.',
+    'A luz está mais forte. Você encontrou alguma coisa?':'The light is stronger. Did you find something?',
+    'Eu consigo sentir o caminho... mas alguma coisa ainda o bloqueia.':'I can feel the path... but something still blocks it.',
+    'Ainda estou juntando as peças.':'I\'m still putting the pieces together.','Eu vou cuidar do bloqueio.':'I\'ll take care of what is blocking it.',
+    'Eco dissipado pela Luz.':'Echo dispelled by the Light.','A última lanterna trouxe Jack de volta.':'The last lantern brought Jack back.',
+    'Eleanor encontrou a luz · Troféu e memória adicionados ao arquivo':'Eleanor found the light · Trophy and memory added to the archive',
+    'Halloween I concluído novamente':'Halloween I completed again',
+    'Cinco memórias precisam iluminar este selo.':'Five memories must illuminate this seal.',
+    'A lanterna guardou seu último checkpoint. Continue de onde a chama ficou acesa.':'The lantern saved your last checkpoint. Continue from where the flame remained lit.',
+    '✦ CONTINUAR JORNADA':'✦ CONTINUE JOURNEY','✦ CONTINUAR REPLAY':'✦ CONTINUE REPLAY','↻ JOGAR NOVAMENTE':'↻ PLAY AGAIN',
+
+    // Halloween II static
+    'Halloween II — A Vila sem Amanhecer · Protótipo':'Halloween II — The Village Without Dawn',
+    'HALLOWEEN II · PROTÓTIPO':'HALLOWEEN II','A VILA SEM AMANHECER':'THE VILLAGE WITHOUT DAWN',
+    'A VILA SEM':'THE VILLAGE','AMANHECER':'WITHOUT DAWN','ENGRENAGENS':'GEARS',
+    'Siga pela estrada e descubra por que a vila nunca amanhece.':'Follow the road and discover why dawn never comes to the village.',
+    '4:13 — A Vila sem Amanhecer':'4:13 — The Village Without Dawn',
+    'Todos os relógios marcam 4:13. Alguém ainda acredita que pode consertar aquela noite.':'Every clock reads 4:13. Someone still believes that night can be repaired.',
+    '✦ ENTRAR NA VILA':'✦ ENTER THE VILLAGE','A SOMBRA DAS 4:13':'THE SHADOW OF 4:13',
+    'O PRIMEIRO MINUTO':'THE FIRST MINUTE','O Primeiro Minuto':'The First Minute',
+    'Halloween II · Troféu adicionado às Memórias':'Halloween II · Trophy added to Memories',
+    'CAMINHOS DE LUZ · HALLOWEEN II':'PATHS OF LIGHT · HALLOWEEN II',
+    '4:14 — O PRÓXIMO MINUTO':'4:14 — THE NEXT MINUTE',
+    'Amélia deixou as 4:13 para trás. O caminho de Jack continua.':'Amélia left 4:13 behind. Jack\'s path continues.',
+    'O que deseja fazer?':'What would you like to do?','✦ IR PARA HALLOWEEN III':'✦ GO TO HALLOWEEN III',
+    'Halloween III · O Bosque das Memórias já começou a despertar.':'Halloween III · The Forest of Memories has already begun to awaken.',
+    'LUZ ANCORADA — CHECKPOINT ATIVADO':'ANCHORED LIGHT — CHECKPOINT ACTIVATED',
+    'Outra vila. Outra noite. E nenhum sinal do amanhecer.':'Another village. Another night. And no sign of dawn.',
+    'Curioso... até os relógios quebrados daqui conseguiram concordar: 4:13.':'Funny... even the broken clocks here managed to agree: 4:13.',
+    'Não toque nos relógios, forasteiro. Eles já dão trabalho suficiente parados.':'Do not touch the clocks, stranger. They are trouble enough while standing still.',
+    'Você não é daqui.':'You are not from here.',
+    'Foi a lanterna que denunciou ou o fato de eu ainda estar andando para algum lugar?':'Was it the lantern that gave me away, or the fact that I am still walking somewhere?',
+    'Sou Amélia Vesper. Relojoeira. Quando eu consertar o relógio da praça, o sol vai nascer.':'I am Amélia Vesper. Clockmaker. When I repair the town clock, the sun will rise.',
+    'Há quanto tempo está tentando?':'How long have you been trying?',
+    '... Encontre as três engrenagens. Horas. Minutos. Amanhecer. Depois conversamos.':'... Find the three gears. Hours. Minutes. Dawn. Then we talk.',
+    'A Engrenagem das Horas... ainda estava aqui.':'The Hour Gear... it was still here.',
+    'Você fala dela como quem esperava que tivesse desaparecido.':'You speak of it like you expected it to be gone.',
+    'Minutos. Engraçado como poucos deles podem mudar uma vida inteira.':'Minutes. Funny how a few of them can change an entire life.',
+    'Não filosofe com peças de relógio, Jack.':'Do not philosophize with clock parts, Jack.',
+    'A Engrenagem do Amanhecer...':'The Dawn Gear...',
+    'Você não parece feliz por eu ter encontrado.':'You do not look happy that I found it.',
+    'Leve-a até a Torre. Agora.':'Take it to the Tower. Now.',
+    'Pare. Não coloque as três peças no mecanismo.':'Stop. Do not put all three pieces into the mechanism.',
+    'Você nunca quis consertar o relógio.':'You never wanted to repair the clock.',
+    'Eu só precisava de mais cinco minutos naquela noite.':'I only needed five more minutes that night.',
+    'E desde então mantém todo mundo preso nesses cinco minutos.':'And ever since, you have kept everyone trapped inside those five minutes.',
+    'Se pudesse voltar à pior noite da sua vida... não voltaria?':'If you could return to the worst night of your life... would you not?',
+    'Mas uma lanterna não serve para apagar o que aconteceu. Serve para enxergar o caminho depois.':'A lantern is not meant to erase what happened. It is meant to show the path after it.',
+    'Jack... afaste-se. Eu consigo sentir as 4:13 outra vez.':'Jack... step back. I can feel 4:13 again.',
+    'Amélia? O que está acontecendo com a sua sombra?':'Amélia? What is happening to your shadow?',
+    'Não é o relógio que está preso naquela noite. Sou eu.':'It is not the clock trapped in that night. It is me.',
+    'Eu segurei aquele instante com tanta força... que ele aprendeu a me segurar também.':'I held that moment so tightly... that it learned to hold me too.',
+    'Então solte.':'Then let go.','Eu não sei se consigo.':'I do not know if I can.',
+    'Cinco minutos... só mais cinco minutos...':'Five minutes... just five more minutes...',
+    'Não escute. Isso é tudo o que eu não consegui deixar ir.':'Do not listen. That is everything I could not let go.',
+    'Então eu não vou lutar contra você.':'Then I will not fight you.',
+    'Vou lutar contra o minuto que te prendeu.':'I will fight the minute that trapped you.',
+    'Jack... ele ainda está parado.':'Jack... it is still stopped.',
+    'Então talvez esteja esperando você deixá-lo continuar.':'Then maybe it is waiting for you to let it continue.',
+    'Então... era só deixar o minuto passar.':'So... I only had to let the minute pass.',
+    'Não. Era aceitar que ele já tinha passado.':'No. You had to accept that it had already passed.',
+    'Eu tinha esquecido que existia um minuto depois.':'I had forgotten there was a minute after.',
+    'E agora?':'And now?','Agora você vive nele.':'Now you live in it.','... Então eu vou tentar.':'... Then I will try.',
+    '4:14. Pela primeira vez, a vila tem um minuto depois.':'4:14. For the first time, the village has a minute after.',
+    'O ÚLTIMO MINUTO FOI DISSIPADO':'THE LAST MINUTE WAS DISPELLED','CONTINUAR SEM A CUTSCENE':'CONTINUE WITHOUT CUTSCENE',
+    'SOMBRA DE AMÉLIA — O ÚLTIMO MINUTO':'AMÉLIA\'S SHADOW — THE LAST MINUTE',
+    'A dor das 4:13 tomou forma. Use a LUZ para libertá-la.':'The pain of 4:13 has taken form. Use the LIGHT to free it.',
+    'SELO DO TOPO:':'SUMMIT SEAL:','ENGRENAGEM DAS HORAS':'HOUR GEAR','ENGRENAGEM DOS MINUTOS':'MINUTE GEAR',
+    'ENGRENAGEM DO AMANHECER':'DAWN GEAR','AMÉLIA RELOJOEIRA':'AMÉLIA THE CLOCKMAKER','AMÉLIA CRIANÇA':'YOUNG AMÉLIA',
+    'AMÉLIA E A TORRE':'AMÉLIA AND THE TOWER','AMÉLIA APRENDIZ':'AMÉLIA THE APPRENTICE',
+    'Uma infância antes das 4:13.':'A childhood before 4:13.','O tempo virou ofício.':'Time became a craft.','E então veio a Torre.':'And then came the Tower.',
+    'Lar da Abóbora':'Pumpkin Home','Casa dos Relógios':'House of Clocks','Pedestal da Esquerda':'Left Pedestal','Pedestal da Direita':'Right Pedestal',
+    'ESTRADA DAS LANTERNAS MORTAS':'ROAD OF DEAD LANTERNS','PRAÇA DAS 4:13':'4:13 SQUARE','DISTRITO DOS SINOS':'BELL DISTRICT',
+    'CAMINHO DA TORRE':'TOWER PATH','A TORRE DAS 4:13':'THE TOWER OF 4:13',
+    'Três lares reacenderam. A vila ainda se lembra de como era estar viva.':'Three homes are lit again. The village still remembers what it was like to be alive.',
+    'Uma chama respondeu à lanterna. O primeiro lar recordou seu calor.':'A flame answered the lantern. The first home remembered its warmth.',
+    'Os relógios estremeceram. O segundo lar deixou as 4:13 respirarem.':'The clocks trembled. The second home let 4:13 breathe.',
+    'A vila não respondeu. Talvez os sinais tenham uma ordem...':'The village did not answer. Perhaps the signs have an order...',
+    'AS SOMBRAS ENCONTRARAM O CAMINHO':'THE SHADOWS FOUND THE PATH',
+    'A última sombra aponta para a Torre. O minuto perdido deixou uma trilha.':'The last shadow points to the Tower. The lost minute left a trail.',
+    'A sombra central se moveu. Seu rastro aponta para a esquerda.':'The center shadow moved. Its trail points left.',
+    'A segunda sombra respondeu. Agora o rastro atravessa para a direita.':'The second shadow answered. Now the trail crosses to the right.',
+    'As sombras se dispersaram. Observe qual delas oferece o primeiro caminho...':'The shadows scattered. Watch which one offers the first path...',
+    'Os dois selos temporais despertaram. O mecanismo do topo aguarda as três engrenagens.':'Both temporal seals awakened. The summit mechanism awaits the three gears.',
+    'CORVO DO MINUTO MORTO':'CROW OF THE DEAD MINUTE','ESPECTRO DAS 4:13':'SPECTER OF 4:13','SINEIRO SEM HORA':'TIMELESS BELLRINGER',
+    'VIGIA DAS JANELAS':'WINDOW WATCHER','SENTINELA DO RELÓGIO':'CLOCK SENTINEL','DISTORÇÃO':'DISTORTION',
+    'O tempo voltou a respirar.':'Time began to breathe again.','AMÉLIA — LIVRE':'AMÉLIA — FREE','AMÉLIA':'AMÉLIA',
+    'SUBIDA DA TORRE — siga as plataformas ao redor do relógio':'TOWER ASCENT — follow the platforms around the clock',
+
+    // Halloween III static/gameplay
+    'Halloween III — O Bosque das Memórias':'Halloween III — The Forest of Memories','O BOSQUE DAS MEMÓRIAS':'THE FOREST OF MEMORIES',
+    'O BOSQUE DAS':'THE FOREST OF','MEMÓRIAS':'MEMORIES','Siga as folhas que caem para o céu.':'Follow the leaves that fall toward the sky.',
+    'Algumas lembranças criam raízes profundas. Outras aprendem a crescer sobre quem tenta guardá-las.':'Some memories grow deep roots. Others learn to grow over those who try to keep them.',
+    '✦ ENTRAR NO BOSQUE':'✦ ENTER THE FOREST','LUZ DA MEMÓRIA':'MEMORY LIGHT',
+    'Mara aprendeu que lembrar não é manter tudo preso. Pela primeira vez, as folhas voltaram a cair.':'Mara learned that remembering does not mean keeping everything trapped. For the first time, the leaves began to fall again.',
+    '“Talvez essa seja a pergunta que ainda lhe resta.”':'“Perhaps that is the question still left to you.”',
+    'O caminho de Jack continua.':'Jack\'s path continues.','✦ IR PARA HALLOWEEN IV':'✦ GO TO HALLOWEEN IV',
+    'Halloween IV · A Estrada dos Esquecidos foi revelada além da névoa.':'Halloween IV · The Road of the Forgotten has been revealed beyond the fog.',
+    'ESTRADA DE 4:14':'ROAD FROM 4:14','O LIMIAR DAS RAÍZES':'THE ROOT THRESHOLD','BOSQUE DOS RETRATOS':'FOREST OF PORTRAITS',
+    'LAGO DAS VOZES':'LAKE OF VOICES','ARQUIVO DAS RAÍZES':'ROOT ARCHIVE','CAMINHO DA ÁRVORE-MÃE':'PATH TO THE MOTHER TREE',
+    'O CORAÇÃO DAS RAÍZES':'THE HEART OF THE ROOTS','Árvore da Primeira Lembrança':'Tree of the First Memory',
+    'Salgueiro das Vozes':'Willow of Voices','Raiz do Arquivo':'Archive Root','RAIZ DE LUZ — CHECKPOINT':'ROOT OF LIGHT — CHECKPOINT',
+    'F · despertar memória':'F · awaken memory','QUAL DESTAS LEMBRANÇAS':'WHICH OF THESE MEMORIES','CAIXA DE MÚSICA':'MUSIC BOX',
+    'MEMÓRIA OUVIDA':'MEMORY HEARD','DEIXAR IR — SEM APAGAR':'LET GO — WITHOUT ERASING',
+    'MEMÓRIA NÃO APAGADA — LIBERTADA':'MEMORY NOT ERASED — RELEASED',
+    'As raízes soltaram o caminho para a Árvore-Mãe.':'The roots released the path to the Mother Tree.',
+    'Mara ergueu a própria lanterna e seguiu em direção ao Lago das Vozes.':'Mara raised her own lantern and headed toward the Lake of Voices.',
+    'MARA POUSOU NO LAGO DAS VOZES':'MARA REACHED THE LAKE OF VOICES',
+    'O Eco ainda está adormecido. Use F para escutar o fragmento primeiro.':'The Echo is still asleep. Use F to hear the fragment first.',
+    'A voz está desperta, mas a conexão enfraqueceu. Erga novamente a Luz da Memória.':'The voice is awake, but the connection weakened. Raise the Memory Light again.',
+    'A frase se perdeu na água. Os Ecos continuam despertos — reorganize a sequência.':'The phrase was lost in the water. The Echoes remain awake — reorder the sequence.',
+    'Mara correu para o Arquivo das Raízes.':'Mara ran toward the Root Archive.','MARA CHEGOU AO ARQUIVO DAS RAÍZES':'MARA REACHED THE ROOT ARCHIVE',
+    'O CORAÇÃO DA ORDEM FOI EXPOSTO':'THE HEART OF THE COMMAND WAS EXPOSED',
+    'A ordem ganhou corpo. Tente usar a Luz no Arquivista.':'The command took form. Try using the Light on the Archivist.',
+    'Procure os três rostos presos ao redor do Arquivista e ilumine cada um.':'Find the three faces trapped around the Archivist and illuminate each one.',
+    'A Luz toca o corpo do Arquivista, mas ele se recompõe. Procure um rosto preso.':'The Light touches the Archivist\'s body, but it reforms. Find a trapped face.',
+    'Esse rosto já foi reconhecido. Há outras memórias presas.':'That face has already been recognized. Other memories are still trapped.',
+    'Lívia foi lembrada pelo pão que repartiu.':'Lívia was remembered for the bread she shared.',
+    'Tomás foi lembrado pelo que restaurou.':'Tomás was remembered for what he restored.',
+    'Celina foi lembrada pela música que deixou.':'Celina was remembered for the music she left behind.',
+    'Repita a sequência aprendida no Lago. A ordem dos ecos ainda importa.':'Repeat the sequence learned at the Lake. The order of the echoes still matters.',
+    'O Arquivista misturou os ecos. Recomece a frase de Mara.':'The Archivist mixed the echoes. Rebuild Mara\'s phrase from the beginning.',
+    'Abra caminho para Mara: aproxime-se da Raiz-Selo corrompida e use F.':'Open the path for Mara: approach the corrupted Root-Seal and use F.',
+    'O coração da ordem está exposto. Aproxime-se e pressione E.':'The heart of the command is exposed. Approach it and press E.',
+    'O troféu de Mara foi adicionado às Memórias.':'Mara\'s trophy was added to Memories.',
+    'O Bosque das Memórias foi atravessado novamente.':'The Forest of Memories was crossed again.',
+    'Use a Luz para caminhar sobre uma lembrança do caminho.':'Use the Light to walk across a memory of the path.',
+    'Siga as folhas até a mulher que espera junto às raízes.':'Follow the leaves to the woman waiting by the roots.',
+    'Pela primeira vez, as folhas estão caindo para o chão.':'For the first time, the leaves are falling to the ground.',
+    'O caminho de Mara terminou. O de Jack continua.':'Mara\'s path has ended. Jack\'s continues.',
+    'Escute a Árvore-Mãe.':'Listen to the Mother Tree.','Siga as folhas que caem para o céu.':'Follow the leaves that fall toward the sky.',
+
+    // Halloween IV static/gameplay
+    'Halloween IV — A Estrada dos Esquecidos':'Halloween IV — The Road of the Forgotten','A ESTRADA DOS ESQUECIDOS':'THE ROAD OF THE FORGOTTEN',
+    'A ESTRADA DOS':'THE ROAD OF','ESQUECIDOS':'THE FORGOTTEN',
+    'A chave de Mara reage à parede. Aproxime-se e pressione E.':'Mara\'s key reacts to the wall. Approach it and press E.',
+    'Depois do Bosque das Memórias, Jack encontra um caminho onde até os nomes desapareceram. A chave de Mara ainda se lembra de uma porta.':'After the Forest of Memories, Jack finds a road where even names have vanished. Mara\'s key still remembers a door.',
+    '✦ ENTRAR NA ESTRADA':'✦ ENTER THE ROAD','LUZ / COMBATE':'LIGHT / COMBAT','HALLOWEEN IV · CONCLUÍDO':'HALLOWEEN IV · COMPLETE',
+    'A Peregrina escolheu continuar sem esperar que um nome dissesse quem ela é. O Coletor soltou o que nunca lhe pertenceu, e Jack recuperou uma parte de sua própria promessa.':'The Pilgrim chose to continue without waiting for a name to tell her who she is. The Collector released what never belonged to him, and Jack recovered part of his own promise.',
+    '“Você prometeu.” — “Eu volto.”':'“You promised.” — “I\'ll come back.”','✦ ITEM OBTIDO · SINO SEM INSCRIÇÃO':'✦ ITEM OBTAINED · UNINSCRIBED BELL',
+    'Se alguém esquecer para onde estava indo, chame — mesmo sem saber o nome.':'If someone forgets where they were going, call — even if you do not know the name.',
+    'HALLOWEEN V DESBLOQUEADO':'HALLOWEEN V UNLOCKED','O sino chama para a última estrada desta aventura.':'The bell calls toward the final road of this adventure.',
+    '✦ SEGUIR PARA A ÚLTIMA LANTERNA':'✦ FOLLOW THE LAST LANTERN',
+    'Marco sem inscrição':'Uninscribed Marker','Marco do Povoado':'Settlement Marker','Marco das Pegadas':'Tracks Marker','Marco do Arquivo':'Archive Marker',
+    'Marco da Praça':'Square Marker','Marco sem Nome':'Nameless Marker','A Luz abriu fissuras na rasura.':'The Light opened cracks in the redaction.',
+    'CÃO DE CINZA':'ASH HOUND','CORVO DO ESQUECIMENTO':'CROW OF FORGETTING',
+    'A Luz incendiou as rachaduras de cinza.':'The Light ignited the cracks of ash.',
+    'As roupas caíram vazias. O pó dentro delas não tinha nome.':'The clothes fell empty. The dust inside them had no name.',
+    'O corvo se rasgou em penas de papel e letras sem dono.':'The crow tore apart into paper feathers and ownerless letters.',
+    'O Corvo roubou o brilho da lanterna.':'The Crow stole the lantern\'s glow.','O Cão de Cinza atravessou a guarda de Jack.':'The Ash Hound broke through Jack\'s guard.',
+    'O Coletor empurrou Jack com o peso dos nomes roubados.':'The Collector struck Jack with the weight of stolen names.',
+    'VOCÊ PASSOU POR AQUI':'YOU PASSED THROUGH HERE','Ela voltou. Amparou. E voltou outra vez.':'She came back. She supported someone. And she came back again.',
+    'Use F perto do Coletor para libertar as placas da armadura.':'Use F near the Collector to free the plaques from his armor.',
+    'Sem a armadura, o Coletor ficou menor — e muito mais rápido.':'Without the armor, the Collector became smaller — and much faster.',
+    'A forma monumental do Coletor começa a desabar.':'The Collector\'s monumental form begins to collapse.',
+    'A Luz não precisa feri-lo. Aproxime-se e pressione E.':'The Light does not need to hurt him. Approach and press E.',
+    'O confronto terminou sem apagar quem estava por baixo dos nomes.':'The confrontation ended without erasing the person beneath the names.',
+    'O sino toca sem chamar um nome — e alguma coisa na memória de Jack responde.':'The bell rings without calling a name — and something in Jack\'s memory answers.',
+    'Ser esquecido não significa nunca ter existido.':'Being forgotten does not mean never having existed.',
+    'Aproxime-se do sino e pressione E para recebê-lo.':'Approach the bell and press E to receive it.',
+    'ELA NÃO PRECISA ESPERAR PELO NOME':'SHE DOES NOT NEED TO WAIT FOR THE NAME','MEMÓRIA · EU VOLTO':'MEMORY · I\'LL COME BACK',
+    'A ESTRADA CONTINUA':'THE ROAD CONTINUES','O COLETOR DE NOMES · ATO':'THE COLLECTOR OF NAMES · ACT',
+    'A chave está reagindo a alguma coisa na parede.':'The key is reacting to something in the wall.',
+    'Há o contorno de uma porta, mas Jack não tem nada que se encaixe nela.':'There is the outline of a door, but Jack has nothing that fits it.',
+    'A passagem existe enquanto a memória da chave permanecer acesa.':'The passage exists while the memory of the key remains lit.',
+    'O Sino sem Inscrição espera alguns passos adiante.':'The Uninscribed Bell waits a few steps ahead.',
+    'POVOADO SEM NOMES':'NAMELESS SETTLEMENT','OS NOMES ESTÃO SENDO COLETADOS':'THE NAMES ARE BEING COLLECTED',
+    'IDENTIDADE TAMBÉM É O QUE FAZEMOS':'IDENTITY IS ALSO WHAT WE DO','NOMES NÃO SÃO PESSOAS':'NAMES ARE NOT PEOPLE',
+    'PONTE DOS NINGUÉM':'BRIDGE OF NOBODIES','PRAÇA DOS NOMES ROUBADOS':'SQUARE OF STOLEN NAMES',
+    'CASA DO COLETOR':'THE COLLECTOR\'S HOUSE','DIANTE DA CASA DO COLETOR':'BEFORE THE COLLECTOR\'S HOUSE',
+
+    // Halloween V static/gameplay
+    'Halloween V — A Última Lanterna':'Halloween V — The Last Lantern',
+    'A ÚLTIMA':'THE LAST','LANTERNA':'LANTERN',
+    'Siga a estrada. O sino sem inscrição ainda está com Jack.':'Follow the road. Jack still carries the uninscribed bell.',
+    'O sino da Peregrina chama para uma estrada que Jack nunca conseguiu enxergar. Desta vez, a Luz não aponta apenas para quem está perdido.':'The Pilgrim\'s bell calls toward a road Jack was never able to see. This time, the Light points not only to those who are lost.',
+    '✦ SEGUIR O SINO':'✦ FOLLOW THE BELL','LUZ / REFLETIR':'LIGHT / REFLECT',
+    'Jack não apagou o passado e não recebeu uma sentença antecipada. Ele apenas deixou de permitir que o pior de sua história escrevesse sozinho tudo o que ainda pode fazer.':'Jack did not erase the past, nor did he receive an early verdict. He simply stopped allowing the worst of his story to write everything he can still become.',
+    '“Ainda não. Mas finalmente sei como continuar procurando.”':'“Not yet. But I finally know how to keep looking.”',
+    '✦ JORNADA 5/5':'✦ JOURNEY 5/5','A última lanterna desta aventura foi acesa. Jack continua caminhando.':'The last lantern of this adventure has been lit. Jack keeps walking.',
+    '✦ VER MEMÓRIAS DA JORNADA':'✦ VIEW JOURNEY MEMORIES',
+    'MARCO DO RETORNO':'MARKER OF RETURN','RELÓGIO DO AGORA':'CLOCK OF NOW','LANTERNA DAS COISAS DEIXADAS':'LANTERN OF THINGS LEFT BEHIND',
+    'MARCO SEM NOME':'NAMELESS MARKER','A PENÚLTIMA LANTERNA':'THE PENULTIMATE LANTERN','VOCÊ PROMETEU':'YOU PROMISED',
+    'ENCONTRE O CAMINHO DE VOLTA':'FIND THE WAY BACK','PARA TODOS ELES':'FOR ALL OF THEM',
+    'Siga a estrada até onde a névoa permitir.':'Follow the road as far as the fog allows.',
+    'O sino chama para trás. Volte pelo caminho que acabou de percorrer.':'The bell calls backward. Return along the path you just traveled.',
+    'O caminho mudou. Atravesse o Marco do Retorno.':'The path has changed. Cross the Marker of Return.',
+    'Apague as 3 lanternas que mantêm janelas esperando. Preserve as 2 que iluminam a estrada.':'Extinguish the 3 lanterns that keep windows waiting. Preserve the 2 that light the road.',
+    'Use F junto aos 3 espelhos para impedir o mecanismo de voltar a ONTEM.':'Use F beside the 3 mirrors to keep the mechanism from returning to YESTERDAY.',
+    'Deposite CARTA, CHAVE e RETRATO nos memoriais. Guardar tudo impede continuar.':'Place the LETTER, KEY and PORTRAIT at the memorials. Keeping everything prevents you from moving on.',
+    'Ilumine as 4 marcas de ações e enfrente o rótulo MISERÁVEL.':'Illuminate the 4 marks of action and confront the label MISERABLE.',
+    'Aproxime-se das quatro marcas da promessa e pressione E, na ordem em que chamam.':'Approach the four marks of the promise and press E in the order they call.',
+    'Entre na escuridão e encontre a Última Lanterna.':'Enter the darkness and find the Last Lantern.',
+    'ATO I · Ilumine e RECONHEÇA as quatro acusações. Não apague o passado.':'ACT I · Illuminate and RECOGNIZE the four accusations. Do not erase the past.',
+    'ATO II · Acenda as quatro lições. Duas exigem LUZ REFLETIDA.':'ACT II · Light the four lessons. Two require REFLECTED LIGHT.',
+    'ATO III · Aproxime-se de O Miserável e pressione E · CONTINUAR.':'ACT III · Approach The Miserable and press E · CONTINUE.',
+    'A Última Lanterna está adiante. Aproxime-se e pressione E.':'The Last Lantern is ahead. Approach it and press E.',
+    'Continue pela estrada.':'Continue along the road.','A chama guardará este retorno.':'The flame will preserve this return.',
+    'A estrada devolveu Jack ao último marco.':'The road returned Jack to the last marker.','A escuridão alcançou Jack.':'The darkness reached Jack.',
+    'SOMBRA DE RETORNO':'SHADOW OF RETURN','PORTADOR DE CINZAS':'ASH BEARER',
+    'A lanterna apagada absorveu a Luz. Tente refletir o facho.':'The extinguished lantern absorbed the Light. Try reflecting the beam.',
+    'AS CASAS PARARAM DE ESPERAR':'THE HOUSES STOPPED WAITING','LIÇÃO':'LESSON','ATO II · O QUE VOCÊ FEZ DEPOIS':'ACT II · WHAT YOU DID AFTER',
+    'Essa luz aponta para a estrada. Talvez não seja essa.':'That light points toward the road. Maybe this is not the one.',
+    'A lanterna voltou a acender.':'The lantern lit again.','A espera se apagou sem apagar a memória.':'The waiting ended without erasing the memory.',
+    '· DEIXADO EM MEMÓRIA':'· LEFT IN MEMORY','A ESTRADA RECUSA O PASSO':'THE ROAD REFUSES THE STEP','O CAMINHO EXISTIA PARA TRÁS':'THE PATH EXISTED BEHIND',
+    'E · CONTINUAR':'E · CONTINUE'
   };
 
-  const phrases = [
-    ['Iniciar Jornada','Start Journey'],
-    ['Continuar Jornada','Continue Journey'],
-    ['Voltar ao menu','Back to Menu'],
-    ['Jogar novamente','Play Again'],
-    ['Próxima fase','Next Chapter'],
-    ['Fase concluída','Chapter Complete'],
-    ['Memória encontrada','Memory Found'],
-    ['Fragmento encontrado','Fragment Found'],
-    ['Checkpoint alcançado','Checkpoint Reached'],
-    ['Use a luz da lanterna','Use the lantern light'],
-    ['lanterna de Jack','Jack\'s lantern'],
-    ['a lanterna de Jack','Jack\'s lantern']
+  const phrases=[
+    ['Halloween I concluído','Halloween I complete'],['Halloween II concluído','Halloween II complete'],
+    ['Halloween III concluído','Halloween III complete'],['Halloween IV concluído','Halloween IV complete'],['Halloween V concluído','Halloween V complete'],
+    ['Voltar ao menu','Back to Menu'],['Voltar ao mapa','Back to Map'],['Jogar novamente','Play Again'],
+    ['Checkpoint ativado','Checkpoint activated'],['checkpoint ativado','checkpoint activated'],
+    ['Memória encontrada','Memory Found'],['Fragmento encontrado','Fragment Found'],
+    ['Use a Luz','Use the Light'],['use a Luz','use the Light'],['Use F','Use F'],
+    ['A lanterna','The lantern'],['a lanterna','the lantern'],['A Luz','The Light'],['a Luz','the Light'],
+    ['A estrada','The road'],['a estrada','the road'],['A névoa','The fog'],['a névoa','the fog'],
+    ['A Peregrina','The Pilgrim'],['o Coletor','the Collector'],['O Coletor','The Collector'],
+    ['Árvore-Mãe','Mother Tree'],['ARQUIVISTA ETERNO','ETERNAL ARCHIVIST'],['O Arquivista','The Archivist'],
+    ['Fase concluída','Chapter Complete'],['Próxima fase','Next Chapter']
   ];
 
-  const original = new WeakMap();
-
-  function lang(){ return localStorage.getItem(STORAGE_KEY) === 'en' ? 'en' : 'pt-BR'; }
-
-  function tr(s){
-    if (lang() !== 'en') return s;
-    const t=s.trim();
-    if (exact[t]) return s.replace(t,exact[t]);
-    let out=s;
-    phrases.forEach(([a,b])=>{ out=out.replace(a,b); });
+  const original=new WeakMap();
+  function lang(){return EN()?'en':'pt-BR'}
+  function tr(value){
+    if(!EN()||typeof value!=='string')return value;
+    const trimmed=value.trim();
+    if(exact[trimmed])return value.replace(trimmed,exact[trimmed]);
+    let out=value;
+    for(const [a,b] of phrases)out=out.split(a).join(b);
     return out;
   }
 
+  // Translate text drawn directly on the canvas (boss labels, puzzle signs, banners).
+  if(!window.__jackCanvasI18nPatched && window.CanvasRenderingContext2D){
+    window.__jackCanvasI18nPatched=true;
+    const fp=CanvasRenderingContext2D.prototype.fillText;
+    const sp=CanvasRenderingContext2D.prototype.strokeText;
+    CanvasRenderingContext2D.prototype.fillText=function(text,...args){return fp.call(this,tr(String(text)),...args)};
+    CanvasRenderingContext2D.prototype.strokeText=function(text,...args){return sp.call(this,tr(String(text)),...args)};
+  }
+
   function translateNode(root=document.body){
-    if (!root) return;
+    if(!root)return;
     const nodes=[];
-    if (root.nodeType===Node.TEXT_NODE) nodes.push(root);
-    const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{
-      acceptNode(n){
-        if(!n.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
-        const p=n.parentElement;
-        if(!p || ['SCRIPT','STYLE','TEXTAREA'].includes(p.tagName)) return NodeFilter.FILTER_REJECT;
-        return NodeFilter.FILTER_ACCEPT;
-      }
-    });
-    while(walker.nextNode()) nodes.push(walker.currentNode);
-    nodes.forEach(n=>{
-      if(!original.has(n)) original.set(n,n.nodeValue);
+    if(root.nodeType===Node.TEXT_NODE)nodes.push(root);
+    if(root.nodeType===Node.ELEMENT_NODE||root===document.body){
+      const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{
+        acceptNode(n){
+          if(!n.nodeValue.trim())return NodeFilter.FILTER_REJECT;
+          const p=n.parentElement;
+          if(!p||['SCRIPT','STYLE','TEXTAREA'].includes(p.tagName))return NodeFilter.FILTER_REJECT;
+          return NodeFilter.FILTER_ACCEPT;
+        }
+      });
+      while(walker.nextNode())nodes.push(walker.currentNode);
+    }
+    for(const n of nodes){
+      if(!original.has(n))original.set(n,n.nodeValue);
       const src=original.get(n);
-      n.nodeValue=lang()==='en'?tr(src):src;
-    });
+      n.nodeValue=EN()?tr(src):src;
+    }
     if(root.querySelectorAll){
-      root.querySelectorAll('[aria-label],[title]').forEach(el=>{
-        ['aria-label','title'].forEach(attr=>{
-          if(!el.hasAttribute(attr)) return;
-          const dataKey='jackI18n'+attr.replace(/-([a-z])/g,(_,c)=>c.toUpperCase()).replace(/^./,c=>c.toUpperCase());
-          if(!el.dataset[dataKey]) el.dataset[dataKey]=el.getAttribute(attr);
-          const src=el.dataset[dataKey];
-          el.setAttribute(attr,lang()==='en'?tr(src):src);
+      root.querySelectorAll('[aria-label],[title],[alt]').forEach(el=>{
+        ['aria-label','title','alt'].forEach(attr=>{
+          if(!el.hasAttribute(attr))return;
+          const key='jackI18n'+attr.replace(/-([a-z])/g,(_,c)=>c.toUpperCase()).replace(/^./,c=>c.toUpperCase());
+          if(!el.dataset[key])el.dataset[key]=el.getAttribute(attr);
+          el.setAttribute(attr,EN()?tr(el.dataset[key]):el.dataset[key]);
         });
       });
     }
   }
 
   function injectSwitcher(){
-    if(document.getElementById('jackPhaseLanguage')) return;
+    if(document.getElementById('jackPhaseLanguage'))return;
     const box=document.createElement('div');
-    box.id='jackPhaseLanguage';
-    box.className='jack-phase-language';
+    box.id='jackPhaseLanguage';box.className='jack-phase-language';box.setAttribute('aria-label','Idioma / Language');
     box.innerHTML='<button type="button" data-lang="pt-BR">PT</button><span>/</span><button type="button" data-lang="en">EN</button>';
     document.body.appendChild(box);
     box.querySelectorAll('button').forEach(btn=>btn.addEventListener('click',()=>{
-      localStorage.setItem(STORAGE_KEY,btn.dataset.lang);
-      location.reload();
+      localStorage.setItem(STORAGE_KEY,btn.dataset.lang);location.reload();
     }));
     box.querySelectorAll('button').forEach(btn=>btn.classList.toggle('is-active',btn.dataset.lang===lang()));
   }
-
   function addStyle(){
-    if(document.getElementById('jackPhaseLanguageStyle')) return;
-    const s=document.createElement('style');
-    s.id='jackPhaseLanguageStyle';
+    if(document.getElementById('jackPhaseLanguageStyle'))return;
+    const s=document.createElement('style');s.id='jackPhaseLanguageStyle';
     s.textContent='.jack-phase-language{position:fixed;z-index:999999;top:10px;right:10px;display:flex;align-items:center;gap:3px;padding:4px 6px;background:#080b12dc;border:1px solid #b97a2e88;box-shadow:0 4px 16px #0008;font-family:Georgia,serif}.jack-phase-language button{border:0;background:transparent;color:#8f826d;padding:4px 6px;font-weight:700;font-size:11px;cursor:pointer}.jack-phase-language button.is-active{color:#ffe0a0;text-shadow:0 0 8px #e88b24}.jack-phase-language span{color:#59452e;font-size:10px}';
     document.head.appendChild(s);
   }
-
   function init(){
-    document.documentElement.lang=lang();
-    addStyle();
-    injectSwitcher();
-    translateNode(document.body);
-    const observer=new MutationObserver(records=>{
-      if(lang()!=='en') return;
-      records.forEach(r=>r.addedNodes.forEach(n=>{
-        if(n.nodeType===Node.ELEMENT_NODE || n.nodeType===Node.TEXT_NODE) translateNode(n);
+    document.documentElement.lang=lang();addStyle();injectSwitcher();translateNode(document.body);
+    if(EN()){
+      const observer=new MutationObserver(records=>records.forEach(r=>{
+        if(r.type==='characterData')translateNode(r.target);
+        r.addedNodes.forEach(n=>{if(n.nodeType===Node.ELEMENT_NODE||n.nodeType===Node.TEXT_NODE)translateNode(n)});
       }));
-    });
-    observer.observe(document.body,{childList:true,subtree:true});
+      observer.observe(document.body,{childList:true,subtree:true,characterData:true});
+    }
   }
-
-  window.JackGameI18n={translateNode,getLanguage:lang};
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init,{once:true}); else init();
+  window.JackGameI18n={t:tr,translateNode,getLanguage:lang};
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
