@@ -341,54 +341,74 @@ function phase5PlatformImage(section,index){
  const entry=phase5PlatformCache.get(phase5PlatformKey(section,index));
  return entry?.ready?entry.img:null;
 }
-function drawPhase5PlatformArt(section,index,x,top,w,surface=.42,alpha=1){
+function drawPhase5PlatformArt(section,index,x,top,w,surface=.42,alpha=1,visualScale=1,clipToWidth=false){
  const im=phase5PlatformImage(section,index);
  if(!im||!im.naturalWidth||!im.naturalHeight)return false;
- const h=w*(im.naturalHeight/im.naturalWidth);
+ const drawW=w*Math.max(1,visualScale);
+ const h=drawW*(im.naturalHeight/im.naturalWidth);
+ const drawX=x-(drawW-w)/2;
  ctx.save();
+ if(clipToWidth){
+  ctx.beginPath();
+  ctx.rect(x,0,w,H);
+  ctx.clip();
+ }
  ctx.globalAlpha=alpha;
  ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";
- ctx.drawImage(im,x,top-h*surface,w,h);
+ ctx.drawImage(im,drawX,top-h*surface,drawW,h);
  ctx.restore();
  return true;
 }
 
 const PHASE5_GROUND_ART=Object.freeze([
- // 5A · A Estrada que Volta — seis variações ao longo da mesma estrada.
- {s:"return",i:0,x:0,w:285},{s:"return",i:1,x:285,w:285},{s:"return",i:2,x:570,w:285},
- {s:"return",i:3,x:855,w:285},{s:"return",i:4,x:1140,w:280},{s:"return",i:5,x:1420,w:280},
+ // 5A · Estrada do Retorno — três grandes trechos; os outros assets ficam
+ // disponíveis como biblioteca para refinamento, sem comprimir a arte.
+ {s:"return",i:0,x:0,w:570,scale:1.35},
+ {s:"return",i:3,x:570,w:570,scale:1.35},
+ {s:"return",i:5,x:1140,w:560,scale:1.35},
 
- // 5B · Vila — três trechos de chão separados pelos buracos existentes.
- {s:"houses",i:0,x:1700,w:490},{s:"houses",i:1,x:2280,w:520},{s:"houses",i:2,x:2890,w:610},
+ // 5B · Vila — cada peça veste um trecho físico e é recortada no buraco.
+ {s:"houses",i:0,x:1700,w:490,scale:1.55},
+ {s:"houses",i:2,x:2280,w:520,scale:1.55},
+ {s:"houses",i:1,x:2890,w:610,scale:1.45},
 
  // 5C · Relógios e Reflexos.
- {s:"clock",i:0,x:3500,w:700},{s:"clock",i:2,x:4300,w:500},{s:"clock",i:3,x:4900,w:450},
+ {s:"clock",i:0,x:3500,w:700,scale:1.30},
+ {s:"clock",i:2,x:4300,w:500,scale:1.55},
+ {s:"clock",i:3,x:4900,w:450,scale:1.70},
 
  // 5D · Jardim das Memórias.
- {s:"garden",i:0,x:5350,w:600},{s:"garden",i:2,x:6050,w:600},{s:"garden",i:5,x:6750,w:600},
+ {s:"garden",i:0,x:5350,w:600,scale:1.45},
+ {s:"garden",i:2,x:6050,w:600,scale:1.45},
+ {s:"garden",i:5,x:6750,w:600,scale:1.45},
 
  // 5E · Cidade dos Rótulos.
- {s:"city",i:0,x:7350,w:700},{s:"city",i:1,x:8150,w:550},{s:"city",i:5,x:8800,w:700},
+ {s:"city",i:0,x:7350,w:700,scale:1.30},
+ {s:"city",i:1,x:8150,w:550,scale:1.50},
+ {s:"city",i:5,x:8800,w:700,scale:1.30},
 
- // 5F · Caminho da Promessa — percurso contínuo e progressivamente mais claro.
- {s:"promise",i:0,x:9500,w:270},{s:"promise",i:1,x:9770,w:270},{s:"promise",i:2,x:10040,w:270,surface:.34},
- {s:"promise",i:3,x:10310,w:270},{s:"promise",i:4,x:10580,w:270},
+ // 5F · Caminho da Promessa.
+ {s:"promise",i:0,x:9500,w:340,scale:1.95},
+ {s:"promise",i:1,x:9840,w:340,scale:1.95},
+ {s:"promise",i:3,x:10180,w:335,scale:1.95},
+ {s:"promise",i:4,x:10515,w:335,scale:1.95},
 
- // 5G · Sala de Espelhos — palco fragmentado em blocos para preservar leitura.
- {s:"final",i:1,x:10850,w:360,surface:.36},{s:"final",i:4,x:11210,w:300,surface:.36},
- {s:"final",i:0,x:11510,w:500,surface:.36},{s:"final",i:2,x:12010,w:300,surface:.36},
- {s:"final",i:7,x:12310,w:290,surface:.36}
+ // 5G · Sala de Espelhos — grandes placas de palco, não miniaturas.
+ {s:"final",i:1,x:10850,w:450,scale:1.65,surface:.38},
+ {s:"final",i:4,x:11300,w:420,scale:1.70,surface:.38},
+ {s:"final",i:0,x:11720,w:500,scale:1.55,surface:.38},
+ {s:"final",i:7,x:12220,w:380,scale:1.75,surface:.38}
 ]);
 
 const PHASE5_ELEVATED_ART=Object.freeze([
  // Vila
- {p:0,s:"houses",i:3,scale:1.55},{p:1,s:"houses",i:4,scale:1.50},{p:2,s:"houses",i:5,scale:1.52},
+ {p:0,s:"houses",i:3,scale:3.05},{p:1,s:"houses",i:4,scale:2.85},{p:2,s:"houses",i:5,scale:3.00},
  // Relógios
- {p:3,s:"clock",i:1,scale:1.55},{p:4,s:"clock",i:4,scale:1.55},{p:5,s:"clock",i:5,scale:1.50},
+ {p:3,s:"clock",i:1,scale:3.00},{p:4,s:"clock",i:4,scale:2.90},{p:5,s:"clock",i:5,scale:2.55},
  // Jardim
- {p:6,s:"garden",i:1,scale:1.55},{p:7,s:"garden",i:3,scale:1.48},{p:8,s:"garden",i:4,scale:1.55},
+ {p:6,s:"garden",i:1,scale:3.00},{p:7,s:"garden",i:3,scale:2.85},{p:8,s:"garden",i:4,scale:3.05},
  // Cidade
- {p:9,s:"city",i:2,scale:1.55},{p:10,s:"city",i:3,scale:1.55},{p:11,s:"city",i:4,scale:1.50}
+ {p:9,s:"city",i:2,scale:3.00},{p:10,s:"city",i:3,scale:2.90},{p:11,s:"city",i:4,scale:3.00}
 ]);
 
 // Elementos utilitários do lote 5Z usados como acabamento de transição.
@@ -1031,16 +1051,14 @@ function drawGround(){
 
  // Chão artístico por capítulo.
  for(const a of PHASE5_GROUND_ART){
-  drawPhase5PlatformArt(a.s,a.i,a.x,FLOOR,a.w,a.surface??.42,1);
+  drawPhase5PlatformArt(a.s,a.i,a.x,FLOOR,a.w,a.surface??.42,1,a.scale??1.4,true);
  }
 
  // Plataformas elevadas mantêm exatamente os hitboxes originais.
  for(const a of PHASE5_ELEVATED_ART){
   const q=PLATFORMS[a.p];
   if(!q)continue;
-  const visualW=q.w*(a.scale||1.5);
-  const visualX=q.x-(visualW-q.w)/2;
-  const drew=drawPhase5PlatformArt(a.s,a.i,visualX,q.y,visualW,a.surface??.42,1);
+  const drew=drawPhase5PlatformArt(a.s,a.i,q.x,q.y,q.w,a.surface??.42,1,a.scale||3,false);
   if(!drew){
    ctx.fillStyle="#26251f";ctx.fillRect(q.x,q.y,q.w,q.h);
    ctx.fillStyle="#8d7952";ctx.fillRect(q.x,q.y,q.w,4);
@@ -1049,7 +1067,12 @@ function drawGround(){
 
  // Lote 5Z: peças de acabamento nos grandes limiares narrativos.
  for(const d of PHASE5_SHARED_DECOR){
-  drawPhase5PlatformArt("shared",d.i,d.x,d.top,d.w,d.surface,d.alpha);
+  drawPhase5PlatformArt("shared",d.i,d.x,d.top,d.w,d.surface,d.alpha,1.15,false);
+ }
+
+ // Platô circular da promessa: destaque central, sem alterar a colisão.
+ if(phase5PlatformImage("promise",2)){
+  drawPhase5PlatformArt("promise",2,10020,FLOOR,330,.42,.94,1,false);
  }
  ctx.restore();
 }
