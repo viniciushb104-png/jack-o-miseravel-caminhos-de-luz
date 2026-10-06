@@ -1,4 +1,4 @@
-if(localStorage.getItem("jack-language")==="en"){
+if(localStorage.getItem("jack-language")!=="pt-BR"){
 window.PHASE1_DIALOGUES={
  firstMeeting:[
   {speaker:"Eleanor",portrait:"eleanor",expression:1,text:"You... have you seen my family?"},
