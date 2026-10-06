@@ -1,6 +1,7 @@
 (() => {
   const STORAGE_KEY = 'jack-language';
   const DEFAULT_LANG = 'pt-BR';
+  const SUPPORTED = ['pt-BR','en','es','fr','zh-CN','ko','ja'];
 
   const translations = {
     'Carregando a jornada':'Loading the journey',
@@ -228,10 +229,12 @@
     const trimmed = text.trim();
     if (!trimmed) return text;
     const exact = translations[trimmed];
-    if (exact) return text.replace(trimmed, exact);
-    let out = text;
-    phraseTranslations.forEach(([pt,en]) => { out = out.replace(pt,en); });
-    out = out.replace(/‹\s*Voltar/g, '‹ Back');
+    let out = exact ? text.replace(trimmed, exact) : text;
+    if (!exact) {
+      phraseTranslations.forEach(([pt,en]) => { out = out.replace(pt,en); });
+      out = out.replace(/‹\s*Voltar/g, '‹ Back');
+    }
+    if (lang !== 'en') out = window.JackLocale?.translateEnglish(out, lang) || out;
     return out;
   }
 
@@ -266,26 +269,37 @@
   }
 
   function updateLanguageControls(lang) {
-    document.querySelectorAll('[data-jack-lang]').forEach(btn => {
-      const active = btn.dataset.jackLang === lang;
-      btn.classList.toggle('is-active', active);
-      btn.setAttribute('aria-pressed', active ? 'true' : 'false');
-    });
+    const select = document.getElementById('jackLanguageSelect');
+    if (select) select.value = lang;
   }
 
   function applyLanguage(lang) {
-    const normalized = lang === 'en' ? 'en' : 'pt-BR';
+    const normalized = SUPPORTED.includes(lang) ? lang : 'pt-BR';
     localStorage.setItem(STORAGE_KEY, normalized);
     document.documentElement.lang = normalized;
     document.documentElement.dataset.language = normalized;
     walkTextNodes(document.body, normalized);
     translateAttributes(normalized);
     updateLanguageControls(normalized);
-    document.title = normalized === 'en' ? 'Jack the Miserable — Paths of Light' : 'Jack o Miserável — Caminhos de Luz';
+    const localizedTitle = {
+      'pt-BR':'Jack o Miserável — Caminhos de Luz','en':'Jack the Miserable — Paths of Light',
+      'es':'Jack el Miserable — Caminos de Luz','fr':'Jack le Misérable — Chemins de Lumière',
+      'zh-CN':'悲惨的杰克 — 光之路','ko':'비참한 잭 — 빛의 길','ja':'哀れなジャック — 光の道'
+    };
+    document.title = localizedTitle[normalized] || localizedTitle['pt-BR'];
     const metaDescription = document.querySelector('meta[name="description"]');
-    if (metaDescription) metaDescription.setAttribute('content', normalized === 'en'
-      ? 'Jack the Miserable — Paths of Light. A Halloween narrative adventure in a 16-bit aesthetic.'
-      : 'Jack o Miserável — Caminhos de Luz. Uma aventura narrativa de Halloween em estética 16-bit.');
+    if (metaDescription) {
+      const descriptions={
+        'pt-BR':'Jack o Miserável — Caminhos de Luz. Uma aventura narrativa de Halloween em estética 16-bit.',
+        'en':'Jack the Miserable — Paths of Light. A Halloween narrative adventure in a 16-bit aesthetic.',
+        'es':'Jack el Miserable — Caminos de Luz. Una aventura narrativa de Halloween con estética de 16 bits.',
+        'fr':'Jack le Misérable — Chemins de Lumière. Une aventure narrative d’Halloween à l’esthétique 16 bits.',
+        'zh-CN':'《悲惨的杰克：光之路》——16位美术风格的万圣节叙事冒险。',
+        'ko':'《비참한 잭: 빛의 길》 — 16비트 감성의 할로윈 내러티브 어드벤처.',
+        'ja':'『哀れなジャック：光の道』— 16ビット風のハロウィーン物語アドベンチャー。'
+      };
+      metaDescription.setAttribute('content', descriptions[normalized]||descriptions['pt-BR']);
+    }
     document.dispatchEvent(new CustomEvent('jack:languagechange', {detail:{language:normalized}}));
   }
 
@@ -296,15 +310,19 @@
     wrap.id = 'jackLanguageSwitcher';
     wrap.className = 'language-switcher';
     wrap.setAttribute('aria-label','Idioma / Language');
-    wrap.innerHTML = '<span class="language-switcher__label">LANGUAGE</span><button type="button" data-jack-lang="pt-BR" aria-pressed="false">PT</button><i aria-hidden="true">/</i><button type="button" data-jack-lang="en" aria-pressed="false">EN</button>';
+    wrap.innerHTML = '<span class="language-switcher__label">LANGUAGE</span><select id="jackLanguageSelect" aria-label="Idioma / Language"><option value="pt-BR">PT · Português</option><option value="en">EN · English</option><option value="es">ES · Español</option><option value="fr">FR · Français</option><option value="zh-CN">中文 · 简体</option><option value="ko">한국어</option><option value="ja">日本語</option></select>';
     host.appendChild(wrap);
-    wrap.querySelectorAll('[data-jack-lang]').forEach(btn => btn.addEventListener('click', () => applyLanguage(btn.dataset.jackLang)));
+    const select = wrap.querySelector('#jackLanguageSelect');
+    if (select) {
+      select.value = localStorage.getItem(STORAGE_KEY) || DEFAULT_LANG;
+      select.addEventListener('change', () => applyLanguage(select.value));
+    }
   }
 
   function init() {
     injectSwitcher();
     const saved = localStorage.getItem(STORAGE_KEY);
-    const initial = saved === 'en' ? 'en' : 'pt-BR';
+    const initial = SUPPORTED.includes(saved) ? saved : 'pt-BR';
     applyLanguage(initial);
     const observer = new MutationObserver(records => {
       const current = localStorage.getItem(STORAGE_KEY) === 'en' ? 'en' : 'pt-BR';
@@ -322,7 +340,7 @@
     observer.observe(document.body, {subtree:true, childList:true, characterData:true});
   }
 
-  window.JackI18n = { applyLanguage, getLanguage: () => localStorage.getItem(STORAGE_KEY) || DEFAULT_LANG };
+  window.JackI18n = { applyLanguage, getLanguage: () => localStorage.getItem(STORAGE_KEY) || DEFAULT_LANG, supported:SUPPORTED };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, {once:true});
   else init();
 })();
