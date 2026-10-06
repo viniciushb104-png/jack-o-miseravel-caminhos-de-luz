@@ -1,4 +1,4 @@
-if(localStorage.getItem("jack-language")==="en"){
+if(localStorage.getItem("jack-language")!=="pt-BR"){
 window.PHASE3_STORY=Object.freeze({
   title:"The Forest of Memories",
   theme:"Remembering does not mean preserving everything unchanged forever.",
