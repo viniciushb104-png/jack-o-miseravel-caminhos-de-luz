@@ -501,6 +501,9 @@
       observer.observe(document.body,{childList:true,subtree:true,characterData:true});
     }
   }
+  /* Localize frozen story objects before phase*.js reads them. */
+  window.JackLocale?.localizeStories(lang());
+
   window.JackGameI18n={t:tr,translateNode,getLanguage:lang,supported:SUPPORTED};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
