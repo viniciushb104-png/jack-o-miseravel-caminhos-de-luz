@@ -1,4 +1,4 @@
-if(localStorage.getItem("jack-language")==="en"){
+if(localStorage.getItem("jack-language")!=="pt-BR"){
 window.PHASE4_STORY=Object.freeze({
  title:"The Road of the Forgotten",
  theme:"Being forgotten does not mean never having existed.",
