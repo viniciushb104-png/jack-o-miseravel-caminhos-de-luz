@@ -2129,4 +2129,35 @@ R('ja',Object.fromEntries([
 ["I'm not going to erase you.","お前を消すつもりはない。"],
 ["I'm not going to live here either.","だが、ここに住むつもりもない。"]
 ]));
+
+R('es',{"That wasn't me.":"No fui yo."});
+R('fr',{
+"I remember what was entrusted to me.":"Je me souviens de ce qui m’a été confié.",
+"That wasn't me.":"Ce n’était pas moi.",
+"Even without knowing the name?":"Même sans connaître le nom ?"
+});
+R('zh-CN',{
+"A door.":"一扇门。",
+"I remember what was entrusted to me.":"我记得托付给我的一切。",
+"You came with names. Letters. Voices. Promises.":"你带着名字、信件、声音和承诺来到这里。",
+"The light did not come only for those you seek, Jack.":"这道光并不只是为了你所寻找的人而来，杰克。",
+"That wasn't me.":"那不是我。",
+"Even without knowing the name?":"即使不知道名字？"
+});
+R('ko',{
+"A door.":"문 하나.",
+"I remember what was entrusted to me.":"내게 맡겨진 것을 기억한다.",
+"You came with names. Letters. Voices. Promises.":"너는 이름, 편지, 목소리, 약속을 들고 왔다.",
+"The light did not come only for those you seek, Jack.":"이 빛은 네가 찾는 이들만을 위해 온 것이 아니다, 잭.",
+"That wasn't me.":"그건 내가 아니었어.",
+"Even without knowing the name?":"이름을 몰라도?"
+});
+R('ja',{
+"A door.":"扉だ。",
+"I remember what was entrusted to me.":"託されたものを覚えている。",
+"You came with names. Letters. Voices. Promises.":"お前は名前、手紙、声、約束を携えて来た。",
+"The light did not come only for those you seek, Jack.":"この光は、お前が探している者たちだけのために来たのではない、ジャック。",
+"That wasn't me.":"今のは私じゃない。",
+"Even without knowing the name?":"名前を知らなくても？"
+});
 })();
