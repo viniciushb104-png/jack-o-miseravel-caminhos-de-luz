@@ -1,4 +1,4 @@
-if(localStorage.getItem("jack-language")==="en"){
+if(localStorage.getItem("jack-language")!=="pt-BR"){
 window.PHASE1_STORY = {
   id:"halloween-1",
   title:"The Houses of the Lost",
