@@ -639,6 +639,40 @@
   <script src="locale-runtime.js?v=2"></script>
   <script src="locale-packs.js?v=9"></script>
   <script src="i18n.js?v=4"></script>
-  <script src="script.js?v=22"></script>
+  <script data-nav-rescue>
+  (() => {
+    const go = href => {
+      if (!href) return;
+      window.location.assign(href);
+    };
+
+    document.addEventListener('click', event => {
+      const start = event.target.closest('#startJourneyBtn');
+      if (start) {
+        // Main script normally handles reset + transition. This fallback only
+        // takes over if that handler failed to navigate.
+        setTimeout(() => {
+          if (document.visibilityState === 'visible') go('./game/phase1.html?journey=1&new=1');
+        }, 1300);
+        return;
+      }
+
+      const link = event.target.closest(
+        '#continueJourneyBtn, #chapterOne, #chapterTwo, #chapterThree, #chapterFour, #chapterFive'
+      );
+      if (!link || link.getAttribute('aria-disabled') === 'true') return;
+
+      const href = link.getAttribute('href');
+      if (!href) return;
+
+      // Preserve normal anchor behavior. If another UI handler prevents it and
+      // fails, force navigation on the next task.
+      setTimeout(() => {
+        if (document.visibilityState === 'visible' && location.href.indexOf(href) === -1) go(href);
+      }, 80);
+    }, true);
+  })();
+  </script>
+  <script src="script.js?v=23"></script>
 </body>
 </html>
