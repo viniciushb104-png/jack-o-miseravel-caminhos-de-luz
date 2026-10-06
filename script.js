@@ -494,6 +494,7 @@
 
     hero.style.display = 'none';
     screens.forEach(screen => screen.classList.toggle('active-screen', screen === target));
+    window.JackI18n?.translateRoot?.(target);
     history.replaceState(null, '', '#' + id);
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
