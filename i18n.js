@@ -178,7 +178,28 @@
     'Volume da trilha':'Soundtrack volume',
     'Coleção de músicas':'Music collection',
     'Progresso de fases concluídas':'Completed chapters progress',
-    'Troféus das fases':'Chapter trophies'
+    'Troféus das fases':'Chapter trophies',
+    ', Jack descobre que carregar sua lanterna não é apenas uma condenação. A chama que um dia iluminou somente o próprio caminho agora revela trilhas para aqueles que se perderam.':', Jack discovers that carrying his lantern is more than a sentence. The flame that once lit only his own path now reveals trails for those who have lost their way.',
+    'REDENTOR DOS PERDIDOS':'REDEEMER OF THE LOST',
+    'Ficha ilustrada de Jack, o viajante da lanterna, caminhando entre almas perdidas em uma noite de Halloween':'Illustrated character sheet of Jack, the lantern wanderer, walking among lost souls on a Halloween night',
+    'Características de Jack':'Jack’s traits',
+    'Jack o Miserável — Musical · Vídeo I':'Jack the Miserable — Musical · Video I',
+    'Jack o Miserável — Musical · Vídeo II':'Jack the Miserable — Musical · Video II',
+    'Jack o Miserável — Musical · Vídeo III':'Jack the Miserable — Musical · Video III',
+    'Jack o Miserável — Musical · Vídeo IV':'Jack the Miserable — Musical · Video IV',
+    'Troféu de Halloween I — As Casas dos Perdidos':'Halloween I Trophy — The Houses of the Lost',
+    'Memória de Halloween II — Amélia Vesper e a Vila sem Amanhecer':'Halloween II Memory — Amélia Vesper and the Village Without Dawn',
+    'Troféu de Halloween III — Mara Rowan e o Bosque das Memórias':'Halloween III Trophy — Mara Rowan and the Forest of Memories',
+    'Troféu de Halloween IV — Jack, a Peregrina e o Sino sem Inscrição na Estrada dos Esquecidos':'Halloween IV Trophy — Jack, the Pilgrim and the Uninscribed Bell on the Road of the Forgotten',
+    'Troféu de Halloween V — Jack diante da última estrada iluminada':'Halloween V Trophy — Jack before the last illuminated road',
+    'Toque para entrar':'Tap to enter',
+    'Desbloqueada · rejogar esta fase':'Unlocked · replay this chapter',
+    'Conclua a fase para desbloquear':'Complete the chapter to unlock',
+    'Faixa conquistada · pronta para ouvir':'Track unlocked · ready to play',
+    'Tocando agora':'Now playing',
+    'Pausar faixa':'Pause track',
+    'Toque novamente para iniciar a música.':'Tap again to start the music.',
+    'Não foi possível carregar esta faixa.':'This track could not be loaded.'
 
   };
 
