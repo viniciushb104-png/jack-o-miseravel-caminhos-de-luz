@@ -133,7 +133,7 @@ const cityMarks=[
  {x:7640,label:"ESPEROU"},{x:8170,label:"CONTINUOU"},
  {x:8580,label:"DEIXOU IR"},{x:9050,label:"ATRAVESSOU"}
 ];
-const cityAshMirror={x:8845,y:520,targetX:9000,targetY:425,garden:true,range:135};
+const cityAshMirror={x:8845,y:520,targetX:9000,targetY:545,garden:true,range:135};
 
 const promiseAltars=[
  {x:9680,label:"VOCÊ PROMETEU"},{x:9970,label:"EU VOLTO"},
@@ -489,10 +489,10 @@ const PHASE5_ELEVATED_ART=Object.freeze([
 
 // Elementos utilitários do lote 5Z usados como acabamento de transição.
 const PHASE5_SHARED_DECOR=Object.freeze([
- {i:3,x:1510,top:FLOOR,w:235,surface:.42,alpha:.88},
- {i:5,x:5120,top:FLOOR,w:240,surface:.42,alpha:.82},
- {i:2,x:9285,top:FLOOR,w:240,surface:.42,alpha:.82},
- {i:6,x:10680,top:FLOOR,w:245,surface:.42,alpha:.82}
+ {i:3,x:1510,w:235,surface:.42,alpha:.88},
+ {i:5,x:5120,w:240,surface:.42,alpha:.82},
+ {i:2,x:9285,w:240,surface:.42,alpha:.82},
+ {i:6,x:10605,w:245,surface:.42,alpha:.82}
 ]);
 
 // O lote 5Z é utilitário: carregamos somente as quatro peças usadas agora.
@@ -756,7 +756,6 @@ function enemyActive(e){
  return true;
 }
 function enemyGroundY(e){
- for(const q of PLATFORMS)if(e.x>=q.x&&e.x<=q.x+q.w)return q.y;
  return groundAt(e.x)?.y??FLOOR;
 }
 function hurtPlayer(sourceX){
@@ -1241,7 +1240,8 @@ function drawSectionProps(){
  }
  if(sec==="promise"){
   ctx.strokeStyle="rgba(184,153,91,.3)";ctx.lineWidth=5;
-  for(let i=-3;i<=3;i++){ctx.beginPath();ctx.moveTo(10100,FLOOR);ctx.lineTo(10100+i*440,260);ctx.stroke()}
+  const promiseGround=groundYAt(10100);
+  for(let i=-3;i<=3;i++){ctx.beginPath();ctx.moveTo(10100,promiseGround);ctx.lineTo(10100+i*440,260);ctx.stroke()}
   promiseAltars.forEach((a,i)=>{
    const gy=groundYAt(a.x),on=i<promiseStep;
    ctx.fillStyle=on?"#d9b65f":"#3f392f";ctx.fillRect(a.x-4,gy-90,8,90);
@@ -1270,7 +1270,7 @@ function drawBossScene(){
  veil.addColorStop(1,"rgba(0,0,0,.22)");
  ctx.fillStyle=veil;ctx.fillRect(10850,180,1750,410);
  if(!bossStarted)return;
- ctx.save();ctx.translate(bx,500);
+ ctx.save();ctx.translate(bx,460);
  ctx.fillStyle=bossAct===3?"#1e1d1a":"#0b0b0c";ctx.shadowColor="rgba(0,0,0,.9)";ctx.shadowBlur=28;
  ctx.beginPath();ctx.moveTo(-70,80);ctx.lineTo(-45,-105);ctx.quadraticCurveTo(0,-190,45,-105);ctx.lineTo(70,80);ctx.closePath();ctx.fill();
  ctx.fillStyle="#32281d";ctx.fillRect(-45,-62,90,16);ctx.fillStyle="#c6a75d";ctx.font="700 12px Georgia";ctx.textAlign="center";ctx.fillText("MISERÁVEL",0,-50);ctx.restore();
@@ -1285,8 +1285,9 @@ function drawBossScene(){
   ctx.fillStyle="#f0d488";ctx.font="700 14px Georgia";ctx.textAlign="center";ctx.fillText("E · CONTINUAR",bx,315);
  }
  if(bossResolved){
-  const lx=12420;ctx.fillStyle="#e8ba4f";ctx.shadowColor="#e6a43d";ctx.shadowBlur=35;ctx.beginPath();ctx.arc(lx,470,30,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
-  ctx.fillStyle="#f0d78e";ctx.font="700 13px Georgia";ctx.textAlign="center";ctx.fillText("A ÚLTIMA LANTERNA",lx,425);
+  const lx=12420,gy=groundYAt(lx);
+  ctx.fillStyle="#e8ba4f";ctx.shadowColor="#e6a43d";ctx.shadowBlur=35;ctx.beginPath();ctx.arc(lx,gy-92,30,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
+  ctx.fillStyle="#f0d78e";ctx.font="700 13px Georgia";ctx.textAlign="center";ctx.fillText("A ÚLTIMA LANTERNA",lx,gy-137);
  }
 }
 function drawEnemies(){
