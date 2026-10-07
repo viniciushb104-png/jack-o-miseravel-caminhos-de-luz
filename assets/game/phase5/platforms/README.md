@@ -32,3 +32,9 @@ todos os PNGs pesados da fase na memória ao mesmo tempo.
 - 5F: cinco trechos sequenciais no Caminho da Promessa
 - 5G: arena final dividida em blocos visuais
 - 5Z: quatro peças usadas como acabamento de transição; restantes ficam como biblioteca de polimento
+
+
+## Layout R1
+
+A disposição física definitiva da fase está documentada em `R1-LAYOUT.md`.
+O R1 redefine chão, gaps, níveis, puzzles, Caminho da Promessa e arena final antes do polimento visual fino.
