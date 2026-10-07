@@ -31,63 +31,41 @@ const SECTIONS=Object.freeze([
 ]);
 
 const GROUND=Object.freeze([
- // 5A · Estrada do Retorno — caminhada estável.
+ // R2 · uma linha de chão dominante. Cada capítulo é um espaço legível,
+ // sem buracos decorativos entre os elementos do próprio enigma.
  {x1:0,x2:1700,y:590,section:"return"},
-
- // 5B · Vila — três quarteirões com dois saltos curtos.
- {x1:1700,x2:2180,y:590,section:"houses"},
- {x1:2270,x2:2800,y:590,section:"houses"},
- {x1:2890,x2:3500,y:590,section:"houses"},
-
- // 5C · Relógios e Reflexos — composição tripartida e simétrica.
- {x1:3500,x2:3970,y:590,section:"clock"},
- {x1:4060,x2:4800,y:590,section:"clock"},
- {x1:4890,x2:5350,y:590,section:"clock"},
-
- // 5D · Jardim — caminhada contínua para não punir quem carrega memórias.
+ {x1:1700,x2:3500,y:590,section:"houses"},
+ {x1:3500,x2:5350,y:590,section:"clock"},
  {x1:5350,x2:7350,y:590,section:"garden"},
+ {x1:7350,x2:9500,y:590,section:"city"},
 
- // 5E · Cidade — três blocos de praça, deliberadamente fragmentados.
- {x1:7350,x2:8050,y:590,section:"city"},
- {x1:8140,x2:8750,y:590,section:"city"},
- {x1:8840,x2:9500,y:590,section:"city"},
+ // A Promessa sobe em apenas três patamares de 20 px: ascensão perceptível,
+ // mas sem transformar o trecho numa escadaria visualmente ruidosa.
+ {x1:9500,x2:9950,y:580,section:"promise"},
+ {x1:9950,x2:10400,y:560,section:"promise"},
+ {x1:10400,x2:10850,y:540,section:"promise"},
 
- // 5F · Promessa — ascensão ritual em degraus suaves de 20 px.
- {x1:9500,x2:9820,y:570,section:"promise"},
- {x1:9820,x2:10110,y:550,section:"promise"},
- {x1:10110,x2:10400,y:530,section:"promise"},
- {x1:10400,x2:10690,y:510,section:"promise"},
- {x1:10690,x2:10850,y:500,section:"promise"},
-
- // 5G · Sala de Espelhos + caminhada pós-boss.
+ // A arena final volta a uma linha de chão única; o boss ganha três palcos claros.
  {x1:10850,x2:12600,y:590,section:"final"}
 ]);
 
 const PLATFORMS=Object.freeze([
- // 5A · pequenos relevos opcionais: a estrada continua sendo o foco.
- {id:"return-step",x:520,y:555,w:180,h:22,section:"return"},
- {id:"return-ruin",x:1050,y:540,w:190,h:22,section:"return"},
+ // 5C · cada espelho tem um pedestal físico exatamente sob o sprite.
+ {id:"clock-mirror-left",x:3620,y:520,w:260,h:22,section:"clock"},
+ {id:"clock-mirror-center",x:4160,y:500,w:280,h:22,section:"clock"},
+ {id:"clock-mirror-right",x:4690,y:520,w:260,h:22,section:"clock"},
 
- // 5B · vila construída em níveis, nunca flutuando sem contexto.
- {id:"village-balcony-left",x:1940,y:500,w:180,h:22,section:"houses"},
- {id:"village-well",x:2440,y:475,w:210,h:22,section:"houses"},
- {id:"village-balcony-right",x:3100,y:500,w:190,h:22,section:"houses"},
+ // 5E · as quatro marcas ficam integralmente sobre seus próprios palcos.
+ {id:"city-waited",x:7520,y:530,w:240,h:22,section:"city"},
+ {id:"city-continued",x:8050,y:515,w:250,h:22,section:"city"},
+ {id:"city-let-go",x:8460,y:530,w:250,h:22,section:"city"},
+ {id:"city-crossed",x:8930,y:515,w:250,h:22,section:"city"},
 
- // 5C · três pedestais funcionais para os espelhos.
- {id:"clock-mirror-left",x:3660,y:500,w:180,h:22,section:"clock"},
- {id:"clock-mirror-center",x:4210,y:455,w:180,h:22,section:"clock"},
- {id:"clock-mirror-right",x:4730,y:500,w:180,h:22,section:"clock"},
-
- // 5E · quatro estações da praça dos rótulos.
- {id:"city-waited",x:7550,y:505,w:180,h:22,section:"city"},
- {id:"city-continued",x:8120,y:470,w:220,h:22,section:"city"},
- {id:"city-let-go",x:8500,y:510,w:180,h:22,section:"city"},
- {id:"city-crossed",x:8980,y:470,w:220,h:22,section:"city"},
-
- // 5G · boss legível: duas laterais e um centro baixo.
- {id:"boss-left",x:11080,y:500,w:220,h:22,section:"final"},
- {id:"boss-center",x:11620,y:540,w:240,h:22,section:"final"},
- {id:"boss-right",x:12020,y:500,w:220,h:22,section:"final"}
+ // 5G · três massas apenas: acusação esquerda, confronto central e resolução direita.
+ // Todos os sigilos, lições e espelhos agora pertencem fisicamente a um desses palcos.
+ {id:"boss-left",x:11000,y:520,w:540,h:22,section:"final"},
+ {id:"boss-center",x:11540,y:545,w:400,h:22,section:"final"},
+ {id:"boss-right",x:11940,y:520,w:560,h:22,section:"final"}
 ]);
 
 const GATES=[
@@ -113,9 +91,9 @@ const housesLamps=[
 ];
 
 const clockMirrors=[
- {x:3750,y:500,targetX:4020,targetY:385,node:0,range:185},
- {x:4300,y:455,targetX:4560,targetY:385,node:1,range:185},
- {x:4820,y:500,targetX:5060,targetY:385,node:2,range:185}
+ {x:3750,y:520,targetX:4020,targetY:385,node:0,range:185},
+ {x:4300,y:500,targetX:4560,targetY:385,node:1,range:185},
+ {x:4820,y:520,targetX:5060,targetY:385,node:2,range:185}
 ];
 
 const gardenItems=[
@@ -151,8 +129,8 @@ const bossLessons=[
  {x:12330,label:"ATRAVESSAR",mode:"reflected"}
 ];
 const bossMirrors=[
- {x:11340,y:500,targetX:11450,targetY:500,lesson:1,range:145},
- {x:12190,y:500,targetX:12330,targetY:500,lesson:3,range:145}
+ {x:11340,y:520,targetX:11450,targetY:500,lesson:1,range:145},
+ {x:12190,y:520,targetX:12330,targetY:500,lesson:3,range:145}
 ];
 
 let state={
@@ -421,82 +399,60 @@ function drawPhase5PlatformArt(section,index,x,top,w,surface=.42,alpha=1,visualS
 }
 
 const PHASE5_GROUND_ART=Object.freeze([
- // 5A · estrada contínua, com três grandes peças em vez de miniaturas.
- {s:"return",i:0,x:0,w:570,scale:1.35},
- {s:"return",i:3,x:570,w:570,scale:1.35},
- {s:"return",i:5,x:1140,w:560,scale:1.35},
+ // R2 · poucas peças grandes, escala quase 1:1 e leitura horizontal contínua.
+ // A arte veste a colisão; nunca cria uma "plataforma fantasma" fora dela.
+ {s:"return",i:0,x:0,w:570,scale:1.08},
+ {s:"return",i:3,x:570,w:570,scale:1.08},
+ {s:"return",i:5,x:1140,w:560,scale:1.08},
 
- // 5B · três quarteirões.
- {s:"houses",i:0,x:1700,w:480,scale:1.55},
- {s:"houses",i:2,x:2270,w:530,scale:1.50},
- {s:"houses",i:1,x:2890,w:610,scale:1.45},
+ {s:"houses",i:0,x:1700,w:600,scale:1.08},
+ {s:"houses",i:1,x:2300,w:600,scale:1.08},
+ {s:"houses",i:2,x:2900,w:600,scale:1.08},
 
- // 5C · três blocos temporais.
- {s:"clock",i:0,x:3500,w:470,scale:1.65},
- {s:"clock",i:2,x:4060,w:740,scale:1.30},
- {s:"clock",i:3,x:4890,w:460,scale:1.70},
+ {s:"clock",i:0,x:3500,w:620,scale:1.06},
+ {s:"clock",i:2,x:4120,w:615,scale:1.06},
+ {s:"clock",i:3,x:4735,w:615,scale:1.06},
 
- // 5D · jardim contínuo e respirado.
- {s:"garden",i:0,x:5350,w:650,scale:1.40},
- {s:"garden",i:2,x:6000,w:670,scale:1.38},
- {s:"garden",i:5,x:6670,w:680,scale:1.38},
+ {s:"garden",i:0,x:5350,w:670,scale:1.06},
+ {s:"garden",i:2,x:6020,w:665,scale:1.06},
+ {s:"garden",i:5,x:6685,w:665,scale:1.06},
 
- // 5E · praça fragmentada em três atos visuais.
- {s:"city",i:0,x:7350,w:700,scale:1.30},
- {s:"city",i:1,x:8140,w:610,scale:1.42},
- {s:"city",i:5,x:8840,w:660,scale:1.35},
+ {s:"city",i:0,x:7350,w:720,scale:1.06},
+ {s:"city",i:1,x:8070,w:715,scale:1.06},
+ {s:"city",i:5,x:8785,w:715,scale:1.06},
 
- // 5F · cada degrau usa uma peça própria do Caminho da Promessa.
- {s:"promise",i:0,x:9500,w:320,scale:1.90},
- {s:"promise",i:1,x:9820,w:290,scale:2.00},
- {s:"promise",i:2,x:10110,w:290,scale:1.20,surface:.42},
- {s:"promise",i:3,x:10400,w:290,scale:2.00},
- {s:"promise",i:4,x:10690,w:160,scale:2.70},
+ {s:"promise",i:0,x:9500,w:450,scale:1.10},
+ {s:"promise",i:3,x:9950,w:450,scale:1.10},
+ {s:"promise",i:4,x:10400,w:450,scale:1.10},
 
- // 5G · arena clara, em quatro grandes blocos.
- {s:"final",i:1,x:10850,w:400,scale:1.70,surface:.38},
- {s:"final",i:4,x:11250,w:400,scale:1.70,surface:.38},
- {s:"final",i:0,x:11650,w:450,scale:1.60,surface:.38},
- {s:"final",i:7,x:12100,w:500,scale:1.55,surface:.38}
+ {s:"final",i:1,x:10850,w:585,scale:1.04,surface:.38},
+ {s:"final",i:0,x:11435,w:580,scale:1.04,surface:.38},
+ {s:"final",i:7,x:12015,w:585,scale:1.04,surface:.38}
 ]);
 
 const PHASE5_ELEVATED_ART=Object.freeze([
- // 5A
- {p:0,s:"return",i:2,scale:2.65},
- {p:1,s:"return",i:4,scale:2.55},
+ // 5C · pedestais dos três espelhos.
+ {p:0,s:"clock",i:1,scale:1.28},
+ {p:1,s:"clock",i:4,scale:1.22},
+ {p:2,s:"clock",i:1,scale:1.28},
 
- // 5B
- {p:2,s:"houses",i:3,scale:3.00},
- {p:3,s:"houses",i:4,scale:2.85},
- {p:4,s:"houses",i:5,scale:3.00},
+ // 5E · palcos das quatro marcas.
+ {p:3,s:"city",i:2,scale:1.26},
+ {p:4,s:"city",i:4,scale:1.22},
+ {p:5,s:"city",i:2,scale:1.26},
+ {p:6,s:"city",i:4,scale:1.22},
 
- // 5C
- {p:5,s:"clock",i:1,scale:3.00},
- {p:6,s:"clock",i:4,scale:2.90},
- {p:7,s:"clock",i:5,scale:2.70},
-
- // 5E
- {p:8,s:"city",i:2,scale:3.00},
- {p:9,s:"city",i:4,scale:2.90},
- {p:10,s:"city",i:3,scale:3.00},
- {p:11,s:"city",i:4,scale:2.90},
-
- // 5G
- {p:12,s:"final",i:2,scale:2.80,surface:.38},
- {p:13,s:"final",i:3,scale:2.20,surface:.36},
- {p:14,s:"final",i:6,scale:2.80,surface:.38}
+ // 5G · esquerda / centro / direita. Nada fica solto no vazio.
+ {p:7,s:"final",i:1,scale:1.22,surface:.38},
+ {p:8,s:"final",i:3,scale:1.18,surface:.36},
+ {p:9,s:"final",i:2,scale:1.22,surface:.38}
 ]);
 
 // Elementos utilitários do lote 5Z usados como acabamento de transição.
-const PHASE5_SHARED_DECOR=Object.freeze([
- {i:3,x:1510,w:235,surface:.42,alpha:.88},
- {i:5,x:5120,w:240,surface:.42,alpha:.82},
- {i:2,x:9285,w:240,surface:.42,alpha:.82},
- {i:6,x:10605,w:245,surface:.42,alpha:.82}
-]);
+const PHASE5_SHARED_DECOR=Object.freeze([]);
 
 // O lote 5Z é utilitário: carregamos somente as quatro peças usadas agora.
-[2,3,5,6].forEach(i=>loadPhase5Platform("shared",i));
+
 const initialPlatformReady=ensurePhase5PlatformSection("return");
 window.__PHASE_ASSETS_READY=Promise.allSettled([
  jackDialogueReady,
@@ -1275,17 +1231,17 @@ function drawBossScene(){
  ctx.beginPath();ctx.moveTo(-70,80);ctx.lineTo(-45,-105);ctx.quadraticCurveTo(0,-190,45,-105);ctx.lineTo(70,80);ctx.closePath();ctx.fill();
  ctx.fillStyle="#32281d";ctx.fillRect(-45,-62,90,16);ctx.fillStyle="#c6a75d";ctx.font="700 12px Georgia";ctx.textAlign="center";ctx.fillText("MISERÁVEL",0,-50);ctx.restore();
  if(bossAct===1){
-  bossSigils.forEach((s,i)=>{ctx.strokeStyle=bossSigilLit.has(i)?"#e5c369":"#6d2f2f";ctx.lineWidth=3;ctx.strokeRect(s.x-55,505,110,48);ctx.fillStyle="#cdb57a";ctx.font="10px Georgia";ctx.textAlign="center";ctx.fillText(s.label,s.x,535)});
+  bossSigils.forEach((s,i)=>{const gy=surfaceYAt(s.x);ctx.strokeStyle=bossSigilLit.has(i)?"#e5c369":"#6d2f2f";ctx.lineWidth=3;ctx.strokeRect(s.x-55,gy-70,110,48);ctx.fillStyle="#cdb57a";ctx.font="10px Georgia";ctx.textAlign="center";ctx.fillText(s.label,s.x,gy-40)});
  }
  if(bossAct===2){
-  bossLessons.forEach((s,i)=>{ctx.strokeStyle=bossLessonLit.has(i)?"#ead073":"#63594a";ctx.lineWidth=3;ctx.beginPath();ctx.arc(s.x,525,28,0,Math.PI*2);ctx.stroke();ctx.fillStyle="#d8c08a";ctx.font="9px Georgia";ctx.textAlign="center";ctx.fillText(s.label,s.x,575)});
+  bossLessons.forEach((s,i)=>{const gy=surfaceYAt(s.x);ctx.strokeStyle=bossLessonLit.has(i)?"#ead073":"#63594a";ctx.lineWidth=3;ctx.beginPath();ctx.arc(s.x,gy-55,28,0,Math.PI*2);ctx.stroke();ctx.fillStyle="#d8c08a";ctx.font="9px Georgia";ctx.textAlign="center";ctx.fillText(s.label,s.x,gy-12)});
   bossMirrors.forEach(m=>drawMirror(m,bossLessonLit.has(m.lesson)));
  }
  if(bossAct===3&&!bossContinued){
   ctx.fillStyle="#f0d488";ctx.font="700 14px Georgia";ctx.textAlign="center";ctx.fillText("E · CONTINUAR",bx,315);
  }
  if(bossResolved){
-  const lx=12420,gy=groundYAt(lx);
+  const lx=12420,gy=surfaceYAt(lx);
   ctx.fillStyle="#e8ba4f";ctx.shadowColor="#e6a43d";ctx.shadowBlur=35;ctx.beginPath();ctx.arc(lx,gy-92,30,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
   ctx.fillStyle="#f0d78e";ctx.font="700 13px Georgia";ctx.textAlign="center";ctx.fillText("A ÚLTIMA LANTERNA",lx,gy-137);
  }
