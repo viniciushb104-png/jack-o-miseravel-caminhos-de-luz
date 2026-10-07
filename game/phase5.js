@@ -69,7 +69,7 @@ const PLATFORMS=Object.freeze([
 ]);
 
 const GATES=[
- {x:1660,flag:()=>returnOpened},
+ {x:1660,flag:()=>returnOpened&&roadMonologueCompleted},
  {x:3470,flag:()=>housesSolved},
  {x:5320,flag:()=>clockSolved},
  {x:7320,flag:()=>gardenSolved},
@@ -134,7 +134,7 @@ const bossMirrors=[
 ];
 
 let state={
- returnOpened:false,roadBlockedSeen:false,
+ returnOpened:false,roadBlockedSeen:false,roadMonologueCompleted:false,
  housesSolved:false,clockSolved:false,gardenSolved:false,citySolved:false,promiseSolved:false,
  housesLamps:null,clockCharged:[],gardenPlaced:[],cityMarks:[],promiseStep:0,
  sectionSeen:[],deadEnemies:[],activeCheckpoint:"",
@@ -150,7 +150,11 @@ if(!forceNew){
   if(raw)Object.assign(state,JSON.parse(raw));
  }catch(_){}
 }
-let returnOpened=!!state.returnOpened,roadBlockedSeen=!!state.roadBlockedSeen;
+let roadMonologueCompleted=!!state.roadMonologueCompleted;
+let returnOpened=!!state.returnOpened&&roadMonologueCompleted,roadBlockedSeen=!!state.roadBlockedSeen;
+// Saves produzidos antes da trava narrativa não podem colocar Jack no Enigma 2
+// sem que o monólogo do retorno tenha sido concluído nesta lógica.
+if(!roadMonologueCompleted)returnOpened=false;
 let housesSolved=!!state.housesSolved,clockSolved=!!state.clockSolved,gardenSolved=!!state.gardenSolved,
     citySolved=!!state.citySolved,promiseSolved=!!state.promiseSolved;
 if(Array.isArray(state.housesLamps))state.housesLamps.forEach((v,i)=>{if(housesLamps[i])housesLamps[i].on=!!v});
@@ -633,7 +637,7 @@ function openLines(lines,cb){
 }
 function save(){
  const data={
-  returnOpened,roadBlockedSeen,housesSolved,clockSolved,gardenSolved,citySolved,promiseSolved,
+  returnOpened,roadBlockedSeen,roadMonologueCompleted,housesSolved,clockSolved,gardenSolved,citySolved,promiseSolved,
   housesLamps:housesLamps.map(v=>v.on),clockCharged:[...clockCharged],gardenPlaced:[...gardenPlaced],
   cityMarks:[...cityLit],carriedItem,promiseStep,sectionSeen:[...sectionSeen],deadEnemies:[...deadEnemies],
   activeCheckpoint,bossStarted,bossAct,bossSigils:[...bossSigilLit],bossLessons:[...bossLessonLit],
@@ -647,7 +651,8 @@ function objective(){
  const id=currentSection().id;
  if(id==="return"){
   if(!roadBlockedSeen)return "Siga a estrada até onde a névoa permitir.";
-  if(!returnOpened)return "O sino chama para trás. Volte pelo caminho que acabou de percorrer.";
+  if(!roadMonologueCompleted)return "O sino chama para trás. Volte pelo caminho que acabou de percorrer.";
+  if(!returnOpened)return "Escute Jack até o fim. Só então a estrada poderá mudar.";
   return "O caminho mudou. Atravesse o Marco do Retorno.";
  }
  if(id==="houses"&&!housesSolved)return "Apague as 3 lanternas que mantêm janelas esperando. Preserve as 2 que iluminam a estrada.";
@@ -962,17 +967,24 @@ function interact(){
 }
 
 function updateRoadStory(){
+ if(!roadMonologueCompleted&&p.x+p.w>1660){
+  p.x=1660-p.w;
+  p.vx=0;
+ }
  const pc=p.x+p.w/2;
  if(!roadBlockedSeen&&pc>1450){
   roadBlockedSeen=true;banner("A ESTRADA RECUSA O PASSO");openLines(story.roadBlocked,save);save();
  }
- if(roadBlockedSeen&&!returnOpened&&pc<280){
+ if(roadBlockedSeen&&!roadMonologueCompleted&&pc<280){
   banner("O CAMINHO EXISTIA PARA TRÁS");
   openLines(story.roadTurn,()=>{
-   // A passagem só existe depois que Jack termina de encarar a memória.
+   // ENIGMA 1: voltar não basta. O monólogo precisa terminar.
+   // Só o callback final do diálogo autoriza a abertura do caminho.
+   roadMonologueCompleted=true;
    returnOpened=true;
    roadOpenFxStartedAt=performance.now();
    save();
+   syncHud();
   });
   save();
  }
