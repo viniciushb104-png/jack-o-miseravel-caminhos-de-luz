@@ -385,6 +385,10 @@ function drawPhase5PlatformArt(section,index,x,top,w,surface=.42,alpha=1,visualS
  const drawW=w*visualScale;
  const h=drawW*(im.naturalHeight/im.naturalWidth);
  const drawX=x+(w-drawW)/2;
+ // R2.2 · a colisão continua exatamente em "top", mas a pintura sobe alguns
+ // pixels para a borda visível encontrar a sola do Jack e eliminar o efeito
+ // de flutuação provocado pelas margens transparentes dos PNGs.
+ const visualLift=10;
  ctx.save();
  if(clipToWidth){
   ctx.beginPath();
@@ -393,7 +397,7 @@ function drawPhase5PlatformArt(section,index,x,top,w,surface=.42,alpha=1,visualS
  }
  ctx.globalAlpha=alpha;
  ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";
- ctx.drawImage(im,drawX,top-h*surface,drawW,h);
+ ctx.drawImage(im,drawX,top-h*surface-visualLift,drawW,h);
  ctx.restore();
  return true;
 }
@@ -1094,13 +1098,8 @@ function drawBackdrop(){
 function drawGround(){
  ctx.save();ctx.translate(-cam,0);
 
- // Base física discreta: permanece como fallback enquanto a arte carrega.
- for(const r of GROUND){
-  const x=r.x1,w=r.x2-r.x1;
-  ctx.fillStyle="rgba(18,18,16,.78)";ctx.fillRect(x,r.y,w,H-r.y);
-  ctx.fillStyle="rgba(139,119,82,.72)";ctx.fillRect(x,r.y,w,4);
- }
-
+ // R2.2 · GROUND é apenas colisão. Não desenhamos mais retângulos físicos:
+ // o jogador vê somente os sprites de chão/plataforma.
  // Chão artístico por capítulo, alinhado à altura física de cada trecho.
  for(const a of PHASE5_GROUND_ART){
   const top=groundYAt(a.x+a.w*.5);
@@ -1112,10 +1111,8 @@ function drawGround(){
   const q=PLATFORMS[a.p];
   if(!q)continue;
   const drew=drawPhase5PlatformArt(a.s,a.i,q.x,q.y,q.w,a.surface??.42,1,a.scale??1,true);
-  if(!drew){
-   ctx.fillStyle="#26251f";ctx.fillRect(q.x,q.y,q.w,q.h);
-   ctx.fillStyle="#8d7952";ctx.fillRect(q.x,q.y,q.w,4);
-  }
+  // Sem fallback geométrico visível: a hitbox permanece ativa, mas invisível.
+  // Se a arte ainda estiver carregando, a plataforma não exibe um bloco artificial.
  }
 
  // Lote 5Z: peças de acabamento nos grandes limiares narrativos.
