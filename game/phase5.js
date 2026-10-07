@@ -695,7 +695,8 @@ function platformAtFoot(cx,bottom,oldBottom){
 function gateCollision(oldX){
  for(const g of GATES){
   if(g.flag())continue;
-  if(g.x===1660)continue; // P5-2A usa o selo artístico da Estrada que Volta.
+  // O primeiro gate continua fisicamente ativo. Só o desenho genérico dele
+  // é ocultado, porque o selo P5-2A assume a representação visual.
   const oldR=oldX+p.w,newR=p.x+p.w;
   if(oldR<=g.x&&newR>g.x){p.x=g.x-p.w;p.vx=0;return}
   if(oldX>=g.x+18&&p.x<g.x+18){p.x=g.x+18;p.vx=0;return}
@@ -966,10 +967,14 @@ function updateRoadStory(){
   roadBlockedSeen=true;banner("A ESTRADA RECUSA O PASSO");openLines(story.roadBlocked,save);save();
  }
  if(roadBlockedSeen&&!returnOpened&&pc<280){
-  returnOpened=true;
-  roadOpenFxStartedAt=performance.now();
   banner("O CAMINHO EXISTIA PARA TRÁS");
-  openLines(story.roadTurn,save);save();
+  openLines(story.roadTurn,()=>{
+   // A passagem só existe depois que Jack termina de encarar a memória.
+   returnOpened=true;
+   roadOpenFxStartedAt=performance.now();
+   save();
+  });
+  save();
  }
 }
 function sectionIntro(idx){
