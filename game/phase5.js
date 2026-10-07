@@ -379,12 +379,12 @@ function phase5PlatformImage(section,index){
  const entry=phase5PlatformCache.get(phase5PlatformKey(section,index));
  return entry?.ready?entry.img:null;
 }
-function drawPhase5PlatformArt(section,index,x,top,w,surface=.42,alpha=1,visualScale=1,clipToWidth=false){
+function drawPhase5PlatformArt(section,index,x,top,w,surface=.42,alpha=1,visualScale=1,clipToWidth=true){
  const im=phase5PlatformImage(section,index);
  if(!im||!im.naturalWidth||!im.naturalHeight)return false;
- const drawW=w*Math.max(1,visualScale);
+ const drawW=w*visualScale;
  const h=drawW*(im.naturalHeight/im.naturalWidth);
- const drawX=x-(drawW-w)/2;
+ const drawX=x+(w-drawW)/2;
  ctx.save();
  if(clipToWidth){
   ctx.beginPath();
@@ -431,21 +431,19 @@ const PHASE5_GROUND_ART=Object.freeze([
 ]);
 
 const PHASE5_ELEVATED_ART=Object.freeze([
- // 5C · pedestais dos três espelhos.
- {p:0,s:"clock",i:1,scale:1.28},
- {p:1,s:"clock",i:4,scale:1.22},
- {p:2,s:"clock",i:1,scale:1.28},
+ // R2.1 · sprite e hitbox usam a mesma largura física.
+ {p:0,s:"clock",i:1,scale:1.00},
+ {p:1,s:"clock",i:4,scale:1.00},
+ {p:2,s:"clock",i:1,scale:1.00},
 
- // 5E · palcos das quatro marcas.
- {p:3,s:"city",i:2,scale:1.26},
- {p:4,s:"city",i:4,scale:1.22},
- {p:5,s:"city",i:2,scale:1.26},
- {p:6,s:"city",i:4,scale:1.22},
+ {p:3,s:"city",i:2,scale:1.00},
+ {p:4,s:"city",i:4,scale:1.00},
+ {p:5,s:"city",i:2,scale:1.00},
+ {p:6,s:"city",i:4,scale:1.00},
 
- // 5G · esquerda / centro / direita. Nada fica solto no vazio.
- {p:7,s:"final",i:1,scale:1.22,surface:.38},
- {p:8,s:"final",i:3,scale:1.18,surface:.36},
- {p:9,s:"final",i:2,scale:1.22,surface:.38}
+ {p:7,s:"final",i:1,scale:1.00,surface:.38},
+ {p:8,s:"final",i:3,scale:1.00,surface:.36},
+ {p:9,s:"final",i:2,scale:1.00,surface:.38}
 ]);
 
 // Elementos utilitários do lote 5Z usados como acabamento de transição.
@@ -1113,7 +1111,7 @@ function drawGround(){
  for(const a of PHASE5_ELEVATED_ART){
   const q=PLATFORMS[a.p];
   if(!q)continue;
-  const drew=drawPhase5PlatformArt(a.s,a.i,q.x,q.y,q.w,a.surface??.42,1,a.scale||3,false);
+  const drew=drawPhase5PlatformArt(a.s,a.i,q.x,q.y,q.w,a.surface??.42,1,a.scale??1,true);
   if(!drew){
    ctx.fillStyle="#26251f";ctx.fillRect(q.x,q.y,q.w,q.h);
    ctx.fillStyle="#8d7952";ctx.fillRect(q.x,q.y,q.w,4);
