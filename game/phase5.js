@@ -180,6 +180,7 @@ const p={x:Number(state.px)||150,y:Number(state.py)||480,w:44,h:86,vx:0,vy:0,on:
 let life=3,cam=0,running=false,last=performance.now(),sectionIndex=-1,lightPulse=0,lightCooldown=0;
 let reflectedFx=[],hazards=[],shots=[],enemyDissolves=[],messageTimer=0,bannerTimer=0,bossShotCd=1.2,ending=false,autosaveTimer=0;
 let roadOpenFxStartedAt=0;
+let checkpointActivation={id:"",startedAt:0,duration:900};
 const input={left:false,right:false,down:false,jump:false,run:false};
 
 const atlas=new Image();atlas.src="../assets/game/phase1/sprites-hd/jack-atlas-hd.png";
@@ -284,6 +285,39 @@ Object.entries(SHADOW_RETURN_FILES).forEach(([state,files])=>{
  });
 });
 const shadowReturnAssetsReady=Promise.allSettled(shadowReturnReady);
+
+// ---------------------------------------------------------------------------
+// FASE 5 · LANTERNA DE VIGÍLIA
+// Checkpoint narrativo: apagado quando inativo, acendimento em 3 estágios e
+// abóbora iluminada quando é o ponto de retorno atual.
+// ---------------------------------------------------------------------------
+const PHASE5_CHECKPOINT_FILES=Object.freeze({
+ off:"../assets/game/phase5/checkpoints/phase5-checkpoint-off.png?v=1",
+ on:"../assets/game/phase5/checkpoints/phase5-checkpoint-on.png?v=1",
+ activate:[
+  "../assets/game/phase5/checkpoints/phase5-checkpoint-activate-01.png?v=1",
+  "../assets/game/phase5/checkpoints/phase5-checkpoint-activate-02.png?v=1",
+  "../assets/game/phase5/checkpoints/phase5-checkpoint-activate-03.png?v=1"
+ ],
+ glow:"../assets/game/phase5/checkpoints/phase5-checkpoint-glow-variant.png?v=1"
+});
+const phase5CheckpointImgs={off:null,on:null,activate:[],glow:null};
+const phase5CheckpointReady=[];
+function loadCheckpointAsset(key,src,index=null){
+ const im=new Image();
+ if(index===null)phase5CheckpointImgs[key]=im;
+ else phase5CheckpointImgs[key][index]=im;
+ phase5CheckpointReady.push(new Promise(resolve=>{
+  im.onload=()=>resolve(im);
+  im.onerror=()=>resolve(null);
+ }));
+ im.src=src;
+}
+loadCheckpointAsset("off",PHASE5_CHECKPOINT_FILES.off);
+loadCheckpointAsset("on",PHASE5_CHECKPOINT_FILES.on);
+PHASE5_CHECKPOINT_FILES.activate.forEach((src,i)=>loadCheckpointAsset("activate",src,i));
+loadCheckpointAsset("glow",PHASE5_CHECKPOINT_FILES.glow);
+const phase5CheckpointAssetsReady=Promise.allSettled(phase5CheckpointReady);
 
 const PHASE5_BACKGROUND_FILES=Object.freeze({
  return:"../assets/game/phase5/backgrounds/01-village-carnival/phase5-village-halloween-01.png",
@@ -549,7 +583,8 @@ window.__PHASE_ASSETS_READY=Promise.allSettled([
  initialPlatformReady,
  phase5RoadPuzzlePromises.seal,
  phase5RoadPuzzlePromises.wave1,
- shadowReturnAssetsReady
+ shadowReturnAssetsReady,
+ phase5CheckpointAssetsReady
 ]);
 
 const PHASE5_MUSIC=Object.freeze({
@@ -758,7 +793,12 @@ function updateCheckpoint(){
   const cp=CHECKPOINTS[i];
   if(i<=activeIndex||!checkpointAllowed(cp))continue;
   if(Math.abs(pc-cp.x)<78&&Math.abs((p.y+p.h)-surfaceYAt(pc))<105){
-   activeCheckpoint=cp.id;life=3;banner(cp.name+" · ACESO");say("A chama guardará este retorno.");save();syncHud();break;
+   activeCheckpoint=cp.id;
+   checkpointActivation={id:cp.id,startedAt:performance.now(),duration:900};
+   life=3;
+   banner(cp.name+" · ACESO");
+   say("A estrada guardará este passo.");
+   save();syncHud();break;
   }
  }
 }
@@ -1250,14 +1290,59 @@ function drawGates(){
  }
  ctx.restore();
 }
+function drawCheckpointImage(im,gy,alpha=1,scale=1){
+ if(!im||!im.complete||!(im.naturalWidth||im.width))return false;
+ const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+ const h=245*scale,w=h*(iw/ih);
+ ctx.save();
+ ctx.globalAlpha=alpha;
+ ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";
+ ctx.drawImage(im,-w*.5,-h+8,w,h);
+ ctx.restore();
+ return true;
+}
 function drawCheckpoint(cp){
- const lit=cp.id===activeCheckpoint||checkpointAllowed(cp)&&CHECKPOINTS.indexOf(cp)<=CHECKPOINTS.findIndex(v=>v.id===activeCheckpoint);
+ const isActive=cp.id===activeCheckpoint;
  const gy=groundYAt(cp.x);
+ const now=performance.now();
+ const activating=isActive&&checkpointActivation.id===cp.id&&
+  now-checkpointActivation.startedAt<checkpointActivation.duration;
+
  ctx.save();ctx.translate(cp.x-cam,gy);
- ctx.fillStyle="#30281c";ctx.fillRect(-6,-105,12,105);
- ctx.fillStyle=lit?"#f0b94d":"#55442d";ctx.shadowColor=lit?"#f0a83c":"transparent";ctx.shadowBlur=lit?22:0;
- ctx.beginPath();ctx.arc(0,-116,24,0,Math.PI*2);ctx.fill();
- ctx.fillStyle="#17100c";ctx.fillRect(-8,-124,16,5);ctx.fillRect(-13,-114,26,4);
+
+ let drew=false;
+ if(activating){
+  const age=now-checkpointActivation.startedAt;
+  const seq=phase5CheckpointImgs.activate;
+  const frame=Math.min(seq.length-1,Math.floor(age/(checkpointActivation.duration/Math.max(1,seq.length))));
+  drew=drawCheckpointImage(seq[frame],gy,1,1);
+ }else if(isActive){
+  // Glow atrás da peça principal: respira lentamente, sem virar um clarão.
+  const glow=phase5CheckpointImgs.glow;
+  if(glow&&glow.complete&&(glow.naturalWidth||glow.width)){
+   const pulse=.22+.08*(.5+.5*Math.sin(now/520));
+   drawCheckpointImage(glow,gy,pulse,1.04);
+  }
+  drew=drawCheckpointImage(phase5CheckpointImgs.on,gy,1,1);
+ }else{
+  drew=drawCheckpointImage(phase5CheckpointImgs.off,gy,.96,1);
+ }
+
+ // Fallback caso algum asset ainda esteja carregando.
+ if(!drew){
+  ctx.fillStyle="#30281c";ctx.fillRect(-6,-105,12,105);
+  ctx.fillStyle=isActive?"#f0b94d":"#55442d";
+  ctx.shadowColor=isActive?"#f0a83c":"transparent";ctx.shadowBlur=isActive?22:0;
+  ctx.beginPath();ctx.arc(0,-116,24,0,Math.PI*2);ctx.fill();
+  ctx.shadowBlur=0;
+ }
+
+ // Pequena identificação diegética apenas no ponto ativo.
+ if(isActive&&!activating){
+  ctx.fillStyle="rgba(238,207,126,.82)";
+  ctx.font="700 10px Georgia";ctx.textAlign="center";
+  ctx.fillText(cp.name,0,-250);
+ }
  ctx.restore();
 }
 function drawSectionProps(){
