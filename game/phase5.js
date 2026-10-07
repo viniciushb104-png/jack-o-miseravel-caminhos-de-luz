@@ -1228,7 +1228,8 @@ function drawSectionProps(){
     const t=Math.max(0,Math.min(1,age/1.8));
     const a=Math.sin(Math.PI*t)*.95;
     const w=500+180*t;
-    drawRoadAssetBottom("open",1600,FLOOR+28,w,a);
+    // O caminho se reorganiza onde Jack está olhando, para que a revelação seja visível.
+    drawRoadAssetBottom("open",Math.max(340,pc+120),FLOOR+28,w,a);
    }else{
     roadOpenFxStartedAt=0;
    }
