@@ -1179,6 +1179,7 @@ function drawGates(){
  ctx.save();ctx.translate(-cam,0);
  for(const g of GATES){
   if(g.flag())continue;
+  if(g.x===1660)continue; // colisão permanece; o selo P5-2A é o visual oficial.
   ctx.strokeStyle="rgba(216,188,112,.38)";ctx.lineWidth=3;
   const gy=groundYAt(g.x);
   ctx.beginPath();ctx.moveTo(g.x,260);ctx.lineTo(g.x,gy);ctx.stroke();
