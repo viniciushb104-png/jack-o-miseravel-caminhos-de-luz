@@ -178,7 +178,7 @@ let phase5Complete=(!forceNew&&!replayMode)&&(
 
 const p={x:Number(state.px)||150,y:Number(state.py)||480,w:44,h:86,vx:0,vy:0,on:false,dir:1,anim:0,attack:0,inv:0};
 let life=3,cam=0,running=false,last=performance.now(),sectionIndex=-1,lightPulse=0,lightCooldown=0;
-let reflectedFx=[],hazards=[],shots=[],messageTimer=0,bannerTimer=0,bossShotCd=1.2,ending=false,autosaveTimer=0;
+let reflectedFx=[],hazards=[],shots=[],enemyDissolves=[],messageTimer=0,bannerTimer=0,bossShotCd=1.2,ending=false,autosaveTimer=0;
 let roadOpenFxStartedAt=0;
 const input={left:false,right:false,down:false,jump:false,run:false};
 
@@ -243,6 +243,48 @@ const jackDialogueReady=Promise.allSettled(
  dialogue.setAssets({jack:{frames}});
  return frames;
 });
+// ---------------------------------------------------------------------------
+// FASE 5 · SOMBRA DE RETORNO
+// Sprites individuais do Lote 1. Mantemos cada frame separado para permitir
+// animação, substituição pontual e carregamento progressivo sem atlas gigante.
+// ---------------------------------------------------------------------------
+const SHADOW_RETURN_FILES=Object.freeze({
+ idle:[
+  "../assets/game/phase5/enemies/shadow-return/shadow-return-idle-01.png?v=1",
+  "../assets/game/phase5/enemies/shadow-return/shadow-return-idle-02.png?v=1",
+  "../assets/game/phase5/enemies/shadow-return/shadow-return-idle-03.png?v=1"
+ ],
+ move:[
+  "../assets/game/phase5/enemies/shadow-return/shadow-return-move-01.png?v=1",
+  "../assets/game/phase5/enemies/shadow-return/shadow-return-move-02.png?v=1",
+  "../assets/game/phase5/enemies/shadow-return/shadow-return-move-03.png?v=1"
+ ],
+ attack:[
+  "../assets/game/phase5/enemies/shadow-return/shadow-return-attack-01.png?v=1"
+ ],
+ hit:[
+  "../assets/game/phase5/enemies/shadow-return/shadow-return-hit-01.png?v=1",
+  "../assets/game/phase5/enemies/shadow-return/shadow-return-hit-02.png?v=1"
+ ],
+ dissolve:[
+  "../assets/game/phase5/enemies/shadow-return/shadow-return-dissolve-01.png?v=1"
+ ]
+});
+const shadowReturnSprites={idle:[],move:[],attack:[],hit:[],dissolve:[]};
+const shadowReturnReady=[];
+Object.entries(SHADOW_RETURN_FILES).forEach(([state,files])=>{
+ files.forEach((src,index)=>{
+  const im=new Image();
+  shadowReturnSprites[state][index]=im;
+  shadowReturnReady.push(new Promise(resolve=>{
+   im.onload=()=>resolve(im);
+   im.onerror=()=>resolve(null);
+  }));
+  im.src=src;
+ });
+});
+const shadowReturnAssetsReady=Promise.allSettled(shadowReturnReady);
+
 const PHASE5_BACKGROUND_FILES=Object.freeze({
  return:"../assets/game/phase5/backgrounds/01-village-carnival/phase5-village-halloween-01.png",
  houses:"../assets/game/phase5/backgrounds/01-village-carnival/phase5-village-carnival-02.png",
@@ -506,7 +548,8 @@ window.__PHASE_ASSETS_READY=Promise.allSettled([
  phase5BackgroundPromises.return,
  initialPlatformReady,
  phase5RoadPuzzlePromises.seal,
- phase5RoadPuzzlePromises.wave1
+ phase5RoadPuzzlePromises.wave1,
+ shadowReturnAssetsReady
 ]);
 
 const PHASE5_MUSIC=Object.freeze({
@@ -730,7 +773,7 @@ function respawn(){
 }
 
 function makeEnemy(id,kind,x,minX,maxX,hp,label){
- return {id,kind,x,y:0,minX,maxX,hp,maxHp:hp,label,dir:-1,vx:0,cd:.7,t:0,hit:0};
+ return {id,kind,x,y:0,minX,maxX,hp,maxHp:hp,label,dir:-1,vx:0,cd:.7,t:0,hit:0,attackFx:0};
 }
 const enemies=[
  makeEnemy("shadow-1","shadow",980,720,1400,2,"SOMBRA DE RETORNO"),
@@ -774,6 +817,9 @@ function hurtPlayer(sourceX){
  syncHud();
 }
 function killEnemy(e){
+ if(e.kind==="shadow"){
+  enemyDissolves.push({kind:"shadow",x:e.x,y:e.y,dir:e.vx<0?-1:1,t:.48,maxT:.48});
+ }
  deadEnemies.add(e.id);e.dead=true;banner(e.label+" · DISSIPADO");
  if(e.id==="accuser-4")checkCitySolved();
  save();
@@ -789,7 +835,7 @@ function updateEnemies(dt){
  const pc=p.x+p.w/2;
  for(const e of enemies){
   if(e.dead||!enemyActive(e))continue;
-  e.cd=Math.max(0,e.cd-dt);e.hit=Math.max(0,e.hit-dt);e.t+=dt;
+  e.cd=Math.max(0,e.cd-dt);e.hit=Math.max(0,e.hit-dt);e.attackFx=Math.max(0,e.attackFx-dt);e.t+=dt;
   const dx=pc-e.x,ad=Math.abs(dx),sg=Math.sign(dx)||1;
   e.y=enemyGroundY(e);
 
@@ -811,8 +857,13 @@ function updateEnemies(dt){
 
   e.x+=e.vx*dt;
   if(e.x<e.minX){e.x=e.minX;e.dir=1}if(e.x>e.maxX){e.x=e.maxX;e.dir=-1}
-  if(ad<58&&Math.abs((p.y+p.h)-e.y)<110&&e.cd<=.25){hurtPlayer(e.x);e.cd=.9}
+  if(ad<58&&Math.abs((p.y+p.h)-e.y)<110&&e.cd<=.25){
+   e.attackFx=.28;
+   hurtPlayer(e.x);e.cd=.9;
+  }
  }
+ for(const fx of enemyDissolves)fx.t-=dt;
+ enemyDissolves=enemyDissolves.filter(fx=>fx.t>0);
  for(const h of hazards){
   h.t-=dt;h.arm-=dt;
   if(h.arm<=0&&h.t>0&&Math.abs(pc-h.x)<42&&p.y+p.h>520){hurtPlayer(h.x);h.t=0}
@@ -1344,14 +1395,62 @@ function drawBossScene(){
   ctx.fillStyle="#f0d78e";ctx.font="700 13px Georgia";ctx.textAlign="center";ctx.fillText("A ÚLTIMA LANTERNA",lx,gy-137);
  }
 }
+function shadowReturnFrame(e){
+ if(e.hit>0){
+  const seq=shadowReturnSprites.hit;
+  return seq[Math.min(seq.length-1,Math.floor((.24-e.hit)*11))]||seq[0];
+ }
+ if(e.attackFx>0)return shadowReturnSprites.attack[0];
+ const moving=Math.abs(e.vx)>18;
+ const seq=moving?shadowReturnSprites.move:shadowReturnSprites.idle;
+ const fps=moving?8.5:3.2;
+ return seq[Math.floor(e.t*fps)%Math.max(1,seq.length)];
+}
+function drawShadowReturnSprite(e){
+ const im=shadowReturnFrame(e);
+ if(!im||!im.complete||!(im.naturalWidth||im.width))return false;
+ const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+ // Sprite alto e legível, mas com os pés presos ao mesmo chão da hitbox.
+ const targetH=190,targetW=targetH*(iw/ih);
+ const facing=e.vx<0?-1:1;
+ ctx.save();
+ ctx.translate(0,0);
+ if(facing<0){
+  ctx.scale(-1,1);
+  ctx.drawImage(im,-targetW/2,-targetH,targetW,targetH);
+ }else{
+  ctx.drawImage(im,-targetW/2,-targetH,targetW,targetH);
+ }
+ ctx.restore();
+ return true;
+}
+function drawShadowDissolves(){
+ for(const fx of enemyDissolves){
+  if(fx.kind!=="shadow")continue;
+  const seq=shadowReturnSprites.dissolve,im=seq[0];
+  if(!im||!im.complete||!(im.naturalWidth||im.width))continue;
+  const q=Math.max(0,Math.min(1,fx.t/fx.maxT));
+  const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+  const h=190,w=h*(iw/ih);
+  ctx.save();ctx.translate(fx.x,fx.y);
+  ctx.globalAlpha=q;
+  if(fx.dir<0){ctx.scale(-1,1);ctx.drawImage(im,-w/2,-h,w,h)}
+  else ctx.drawImage(im,-w/2,-h,w,h);
+  ctx.restore();
+ }
+}
 function drawEnemies(){
  ctx.save();ctx.translate(-cam,0);
+ drawShadowDissolves();
  for(const e of enemies){
   if(e.dead||!enemyActive(e))continue;
   const y=e.y,hit=e.hit>0;
-  ctx.save();ctx.translate(e.x,y);ctx.globalAlpha=hit?.45:1;
+  ctx.save();ctx.translate(e.x,y);ctx.globalAlpha=hit?.72:1;
   if(e.kind==="shadow"){
-   ctx.fillStyle="rgba(25,24,30,.82)";ctx.beginPath();ctx.ellipse(0,-58,28,62,0,0,Math.PI*2);ctx.fill();ctx.fillStyle="#d8d0bb";ctx.fillRect(-5,-82,4,4);ctx.fillRect(7,-82,4,4);
+   if(!drawShadowReturnSprite(e)){
+    ctx.fillStyle="rgba(25,24,30,.82)";ctx.beginPath();ctx.ellipse(0,-58,28,62,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle="#d8d0bb";ctx.fillRect(-5,-82,4,4);ctx.fillRect(7,-82,4,4);
+   }
   }else if(e.kind==="witness"){
    ctx.fillStyle="#282621";ctx.beginPath();ctx.moveTo(-34,0);ctx.lineTo(-20,-88);ctx.lineTo(0,-122);ctx.lineTo(20,-88);ctx.lineTo(34,0);ctx.closePath();ctx.fill();ctx.strokeStyle="#8b7857";ctx.strokeRect(-22,-82,44,20);
   }else if(e.kind==="repeater"){
