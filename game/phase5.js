@@ -175,6 +175,7 @@ let phase5Complete=(!forceNew&&!replayMode)&&(
 const p={x:Number(state.px)||150,y:Number(state.py)||480,w:44,h:86,vx:0,vy:0,on:false,dir:1,anim:0,attack:0,inv:0};
 let life=3,cam=0,running=false,last=performance.now(),sectionIndex=-1,lightPulse=0,lightCooldown=0;
 let reflectedFx=[],hazards=[],shots=[],messageTimer=0,bannerTimer=0,bossShotCd=1.2,ending=false,autosaveTimer=0;
+let roadOpenFxStartedAt=0;
 const input={left:false,right:false,down:false,jump:false,run:false};
 
 const atlas=new Image();atlas.src="../assets/game/phase1/sprites-hd/jack-atlas-hd.png";
@@ -266,6 +267,46 @@ Object.entries(PHASE5_BACKGROUND_FILES).forEach(([key,src])=>{
    A física continua usando GROUND/PLATFORMS. As artes abaixo vestem essa
    geometria sem alterar colisão, puzzles ou checkpoints.
    -------------------------------------------------------------------------- */
+const PHASE5_ROAD_PUZZLE_FILES=Object.freeze({
+ seal:"../assets/game/phase5/puzzles/P5-2A-estrada-volta/phase5-road-blocked-seal.png",
+ glow:"../assets/game/phase5/puzzles/P5-2A-estrada-volta/phase5-road-blocked-seal-glow.png",
+ wave1:"../assets/game/phase5/puzzles/P5-2A-estrada-volta/phase5-bell-call-wave-01.png",
+ wave2:"../assets/game/phase5/puzzles/P5-2A-estrada-volta/phase5-bell-call-wave-02.png",
+ arrow:"../assets/game/phase5/puzzles/P5-2A-estrada-volta/phase5-return-arrow-light.png",
+ open:"../assets/game/phase5/puzzles/P5-2A-estrada-volta/phase5-return-path-open-fx.png"
+});
+const phase5RoadPuzzleImgs={};
+const phase5RoadPuzzlePromises={};
+Object.entries(PHASE5_ROAD_PUZZLE_FILES).forEach(([key,src])=>{
+ const im=new Image();
+ phase5RoadPuzzleImgs[key]=im;
+ phase5RoadPuzzlePromises[key]=new Promise(resolve=>{
+  im.onload=()=>resolve(im);
+  im.onerror=()=>resolve(null);
+ });
+ im.src=src+"?v=1";
+});
+function roadPuzzleImg(key){
+ const im=phase5RoadPuzzleImgs[key];
+ return im&&im.complete&&im.naturalWidth?im:null;
+}
+function drawRoadAssetBottom(key,cx,bottom,w,alpha=1,flip=false){
+ const im=roadPuzzleImg(key);
+ if(!im)return false;
+ const h=w*(im.naturalHeight/im.naturalWidth);
+ ctx.save();
+ ctx.globalAlpha=Math.max(0,Math.min(1,alpha));
+ ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";
+ if(flip){
+  ctx.translate(cx,0);ctx.scale(-1,1);
+  ctx.drawImage(im,-w/2,bottom-h,w,h);
+ }else{
+  ctx.drawImage(im,cx-w/2,bottom-h,w,h);
+ }
+ ctx.restore();
+ return true;
+}
+
 const PHASE5_PLATFORM_FILES=Object.freeze({
  return:[
   "../assets/game/phase5/platforms/5A-estrada-retorno/phase5-5a-01-plataforma-outono-lanternas.png",
@@ -459,7 +500,9 @@ const initialPlatformReady=ensurePhase5PlatformSection("return");
 window.__PHASE_ASSETS_READY=Promise.allSettled([
  jackDialogueReady,
  phase5BackgroundPromises.return,
- initialPlatformReady
+ initialPlatformReady,
+ phase5RoadPuzzlePromises.seal,
+ phase5RoadPuzzlePromises.wave1
 ]);
 
 const PHASE5_MUSIC=Object.freeze({
@@ -652,6 +695,7 @@ function platformAtFoot(cx,bottom,oldBottom){
 function gateCollision(oldX){
  for(const g of GATES){
   if(g.flag())continue;
+  if(g.x===1660)continue; // P5-2A usa o selo artístico da Estrada que Volta.
   const oldR=oldX+p.w,newR=p.x+p.w;
   if(oldR<=g.x&&newR>g.x){p.x=g.x-p.w;p.vx=0;return}
   if(oldX>=g.x+18&&p.x<g.x+18){p.x=g.x+18;p.vx=0;return}
@@ -922,7 +966,10 @@ function updateRoadStory(){
   roadBlockedSeen=true;banner("A ESTRADA RECUSA O PASSO");openLines(story.roadBlocked,save);save();
  }
  if(roadBlockedSeen&&!returnOpened&&pc<280){
-  returnOpened=true;banner("O CAMINHO EXISTIA PARA TRÁS");openLines(story.roadTurn,save);save();
+  returnOpened=true;
+  roadOpenFxStartedAt=performance.now();
+  banner("O CAMINHO EXISTIA PARA TRÁS");
+  openLines(story.roadTurn,save);save();
  }
 }
 function sectionIntro(idx){
@@ -1147,8 +1194,45 @@ function drawCheckpoint(cp){
 function drawSectionProps(){
  const sec=currentSection().id;ctx.save();ctx.translate(-cam,0);
  if(sec==="return"){
-  ctx.fillStyle="rgba(180,190,190,.09)";for(let i=0;i<7;i++){ctx.beginPath();ctx.ellipse(260+i*220,530,170,36,0,0,Math.PI*2);ctx.fill()}
-  if(roadBlockedSeen&&!returnOpened){ctx.fillStyle="#d4bc72";ctx.font="700 20px Georgia";ctx.fillText("←",260,420)}
+  const now=performance.now();
+  const pc=p.x+p.w/2;
+
+  // Antes do encontro, a estrada permanece limpa: o selo só se revela
+  // quando Jack descobre que a névoa está recusando a passagem.
+  if(roadBlockedSeen&&!returnOpened){
+   const pulse=.78+Math.sin(now/360)*.14;
+
+   // Aura atrás do selo.
+   drawRoadAssetBottom("glow",1600,FLOOR+12,570,.46*pulse);
+
+   // Selo físico/narrativo da estrada. Ele substitui o antigo portão genérico.
+   drawRoadAssetBottom("seal",1600,FLOOR+8,455,.97);
+
+   // O sino não aparece como objeto: sua chamada visual vem de trás de Jack.
+   // As duas ondas respiram em ritmos diferentes para sugerir eco.
+   const wavePulse1=.48+.25*(.5+.5*Math.sin(now/430));
+   const wavePulse2=.30+.22*(.5+.5*Math.sin(now/610+1.2));
+   const guideX=Math.max(360,pc-235);
+   drawRoadAssetBottom("wave1",guideX,FLOOR-18,390,wavePulse1,true);
+   drawRoadAssetBottom("wave2",Math.max(250,pc-430),FLOOR-30,470,wavePulse2,true);
+
+   // Indicação diegética: aparece apenas depois que a fala do bloqueio começou.
+   const arrowA=.52+.30*(.5+.5*Math.sin(now/320));
+   drawRoadAssetBottom("arrow",Math.max(300,pc-155),FLOOR-12,245,arrowA,true);
+  }
+
+  // Quando Jack volta, a abertura é uma lembrança visual curta, não um portal permanente.
+  if(returnOpened&&roadOpenFxStartedAt>0){
+   const age=(now-roadOpenFxStartedAt)/1000;
+   if(age<1.8){
+    const t=Math.max(0,Math.min(1,age/1.8));
+    const a=Math.sin(Math.PI*t)*.95;
+    const w=500+180*t;
+    drawRoadAssetBottom("open",1600,FLOOR+28,w,a);
+   }else{
+    roadOpenFxStartedAt=0;
+   }
+  }
  }
  if(sec==="houses"){
   // As casas agora pertencem ao panorama final; em primeiro plano ficam apenas
