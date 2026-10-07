@@ -31,14 +31,63 @@ const SECTIONS=Object.freeze([
 ]);
 
 const GROUND=Object.freeze([
- [0,2190],[2280,2800],[2890,4200],[4300,4800],[4900,5950],
- [6050,6650],[6750,8050],[8150,8700],[8800,12600]
+ // 5A · Estrada do Retorno — caminhada estável.
+ {x1:0,x2:1700,y:590,section:"return"},
+
+ // 5B · Vila — três quarteirões com dois saltos curtos.
+ {x1:1700,x2:2180,y:590,section:"houses"},
+ {x1:2270,x2:2800,y:590,section:"houses"},
+ {x1:2890,x2:3500,y:590,section:"houses"},
+
+ // 5C · Relógios e Reflexos — composição tripartida e simétrica.
+ {x1:3500,x2:3970,y:590,section:"clock"},
+ {x1:4060,x2:4800,y:590,section:"clock"},
+ {x1:4890,x2:5350,y:590,section:"clock"},
+
+ // 5D · Jardim — caminhada contínua para não punir quem carrega memórias.
+ {x1:5350,x2:7350,y:590,section:"garden"},
+
+ // 5E · Cidade — três blocos de praça, deliberadamente fragmentados.
+ {x1:7350,x2:8050,y:590,section:"city"},
+ {x1:8140,x2:8750,y:590,section:"city"},
+ {x1:8840,x2:9500,y:590,section:"city"},
+
+ // 5F · Promessa — ascensão ritual em degraus suaves de 20 px.
+ {x1:9500,x2:9820,y:570,section:"promise"},
+ {x1:9820,x2:10110,y:550,section:"promise"},
+ {x1:10110,x2:10400,y:530,section:"promise"},
+ {x1:10400,x2:10690,y:510,section:"promise"},
+ {x1:10690,x2:10850,y:500,section:"promise"},
+
+ // 5G · Sala de Espelhos + caminhada pós-boss.
+ {x1:10850,x2:12600,y:590,section:"final"}
 ]);
+
 const PLATFORMS=Object.freeze([
- {x:2050,y:505,w:170,h:22},{x:2440,y:455,w:190,h:22},{x:3160,y:500,w:190,h:22},
- {x:3820,y:475,w:180,h:22},{x:4450,y:425,w:190,h:22},{x:5050,y:485,w:170,h:22},
- {x:5660,y:490,w:190,h:22},{x:6270,y:430,w:200,h:22},{x:6910,y:485,w:180,h:22},
- {x:7730,y:465,w:180,h:22},{x:8370,y:420,w:190,h:22},{x:9040,y:475,w:200,h:22}
+ // 5A · pequenos relevos opcionais: a estrada continua sendo o foco.
+ {id:"return-step",x:520,y:555,w:180,h:22,section:"return"},
+ {id:"return-ruin",x:1050,y:540,w:190,h:22,section:"return"},
+
+ // 5B · vila construída em níveis, nunca flutuando sem contexto.
+ {id:"village-balcony-left",x:1940,y:500,w:180,h:22,section:"houses"},
+ {id:"village-well",x:2440,y:475,w:210,h:22,section:"houses"},
+ {id:"village-balcony-right",x:3100,y:500,w:190,h:22,section:"houses"},
+
+ // 5C · três pedestais funcionais para os espelhos.
+ {id:"clock-mirror-left",x:3660,y:500,w:180,h:22,section:"clock"},
+ {id:"clock-mirror-center",x:4210,y:455,w:180,h:22,section:"clock"},
+ {id:"clock-mirror-right",x:4730,y:500,w:180,h:22,section:"clock"},
+
+ // 5E · quatro estações da praça dos rótulos.
+ {id:"city-waited",x:7550,y:505,w:180,h:22,section:"city"},
+ {id:"city-continued",x:8120,y:470,w:220,h:22,section:"city"},
+ {id:"city-let-go",x:8500,y:510,w:180,h:22,section:"city"},
+ {id:"city-crossed",x:8980,y:470,w:220,h:22,section:"city"},
+
+ // 5G · boss legível: duas laterais e um centro baixo.
+ {id:"boss-left",x:11080,y:500,w:220,h:22,section:"final"},
+ {id:"boss-center",x:11620,y:540,w:240,h:22,section:"final"},
+ {id:"boss-right",x:12020,y:500,w:220,h:22,section:"final"}
 ]);
 
 const GATES=[
@@ -55,44 +104,55 @@ const CHECKPOINTS=Object.freeze([
  {id:"clock",x:5200,respawnX:5110,require:()=>clockSolved,name:"RELÓGIO DO AGORA"},
  {id:"garden",x:7180,respawnX:7090,require:()=>gardenSolved,name:"LANTERNA DAS COISAS DEIXADAS"},
  {id:"city",x:9360,respawnX:9270,require:()=>citySolved,name:"MARCO SEM NOME"},
- {id:"promise",x:10720,respawnX:10620,require:()=>promiseSolved,name:"A PENÚLTIMA LANTERNA"}
+ {id:"promise",x:10700,respawnX:10640,require:()=>promiseSolved,name:"A PENÚLTIMA LANTERNA"}
 ]);
 
 const housesLamps=[
  {x:1840,type:"path",on:true},{x:2140,type:"wait",on:true},{x:2500,type:"wait",on:true},
  {x:2860,type:"path",on:true},{x:3260,type:"wait",on:true}
 ];
+
 const clockMirrors=[
- {x:3750,y:520,targetX:4020,targetY:385,node:0},
- {x:4300,y:520,targetX:4560,targetY:385,node:1},
- {x:4820,y:520,targetX:5060,targetY:385,node:2}
+ {x:3750,y:500,targetX:4020,targetY:385,node:0,range:185},
+ {x:4300,y:455,targetX:4560,targetY:385,node:1,range:185},
+ {x:4820,y:500,targetX:5060,targetY:385,node:2,range:185}
 ];
+
 const gardenItems=[
- {id:"letter",x:5510,memorialX:5690,title:"CARTA"},
- {id:"key",x:6110,memorialX:6290,title:"CHAVE"},
- {id:"portrait",x:6800,memorialX:7040,title:"RETRATO"}
+ {id:"letter",x:5480,memorialX:5730,title:"CARTA"},
+ {id:"key",x:6100,memorialX:6360,title:"CHAVE"},
+ {id:"portrait",x:6780,memorialX:7080,title:"RETRATO"}
 ];
+
+const gardenMirrors=[
+ {x:5670,y:520,targetX:5900,targetY:545,garden:true,range:170},
+ {x:6740,y:520,targetX:6900,targetY:545,garden:true,range:170}
+];
+
 const cityMarks=[
- {x:7560,label:"ESPEROU"},{x:8200,label:"CONTINUOU"},
- {x:8600,label:"DEIXOU IR"},{x:9150,label:"ATRAVESSOU"}
+ {x:7640,label:"ESPEROU"},{x:8170,label:"CONTINUOU"},
+ {x:8580,label:"DEIXOU IR"},{x:9050,label:"ATRAVESSOU"}
 ];
+const cityAshMirror={x:8845,y:520,targetX:9000,targetY:425,garden:true,range:135};
+
 const promiseAltars=[
- {x:9710,label:"VOCÊ PROMETEU"},{x:9990,label:"EU VOLTO"},
- {x:10280,label:"ENCONTRE O CAMINHO DE VOLTA"},{x:10580,label:"PARA TODOS ELES"}
+ {x:9680,label:"VOCÊ PROMETEU"},{x:9970,label:"EU VOLTO"},
+ {x:10250,label:"ENCONTRE O CAMINHO DE VOLTA"},{x:10550,label:"PARA TODOS ELES"}
 ];
+
 const bossSigils=[
- {x:11160,label:"MENTIROSO"},{x:11420,label:"COVARDE"},
- {x:12050,label:"AVARENTO"},{x:12320,label:"MISERÁVEL"}
+ {x:11150,label:"MENTIROSO"},{x:11450,label:"COVARDE"},
+ {x:12030,label:"AVARENTO"},{x:12330,label:"MISERÁVEL"}
 ];
 const bossLessons=[
- {x:11210,label:"ESPERAR",mode:"direct"},
- {x:11550,label:"CONTINUAR",mode:"reflected"},
- {x:11960,label:"DEIXAR IR",mode:"direct"},
- {x:12250,label:"ATRAVESSAR",mode:"reflected"}
+ {x:11150,label:"ESPERAR",mode:"direct"},
+ {x:11450,label:"CONTINUAR",mode:"reflected"},
+ {x:12030,label:"DEIXAR IR",mode:"direct"},
+ {x:12330,label:"ATRAVESSAR",mode:"reflected"}
 ];
 const bossMirrors=[
- {x:11420,y:520,targetX:11550,targetY:500,lesson:1},
- {x:12120,y:520,targetX:12250,targetY:500,lesson:3}
+ {x:11340,y:500,targetX:11450,targetY:500,lesson:1,range:145},
+ {x:12190,y:500,targetX:12330,targetY:500,lesson:3,range:145}
 ];
 
 let state={
@@ -136,7 +196,7 @@ let phase5Complete=(!forceNew&&!replayMode)&&(
 
 const p={x:Number(state.px)||150,y:Number(state.py)||480,w:44,h:86,vx:0,vy:0,on:false,dir:1,anim:0,attack:0,inv:0};
 let life=3,cam=0,running=false,last=performance.now(),sectionIndex=-1,lightPulse=0,lightCooldown=0;
-let reflectedFx=[],hazards=[],shots=[],messageTimer=0,bannerTimer=0,bossShotCd=1.2,ending=false;
+let reflectedFx=[],hazards=[],shots=[],messageTimer=0,bannerTimer=0,bossShotCd=1.2,ending=false,autosaveTimer=0;
 const input={left:false,right:false,down:false,jump:false,run:false};
 
 const atlas=new Image();atlas.src="../assets/game/phase1/sprites-hd/jack-atlas-hd.png";
@@ -361,54 +421,70 @@ function drawPhase5PlatformArt(section,index,x,top,w,surface=.42,alpha=1,visualS
 }
 
 const PHASE5_GROUND_ART=Object.freeze([
- // 5A · Estrada do Retorno — três grandes trechos; os outros assets ficam
- // disponíveis como biblioteca para refinamento, sem comprimir a arte.
+ // 5A · estrada contínua, com três grandes peças em vez de miniaturas.
  {s:"return",i:0,x:0,w:570,scale:1.35},
  {s:"return",i:3,x:570,w:570,scale:1.35},
  {s:"return",i:5,x:1140,w:560,scale:1.35},
 
- // 5B · Vila — cada peça veste um trecho físico e é recortada no buraco.
- {s:"houses",i:0,x:1700,w:490,scale:1.55},
- {s:"houses",i:2,x:2280,w:520,scale:1.55},
+ // 5B · três quarteirões.
+ {s:"houses",i:0,x:1700,w:480,scale:1.55},
+ {s:"houses",i:2,x:2270,w:530,scale:1.50},
  {s:"houses",i:1,x:2890,w:610,scale:1.45},
 
- // 5C · Relógios e Reflexos.
- {s:"clock",i:0,x:3500,w:700,scale:1.30},
- {s:"clock",i:2,x:4300,w:500,scale:1.55},
- {s:"clock",i:3,x:4900,w:450,scale:1.70},
+ // 5C · três blocos temporais.
+ {s:"clock",i:0,x:3500,w:470,scale:1.65},
+ {s:"clock",i:2,x:4060,w:740,scale:1.30},
+ {s:"clock",i:3,x:4890,w:460,scale:1.70},
 
- // 5D · Jardim das Memórias.
- {s:"garden",i:0,x:5350,w:600,scale:1.45},
- {s:"garden",i:2,x:6050,w:600,scale:1.45},
- {s:"garden",i:5,x:6750,w:600,scale:1.45},
+ // 5D · jardim contínuo e respirado.
+ {s:"garden",i:0,x:5350,w:650,scale:1.40},
+ {s:"garden",i:2,x:6000,w:670,scale:1.38},
+ {s:"garden",i:5,x:6670,w:680,scale:1.38},
 
- // 5E · Cidade dos Rótulos.
+ // 5E · praça fragmentada em três atos visuais.
  {s:"city",i:0,x:7350,w:700,scale:1.30},
- {s:"city",i:1,x:8150,w:550,scale:1.50},
- {s:"city",i:5,x:8800,w:700,scale:1.30},
+ {s:"city",i:1,x:8140,w:610,scale:1.42},
+ {s:"city",i:5,x:8840,w:660,scale:1.35},
 
- // 5F · Caminho da Promessa.
- {s:"promise",i:0,x:9500,w:340,scale:1.95},
- {s:"promise",i:1,x:9840,w:340,scale:1.95},
- {s:"promise",i:3,x:10180,w:335,scale:1.95},
- {s:"promise",i:4,x:10515,w:335,scale:1.95},
+ // 5F · cada degrau usa uma peça própria do Caminho da Promessa.
+ {s:"promise",i:0,x:9500,w:320,scale:1.90},
+ {s:"promise",i:1,x:9820,w:290,scale:2.00},
+ {s:"promise",i:2,x:10110,w:290,scale:1.20,surface:.42},
+ {s:"promise",i:3,x:10400,w:290,scale:2.00},
+ {s:"promise",i:4,x:10690,w:160,scale:2.70},
 
- // 5G · Sala de Espelhos — grandes placas de palco, não miniaturas.
- {s:"final",i:1,x:10850,w:450,scale:1.65,surface:.38},
- {s:"final",i:4,x:11300,w:420,scale:1.70,surface:.38},
- {s:"final",i:0,x:11720,w:500,scale:1.55,surface:.38},
- {s:"final",i:7,x:12220,w:380,scale:1.75,surface:.38}
+ // 5G · arena clara, em quatro grandes blocos.
+ {s:"final",i:1,x:10850,w:400,scale:1.70,surface:.38},
+ {s:"final",i:4,x:11250,w:400,scale:1.70,surface:.38},
+ {s:"final",i:0,x:11650,w:450,scale:1.60,surface:.38},
+ {s:"final",i:7,x:12100,w:500,scale:1.55,surface:.38}
 ]);
 
 const PHASE5_ELEVATED_ART=Object.freeze([
- // Vila
- {p:0,s:"houses",i:3,scale:3.05},{p:1,s:"houses",i:4,scale:2.85},{p:2,s:"houses",i:5,scale:3.00},
- // Relógios
- {p:3,s:"clock",i:1,scale:3.00},{p:4,s:"clock",i:4,scale:2.90},{p:5,s:"clock",i:5,scale:2.55},
- // Jardim
- {p:6,s:"garden",i:1,scale:3.00},{p:7,s:"garden",i:3,scale:2.85},{p:8,s:"garden",i:4,scale:3.05},
- // Cidade
- {p:9,s:"city",i:2,scale:3.00},{p:10,s:"city",i:3,scale:2.90},{p:11,s:"city",i:4,scale:3.00}
+ // 5A
+ {p:0,s:"return",i:2,scale:2.65},
+ {p:1,s:"return",i:4,scale:2.55},
+
+ // 5B
+ {p:2,s:"houses",i:3,scale:3.00},
+ {p:3,s:"houses",i:4,scale:2.85},
+ {p:4,s:"houses",i:5,scale:3.00},
+
+ // 5C
+ {p:5,s:"clock",i:1,scale:3.00},
+ {p:6,s:"clock",i:4,scale:2.90},
+ {p:7,s:"clock",i:5,scale:2.70},
+
+ // 5E
+ {p:8,s:"city",i:2,scale:3.00},
+ {p:9,s:"city",i:4,scale:2.90},
+ {p:10,s:"city",i:3,scale:3.00},
+ {p:11,s:"city",i:4,scale:2.90},
+
+ // 5G
+ {p:12,s:"final",i:2,scale:2.80,surface:.38},
+ {p:13,s:"final",i:3,scale:2.20,surface:.36},
+ {p:14,s:"final",i:6,scale:2.80,surface:.38}
 ]);
 
 // Elementos utilitários do lote 5Z usados como acabamento de transição.
@@ -592,10 +668,21 @@ function syncHud(){
  ui.obj.textContent=objective();
 }
 
-function pointOnGround(x){
- for(const r of GROUND)if(x>=r[0]&&x<=r[1])return true;
- return false;
+function groundAt(x){
+ for(const r of GROUND)if(x>=r.x1&&x<=r.x2)return r;
+ return null;
 }
+function groundYAt(x){
+ return groundAt(x)?.y??FLOOR;
+}
+function surfaceYAt(x){
+ let y=groundYAt(x);
+ for(const q of PLATFORMS){
+  if(x>=q.x&&x<=q.x+q.w)y=Math.min(y,q.y);
+ }
+ return y;
+}
+function pointOnGround(x){return !!groundAt(x)}
 function platformAtFoot(cx,bottom,oldBottom){
  let best=null;
  for(const q of PLATFORMS){
@@ -615,9 +702,11 @@ function gateCollision(oldX){
 function checkpointAllowed(cp){return !cp.require||cp.require()}
 function updateCheckpoint(){
  const pc=p.x+p.w/2;
- for(const cp of CHECKPOINTS){
-  if(cp.id===activeCheckpoint||!checkpointAllowed(cp))continue;
-  if(Math.abs(pc-cp.x)<78&&p.y+p.h>520){
+ const activeIndex=CHECKPOINTS.findIndex(v=>v.id===activeCheckpoint);
+ for(let i=0;i<CHECKPOINTS.length;i++){
+  const cp=CHECKPOINTS[i];
+  if(i<=activeIndex||!checkpointAllowed(cp))continue;
+  if(Math.abs(pc-cp.x)<78&&Math.abs((p.y+p.h)-surfaceYAt(pc))<105){
    activeCheckpoint=cp.id;life=3;banner(cp.name+" · ACESO");say("A chama guardará este retorno.");save();syncHud();break;
   }
  }
@@ -627,29 +716,35 @@ function respawn(){
  life=Math.max(0,life-1);
  if(life<=0){life=3;say("A estrada devolveu Jack ao último marco.")}
  else say("A escuridão alcançou Jack. "+life+"/3.");
- p.x=cp?cp.respawnX:150;p.y=470;p.vx=p.vy=0;p.inv=1.2;shots.length=0;hazards.length=0;save();syncHud();
+ p.x=cp?cp.respawnX:150;
+ p.y=groundYAt(p.x)-p.h-8;
+ p.vx=p.vy=0;p.inv=1.2;shots.length=0;hazards.length=0;save();syncHud();
 }
 
 function makeEnemy(id,kind,x,minX,maxX,hp,label){
  return {id,kind,x,y:0,minX,maxX,hp,maxHp:hp,label,dir:-1,vx:0,cd:.7,t:0,hit:0};
 }
 const enemies=[
- makeEnemy("shadow-1","shadow",980,650,1450,2,"SOMBRA DE RETORNO"),
- makeEnemy("witness-1","witness",2050,1840,2260,2,"TESTEMUNHA CEGA"),
+ makeEnemy("shadow-1","shadow",980,720,1400,2,"SOMBRA DE RETORNO"),
+
+ makeEnemy("witness-1","witness",2050,1840,2160,2,"TESTEMUNHA CEGA"),
  makeEnemy("accuser-1","accuser",3320,3180,3440,3,"MENTIROSO"),
- makeEnemy("repeater-1","repeater",3900,3650,4170,2,"REPETIDOR"),
- makeEnemy("repeater-2","repeater",4630,4380,4860,2,"REPETIDOR"),
+
+ makeEnemy("repeater-1","repeater",3870,3600,3960,2,"REPETIDOR"),
+ makeEnemy("repeater-2","repeater",4620,4360,4740,2,"REPETIDOR"),
  makeEnemy("accuser-2","accuser",5150,4970,5280,3,"COVARDE"),
- makeEnemy("ash-1","ash",5840,5500,6000,3,"PORTADOR DE CINZAS"),
- makeEnemy("witness-2","witness",6420,6150,6650,2,"TESTEMUNHA CEGA"),
- makeEnemy("ash-2","ash",6880,6740,7080,3,"PORTADOR DE CINZAS"),
- makeEnemy("accuser-3","accuser",7200,7050,7300,3,"AVARENTO"),
- makeEnemy("shadow-2","shadow",7700,7420,8000,2,"SOMBRA DE RETORNO"),
- makeEnemy("witness-3","witness",8260,8080,8480,2,"TESTEMUNHA CEGA"),
- makeEnemy("repeater-3","repeater",8680,8500,8840,3,"REPETIDOR"),
- makeEnemy("ash-3","ash",9000,8860,9180,3,"PORTADOR DE CINZAS"),
- makeEnemy("accuser-4","accuser",9320,9180,9440,4,"MISERÁVEL")
-].filter(e=>!deadEnemies.has(e.id));
+
+ makeEnemy("ash-1","ash",5900,5650,6050,3,"PORTADOR DE CINZAS"),
+ makeEnemy("witness-2","witness",6420,6200,6600,2,"TESTEMUNHA CEGA"),
+ makeEnemy("ash-2","ash",6900,6760,7060,3,"PORTADOR DE CINZAS"),
+ makeEnemy("accuser-3","accuser",7200,7080,7290,3,"AVARENTO"),
+
+ makeEnemy("shadow-2","shadow",7700,7420,7980,2,"SOMBRA DE RETORNO"),
+ makeEnemy("witness-3","witness",8250,8170,8330,2,"TESTEMUNHA CEGA"),
+ makeEnemy("repeater-3","repeater",8600,8480,8700,3,"REPETIDOR"),
+ makeEnemy("ash-3","ash",9000,8880,9160,3,"PORTADOR DE CINZAS"),
+ makeEnemy("accuser-4","accuser",9320,9200,9440,4,"MISERÁVEL")
+].filter(e=>!deadEnemies.has(e.id));;
 
 function enemyActive(e){
  const x=e.x;
@@ -662,7 +757,7 @@ function enemyActive(e){
 }
 function enemyGroundY(e){
  for(const q of PLATFORMS)if(e.x>=q.x&&e.x<=q.x+q.w)return q.y;
- return FLOOR;
+ return groundAt(e.x)?.y??FLOOR;
 }
 function hurtPlayer(sourceX){
  if(p.inv>0||phase5Complete)return;
@@ -745,15 +840,12 @@ function checkCitySolved(){
 
 function nearestMirror(){
  const pc=p.x+p.w/2,pcy=p.y+p.h/2;
- const list=[...clockMirrors,...bossMirrors,
-  {x:5730,y:520,targetX:5840,targetY:520,garden:true},
-  {x:6710,y:520,targetX:6880,targetY:520,garden:true},
-  {x:8920,y:520,targetX:9000,targetY:520,garden:true}
- ];
+ const list=[...clockMirrors,...bossMirrors,...gardenMirrors,cityAshMirror];
  let best=null,bd=999;
  for(const m of list){
   const d=Math.hypot(m.x-pc,(m.y-pcy)*.8);
-  if(d<220&&d<bd){best=m;bd=d}
+  const reach=m.range||220;
+  if(d<reach&&d<bd){best=m;bd=d}
  }
  return best;
 }
@@ -862,7 +954,7 @@ function interact(){
   openLines(story.bossContinue,save);save();return;
  }
 
- if(bossResolved&&Math.abs(pc-12410)<115){
+ if(bossResolved&&Math.abs(pc-12420)<115){
   completePhase();return;
  }
 }
@@ -937,8 +1029,13 @@ function update(dt){
 
  const cx=p.x+p.w/2,bottom=p.y+p.h;
  const plat=platformAtFoot(cx,bottom,oldBottom);
- if(plat&&p.vy>=0){p.y=plat.y-p.h;p.vy=0;p.on=true}
- else if(pointOnGround(cx)&&oldBottom<=FLOOR+9&&bottom>=FLOOR&&p.vy>=0){p.y=FLOOR-p.h;p.vy=0;p.on=true}
+ const ground=groundAt(cx);
+ if(plat&&p.vy>=0){
+  p.y=plat.y-p.h;p.vy=0;p.on=true;
+ }else if(ground&&oldBottom<=ground.y+24&&bottom>=ground.y&&p.vy>=0){
+  // +24 permite subir naturalmente os degraus de 20 px da Promessa.
+  p.y=ground.y-p.h;p.vy=0;p.on=true;
+ }
 
  if(p.y>760){respawn();return}
 
@@ -959,7 +1056,9 @@ function update(dt){
  reflectedFx=reflectedFx.filter(f=>f.t>0);
 
  cam+=(Math.max(0,Math.min(WORLD-W,p.x-W*.38))-cam)*Math.min(1,dt*6);
- syncHud();save();
+ syncHud();
+ autosaveTimer-=dt;
+ if(autosaveTimer<=0){autosaveTimer=.75;save()}
 }
 
 function drawBackgroundCover(im,alpha=1,pan=0,zoom=1.04){
@@ -1044,14 +1143,15 @@ function drawGround(){
 
  // Base física discreta: permanece como fallback enquanto a arte carrega.
  for(const r of GROUND){
-  const x=r[0],w=r[1]-r[0];
-  ctx.fillStyle="rgba(18,18,16,.78)";ctx.fillRect(x,FLOOR,w,140);
-  ctx.fillStyle="rgba(139,119,82,.72)";ctx.fillRect(x,FLOOR,w,4);
+  const x=r.x1,w=r.x2-r.x1;
+  ctx.fillStyle="rgba(18,18,16,.78)";ctx.fillRect(x,r.y,w,H-r.y);
+  ctx.fillStyle="rgba(139,119,82,.72)";ctx.fillRect(x,r.y,w,4);
  }
 
- // Chão artístico por capítulo.
+ // Chão artístico por capítulo, alinhado à altura física de cada trecho.
  for(const a of PHASE5_GROUND_ART){
-  drawPhase5PlatformArt(a.s,a.i,a.x,FLOOR,a.w,a.surface??.42,1,a.scale??1.4,true);
+  const top=groundYAt(a.x+a.w*.5);
+  drawPhase5PlatformArt(a.s,a.i,a.x,top,a.w,a.surface??.42,1,a.scale??1.4,true);
  }
 
  // Plataformas elevadas mantêm exatamente os hitboxes originais.
@@ -1067,13 +1167,10 @@ function drawGround(){
 
  // Lote 5Z: peças de acabamento nos grandes limiares narrativos.
  for(const d of PHASE5_SHARED_DECOR){
-  drawPhase5PlatformArt("shared",d.i,d.x,d.top,d.w,d.surface,d.alpha,1.15,false);
+  const top=Number.isFinite(d.top)?d.top:groundYAt(d.x+d.w*.5);
+  drawPhase5PlatformArt("shared",d.i,d.x,top,d.w,d.surface,d.alpha,1.15,false);
  }
 
- // Platô circular da promessa: destaque central, sem alterar a colisão.
- if(phase5PlatformImage("promise",2)){
-  drawPhase5PlatformArt("promise",2,10020,FLOOR,330,.42,.94,1,false);
- }
  ctx.restore();
 }
 function drawGates(){
@@ -1081,14 +1178,16 @@ function drawGates(){
  for(const g of GATES){
   if(g.flag())continue;
   ctx.strokeStyle="rgba(216,188,112,.38)";ctx.lineWidth=3;
-  ctx.beginPath();ctx.moveTo(g.x,260);ctx.lineTo(g.x,FLOOR);ctx.stroke();
-  for(let y=290;y<FLOOR;y+=42){ctx.fillStyle="rgba(216,188,112,.18)";ctx.fillRect(g.x-22,y,44,3)}
+  const gy=groundYAt(g.x);
+  ctx.beginPath();ctx.moveTo(g.x,260);ctx.lineTo(g.x,gy);ctx.stroke();
+  for(let y=290;y<gy;y+=42){ctx.fillStyle="rgba(216,188,112,.18)";ctx.fillRect(g.x-22,y,44,3)}
  }
  ctx.restore();
 }
 function drawCheckpoint(cp){
  const lit=cp.id===activeCheckpoint||checkpointAllowed(cp)&&CHECKPOINTS.indexOf(cp)<=CHECKPOINTS.findIndex(v=>v.id===activeCheckpoint);
- ctx.save();ctx.translate(cp.x-cam,FLOOR);
+ const gy=groundYAt(cp.x);
+ ctx.save();ctx.translate(cp.x-cam,gy);
  ctx.fillStyle="#30281c";ctx.fillRect(-6,-105,12,105);
  ctx.fillStyle=lit?"#f0b94d":"#55442d";ctx.shadowColor=lit?"#f0a83c":"transparent";ctx.shadowBlur=lit?22:0;
  ctx.beginPath();ctx.arc(0,-116,24,0,Math.PI*2);ctx.fill();
@@ -1105,11 +1204,12 @@ function drawSectionProps(){
   // As casas agora pertencem ao panorama final; em primeiro plano ficam apenas
   // as cinco lanternas que fazem parte do enigma.
   housesLamps.forEach((l,i)=>{
-   ctx.fillStyle="#332718";ctx.fillRect(l.x-4,500,8,90);
+   const gy=surfaceYAt(l.x);
+   ctx.fillStyle="#332718";ctx.fillRect(l.x-4,gy-90,8,90);
    ctx.fillStyle=l.on?(l.type==="path"?"#e7c064":"#e28b49"):"#302a24";
    ctx.shadowColor=l.on?"#d89a48":"transparent";ctx.shadowBlur=l.on?18:0;
-   ctx.beginPath();ctx.arc(l.x,492,14,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
-   ctx.fillStyle="rgba(240,225,180,.7)";ctx.font="10px Georgia";ctx.textAlign="center";ctx.fillText(l.type==="path"?"ESTRADA":"JANELA",l.x,465);
+   ctx.beginPath();ctx.arc(l.x,gy-98,14,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
+   ctx.fillStyle="rgba(240,225,180,.7)";ctx.font="10px Georgia";ctx.textAlign="center";ctx.fillText(l.type==="path"?"ESTRADA":"JANELA",l.x,gy-125);
   });
  }
  if(sec==="clock"){
@@ -1121,28 +1221,32 @@ function drawSectionProps(){
  if(sec==="garden"){
   ctx.strokeStyle="#34412e";ctx.lineWidth=14;for(let x=5450;x<7300;x+=310){ctx.beginPath();ctx.moveTo(x,FLOOR);ctx.quadraticCurveTo(x-45,440,x+20,340);ctx.stroke()}
   gardenItems.forEach(it=>{
+   const iy=groundYAt(it.x),my=groundYAt(it.memorialX);
    if(!gardenPlaced.has(it.id)&&carriedItem!==it.id){
-    ctx.fillStyle="#b79a63";ctx.fillRect(it.x-18,538,36,30);ctx.fillStyle="#ead595";ctx.font="10px Georgia";ctx.textAlign="center";ctx.fillText(it.title,it.x,525);
+    ctx.fillStyle="#b79a63";ctx.fillRect(it.x-18,iy-52,36,30);ctx.fillStyle="#ead595";ctx.font="10px Georgia";ctx.textAlign="center";ctx.fillText(it.title,it.x,iy-65);
    }
-   ctx.strokeStyle=gardenPlaced.has(it.id)?"#d3b567":"#655a44";ctx.lineWidth=3;ctx.strokeRect(it.memorialX-34,520,68,70);
+   ctx.strokeStyle=gardenPlaced.has(it.id)?"#d3b567":"#655a44";ctx.lineWidth=3;ctx.strokeRect(it.memorialX-34,my-70,68,70);
   });
-  [{x:5730,targetX:5840},{x:6710,targetX:6880}].forEach(m=>drawMirror({x:m.x,y:520,targetX:m.targetX,targetY:520},false));
+  gardenMirrors.forEach(m=>drawMirror(m,false));
  }
  if(sec==="city"){
   // Fachadas, parque e circo já estão no cenário final; mantemos apenas
   // as quatro marcas jogáveis da identidade de Jack.
   cityMarks.forEach((m,i)=>{
-   ctx.strokeStyle=cityLit.has(i)?"#e3c66e":"#5a5144";ctx.lineWidth=3;ctx.strokeRect(m.x-62,520,124,46);
-   ctx.fillStyle=cityLit.has(i)?"#ead58d":"#786d58";ctx.font="700 11px Georgia";ctx.textAlign="center";ctx.fillText(m.label,m.x,548);
+   const gy=surfaceYAt(m.x);
+   ctx.strokeStyle=cityLit.has(i)?"#e3c66e":"#5a5144";ctx.lineWidth=3;ctx.strokeRect(m.x-62,gy-70,124,46);
+   ctx.fillStyle=cityLit.has(i)?"#ead58d":"#786d58";ctx.font="700 11px Georgia";ctx.textAlign="center";ctx.fillText(m.label,m.x,gy-42);
   });
+  drawMirror(cityAshMirror,false);
  }
  if(sec==="promise"){
   ctx.strokeStyle="rgba(184,153,91,.3)";ctx.lineWidth=5;
   for(let i=-3;i<=3;i++){ctx.beginPath();ctx.moveTo(10100,FLOOR);ctx.lineTo(10100+i*440,260);ctx.stroke()}
   promiseAltars.forEach((a,i)=>{
-   const on=i<promiseStep;ctx.fillStyle=on?"#d9b65f":"#3f392f";ctx.fillRect(a.x-4,500,8,90);
-   ctx.beginPath();ctx.arc(a.x,492,17,0,Math.PI*2);ctx.fill();
-   ctx.fillStyle=on?"#efd48b":"#776a54";ctx.font="10px Georgia";ctx.textAlign="center";ctx.fillText(a.label,a.x,455);
+   const gy=groundYAt(a.x),on=i<promiseStep;
+   ctx.fillStyle=on?"#d9b65f":"#3f392f";ctx.fillRect(a.x-4,gy-90,8,90);
+   ctx.beginPath();ctx.arc(a.x,gy-98,17,0,Math.PI*2);ctx.fill();
+   ctx.fillStyle=on?"#efd48b":"#776a54";ctx.font="10px Georgia";ctx.textAlign="center";ctx.fillText(a.label,a.x,gy-135);
   });
  }
  if(sec==="final"){
@@ -1181,7 +1285,7 @@ function drawBossScene(){
   ctx.fillStyle="#f0d488";ctx.font="700 14px Georgia";ctx.textAlign="center";ctx.fillText("E · CONTINUAR",bx,315);
  }
  if(bossResolved){
-  const lx=12410;ctx.fillStyle="#e8ba4f";ctx.shadowColor="#e6a43d";ctx.shadowBlur=35;ctx.beginPath();ctx.arc(lx,470,30,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
+  const lx=12420;ctx.fillStyle="#e8ba4f";ctx.shadowColor="#e6a43d";ctx.shadowBlur=35;ctx.beginPath();ctx.arc(lx,470,30,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
   ctx.fillStyle="#f0d78e";ctx.font="700 13px Georgia";ctx.textAlign="center";ctx.fillText("A ÚLTIMA LANTERNA",lx,425);
  }
 }
@@ -1276,6 +1380,7 @@ function onKeyUp(e){
  if(["ArrowLeft","a","A"].includes(e.key))input.left=false;
  if(["ArrowRight","d","D"].includes(e.key))input.right=false;
  if(["ArrowDown","s","S"].includes(e.key))input.down=false;
+ if(["ArrowUp","w","W"," "].includes(e.key))input.jump=false;
  if(e.key==="Shift")input.run=false;
 }
 addEventListener("keydown",onKeyDown);addEventListener("keyup",onKeyUp);
@@ -1286,7 +1391,16 @@ function bindHold(id,key){
  el.addEventListener("pointerdown",down);el.addEventListener("pointerup",up);el.addEventListener("pointercancel",up);el.addEventListener("pointerleave",up);
 }
 bindHold("leftBtn","left");bindHold("rightBtn","right");bindHold("downBtn","down");
-document.getElementById("jumpBtn")?.addEventListener("pointerdown",e=>{e.preventDefault();input.jump=true});
+{
+ const jumpBtn=document.getElementById("jumpBtn");
+ if(jumpBtn){
+  jumpBtn.addEventListener("pointerdown",e=>{e.preventDefault();input.jump=true});
+  const clearJump=e=>{e.preventDefault();input.jump=false};
+  jumpBtn.addEventListener("pointerup",clearJump);
+  jumpBtn.addEventListener("pointercancel",clearJump);
+  jumpBtn.addEventListener("pointerleave",clearJump);
+ }
+}
 document.getElementById("lightBtn")?.addEventListener("pointerdown",e=>{e.preventDefault();useLight()});
 document.getElementById("interactBtn")?.addEventListener("pointerdown",e=>{e.preventDefault();interact()});
 
