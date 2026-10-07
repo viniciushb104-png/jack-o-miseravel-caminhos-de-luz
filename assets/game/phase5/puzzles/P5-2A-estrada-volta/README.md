@@ -34,3 +34,16 @@ Suba nesta pasta os 6 arquivos do ZIP:
 ## Regra técnica
 
 Todos os arquivos devem permanecer PNG com transparência e os nomes acima devem ser preservados exatamente.
+
+
+## Integração
+
+Integrado em `game/phase5.js`.
+
+Fluxo:
+1. Jack chega ao bloqueio.
+2. O selo e sua aura se revelam.
+3. As duas ondas do sino chamam visualmente para trás.
+4. A seta de luz reforça a direção sem substituir a descoberta.
+5. Ao retornar ao início, o caminho se reorganiza com `phase5-return-path-open-fx.png`.
+6. O portão genérico da primeira área deixa de ser desenhado.
