@@ -287,6 +287,47 @@ Object.entries(SHADOW_RETURN_FILES).forEach(([state,files])=>{
 const shadowReturnAssetsReady=Promise.allSettled(shadowReturnReady);
 
 // ---------------------------------------------------------------------------
+// FASE 5 · TESTEMUNHA CEGA
+// Lote 2: criatura flutuante que "testemunha" sem ver e marca o chão à distância.
+// ---------------------------------------------------------------------------
+const WITNESS_BLIND_FILES=Object.freeze({
+ idle:[
+  "../assets/game/phase5/enemies/witness-blind/witness-blind-idle-01.png?v=1",
+  "../assets/game/phase5/enemies/witness-blind/witness-blind-idle-02.png?v=1",
+  "../assets/game/phase5/enemies/witness-blind/witness-blind-idle-03.png?v=1"
+ ],
+ float:[
+  "../assets/game/phase5/enemies/witness-blind/witness-blind-float-01.png?v=1",
+  "../assets/game/phase5/enemies/witness-blind/witness-blind-float-02.png?v=1"
+ ],
+ attack:[
+  "../assets/game/phase5/enemies/witness-blind/witness-blind-attack-01.png?v=1",
+  "../assets/game/phase5/enemies/witness-blind/witness-blind-attack-02.png?v=1",
+  "../assets/game/phase5/enemies/witness-blind/witness-blind-attack-03.png?v=1"
+ ],
+ hit:[
+  "../assets/game/phase5/enemies/witness-blind/witness-blind-hit-01.png?v=1"
+ ],
+ dissolve:[
+  "../assets/game/phase5/enemies/witness-blind/witness-blind-dissolve-01.png?v=1"
+ ]
+});
+const witnessBlindSprites={idle:[],float:[],attack:[],hit:[],dissolve:[]};
+const witnessBlindReady=[];
+Object.entries(WITNESS_BLIND_FILES).forEach(([state,files])=>{
+ files.forEach((src,index)=>{
+  const im=new Image();
+  witnessBlindSprites[state][index]=im;
+  witnessBlindReady.push(new Promise(resolve=>{
+   im.onload=()=>resolve(im);
+   im.onerror=()=>resolve(null);
+  }));
+  im.src=src;
+ });
+});
+const witnessBlindAssetsReady=Promise.allSettled(witnessBlindReady);
+
+// ---------------------------------------------------------------------------
 // FASE 5 · LANTERNA DE VIGÍLIA
 // Checkpoint narrativo: apagado quando inativo, acendimento em 3 estágios e
 // abóbora iluminada quando é o ponto de retorno atual.
@@ -584,6 +625,7 @@ window.__PHASE_ASSETS_READY=Promise.allSettled([
  phase5RoadPuzzlePromises.seal,
  phase5RoadPuzzlePromises.wave1,
  shadowReturnAssetsReady,
+ witnessBlindAssetsReady,
  phase5CheckpointAssetsReady
 ]);
 
@@ -860,6 +902,9 @@ function killEnemy(e){
  if(e.kind==="shadow"){
   enemyDissolves.push({kind:"shadow",x:e.x,y:e.y,dir:e.vx<0?-1:1,t:.48,maxT:.48});
  }
+ if(e.kind==="witness"){
+  enemyDissolves.push({kind:"witness",x:e.x,y:e.y,dir:e.vx<0?-1:1,t:.62,maxT:.62});
+ }
  deadEnemies.add(e.id);e.dead=true;banner(e.label+" · DISSIPADO");
  if(e.id==="accuser-4")checkCitySolved();
  save();
@@ -886,6 +931,7 @@ function updateEnemies(dt){
    e.vx=(ad<330?0:e.dir*28);
    if(e.x<e.minX){e.x=e.minX;e.dir=1}if(e.x>e.maxX){e.x=e.maxX;e.dir=-1}
    if(ad<330&&e.cd<=0){
+    e.attackFx=.54;
     hazards.push({x:pc,t:1.35,arm:.58});e.cd=2.15;
    }
   }else if(e.kind==="repeater"){
@@ -1524,9 +1570,50 @@ function drawShadowDissolves(){
   ctx.restore();
  }
 }
+function witnessBlindFrame(e){
+ if(e.hit>0)return witnessBlindSprites.hit[0];
+ if(e.attackFx>0){
+  const seq=witnessBlindSprites.attack;
+  const elapsed=.54-e.attackFx;
+  return seq[Math.min(seq.length-1,Math.floor(elapsed*7))]||seq[0];
+ }
+ const moving=Math.abs(e.vx)>5;
+ const seq=moving?witnessBlindSprites.float:witnessBlindSprites.idle;
+ const fps=moving?4.2:2.7;
+ return seq[Math.floor(e.t*fps)%Math.max(1,seq.length)];
+}
+function drawWitnessBlindSprite(e){
+ const im=witnessBlindFrame(e);
+ if(!im||!im.complete||!(im.naturalWidth||im.width))return false;
+ const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+ const h=205,w=h*(iw/ih);
+ const facing=e.vx<0?-1:1;
+ const bob=Math.sin(e.t*2.4)*4;
+ ctx.save();
+ ctx.translate(0,bob-10);
+ if(facing<0){ctx.scale(-1,1);ctx.drawImage(im,-w/2,-h,w,h)}
+ else ctx.drawImage(im,-w/2,-h,w,h);
+ ctx.restore();
+ return true;
+}
+function drawWitnessDissolves(){
+ for(const fx of enemyDissolves){
+  if(fx.kind!=="witness")continue;
+  const im=witnessBlindSprites.dissolve[0];
+  if(!im||!im.complete||!(im.naturalWidth||im.width))continue;
+  const q=Math.max(0,Math.min(1,fx.t/fx.maxT));
+  const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+  const h=205,w=h*(iw/ih);
+  ctx.save();ctx.translate(fx.x,fx.y-10);ctx.globalAlpha=q;
+  if(fx.dir<0){ctx.scale(-1,1);ctx.drawImage(im,-w/2,-h,w,h)}
+  else ctx.drawImage(im,-w/2,-h,w,h);
+  ctx.restore();
+ }
+}
 function drawEnemies(){
  ctx.save();ctx.translate(-cam,0);
  drawShadowDissolves();
+ drawWitnessDissolves();
  for(const e of enemies){
   if(e.dead||!enemyActive(e))continue;
   const y=e.y,hit=e.hit>0;
@@ -1537,7 +1624,9 @@ function drawEnemies(){
     ctx.fillStyle="#d8d0bb";ctx.fillRect(-5,-82,4,4);ctx.fillRect(7,-82,4,4);
    }
   }else if(e.kind==="witness"){
-   ctx.fillStyle="#282621";ctx.beginPath();ctx.moveTo(-34,0);ctx.lineTo(-20,-88);ctx.lineTo(0,-122);ctx.lineTo(20,-88);ctx.lineTo(34,0);ctx.closePath();ctx.fill();ctx.strokeStyle="#8b7857";ctx.strokeRect(-22,-82,44,20);
+   if(!drawWitnessBlindSprite(e)){
+    ctx.fillStyle="#282621";ctx.beginPath();ctx.moveTo(-34,0);ctx.lineTo(-20,-88);ctx.lineTo(0,-122);ctx.lineTo(20,-88);ctx.lineTo(34,0);ctx.closePath();ctx.fill();ctx.strokeStyle="#8b7857";ctx.strokeRect(-22,-82,44,20);
+   }
   }else if(e.kind==="repeater"){
    ctx.strokeStyle="#9d8760";ctx.lineWidth=7;ctx.beginPath();ctx.arc(0,-62,27,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.moveTo(0,-34);ctx.lineTo(0,-2);ctx.moveTo(0,-24);ctx.lineTo(-24,-2);ctx.moveTo(0,-24);ctx.lineTo(24,-2);ctx.stroke();
   }else if(e.kind==="ash"){
