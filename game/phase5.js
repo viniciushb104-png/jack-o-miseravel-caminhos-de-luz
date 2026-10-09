@@ -371,6 +371,48 @@ Object.entries(REPEATER_FILES).forEach(([state,files])=>{
 const repeaterAssetsReady=Promise.allSettled(repeaterReady);
 
 // ---------------------------------------------------------------------------
+// FASE 5 · PORTADOR DE CINZAS
+// Lote 4: absorve Luz direta; somente Luz refletida causa dano real.
+// ---------------------------------------------------------------------------
+const ASH_BEARER_FILES=Object.freeze({
+ idle:[
+  "../assets/game/phase5/enemies/ash-bearer/ash-bearer-idle-01.png?v=1",
+  "../assets/game/phase5/enemies/ash-bearer/ash-bearer-idle-02.png?v=1"
+ ],
+ walk:[
+  "../assets/game/phase5/enemies/ash-bearer/ash-bearer-walk-01.png?v=1",
+  "../assets/game/phase5/enemies/ash-bearer/ash-bearer-walk-02.png?v=1"
+ ],
+ attack:[
+  "../assets/game/phase5/enemies/ash-bearer/ash-bearer-attack-01.png?v=1",
+  "../assets/game/phase5/enemies/ash-bearer/ash-bearer-attack-02.png?v=1"
+ ],
+ absorb:[
+  "../assets/game/phase5/enemies/ash-bearer/ash-bearer-direct-light-absorb-01.png?v=1"
+ ],
+ hit:[
+  "../assets/game/phase5/enemies/ash-bearer/ash-bearer-reflected-hit-01.png?v=1"
+ ],
+ dissolve:[
+  "../assets/game/phase5/enemies/ash-bearer/ash-bearer-dissolve-01.png?v=1"
+ ]
+});
+const ashBearerSprites={idle:[],walk:[],attack:[],absorb:[],hit:[],dissolve:[]};
+const ashBearerReady=[];
+Object.entries(ASH_BEARER_FILES).forEach(([state,files])=>{
+ files.forEach((src,index)=>{
+  const im=new Image();
+  ashBearerSprites[state][index]=im;
+  ashBearerReady.push(new Promise(resolve=>{
+   im.onload=()=>resolve(im);
+   im.onerror=()=>resolve(null);
+  }));
+  im.src=src;
+ });
+});
+const ashBearerAssetsReady=Promise.allSettled(ashBearerReady);
+
+// ---------------------------------------------------------------------------
 // FASE 5 · LANTERNA DE VIGÍLIA
 // Checkpoint narrativo: apagado quando inativo, acendimento em 3 estágios e
 // abóbora iluminada quando é o ponto de retorno atual.
@@ -670,6 +712,7 @@ window.__PHASE_ASSETS_READY=Promise.allSettled([
  shadowReturnAssetsReady,
  witnessBlindAssetsReady,
  repeaterAssetsReady,
+ ashBearerAssetsReady,
  phase5CheckpointAssetsReady
 ]);
 
@@ -899,7 +942,7 @@ function respawn(){
 }
 
 function makeEnemy(id,kind,x,minX,maxX,hp,label){
- return {id,kind,x,y:0,minX,maxX,hp,maxHp:hp,label,dir:-1,vx:0,cd:.7,t:0,hit:0,attackFx:0,dashFx:0};
+ return {id,kind,x,y:0,minX,maxX,hp,maxHp:hp,label,dir:-1,vx:0,cd:.7,t:0,hit:0,attackFx:0,dashFx:0,absorbFx:0};
 }
 const enemies=[
  makeEnemy("shadow-1","shadow",980,720,1400,2,"SOMBRA DE RETORNO"),
@@ -952,14 +995,23 @@ function killEnemy(e){
  if(e.kind==="repeater"){
   enemyDissolves.push({kind:"repeater",x:e.x,y:e.y,dir:e.vx<0?-1:1,t:.56,maxT:.56});
  }
+ if(e.kind==="ash"){
+  enemyDissolves.push({kind:"ash",x:e.x,y:e.y,dir:e.vx<0?-1:1,t:.66,maxT:.66});
+ }
  deadEnemies.add(e.id);e.dead=true;banner(e.label+" · DISSIPADO");
  if(e.id==="accuser-4")checkCitySolved();
  save();
 }
 function damageEnemy(e,reflected=false){
- if(e.dead||e.hit>0)return false;
- if(e.kind==="ash"&&!reflected){e.hit=.18;say("A lanterna apagada absorveu a Luz. Tente refletir o facho.");return true}
- e.hp--;e.hit=.24;e.x+=p.dir*24;
+ if(e.dead||e.hit>0||e.absorbFx>0)return false;
+ if(e.kind==="ash"&&!reflected){
+  e.absorbFx=.34;
+  say("A lanterna apagada absorveu a Luz. Tente refletir o facho.");
+  return true;
+ }
+ e.hp--;
+ e.hit=e.kind==="ash"&&reflected?.34:.24;
+ e.x+=p.dir*24;
  if(e.hp<=0)killEnemy(e);
  return true;
 }
@@ -967,7 +1019,7 @@ function updateEnemies(dt){
  const pc=p.x+p.w/2;
  for(const e of enemies){
   if(e.dead||!enemyActive(e))continue;
-  e.cd=Math.max(0,e.cd-dt);e.hit=Math.max(0,e.hit-dt);e.attackFx=Math.max(0,e.attackFx-dt);e.dashFx=Math.max(0,e.dashFx-dt);e.t+=dt;
+  e.cd=Math.max(0,e.cd-dt);e.hit=Math.max(0,e.hit-dt);e.attackFx=Math.max(0,e.attackFx-dt);e.dashFx=Math.max(0,e.dashFx-dt);e.absorbFx=Math.max(0,e.absorbFx-dt);e.t+=dt;
   const dx=pc-e.x,ad=Math.abs(dx),sg=Math.sign(dx)||1;
   e.y=enemyGroundY(e);
 
@@ -1702,11 +1754,54 @@ function drawRepeaterDissolves(){
   ctx.restore();
  }
 }
+function ashBearerFrame(e){
+ if(e.absorbFx>0)return ashBearerSprites.absorb[0];
+ if(e.hit>0)return ashBearerSprites.hit[0];
+ if(e.attackFx>0){
+  const seq=ashBearerSprites.attack;
+  const elapsed=.28-e.attackFx;
+  return seq[Math.min(seq.length-1,Math.floor(Math.max(0,elapsed)*8))]||seq[0];
+ }
+ if(Math.abs(e.vx)>12){
+  const seq=ashBearerSprites.walk;
+  return seq[Math.floor(e.t*4.8)%Math.max(1,seq.length)];
+ }
+ const seq=ashBearerSprites.idle;
+ return seq[Math.floor(e.t*2.2)%Math.max(1,seq.length)];
+}
+function drawAshBearerSprite(e){
+ const im=ashBearerFrame(e);
+ if(!im||!im.complete||!(im.naturalWidth||im.width))return false;
+ const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+ const h=210,w=h*(iw/ih);
+ const facing=e.vx<0?-1:1;
+ const bob=Math.sin(e.t*1.8)*2;
+ ctx.save();ctx.translate(0,bob-3);
+ if(facing<0){ctx.scale(-1,1);ctx.drawImage(im,-w/2,-h,w,h)}
+ else ctx.drawImage(im,-w/2,-h,w,h);
+ ctx.restore();
+ return true;
+}
+function drawAshDissolves(){
+ for(const fx of enemyDissolves){
+  if(fx.kind!=="ash")continue;
+  const im=ashBearerSprites.dissolve[0];
+  if(!im||!im.complete||!(im.naturalWidth||im.width))continue;
+  const q=Math.max(0,Math.min(1,fx.t/fx.maxT));
+  const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+  const h=210,w=h*(iw/ih);
+  ctx.save();ctx.translate(fx.x,fx.y-3);ctx.globalAlpha=q;
+  if(fx.dir<0){ctx.scale(-1,1);ctx.drawImage(im,-w/2,-h,w,h)}
+  else ctx.drawImage(im,-w/2,-h,w,h);
+  ctx.restore();
+ }
+}
 function drawEnemies(){
  ctx.save();ctx.translate(-cam,0);
  drawShadowDissolves();
  drawWitnessDissolves();
  drawRepeaterDissolves();
+ drawAshDissolves();
  for(const e of enemies){
   if(e.dead||!enemyActive(e))continue;
   const y=e.y,hit=e.hit>0;
@@ -1725,7 +1820,9 @@ function drawEnemies(){
     ctx.strokeStyle="#9d8760";ctx.lineWidth=7;ctx.beginPath();ctx.arc(0,-62,27,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.moveTo(0,-34);ctx.lineTo(0,-2);ctx.moveTo(0,-24);ctx.lineTo(-24,-2);ctx.moveTo(0,-24);ctx.lineTo(24,-2);ctx.stroke();
    }
   }else if(e.kind==="ash"){
-   ctx.fillStyle="#34312d";ctx.fillRect(-36,-74,72,74);ctx.fillStyle="#171717";ctx.beginPath();ctx.arc(0,-88,28,0,Math.PI*2);ctx.fill();ctx.fillStyle="#5f5440";ctx.fillRect(20,-58,32,42);
+   if(!drawAshBearerSprite(e)){
+    ctx.fillStyle="#34312d";ctx.fillRect(-36,-74,72,74);ctx.fillStyle="#171717";ctx.beginPath();ctx.arc(0,-88,28,0,Math.PI*2);ctx.fill();ctx.fillStyle="#5f5440";ctx.fillRect(20,-58,32,42);
+   }
   }else{
    ctx.fillStyle="#171414";ctx.beginPath();ctx.moveTo(-42,0);ctx.lineTo(-30,-105);ctx.lineTo(0,-145);ctx.lineTo(30,-105);ctx.lineTo(42,0);ctx.closePath();ctx.fill();
    ctx.fillStyle="#5e312b";ctx.fillRect(-48,-92,96,26);ctx.fillStyle="#d9c18a";ctx.font="700 10px Georgia";ctx.textAlign="center";ctx.fillText(e.label,0,-74);
