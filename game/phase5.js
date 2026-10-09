@@ -328,6 +328,49 @@ Object.entries(WITNESS_BLIND_FILES).forEach(([state,files])=>{
 const witnessBlindAssetsReady=Promise.allSettled(witnessBlindReady);
 
 // ---------------------------------------------------------------------------
+// FASE 5 · REPETIDOR
+// Lote 3: criatura agressiva que copia a direção do movimento e entra em dash.
+// ---------------------------------------------------------------------------
+const REPEATER_FILES=Object.freeze({
+ idle:[
+  "../assets/game/phase5/enemies/repeater/repeater-idle-01.png?v=1",
+  "../assets/game/phase5/enemies/repeater/repeater-idle-02.png?v=1",
+  "../assets/game/phase5/enemies/repeater/repeater-idle-03.png?v=1"
+ ],
+ run:[
+  "../assets/game/phase5/enemies/repeater/repeater-run-01.png?v=1",
+  "../assets/game/phase5/enemies/repeater/repeater-run-02.png?v=1"
+ ],
+ dash:[
+  "../assets/game/phase5/enemies/repeater/repeater-dash-01.png?v=1",
+  "../assets/game/phase5/enemies/repeater/repeater-dash-02.png?v=1"
+ ],
+ attack:[
+  "../assets/game/phase5/enemies/repeater/repeater-attack-01.png?v=1"
+ ],
+ hit:[
+  "../assets/game/phase5/enemies/repeater/repeater-hit-01.png?v=1"
+ ],
+ dissolve:[
+  "../assets/game/phase5/enemies/repeater/repeater-dissolve-01.png?v=1"
+ ]
+});
+const repeaterSprites={idle:[],run:[],dash:[],attack:[],hit:[],dissolve:[]};
+const repeaterReady=[];
+Object.entries(REPEATER_FILES).forEach(([state,files])=>{
+ files.forEach((src,index)=>{
+  const im=new Image();
+  repeaterSprites[state][index]=im;
+  repeaterReady.push(new Promise(resolve=>{
+   im.onload=()=>resolve(im);
+   im.onerror=()=>resolve(null);
+  }));
+  im.src=src;
+ });
+});
+const repeaterAssetsReady=Promise.allSettled(repeaterReady);
+
+// ---------------------------------------------------------------------------
 // FASE 5 · LANTERNA DE VIGÍLIA
 // Checkpoint narrativo: apagado quando inativo, acendimento em 3 estágios e
 // abóbora iluminada quando é o ponto de retorno atual.
@@ -626,6 +669,7 @@ window.__PHASE_ASSETS_READY=Promise.allSettled([
  phase5RoadPuzzlePromises.wave1,
  shadowReturnAssetsReady,
  witnessBlindAssetsReady,
+ repeaterAssetsReady,
  phase5CheckpointAssetsReady
 ]);
 
@@ -855,7 +899,7 @@ function respawn(){
 }
 
 function makeEnemy(id,kind,x,minX,maxX,hp,label){
- return {id,kind,x,y:0,minX,maxX,hp,maxHp:hp,label,dir:-1,vx:0,cd:.7,t:0,hit:0,attackFx:0};
+ return {id,kind,x,y:0,minX,maxX,hp,maxHp:hp,label,dir:-1,vx:0,cd:.7,t:0,hit:0,attackFx:0,dashFx:0};
 }
 const enemies=[
  makeEnemy("shadow-1","shadow",980,720,1400,2,"SOMBRA DE RETORNO"),
@@ -905,6 +949,9 @@ function killEnemy(e){
  if(e.kind==="witness"){
   enemyDissolves.push({kind:"witness",x:e.x,y:e.y,dir:e.vx<0?-1:1,t:.62,maxT:.62});
  }
+ if(e.kind==="repeater"){
+  enemyDissolves.push({kind:"repeater",x:e.x,y:e.y,dir:e.vx<0?-1:1,t:.56,maxT:.56});
+ }
  deadEnemies.add(e.id);e.dead=true;banner(e.label+" · DISSIPADO");
  if(e.id==="accuser-4")checkCitySolved();
  save();
@@ -920,7 +967,7 @@ function updateEnemies(dt){
  const pc=p.x+p.w/2;
  for(const e of enemies){
   if(e.dead||!enemyActive(e))continue;
-  e.cd=Math.max(0,e.cd-dt);e.hit=Math.max(0,e.hit-dt);e.attackFx=Math.max(0,e.attackFx-dt);e.t+=dt;
+  e.cd=Math.max(0,e.cd-dt);e.hit=Math.max(0,e.hit-dt);e.attackFx=Math.max(0,e.attackFx-dt);e.dashFx=Math.max(0,e.dashFx-dt);e.t+=dt;
   const dx=pc-e.x,ad=Math.abs(dx),sg=Math.sign(dx)||1;
   e.y=enemyGroundY(e);
 
@@ -935,8 +982,11 @@ function updateEnemies(dt){
     hazards.push({x:pc,t:1.35,arm:.58});e.cd=2.15;
    }
   }else if(e.kind==="repeater"){
-   if(e.cd<=0&&ad<430){e.vx=(Math.sign(p.vx)||sg)*210;e.cd=1.35}
-   else e.vx*=.94;
+   if(e.cd<=0&&ad<430){
+    e.vx=(Math.sign(p.vx)||sg)*210;
+    e.dashFx=.48;
+    e.cd=1.35;
+   }else e.vx*=.94;
   }else{
    e.vx=sg*(e.kind==="accuser"?70:55);
   }
@@ -1610,10 +1660,53 @@ function drawWitnessDissolves(){
   ctx.restore();
  }
 }
+function repeaterFrame(e){
+ if(e.hit>0)return repeaterSprites.hit[0];
+ if(e.attackFx>0)return repeaterSprites.attack[0];
+ if(e.dashFx>0){
+  const seq=repeaterSprites.dash;
+  const elapsed=.48-e.dashFx;
+  return seq[Math.min(seq.length-1,Math.floor(elapsed*6))]||seq[0];
+ }
+ if(Math.abs(e.vx)>45){
+  const seq=repeaterSprites.run;
+  return seq[Math.floor(e.t*7)%Math.max(1,seq.length)];
+ }
+ const seq=repeaterSprites.idle;
+ return seq[Math.floor(e.t*2.8)%Math.max(1,seq.length)];
+}
+function drawRepeaterSprite(e){
+ const im=repeaterFrame(e);
+ if(!im||!im.complete||!(im.naturalWidth||im.width))return false;
+ const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+ const h=195,w=h*(iw/ih);
+ const facing=e.vx<0?-1:1;
+ ctx.save();
+ ctx.translate(0,-4);
+ if(facing<0){ctx.scale(-1,1);ctx.drawImage(im,-w/2,-h,w,h)}
+ else ctx.drawImage(im,-w/2,-h,w,h);
+ ctx.restore();
+ return true;
+}
+function drawRepeaterDissolves(){
+ for(const fx of enemyDissolves){
+  if(fx.kind!=="repeater")continue;
+  const im=repeaterSprites.dissolve[0];
+  if(!im||!im.complete||!(im.naturalWidth||im.width))continue;
+  const q=Math.max(0,Math.min(1,fx.t/fx.maxT));
+  const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+  const h=195,w=h*(iw/ih);
+  ctx.save();ctx.translate(fx.x,fx.y-4);ctx.globalAlpha=q;
+  if(fx.dir<0){ctx.scale(-1,1);ctx.drawImage(im,-w/2,-h,w,h)}
+  else ctx.drawImage(im,-w/2,-h,w,h);
+  ctx.restore();
+ }
+}
 function drawEnemies(){
  ctx.save();ctx.translate(-cam,0);
  drawShadowDissolves();
  drawWitnessDissolves();
+ drawRepeaterDissolves();
  for(const e of enemies){
   if(e.dead||!enemyActive(e))continue;
   const y=e.y,hit=e.hit>0;
@@ -1628,7 +1721,9 @@ function drawEnemies(){
     ctx.fillStyle="#282621";ctx.beginPath();ctx.moveTo(-34,0);ctx.lineTo(-20,-88);ctx.lineTo(0,-122);ctx.lineTo(20,-88);ctx.lineTo(34,0);ctx.closePath();ctx.fill();ctx.strokeStyle="#8b7857";ctx.strokeRect(-22,-82,44,20);
    }
   }else if(e.kind==="repeater"){
-   ctx.strokeStyle="#9d8760";ctx.lineWidth=7;ctx.beginPath();ctx.arc(0,-62,27,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.moveTo(0,-34);ctx.lineTo(0,-2);ctx.moveTo(0,-24);ctx.lineTo(-24,-2);ctx.moveTo(0,-24);ctx.lineTo(24,-2);ctx.stroke();
+   if(!drawRepeaterSprite(e)){
+    ctx.strokeStyle="#9d8760";ctx.lineWidth=7;ctx.beginPath();ctx.arc(0,-62,27,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.moveTo(0,-34);ctx.lineTo(0,-2);ctx.moveTo(0,-24);ctx.lineTo(-24,-2);ctx.moveTo(0,-24);ctx.lineTo(24,-2);ctx.stroke();
+   }
   }else if(e.kind==="ash"){
    ctx.fillStyle="#34312d";ctx.fillRect(-36,-74,72,74);ctx.fillStyle="#171717";ctx.beginPath();ctx.arc(0,-88,28,0,Math.PI*2);ctx.fill();ctx.fillStyle="#5f5440";ctx.fillRect(20,-58,32,42);
   }else{
