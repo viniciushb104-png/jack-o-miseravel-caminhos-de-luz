@@ -244,12 +244,22 @@ function loadPhase5Image(src){
   im.src=src;
  });
 }
-const jackDialogueReady=Promise.allSettled(
- JACK_DIALOGUE_FILES.map(file=>loadPhase5Image("../assets/game/phase1/portraits-hd/"+file+"?v=1"))
-).then(results=>{
- const frames=results.map(r=>r.status==="fulfilled"?r.value:null);
- dialogue.setAssets({jack:{frames}});
- return frames;
+const MISERAVEL_DIALOGUE_FILES=Object.freeze([
+ "boss-miseravel-portrait-neutral.png",
+ "boss-miseravel-portrait-anger.png",
+ "boss-miseravel-portrait-accusing.png",
+ "boss-miseravel-portrait-broken.png",
+ "boss-miseravel-portrait-final.png"
+]);
+const jackDialogueReady=Promise.allSettled([
+ ...JACK_DIALOGUE_FILES.map(file=>loadPhase5Image("../assets/game/phase1/portraits-hd/"+file+"?v=1")),
+ ...MISERAVEL_DIALOGUE_FILES.map(file=>loadPhase5Image("../assets/game/phase5/boss/miseravel/portraits/"+file+"?v=1"))
+]).then(results=>{
+ const images=results.map(r=>r.status==="fulfilled"?r.value:null);
+ const jack=images.slice(0,JACK_DIALOGUE_FILES.length);
+ const miseravel=images.slice(JACK_DIALOGUE_FILES.length);
+ dialogue.setAssets({jack:{frames:jack},miseravel:{frames:miseravel}});
+ return images;
 });
 // ---------------------------------------------------------------------------
 // FASE 5 · SOMBRA DE RETORNO
@@ -984,6 +994,14 @@ function phase5JackExpression(line){
  if(/EU SEI|JÁ FUI|TAMBÉM|EU DISSE ISSO|PASSEI TEMPO DEMAIS/.test(text))return 1;
  return 0;
 }
+function phase5MiseravelExpression(line){
+ const text=(line.text||"").toUpperCase();
+ if(bossAct>=3||/QUEM É|SÓ ISSO/.test(text))return 4; // olhar resignado no ato final
+ if(bossAct===2)return /ENTÃO PARA QUE|APAGAM/.test(text)?1:3; // revolta, depois fissura
+ if(/OLHE PARA ELAS/.test(text))return 2; // acusação direta
+ if(/VOCÊ É/.test(text))return 1; // raiva
+ return 0; // encontro: reflexo reconhecível
+}
 function phase5DialogueLines(lines){
  if(!Array.isArray(lines))return lines;
  return lines.map(line=>{
@@ -991,6 +1009,9 @@ function phase5DialogueLines(lines){
   const speaker=(line.speaker||"").toUpperCase();
   if(speaker==="JACK"||speaker==="MEMÓRIA DE JACK"){
    return {...line,portrait:"jack",expression:phase5JackExpression(line)};
+  }
+  if(speaker==="O MISERÁVEL"){
+   return {...line,portrait:"miseravel",expression:phase5MiseravelExpression(line)};
   }
   return line;
  });
