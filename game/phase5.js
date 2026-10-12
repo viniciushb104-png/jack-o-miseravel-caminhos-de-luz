@@ -859,6 +859,34 @@ const PHASE5_MUSIC=Object.freeze({
 });
 const ambient=new Audio();
 ambient.loop=true;ambient.preload="metadata";ambient.volume=.40;
+// Sino diegético da Estrada que Volta: independente da trilha, sem sobreposições.
+const roadBell=new Audio("../assets/audio/fase5/f5-bell-distant.wav");
+roadBell.preload="auto";roadBell.volume=.48;
+let roadBellElapsed=0;
+function stopRoadBell(){
+ roadBell.pause();
+ try{roadBell.currentTime=0}catch(_){}
+}
+function ringRoadBell(){
+ if(!running||!musicOn||document.hidden||phase5Complete||ending||currentSection().id!=="return")return;
+ if(!roadBell.paused)return;
+ roadBell.volume=.40;
+ try{roadBell.currentTime=0}catch(_){}
+ roadBell.play().catch(()=>{});
+}
+function updateRoadBell(dt){
+ if(!musicOn||document.hidden||currentSection().id!=="return"||phase5Complete){
+  if(!roadBell.paused)stopRoadBell();
+  roadBellElapsed=0;
+  return;
+ }
+ if(dialogue.active)return;
+ roadBellElapsed+=dt;
+ if(roadBellElapsed>=20){
+  roadBellElapsed=0;
+  ringRoadBell();
+ }
+}
 let musicOn=localStorage.getItem("jack-phase5-music-muted")!=="1";
 let phase5MusicKey="",phase5MusicFadeToken=0;
 const musicBtn=document.getElementById("phase5MusicToggle");
@@ -1448,6 +1476,7 @@ function completePhase(){
 
 function update(dt){
  syncPhase5Music();
+ updateRoadBell(dt);
  if(dialogue.active||phase5Complete){syncHud();return}
  p.anim+=dt;p.attack=Math.max(0,p.attack-dt);p.inv=Math.max(0,p.inv-dt);
  lightPulse=Math.max(0,lightPulse-dt);lightCooldown=Math.max(0,lightCooldown-dt);
@@ -2240,8 +2269,8 @@ function loop(t){
  if(!running)return;
  const dt=Math.min(.033,(t-last)/1000);last=t;update(dt);draw();requestAnimationFrame(loop);
 }
-addEventListener("pagehide",()=>{save();ambient.pause()});
-document.addEventListener("visibilitychange",()=>{if(document.hidden){save();ambient.pause()}else if(running&&musicOn)ambient.play().catch(()=>{})});
+addEventListener("pagehide",()=>{save();ambient.pause();stopRoadBell()});
+document.addEventListener("visibilitychange",()=>{if(document.hidden){save();ambient.pause();stopRoadBell()}else if(running&&musicOn)ambient.play().catch(()=>{})});
 
 syncHud();draw();
 })();
