@@ -1874,25 +1874,36 @@ function drawSectionProps(){
   }
  }
  if(sec==="houses"){
-  const houseXs=[1980,2550,3130];
-  houseXs.forEach((x,i)=>{
-   drawPuzzleBottom(puzzleImg("houses",i),x,592,i===1?340:315,.72,i===2);
+  // Casas e janelas usam a superfície física, preservando a lógica do enigma.
+  const houseLayout=[
+   {x:1990,img:0,height:340,flip:false},
+   {x:2680,img:1,height:350,flip:false},
+   {x:3260,img:2,height:335,flip:true}
+  ];
+  houseLayout.forEach(h=>{
+   drawPuzzleBottom(puzzleImg("houses",h.img),h.x,surfaceYAt(h.x)+4,h.height,.86,h.flip);
   });
-  drawPuzzleBottom(puzzleImg("houses",6),1755,592,245,.86);
-  housesLamps.forEach((l,i)=>{
-   const gy=surfaceYAt(l.x);
+  drawPuzzleBottom(puzzleImg("houses",6),1755,surfaceYAt(1755)+3,210,.83);
+  housesLamps.forEach(l=>{
+   const floor=surfaceYAt(l.x);
    const correct=l.type==="path"?l.on:!l.on;
    const windowIndex=correct?(l.on?4:3):5;
-   const drew=drawPuzzleBottom(puzzleImg("houses",windowIndex),l.x,gy-30,112,1);
+   const windowBottom=floor-83;
+   const drew=drawPuzzleBottom(puzzleImg("houses",windowIndex),l.x,windowBottom,104,1);
    if(!drew){
-    ctx.fillStyle="#332718";ctx.fillRect(l.x-4,gy-90,8,90);
-    ctx.fillStyle=l.on?(l.type==="path"?"#e7c064":"#e28b49"):"#302a24";
-    ctx.shadowColor=l.on?"#d89a48":"transparent";ctx.shadowBlur=l.on?18:0;
-    ctx.beginPath();ctx.arc(l.x,gy-98,14,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
+    ctx.save();
+    ctx.fillStyle=l.on?"#e7b46b":"#29212a";
+    ctx.shadowColor=l.on?"#e9a54e":"transparent";
+    ctx.shadowBlur=l.on?15:0;
+    ctx.fillRect(l.x-19,windowBottom-63,38,63);
+    ctx.restore();
    }
-   ctx.fillStyle=correct?"rgba(240,225,180,.82)":"rgba(238,151,112,.88)";
+   ctx.save();
+   ctx.fillStyle=correct?"rgba(240,225,180,.88)":"rgba(238,151,112,.90)";
    ctx.font="700 10px Georgia";ctx.textAlign="center";
-   ctx.fillText(l.type==="path"?"ESTRADA":"JANELA",l.x,gy-145);
+   ctx.shadowColor="rgba(0,0,0,.95)";ctx.shadowBlur=4;
+   ctx.fillText(l.type==="path"?"ESTRADA":"JANELA",l.x,windowBottom-112);
+   ctx.restore();
   });
  }
  if(sec==="clock"){
