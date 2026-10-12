@@ -882,6 +882,15 @@
       chapter: 'HALLOWEEN V · EPÍLOGO',
       title: 'A Última Lanterna',
       src: 'assets/audio/phase5/phase5-09-a-ultima-lanterna.mp3?v=1'
+    },
+    {
+      phase: 5,
+      secret: true,
+      chapter: 'RECOMPENSA FINAL · HALLOWEEN V',
+      title: 'Enquanto Houver uma Luz — Créditos Finais',
+      lockedChapter: 'ARQUIVO SELADO · A ÚLTIMA LUZ',
+      lockedTitle: '??? — Canção de Encerramento',
+      src: 'assets/ending/audio/ending-credits-theme.mp3'
     }
   ];
 
@@ -1074,6 +1083,8 @@
 
   window.addEventListener('storage', refreshSoundtrackUnlocks);
   refreshSoundtrackUnlocks();
+  const endingCreditsWatch = document.getElementById('endingCreditsWatch');
+  if (endingCreditsWatch) endingCreditsWatch.hidden = !phaseIsCleared(5);
 
   runStudioSplash();
 
