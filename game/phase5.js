@@ -39,11 +39,14 @@ const GROUND=Object.freeze([
  {x1:5350,x2:7350,y:590,section:"garden"},
  {x1:7350,x2:9500,y:590,section:"city"},
 
- // A Promessa sobe em apenas três patamares de 20 px: ascensão perceptível,
- // mas sem transformar o trecho numa escadaria visualmente ruidosa.
- {x1:9500,x2:9950,y:580,section:"promise"},
- {x1:9950,x2:10400,y:560,section:"promise"},
- {x1:10400,x2:10850,y:540,section:"promise"},
+ // A Promessa: cinco degraus largos, em subida contínua e alcançável a pé.
+ // Desnível de 12 px por degrau (abaixo da tolerância de colisão de 24 px).
+ // Os altares e o checkpoint conservam suas coordenadas e lógica narrativa.
+ {x1:9500,x2:9770,y:590,section:"promise"},
+ {x1:9770,x2:10040,y:578,section:"promise"},
+ {x1:10040,x2:10310,y:566,section:"promise"},
+ {x1:10310,x2:10580,y:554,section:"promise"},
+ {x1:10580,x2:10850,y:542,section:"promise"},
 
  // A arena final volta a uma linha de chão única; o boss ganha três palcos claros.
  {x1:10850,x2:12600,y:590,section:"final"}
@@ -794,9 +797,12 @@ const PHASE5_GROUND_ART=Object.freeze([
  {s:"city",i:1,x:8070,w:715,scale:1.06},
  {s:"city",i:5,x:8785,w:715,scale:1.06},
 
- {s:"promise",i:0,x:9500,w:450,scale:1.10},
- {s:"promise",i:3,x:9950,w:450,scale:1.10},
- {s:"promise",i:4,x:10400,w:450,scale:1.10},
+ // Um sprite por degrau: centro da arte e topo da colisão coincidem.
+ {s:"promise",i:0,x:9500,w:270,scale:1.05},
+ {s:"promise",i:1,x:9770,w:270,scale:1.05},
+ {s:"promise",i:2,x:10040,w:270,scale:1.05},
+ {s:"promise",i:3,x:10310,w:270,scale:1.05},
+ {s:"promise",i:4,x:10580,w:270,scale:1.05},
 
  {s:"final",i:1,x:10850,w:585,scale:1.04,surface:.38},
  {s:"final",i:0,x:11435,w:580,scale:1.04,surface:.38},
