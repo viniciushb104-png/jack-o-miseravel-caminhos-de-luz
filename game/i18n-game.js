@@ -488,7 +488,17 @@
   function addStyle(){
     if(document.getElementById('jackPhaseLanguageStyle'))return;
     const s=document.createElement('style');s.id='jackPhaseLanguageStyle';
-    s.textContent='.jack-phase-language{position:fixed;z-index:999999;top:10px;right:10px;padding:4px 6px;background:#080b12dc;border:1px solid #b97a2e88;box-shadow:0 4px 16px #0008;font-family:Georgia,"Noto Serif CJK SC","Noto Serif CJK JP","Noto Serif KR",serif}.jack-phase-language select{max-width:170px;border:0;outline:0;background:#0b1019;color:#ffe0a0;padding:6px 8px;font-weight:700;font-size:11px;cursor:pointer}';
+    s.textContent=`
+      /* Shared language dock: sits BELOW the gameplay HUD, never above cinematics. */
+      .jack-phase-language{position:fixed;z-index:80;top:max(70px,calc(env(safe-area-inset-top) + 62px));right:max(12px,env(safe-area-inset-right));max-width:calc(100vw - 24px);padding:3px 5px;background:rgba(8,11,18,.9);border:1px solid #b97a2e;box-shadow:0 4px 14px #0009;border-radius:3px;font-family:Georgia,"Noto Serif CJK SC","Noto Serif CJK JP","Noto Serif KR",serif}
+      .jack-phase-language select{max-width:min(144px,36vw);border:0;outline-offset:2px;background:#0b1019;color:#ffe0a0;padding:5px 6px;font-weight:700;font-size:11px;cursor:pointer}
+      /* Fullscreen stories must have unobstructed Skip / Continue buttons. */
+      body:has(.story-cutscene:not([hidden])) .jack-phase-language,
+      body:has(section[id*="Cutscene"]:not([hidden])) .jack-phase-language,
+      body:has(.cutscene-overlay:not([hidden])) .jack-phase-language{visibility:hidden;pointer-events:none}
+      @media(max-width:900px){.jack-phase-language{top:max(59px,calc(env(safe-area-inset-top) + 53px));right:max(8px,env(safe-area-inset-right));padding:2px 3px}.jack-phase-language select{max-width:min(112px,29vw);font-size:10px;padding:4px 2px}}
+      @media(max-height:420px){.jack-phase-language{top:max(50px,calc(env(safe-area-inset-top) + 45px))}}
+    `;
     document.head.appendChild(s);
   }
   function init(){
