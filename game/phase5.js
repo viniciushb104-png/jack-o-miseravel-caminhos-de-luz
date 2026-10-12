@@ -89,9 +89,16 @@ const CHECKPOINTS=Object.freeze([
  {id:"promise",x:10700,respawnX:10640,require:()=>promiseSolved,name:"A PENÚLTIMA LANTERNA"}
 ]);
 
+// Posições das janelas agrupadas por fachada; área do checkpoint (x=3400) livre.
+const PHASE5_HOUSES_LAYOUT=Object.freeze([
+ {x:1990,img:0,height:330,flip:false,windows:[-92,92]},
+ {x:2580,img:1,height:340,flip:false,windows:[-92,92]},
+ {x:3060,img:2,height:315,flip:true,windows:[0]}
+]);
 const housesLamps=[
- {x:1840,type:"path",on:true},{x:2140,type:"wait",on:true},{x:2500,type:"wait",on:true},
- {x:2860,type:"path",on:true},{x:3260,type:"wait",on:true}
+ {x:1898,type:"path",on:true},{x:2082,type:"wait",on:true},
+ {x:2488,type:"wait",on:true},{x:2672,type:"path",on:true},
+ {x:3060,type:"wait",on:true}
 ];
 
 const clockMirrors=[
@@ -1874,35 +1881,28 @@ function drawSectionProps(){
   }
  }
  if(sec==="houses"){
-  // Casas e janelas usam a superfície física, preservando a lógica do enigma.
-  const houseLayout=[
-   {x:1990,img:0,height:340,flip:false},
-   {x:2680,img:1,height:350,flip:false},
-   {x:3260,img:2,height:335,flip:true}
-  ];
-  houseLayout.forEach(h=>{
-   drawPuzzleBottom(puzzleImg("houses",h.img),h.x,surfaceYAt(h.x)+4,h.height,.86,h.flip);
+  // Cada janela pertence à fachada da casa; nada ocupa a faixa do checkpoint.
+  PHASE5_HOUSES_LAYOUT.forEach(h=>{
+   drawPuzzleBottom(puzzleImg("houses",h.img),h.x,surfaceYAt(h.x)+4,h.height,.9,h.flip);
   });
-  drawPuzzleBottom(puzzleImg("houses",6),1755,surfaceYAt(1755)+3,210,.83);
-  housesLamps.forEach(l=>{
-   const floor=surfaceYAt(l.x);
+  drawPuzzleBottom(puzzleImg("houses",6),1760,surfaceYAt(1760)+3,180,.8);
+  housesLamps.forEach((l,i)=>{
+   const house=PHASE5_HOUSES_LAYOUT[i<2?0:i<4?1:2];
+   const floor=surfaceYAt(house.x);
    const correct=l.type==="path"?l.on:!l.on;
    const windowIndex=correct?(l.on?4:3):5;
-   const windowBottom=floor-83;
-   const drew=drawPuzzleBottom(puzzleImg("houses",windowIndex),l.x,windowBottom,104,1);
+   // Janelas pequenas, numa mesma linha da fachada, acima do térreo.
+   const windowBottom=floor-125;
+   const drew=drawPuzzleBottom(puzzleImg("houses",windowIndex),l.x,windowBottom,70,1);
    if(!drew){
-    ctx.save();
-    ctx.fillStyle=l.on?"#e7b46b":"#29212a";
-    ctx.shadowColor=l.on?"#e9a54e":"transparent";
-    ctx.shadowBlur=l.on?15:0;
-    ctx.fillRect(l.x-19,windowBottom-63,38,63);
-    ctx.restore();
+    ctx.save();ctx.fillStyle=l.on?"#e7b46b":"#29212a";
+    ctx.fillRect(l.x-16,windowBottom-51,32,51);ctx.restore();
    }
    ctx.save();
-   ctx.fillStyle=correct?"rgba(240,225,180,.88)":"rgba(238,151,112,.90)";
+   ctx.fillStyle=correct?"rgba(240,225,180,.9)":"rgba(238,151,112,.9)";
    ctx.font="700 10px Georgia";ctx.textAlign="center";
-   ctx.shadowColor="rgba(0,0,0,.95)";ctx.shadowBlur=4;
-   ctx.fillText(l.type==="path"?"ESTRADA":"JANELA",l.x,windowBottom-112);
+   ctx.shadowColor="rgba(0,0,0,.98)";ctx.shadowBlur=5;
+   ctx.fillText(l.type==="path"?"ESTRADA":"JANELA",l.x,windowBottom-80);
    ctx.restore();
   });
  }
