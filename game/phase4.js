@@ -397,7 +397,7 @@ const ENEMY_ARCHETYPES=Object.freeze({
  eraser:Object.freeze({
    label:"RASURADOR",defeatMessage:"A tinta virou cinza. O rastro permaneceu.",
    hitMessage:"A Luz abriu fissuras na rasura.",
-   width:58,height:58,patrolSpeed:38,chaseSpeed:112,attackSpeed:175,
+   width:58,height:58,patrolSpeed:68,chaseSpeed:145,attackSpeed:175,
    detectRange:410,loseRange:590,attackRange:66,lightRange:205,
    alertTime:.22,idleTime:.7,patrolTime:2.2,
    attackWindup:.34,attackActive:.15,attackRecover:.62,
@@ -407,7 +407,7 @@ const ENEMY_ARCHETYPES=Object.freeze({
  ashHound:Object.freeze({
    label:"CÃO DE CINZA",defeatMessage:"O corpo se rompeu em cinza morna e desapareceu no vento.",
    hitMessage:"A Luz incendiou as rachaduras de cinza.",
-   width:76,height:46,patrolSpeed:68,chaseSpeed:205,attackSpeed:340,
+   width:76,height:46,patrolSpeed:105,chaseSpeed:245,attackSpeed:340,
    detectRange:525,loseRange:760,attackRange:86,lightRange:220,
    alertTime:.13,idleTime:.36,patrolTime:1.42,
    attackWindup:.18,attackActive:.24,attackRecover:.30,
@@ -418,7 +418,7 @@ const ENEMY_ARCHETYPES=Object.freeze({
    label:"PEREGRINO OCO",defeatMessage:"As roupas caíram vazias. O pó dentro delas não tinha nome.",
    hitMessage:"A Luz atravessou o vazio sob as roupas.",
    revealMessage:"A lanterna revelou um vazio sob as vestes. Agora a Luz pode alcançá-lo.",
-   width:68,height:96,patrolSpeed:30,chaseSpeed:72,attackSpeed:170,
+   width:68,height:96,patrolSpeed:55,chaseSpeed:105,attackSpeed:170,
    detectRange:345,loseRange:480,attackRange:82,lightRange:210,
    alertTime:.34,idleTime:.82,patrolTime:2.35,
    attackWindup:.42,attackActive:.32,attackRecover:.48,
@@ -4416,7 +4416,7 @@ function updateEnemyPatrol(e,dt,pc){
  e.x+=e.vx*dt;
  if(e.x<=e.minX){e.x=e.minX;e.dir=1;e.vx=Math.abs(e.vx)}
  if(e.x>=e.maxX){e.x=e.maxX;e.dir=-1;e.vx=-Math.abs(e.vx)}
- if(e.stateTimer<=0){e.vx*=.35;setEnemyState(e,"idle",cfg.idleTime)}
+ if(e.stateTimer<=0){setEnemyState(e,"patrol",cfg.patrolTime)}
 }
 function enemyHitsPlayer(e,extraX=10,extraY=105){
  const pc=p.x+p.w/2,ec=e.x+e.w/2;
@@ -4482,10 +4482,7 @@ function updateGroundEnemyState(e,dt,pc){
  if(e.state==="idle"){
    e.stateTimer=Math.max(0,e.stateTimer-dt);e.vx*=Math.max(0,1-dt*6);
    if(ad<=cfg.detectRange){e.dir=Math.sign(d)||e.dir;setEnemyState(e,"alert",cfg.alertTime);return}
-   if(e.stateTimer<=0){
-     if(((Math.floor(p.anim)+Math.floor(e.spawnX/100))&1)===0)e.dir*=-1;
-     setEnemyState(e,"patrol",cfg.patrolTime);
-   }
+   if(e.stateTimer<=0){setEnemyState(e,"patrol",cfg.patrolTime)}
    return;
  }
 
@@ -4606,7 +4603,14 @@ function updateEnemyState(e,dt,pc){
 }
 function updateEnemies(dt){
  const pc=p.x+p.w/2;
- for(const e of enemies)updateEnemyState(e,dt,pc);
+ for(const e of enemies){
+   // Inimigos terrestres patrulham mesmo antes de Jack entrar no campo de visão.
+   // A detecção vertical evita perseguir Jack através de andares diferentes.
+   if(e.state==="idle"&&e.alive&&e.stateTimer>0){
+     e.stateTimer=Math.min(e.stateTimer,.18);
+   }
+   updateEnemyState(e,dt,pc);
+ }
 }
 function update(dt){
  syncPhase4Music();
