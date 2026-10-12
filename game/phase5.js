@@ -1314,6 +1314,15 @@ function surfaceYAt(x){
  }
  return y;
 }
+// A arte 5F/5G possui uma margem transparente maior sob a superfície pintada.
+// A física fica intacta; este bias existe apenas para "assentar" sprites no piso.
+function finalGroundVisualBias(x){
+ if(x>=9500&&x<10850)return 12;  // Encruzilhada + escadaria
+ if(x>=10850&&x<=12600)return 8;  // Casa dos Espelhos
+ return 0;
+}
+function visualSurfaceYAt(x){return surfaceYAt(x)+finalGroundVisualBias(x)}
+function visualGroundYAt(x){return groundYAt(x)+finalGroundVisualBias(x)}
 function pointOnGround(x){return !!groundAt(x)}
 function platformAtFoot(cx,bottom,oldBottom){
  let best=null;
@@ -1939,7 +1948,7 @@ function drawCheckpointImage(im,gy,alpha=1,scale=1){
 }
 function drawCheckpoint(cp){
  const isActive=cp.id===activeCheckpoint;
- const gy=groundYAt(cp.x);
+ const gy=visualGroundYAt(cp.x);
  const now=performance.now();
  const activating=isActive&&checkpointActivation.id===cp.id&&
   now-checkpointActivation.startedAt<checkpointActivation.duration;
@@ -2157,7 +2166,11 @@ function drawSectionProps(){
   const seal=puzzleImg("promise",3);
   drawPuzzleCentered(seal,10100,365,300,.28);
   promiseAltars.forEach((a,i)=>{
-   const gy=groundYAt(a.x),on=i<promiseStep,altar=puzzleImg("promise",i%3);
+   const gy=visualGroundYAt(a.x),on=i<promiseStep,altar=puzzleImg("promise",i%3);
+   ctx.save();
+   ctx.fillStyle="rgba(0,0,0,.24)";
+   ctx.beginPath();ctx.ellipse(a.x,gy-3,48,9,0,0,Math.PI*2);ctx.fill();
+   ctx.restore();
    drawPuzzleBottom(altar,a.x,gy+8,165,on?1:.74,i===3);
    if(on){
     const pulse=.72+.10*(.5+.5*Math.sin(performance.now()/360+i));
@@ -2251,7 +2264,7 @@ function drawMiseravelBody(bx){
  if(!im||!im.complete||!(im.naturalWidth||im.width))return false;
  const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
  const targetH=bossAct===3?260:290,targetW=targetH*(iw/ih);
- const gy=surfaceYAt(bx);
+ const gy=visualSurfaceYAt(bx);
  ctx.save();
  ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";
  ctx.shadowColor=bossAct===2?"rgba(242,103,45,.55)":"rgba(0,0,0,.78)";
@@ -2262,7 +2275,7 @@ function drawMiseravelBody(bx){
 }
 function drawBossWordCard(node,active=false,reflected=false,opts={}){
  const im=bossWordImg(node.label);
- const gy=surfaceYAt(node.x);
+ const gy=visualSurfaceYAt(node.x);
  const h=opts.height||150;
  if(im){
   const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height,w=h*(iw/ih);
@@ -2297,7 +2310,7 @@ function drawBossWordCard(node,active=false,reflected=false,opts={}){
  return false;
 }
 function drawLastLantern(){
- const lx=12420,gy=surfaceYAt(lx),now=performance.now();
+ const lx=12420,gy=visualSurfaceYAt(lx),now=performance.now();
  if(bossAct<3&&!bossResolved)return;
 
  const seal=lastLanternImg("seal");
@@ -2355,7 +2368,7 @@ function drawBossScene(){
  }
  if(!(bossResolved&&bossReleaseFinished())){
   ctx.fillStyle="#d8bd77";ctx.font="700 11px Georgia";ctx.textAlign="center";
-  ctx.fillText("O MISERÁVEL",bx,surfaceYAt(bx)-290);
+  ctx.fillText("O MISERÁVEL",bx,visualSurfaceYAt(bx)-290);
  }
 
  if(bossAct===1){
@@ -2369,7 +2382,7 @@ function drawBossScene(){
   // A escolha final deixa de ser texto solto: Jack encara o próprio "CONTINUAR".
   drawBossWordCard({x:11740,label:"CONTINUAR"},false,false,{height:138,dim:.9});
   ctx.save();ctx.fillStyle="#f0d488";ctx.font="700 11px Georgia";ctx.textAlign="center";
-  ctx.fillText("E · CONTINUAR",11740,surfaceYAt(11740)-150);ctx.restore();
+  ctx.fillText("E · CONTINUAR",11740,visualSurfaceYAt(11740)-150);ctx.restore();
  }
  drawLastLantern();
 }
@@ -2672,7 +2685,8 @@ function jackFrame(){
  return a.idle[Math.floor(p.anim*2.4)%a.idle.length];
 }
 function drawJack(){
- const cx=p.x-cam+p.w/2,ground=p.y+p.h;
+ const worldX=p.x+p.w/2;
+ const cx=worldX-cam,ground=p.y+p.h+finalGroundVisualBias(worldX);
  ctx.save();ctx.globalAlpha=p.inv>0&&Math.floor(p.inv*12)%2?.4:1;
  ctx.fillStyle="rgba(0,0,0,.28)";ctx.beginPath();ctx.ellipse(cx,ground+3,19,5,0,0,Math.PI*2);ctx.fill();
  if(atlasReady&&JA){
