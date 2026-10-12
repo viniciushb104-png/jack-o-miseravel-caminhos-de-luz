@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Créditos finais — Jack o Miserável</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:#070916;color:#f9e9ce;font-family:Georgia,serif}main{position:relative;height:100dvh;min-height:420px;overflow:hidden;background:radial-gradient(circle at 50% 50%,#302041,#070916 75%)}video{width:100%;height:100%;object-fit:contain;position:absolute;inset:0;background:#050710}.veil{position:absolute;inset:0;background:linear-gradient(0deg,#050710c9,transparent 35%,#05071055);pointer-events:none}.credits{position:absolute;bottom:13%;left:5%;right:5%;text-align:center;text-shadow:0 3px 14px #000;pointer-events:none;transition:opacity .7s}.credits small{color:#ffc47e;letter-spacing:.18em;font:700 .78rem system-ui,sans-serif}.credits h1{font-size:clamp(1.5rem,4vw,3rem);margin:.35em 0}.credits p{font-size:clamp(1rem,2.1vw,1.4rem);margin:.4em 0}.controls{position:absolute;top:1rem;right:1rem;display:flex;gap:.6rem;z-index:3}button,a.btn{border:1px solid #d5a45e;background:#161021e6;color:#ffeac4;border-radius:8px;padding:.75rem 1rem;font:600 .9rem system-ui,sans-serif;cursor:pointer;text-decoration:none}.intro{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:1rem;padding:1rem;background:linear-gradient(135deg,#141226ed,#080811f2);z-index:2}.intro h1{font-size:clamp(2rem,5vw,4rem);margin:0}.intro p{max-width:35rem;line-height:1.5}.intro[hidden],.finish[hidden]{display:none}.finish{position:absolute;inset:0;z-index:4;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:1rem;padding:1rem;background:#080916ec}.finish h2{font-size:clamp(1.7rem,4vw,3rem)}.finish a{max-width:90%}@media(max-width:640px){.credits{bottom:18%}.controls{top:.5rem;right:.5rem}}
+</style></head><body><main>
+<video id="film" playsinline preload="metadata" muted></video><div class="veil"></div>
+<div class="controls"><button id="skip" type="button">Pular créditos ›</button></div>
+<div class="credits" id="credits" aria-live="polite"></div>
+<section class="intro" id="intro"><small>ASAS DO MEDO GAMES</small><h1>A Última Luz</h1><p>Trinta segundos de memórias, gratidão e um novo mistério. Música: “Enquanto Houver uma Luz”.</p><button id="start" type="button">✦ ASSISTIR CRÉDITOS FINAIS</button><a class="btn" href="./index.html#creditos">Voltar</a></section>
+<section class="finish" id="finish" hidden><small>O FIM DESTA ESTRADA</small><h2>Enquanto houver uma luz...</h2><p>Jack continua caminhando.</p><a class="btn" href="./index.html#musical">♫ Ouvir a música completa desbloqueada</a><a class="btn" href="./index.html#creditos">Ver créditos e agradecimentos</a><button id="again" type="button">↻ Rever animação</button></section>
+<audio id="theme" preload="metadata" src="./assets/ending/audio/ending-credits-theme.mp3"></audio>
+</main><script>
+(()=>{'use strict';
+const KEY='jack-phase5-complete';
+const film=document.getElementById('film'),theme=document.getElementById('theme'),text=document.getElementById('credits');
+const intro=document.getElementById('intro'),finish=document.getElementById('finish');
+const videos=['./assets/ending/videos/ending-01-jack-walk.mp4','./assets/ending/videos/ending-02-lantern-lights.mp4','./assets/ending/videos/ending-03-mirror-teaser.mp4'];
+const cards=[
+'<small>ASAS DO MEDO GAMES APRESENTA</small><h1>Jack, o Miserável</h1><p>Caminhos de Luz</p><p>Criação, história e direção criativa · Vinicius Diniz</p>',
+'<small>UMA JORNADA FEITA DE MEMÓRIAS</small><h1>Enquanto Houver uma Luz</h1><p>Desenvolvimento e concepção musical · Vinicius Diniz</p><p>Ferramentas criativas · ChatGPT, Gemini e Suno</p>',
+'<small>AGRADECIMENTOS</small><h1>A todos que caminharam com Jack</h1><p>Produção · Asas do Medo Games</p><p>Identidade visual e demais créditos: veja a seção Créditos</p><p>Quem se lembra daquele que ilumina?</p>'
+];
+let index=0,running=false,advanceTimeout=null,endTimeout=null;
+const showCard=n=>{text.style.opacity='0';setTimeout(()=>{text.innerHTML=cards[n];text.style.opacity='1'},180)};
+function finishFilm(){if(!running)return;running=false;clearTimeout(advanceTimeout);clearTimeout(endTimeout);film.pause();theme.pause();text.style.opacity='0';finish.hidden=false;}
+function next(){if(!running)return;if(index>=2){finishFilm();return;}index++;loadVideo();}
+function loadVideo(){clearTimeout(advanceTimeout);film.pause();film.src=videos[index];film.load();showCard(index);const n=index;advanceTimeout=setTimeout(()=>{if(n===index)next()},10000);film.play().catch(()=>{});}
+film.addEventListener('ended',next);film.addEventListener('error',()=>{if(running)next()});
+function playTheme(){const startAt=175;const seek=()=>{try{theme.currentTime=startAt;}catch(e){}theme.play().catch(()=>{});};if(theme.readyState>=1)seek();else theme.addEventListener('loadedmetadata',seek,{once:true});}
+function start(){if(localStorage.getItem(KEY)!=='yes'){location.replace('./index.html#fases');return;}intro.hidden=true;finish.hidden=true;index=0;running=true;theme.pause();try{theme.currentTime=175}catch(e){};loadVideo();playTheme();endTimeout=setTimeout(finishFilm,30000);}
+document.getElementById('start').addEventListener('click',start);
+document.getElementById('again').addEventListener('click',start);
+document.getElementById('skip').addEventListener('click',()=>{if(running)finishFilm();else location.href='./index.html#creditos';});
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&running){film.pause();theme.pause();}});
+if(localStorage.getItem(KEY)!=='yes'){intro.querySelector('h1').textContent='Arquivo ainda selado';intro.querySelector('p').textContent='Conclua o Halloween V para assistir aos créditos finais.';document.getElementById('start').hidden=true;}
+})();
+</script></body></html>
