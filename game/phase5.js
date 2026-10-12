@@ -1385,7 +1385,11 @@ function sectionIntro(idx){
  if(map[id])setTimeout(()=>{if(!dialogue.active)openLines(map[id],save)},260);
 }
 function bossReleaseFinished(){
- return !!bossReleaseStartedAt&&((performance.now()-bossReleaseStartedAt)/1000)>=1.35;
+ // Em saves recarregados após a libertação, o timestamp visual não existe mais.
+ // Nesse caso o estado persistente bossResolved já significa animação concluída.
+ if(!bossResolved)return false;
+ if(!bossReleaseStartedAt)return true;
+ return ((performance.now()-bossReleaseStartedAt)/1000)>=1.35;
 }
 function maybePreloadBoss(){
  if(!miseravelAssetsStarted&&p.x>9250)ensureMiseravelAssets();
