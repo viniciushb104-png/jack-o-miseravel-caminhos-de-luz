@@ -555,6 +555,64 @@ function ensureMiseravelAssets(){
 }
 
 // ---------------------------------------------------------------------------
+// FASE 5 · INTERAÇÕES DO BOSS + ÚLTIMA LANTERNA — LOTES F1/F2
+// Os oito retratos-palavra substituem os marcadores provisórios dos Atos I/II.
+// A Última Lanterna usa estados idle -> despertar -> acesa no encerramento.
+// ---------------------------------------------------------------------------
+const BOSS_WORD_FILES=Object.freeze({
+ "MENTIROSO":"../assets/game/phase5/boss/interactions/words/phase5-jack-word-mentiroso.png?v=1",
+ "COVARDE":"../assets/game/phase5/boss/interactions/words/phase5-jack-word-covarde.png?v=1",
+ "AVARENTO":"../assets/game/phase5/boss/interactions/words/phase5-jack-word-avarento.png?v=1",
+ "MISERÁVEL":"../assets/game/phase5/boss/interactions/words/phase5-jack-word-miseravel.png?v=1",
+ "ESPERAR":"../assets/game/phase5/boss/interactions/words/phase5-jack-word-esperar.png?v=1",
+ "CONTINUAR":"../assets/game/phase5/boss/interactions/words/phase5-jack-word-continuar.png?v=1",
+ "DEIXAR IR":"../assets/game/phase5/boss/interactions/words/phase5-jack-word-deixar-ir.png?v=1",
+ "ATRAVESSAR":"../assets/game/phase5/boss/interactions/words/phase5-jack-word-atravessar.png?v=1"
+});
+const LAST_LANTERN_FILES=Object.freeze({
+ idle:"../assets/game/phase5/finale/last-lantern/phase5-final-lantern-idle.png?v=1",
+ awaken:[
+  "../assets/game/phase5/finale/last-lantern/phase5-final-lantern-awaken-01.png?v=1",
+  "../assets/game/phase5/finale/last-lantern/phase5-final-lantern-awaken-02.png?v=1"
+ ],
+ on:"../assets/game/phase5/finale/last-lantern/phase5-final-lantern-on.png?v=1",
+ seal:"../assets/game/phase5/finale/last-lantern/phase5-final-lantern-seal.png?v=1"
+});
+const bossWordImgs={};
+const lastLanternImgs={idle:null,awaken:[],on:null,seal:null};
+let bossInteractionAssetsStarted=false,bossInteractionAssetsPromise=null;
+function ensureBossInteractionAssets(){
+ if(bossInteractionAssetsPromise)return bossInteractionAssetsPromise;
+ bossInteractionAssetsStarted=true;
+ const jobs=[];
+ Object.entries(BOSS_WORD_FILES).forEach(([label,src])=>{
+  const im=new Image();bossWordImgs[label]=im;
+  jobs.push(new Promise(resolve=>{im.onload=()=>resolve(im);im.onerror=()=>resolve(null)}));
+  im.src=src;
+ });
+ const addLantern=(key,src,index=null)=>{
+  const im=new Image();
+  if(index===null)lastLanternImgs[key]=im;else lastLanternImgs[key][index]=im;
+  jobs.push(new Promise(resolve=>{im.onload=()=>resolve(im);im.onerror=()=>resolve(null)}));
+  im.src=src;
+ };
+ addLantern("idle",LAST_LANTERN_FILES.idle);
+ LAST_LANTERN_FILES.awaken.forEach((src,i)=>addLantern("awaken",src,i));
+ addLantern("on",LAST_LANTERN_FILES.on);
+ addLantern("seal",LAST_LANTERN_FILES.seal);
+ bossInteractionAssetsPromise=Promise.allSettled(jobs);
+ return bossInteractionAssetsPromise;
+}
+function bossWordImg(label){
+ const im=bossWordImgs[label];
+ return im&&im.complete&&(im.naturalWidth||im.width)?im:null;
+}
+function lastLanternImg(key,index=0){
+ const im=key==="awaken"?lastLanternImgs.awaken[index]:lastLanternImgs[key];
+ return im&&im.complete&&(im.naturalWidth||im.width)?im:null;
+}
+
+// ---------------------------------------------------------------------------
 // FASE 5 · ESPELHOS E REFLEXOS — LOTES M1/M2/M3
 // Carregamento preguiçoso: só entra em memória quando Jack chega às áreas
 // que usam espelhos. A lógica continua funcionando mesmo sem os PNGs.
@@ -1624,11 +1682,15 @@ function bossReleaseFinished(){
  return ((performance.now()-bossReleaseStartedAt)/1000)>=1.35;
 }
 function maybePreloadBoss(){
- if(!miseravelAssetsStarted&&p.x>9250)ensureMiseravelAssets();
+ if(p.x>9250){
+  if(!miseravelAssetsStarted)ensureMiseravelAssets();
+  if(!bossInteractionAssetsStarted)ensureBossInteractionAssets();
+ }
 }
 function startBoss(){
  if(bossStarted||p.x<10980)return;
  ensureMiseravelAssets();
+ ensureBossInteractionAssets();
  bossStarted=true;bossAct=bossAct||1;banner("O MISERÁVEL");
  openLines(story.bossIntro,()=>{bossShotCd=.8;save()});save();
 }
@@ -2177,6 +2239,83 @@ function drawMiseravelBody(bx){
  ctx.restore();
  return true;
 }
+function drawBossWordCard(node,active=false,reflected=false,opts={}){
+ const im=bossWordImg(node.label);
+ const gy=surfaceYAt(node.x);
+ const h=opts.height||150;
+ if(im){
+  const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height,w=h*(iw/ih);
+  const pulse=.88+.12*(.5+.5*Math.sin(performance.now()/330+node.x*.01));
+  ctx.save();
+  ctx.globalAlpha=active?1:(opts.dim??.78);
+  ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";
+  ctx.fillStyle="rgba(0,0,0,.28)";
+  ctx.beginPath();ctx.ellipse(node.x,gy-4,Math.min(50,w*.28),9,0,0,Math.PI*2);ctx.fill();
+  if(active){
+   ctx.shadowColor="#efbd58";ctx.shadowBlur=26*pulse;
+  }else if(reflected){
+   ctx.shadowColor="rgba(154,211,255,.8)";ctx.shadowBlur=14;
+  }else{
+   ctx.shadowColor="rgba(109,74,44,.55)";ctx.shadowBlur=8;
+  }
+  ctx.drawImage(im,node.x-w/2,gy-h+5,w,h);
+  ctx.restore();
+  if(active){
+   ctx.save();ctx.globalCompositeOperation="screen";
+   const g=ctx.createRadialGradient(node.x,gy-h*.52,8,node.x,gy-h*.52,h*.58);
+   g.addColorStop(0,"rgba(255,218,124,.22)");
+   g.addColorStop(1,"rgba(255,185,72,0)");
+   ctx.fillStyle=g;ctx.beginPath();ctx.arc(node.x,gy-h*.52,h*.58,0,Math.PI*2);ctx.fill();ctx.restore();
+  }
+  return true;
+ }
+ // fallback minimalista se o PNG ainda estiver carregando
+ ctx.save();ctx.strokeStyle=active?"#e5c369":reflected?"#8fb9d6":"#6d5545";ctx.lineWidth=3;
+ ctx.strokeRect(node.x-55,gy-80,110,54);ctx.fillStyle="#d8c08a";ctx.font="700 10px Georgia";ctx.textAlign="center";
+ ctx.fillText(node.label,node.x,gy-47);ctx.restore();
+ return false;
+}
+function drawLastLantern(){
+ const lx=12420,gy=surfaceYAt(lx),now=performance.now();
+ if(bossAct<3&&!bossResolved)return;
+
+ const seal=lastLanternImg("seal");
+ if(seal){
+  const iw=seal.naturalWidth||seal.width,ih=seal.naturalHeight||seal.height;
+  const h=170,w=h*(iw/ih);
+  ctx.save();ctx.globalCompositeOperation="screen";
+  const pulse=.16+.10*(.5+.5*Math.sin(now/520));
+  ctx.globalAlpha=bossResolved?.42:pulse;
+  ctx.drawImage(seal,lx-w/2,gy-h*.42,w,h);ctx.restore();
+ }
+
+ let im=lastLanternImg("idle"),glow=false;
+ if(bossResolved&&bossReleaseFinished()){
+  const awakenStart=(bossReleaseStartedAt||now)+1350;
+  const age=Math.max(0,(now-awakenStart)/1000);
+  if(age<.42)im=lastLanternImg("awaken",0)||im;
+  else if(age<.84)im=lastLanternImg("awaken",1)||im;
+  else {im=lastLanternImg("on")||im;glow=true}
+ }
+
+ if(im){
+  const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+  const h=205,w=h*(iw/ih);
+  ctx.save();
+  ctx.fillStyle="rgba(0,0,0,.28)";ctx.beginPath();ctx.ellipse(lx,gy-4,46,9,0,0,Math.PI*2);ctx.fill();
+  if(glow){ctx.shadowColor="#ffc35a";ctx.shadowBlur=34}
+  ctx.drawImage(im,lx-w/2,gy-h+7,w,h);
+  ctx.restore();
+ }else{
+  ctx.save();ctx.fillStyle=bossResolved?"#e8ba4f":"#58452e";ctx.beginPath();ctx.arc(lx,gy-92,30,0,Math.PI*2);ctx.fill();ctx.restore();
+ }
+
+ if(bossResolved&&bossReleaseFinished()){
+  ctx.save();ctx.fillStyle="#f0d78e";ctx.font="700 12px Georgia";ctx.textAlign="center";
+  ctx.shadowColor="rgba(0,0,0,.95)";ctx.shadowBlur=5;
+  ctx.fillText("E · A ÚLTIMA LANTERNA",lx,gy-222);ctx.restore();
+ }
+}
 function drawBossScene(){
  const bx=11740;
  const veil=ctx.createLinearGradient(10850,0,12600,0);
@@ -2199,20 +2338,19 @@ function drawBossScene(){
  }
 
  if(bossAct===1){
-  bossSigils.forEach((s,i)=>{const gy=surfaceYAt(s.x);ctx.strokeStyle=bossSigilLit.has(i)?"#e5c369":"#6d2f2f";ctx.lineWidth=3;ctx.strokeRect(s.x-55,gy-70,110,48);ctx.fillStyle="#cdb57a";ctx.font="10px Georgia";ctx.textAlign="center";ctx.fillText(s.label,s.x,gy-40)});
+  bossSigils.forEach((node,i)=>drawBossWordCard(node,bossSigilLit.has(i),false,{height:154,dim:.76}));
  }
  if(bossAct===2){
-  bossLessons.forEach((s,i)=>{const gy=surfaceYAt(s.x);ctx.strokeStyle=bossLessonLit.has(i)?"#ead073":"#63594a";ctx.lineWidth=3;ctx.beginPath();ctx.arc(s.x,gy-55,28,0,Math.PI*2);ctx.stroke();ctx.fillStyle="#d8c08a";ctx.font="9px Georgia";ctx.textAlign="center";ctx.fillText(s.label,s.x,gy-12)});
+  bossLessons.forEach((node,i)=>drawBossWordCard(node,bossLessonLit.has(i),node.mode==="reflected",{height:150,dim:.74}));
   bossMirrors.forEach(m=>drawMirror(m,bossLessonLit.has(m.lesson)));
  }
  if(bossAct===3&&!bossContinued){
-  ctx.fillStyle="#f0d488";ctx.font="700 14px Georgia";ctx.textAlign="center";ctx.fillText("E · CONTINUAR",bx,315);
+  // A escolha final deixa de ser texto solto: Jack encara o próprio "CONTINUAR".
+  drawBossWordCard({x:11740,label:"CONTINUAR"},false,false,{height:138,dim:.9});
+  ctx.save();ctx.fillStyle="#f0d488";ctx.font="700 11px Georgia";ctx.textAlign="center";
+  ctx.fillText("E · CONTINUAR",11740,surfaceYAt(11740)-150);ctx.restore();
  }
- if(bossResolved&&bossReleaseFinished()){
-  const lx=12420,gy=surfaceYAt(lx);
-  ctx.fillStyle="#e8ba4f";ctx.shadowColor="#e6a43d";ctx.shadowBlur=35;ctx.beginPath();ctx.arc(lx,gy-92,30,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
-  ctx.fillStyle="#f0d78e";ctx.font="700 13px Georgia";ctx.textAlign="center";ctx.fillText("A ÚLTIMA LANTERNA",lx,gy-137);
- }
+ drawLastLantern();
 }
 function shadowReturnFrame(e){
  if(e.hit>0){
