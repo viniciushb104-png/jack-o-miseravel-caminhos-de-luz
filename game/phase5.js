@@ -79,6 +79,7 @@ const GATES=[
 
 const CHECKPOINTS=Object.freeze([
  {id:"return",x:1580,respawnX:1510,require:()=>returnOpened,name:"MARCO DO RETORNO"},
+ {id:"houses",x:3400,respawnX:3330,require:()=>housesSolved,name:"LANTERNA DAS JANELAS APAGADAS"},
  {id:"clock",x:5200,respawnX:5110,require:()=>clockSolved,name:"RELÓGIO DO AGORA"},
  {id:"garden",x:7180,respawnX:7090,require:()=>gardenSolved,name:"LANTERNA DAS COISAS DEIXADAS"},
  {id:"city",x:9360,respawnX:9270,require:()=>citySolved,name:"MARCO SEM NOME"},
@@ -170,6 +171,8 @@ let bossStarted=!!state.bossStarted,bossAct=Number(state.bossAct)||0;
 const bossSigilLit=new Set(state.bossSigils||[]);
 const bossLessonLit=new Set(state.bossLessons||[]);
 let bossContinued=!!state.bossContinued,bossResolved=!!state.bossResolved;
+// Saves antigos/interrompidos no meio da escolha não podem deixar o Ato III travado.
+if(bossContinued&&!bossResolved)bossContinued=false;
 // COMPLETE_KEY é uma conquista permanente (troféu 5/5), não o estado da partida atual.
 // Em replay/new game ela continua salva no perfil, mas NÃO deve pular a fase para a tela final.
 let phase5Complete=(!forceNew&&!replayMode)&&(
@@ -179,7 +182,7 @@ let phase5Complete=(!forceNew&&!replayMode)&&(
 const p={x:Number(state.px)||150,y:Number(state.py)||480,w:44,h:86,vx:0,vy:0,on:false,dir:1,anim:0,attack:0,inv:0};
 let life=3,cam=0,running=false,last=performance.now(),sectionIndex=-1,lightPulse=0,lightCooldown=0;
 let reflectedFx=[],hazards=[],shots=[],bossImpacts=[],enemyDissolves=[],messageTimer=0,bannerTimer=0,bossShotCd=1.2,ending=false,autosaveTimer=0;
-let bossShootFx=0,bossTransformStartedAt=0,bossFinalStartedAt=0,bossReleaseStartedAt=0;
+let bossShootFx=0,bossTransformStartedAt=0,bossFinalStartedAt=0,bossContinueStartedAt=0,bossReleaseStartedAt=0;
 let roadOpenFxStartedAt=0;
 let checkpointActivation={id:"",startedAt:0,duration:900};
 const input={left:false,right:false,down:false,jump:false,run:false};
@@ -511,19 +514,25 @@ const MISERAVEL_FILES=Object.freeze({
  ]
 });
 const miseravelSprites={idle:[],shoot:[],shot1:[],shot2:[],impact:[],transform:[],act2:[],final:[],continue:[],release:[]};
-const miseravelReady=[];
-Object.entries(MISERAVEL_FILES).forEach(([state,files])=>{
- files.forEach((src,index)=>{
-  const im=new Image();
-  miseravelSprites[state][index]=im;
-  miseravelReady.push(new Promise(resolve=>{
-   im.onload=()=>resolve(im);
-   im.onerror=()=>resolve(null);
-  }));
-  im.src=src;
+let miseravelAssetsPromise=null,miseravelAssetsStarted=false;
+function ensureMiseravelAssets(){
+ if(miseravelAssetsPromise)return miseravelAssetsPromise;
+ miseravelAssetsStarted=true;
+ const jobs=[];
+ Object.entries(MISERAVEL_FILES).forEach(([state,files])=>{
+  files.forEach((src,index)=>{
+   const im=new Image();
+   miseravelSprites[state][index]=im;
+   jobs.push(new Promise(resolve=>{
+    im.onload=()=>resolve(im);
+    im.onerror=()=>resolve(null);
+   }));
+   im.src=src;
+  });
  });
-});
-const miseravelAssetsReady=Promise.allSettled(miseravelReady);
+ miseravelAssetsPromise=Promise.allSettled(jobs);
+ return miseravelAssetsPromise;
+}
 
 // ---------------------------------------------------------------------------
 // FASE 5 · LANTERNA DE VIGÍLIA
@@ -827,7 +836,6 @@ window.__PHASE_ASSETS_READY=Promise.allSettled([
  repeaterAssetsReady,
  ashBearerAssetsReady,
  accuserAssetsReady,
- miseravelAssetsReady,
  phase5CheckpointAssetsReady
 ]);
 
@@ -986,7 +994,8 @@ function objective(){
   if(!bossStarted)return "Entre na escuridão e encontre a Última Lanterna.";
   if(bossAct===1)return "ATO I · Ilumine e RECONHEÇA as quatro acusações. Não apague o passado.";
   if(bossAct===2)return "ATO II · Acenda as quatro lições. Duas exigem LUZ REFLETIDA.";
-  if(bossAct===3&&!bossContinued)return "ATO III · Aproxime-se de O Miserável e pressione E · CONTINUAR.";
+  if(bossAct===3&&!bossContinued)return bossContinueStartedAt?"ATO III · Jack decidiu continuar.":"ATO III · Aproxime-se de O Miserável e pressione E · CONTINUAR.";
+  if(bossResolved&&!bossReleaseFinished())return "O Miserável está deixando de prender Jack ao passado.";
   if(bossResolved)return "A Última Lanterna está adiante. Aproxime-se e pressione E.";
  }
  return "Continue pela estrada.";
@@ -1272,13 +1281,20 @@ function useLight(){
 }
 function checkBossActOne(){
  if(bossAct!==1||bossSigilLit.size<4)return;
- bossAct=2;shots.length=0;bossTransformStartedAt=performance.now();banner("ATO II · O QUE VOCÊ FEZ DEPOIS");
- openLines(story.bossActTwo,()=>{bossShotCd=1.1;save()});save();
+ bossAct=2;shots.length=0;bossTransformStartedAt=performance.now();bossShotCd=99;
+ banner("ATO II · O QUE VOCÊ FEZ DEPOIS");save();
+ setTimeout(()=>{
+  if(bossAct!==2||bossResolved||dialogue.active)return;
+  openLines(story.bossActTwo,()=>{bossShotCd=1.1;save()});
+ },1250);
 }
 function checkBossActTwo(){
  if(bossAct!==2||bossLessonLit.size<4)return;
- bossAct=3;shots.length=0;bossFinalStartedAt=performance.now();banner("ATO III · QUEM CONTINUA");
- openLines(story.bossActThree,save);save();
+ bossAct=3;shots.length=0;bossFinalStartedAt=performance.now();banner("ATO III · QUEM CONTINUA");save();
+ setTimeout(()=>{
+  if(bossAct!==3||bossResolved||dialogue.active)return;
+  openLines(story.bossActThree,save);
+ },650);
 }
 
 function interact(){
@@ -1322,12 +1338,19 @@ function interact(){
   }
  }
 
- if(bossAct===3&&!bossContinued&&Math.abs(pc-11740)<120){
-  bossContinued=true;bossResolved=true;bossReleaseStartedAt=performance.now();banner("CONTINUAR");
-  openLines(story.bossContinue,save);save();return;
+ if(bossAct===3&&!bossContinued&&!bossContinueStartedAt&&Math.abs(pc-11740)<120){
+  bossContinueStartedAt=performance.now();banner("CONTINUAR");
+  p.vx=0;input.left=input.right=input.run=false;
+  setTimeout(()=>{
+   if(bossAct!==3||bossResolved||dialogue.active)return;
+   openLines(story.bossContinue,()=>{
+    bossContinued=true;bossResolved=true;bossReleaseStartedAt=performance.now();save();
+   });
+  },760);
+  return;
  }
 
- if(bossResolved&&Math.abs(pc-12420)<115){
+ if(bossResolved&&bossReleaseFinished()&&Math.abs(pc-12420)<115){
   completePhase();return;
  }
 }
@@ -1361,8 +1384,15 @@ function sectionIntro(idx){
  const map={houses:story.housesIntro,clock:story.clockIntro,garden:story.gardenIntro,city:story.cityIntro};
  if(map[id])setTimeout(()=>{if(!dialogue.active)openLines(map[id],save)},260);
 }
+function bossReleaseFinished(){
+ return !!bossReleaseStartedAt&&((performance.now()-bossReleaseStartedAt)/1000)>=1.35;
+}
+function maybePreloadBoss(){
+ if(!miseravelAssetsStarted&&p.x>9250)ensureMiseravelAssets();
+}
 function startBoss(){
  if(bossStarted||p.x<10980)return;
+ ensureMiseravelAssets();
  bossStarted=true;bossAct=bossAct||1;banner("O MISERÁVEL");
  openLines(story.bossIntro,()=>{bossShotCd=.8;save()});save();
 }
@@ -1443,6 +1473,7 @@ function update(dt){
  }
  updateCheckpoint();
  updateEnemies(dt);
+ maybePreloadBoss();
  startBoss();
  updateBoss(dt);
 
@@ -1740,11 +1771,12 @@ function miseravelImage(){
   if(elapsed<1.35)return seq[Math.min(seq.length-1,Math.floor(elapsed/(1.35/Math.max(1,seq.length))))]||seq[seq.length-1];
   return null;
  }
+ if(bossContinueStartedAt&&!bossResolved){
+  const elapsed=(now-bossContinueStartedAt)/1000;
+  const seq=miseravelSprites.continue;
+  return seq[Math.min(seq.length-1,Math.floor(elapsed/.38))%Math.max(1,seq.length)]||seq[0];
+ }
  if(bossAct===3){
-  if(bossContinued){
-   const seq=miseravelSprites.continue;
-   return seq[Math.floor(now/420)%Math.max(1,seq.length)]||seq[0];
-  }
   const seq=miseravelSprites.final;
   return seq[Math.floor(now/650)%Math.max(1,seq.length)]||seq[0];
  }
@@ -1790,13 +1822,14 @@ function drawBossScene(){
  ctx.fillStyle=veil;ctx.fillRect(10850,180,1750,410);
  if(!bossStarted)return;
 
- if(!drawMiseravelBody(bx)){
+ const bossShouldExist=!(bossResolved&&bossReleaseFinished());
+ if(bossShouldExist&&!drawMiseravelBody(bx)){
   ctx.save();ctx.translate(bx,460);
   ctx.fillStyle=bossAct===3?"#1e1d1a":"#0b0b0c";ctx.shadowColor="rgba(0,0,0,.9)";ctx.shadowBlur=28;
   ctx.beginPath();ctx.moveTo(-70,80);ctx.lineTo(-45,-105);ctx.quadraticCurveTo(0,-190,45,-105);ctx.lineTo(70,80);ctx.closePath();ctx.fill();
   ctx.restore();
  }
- if(!bossResolved){
+ if(!(bossResolved&&bossReleaseFinished())){
   ctx.fillStyle="#d8bd77";ctx.font="700 11px Georgia";ctx.textAlign="center";
   ctx.fillText("O MISERÁVEL",bx,surfaceYAt(bx)-290);
  }
@@ -1811,7 +1844,7 @@ function drawBossScene(){
  if(bossAct===3&&!bossContinued){
   ctx.fillStyle="#f0d488";ctx.font="700 14px Georgia";ctx.textAlign="center";ctx.fillText("E · CONTINUAR",bx,315);
  }
- if(bossResolved){
+ if(bossResolved&&bossReleaseFinished()){
   const lx=12420,gy=surfaceYAt(lx);
   ctx.fillStyle="#e8ba4f";ctx.shadowColor="#e6a43d";ctx.shadowBlur=35;ctx.beginPath();ctx.arc(lx,gy-92,30,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
   ctx.fillStyle="#f0d78e";ctx.font="700 13px Georgia";ctx.textAlign="center";ctx.fillText("A ÚLTIMA LANTERNA",lx,gy-137);
