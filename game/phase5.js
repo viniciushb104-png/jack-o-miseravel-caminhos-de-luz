@@ -604,6 +604,109 @@ Object.entries(PHASE5_BACKGROUND_FILES).forEach(([key,src])=>{
 });
 
 /* --------------------------------------------------------------------------
+   HALLOWEEN V · VISUAIS DOS ENIGMAS E1–E5
+   Os PNGs carregam por seção. A mecânica continua independente dos assets:
+   se uma imagem falhar, o desenho procedural antigo permanece como fallback.
+   -------------------------------------------------------------------------- */
+const PHASE5_PUZZLE_FILES=Object.freeze({
+ houses:[
+  "../assets/game/phase5/puzzles/houses/phase5-house-puzzle-01.png",
+  "../assets/game/phase5/puzzles/houses/phase5-house-puzzle-02.png",
+  "../assets/game/phase5/puzzles/houses/phase5-house-puzzle-03.png",
+  "../assets/game/phase5/puzzles/houses/phase5-house-window-off.png",
+  "../assets/game/phase5/puzzles/houses/phase5-house-window-on.png",
+  "../assets/game/phase5/puzzles/houses/phase5-house-window-cursed.png",
+  "../assets/game/phase5/puzzles/houses/phase5-street-lantern-crooked.png"
+ ],
+ clock:[
+  "../assets/game/phase5/puzzles/clock/phase5-clock-main.png",
+  "../assets/game/phase5/puzzles/clock/phase5-clock-frame.png",
+  "../assets/game/phase5/puzzles/clock/phase5-clock-hand-hour.png",
+  "../assets/game/phase5/puzzles/clock/phase5-clock-hand-minute.png",
+  "../assets/game/phase5/puzzles/clock/phase5-clock-gear-small.png",
+  "../assets/game/phase5/puzzles/clock/phase5-clock-gear-large.png",
+  "../assets/game/phase5/puzzles/clock/phase5-clock-core-now.png"
+ ],
+ garden:[
+  "../assets/game/phase5/puzzles/garden/phase5-memory-letter.png",
+  "../assets/game/phase5/puzzles/garden/phase5-memory-key.png",
+  "../assets/game/phase5/puzzles/garden/phase5-memory-portrait.png",
+  "../assets/game/phase5/puzzles/garden/phase5-memory-pedestal.png",
+  "../assets/game/phase5/puzzles/garden/phase5-memory-glow.png"
+ ],
+ city:[
+  "../assets/game/phase5/puzzles/city/phase5-city-marker-01.png",
+  "../assets/game/phase5/puzzles/city/phase5-city-marker-02.png",
+  "../assets/game/phase5/puzzles/city/phase5-city-marker-03.png",
+  "../assets/game/phase5/puzzles/city/phase5-city-sign-faded.png",
+  "../assets/game/phase5/puzzles/city/phase5-city-memorial.png"
+ ],
+ promise:[
+  "../assets/game/phase5/puzzles/promise/phase5-promise-altar-01.png",
+  "../assets/game/phase5/puzzles/promise/phase5-promise-altar-02.png",
+  "../assets/game/phase5/puzzles/promise/phase5-promise-altar-03.png",
+  "../assets/game/phase5/puzzles/promise/phase5-promise-seal.png",
+  "../assets/game/phase5/puzzles/promise/phase5-promise-flame.png"
+ ]
+});
+const phase5PuzzleCache=new Map();
+function puzzleKey(section,index){return section+":"+index}
+function loadPuzzleAsset(section,index){
+ const src=(PHASE5_PUZZLE_FILES[section]||[])[index];
+ if(!src)return Promise.resolve(null);
+ const key=puzzleKey(section,index);
+ const cached=phase5PuzzleCache.get(key);
+ if(cached?.promise)return cached.promise;
+ const im=new Image();
+ const entry={img:im,ready:false,promise:null};
+ entry.promise=new Promise(resolve=>{
+  im.onload=()=>{entry.ready=true;resolve(entry)};
+  im.onerror=()=>{entry.ready=false;resolve(null)};
+ });
+ phase5PuzzleCache.set(key,entry);
+ im.src=src+"?v=1";
+ return entry.promise;
+}
+function ensurePuzzleSection(section){
+ const files=PHASE5_PUZZLE_FILES[section]||[];
+ return Promise.allSettled(files.map((_,i)=>loadPuzzleAsset(section,i)));
+}
+function puzzleImg(section,index){
+ const e=phase5PuzzleCache.get(puzzleKey(section,index));
+ return e?.ready?e.img:null;
+}
+function ensurePuzzleWindow(index){
+ const ids=[];
+ for(const n of [index-1,index,index+1]){
+  if(n>=0&&n<SECTIONS.length)ids.push(SECTIONS[n].id);
+ }
+ ids.forEach(id=>{if(PHASE5_PUZZLE_FILES[id])ensurePuzzleSection(id)});
+ for(const [key,entry] of phase5PuzzleCache){
+  const sec=key.split(":")[0];
+  if(!ids.includes(sec)){
+   try{entry.img.src=""}catch(_){}
+   phase5PuzzleCache.delete(key);
+  }
+ }
+}
+function drawPuzzleBottom(im,cx,bottom,targetH,alpha=1,flip=false){
+ if(!im||!im.complete||!(im.naturalWidth||im.width))return false;
+ const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+ const w=targetH*(iw/ih);
+ ctx.save();ctx.globalAlpha=alpha;ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";
+ if(flip){ctx.translate(cx,0);ctx.scale(-1,1);ctx.drawImage(im,-w/2,bottom-targetH,w,targetH)}
+ else ctx.drawImage(im,cx-w/2,bottom-targetH,w,targetH);
+ ctx.restore();return true;
+}
+function drawPuzzleCentered(im,cx,cy,targetH,alpha=1,rotation=0){
+ if(!im||!im.complete||!(im.naturalWidth||im.width))return false;
+ const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height,w=targetH*(iw/ih);
+ ctx.save();ctx.translate(cx,cy);ctx.rotate(rotation);ctx.globalAlpha=alpha;
+ ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";
+ ctx.drawImage(im,-w/2,-targetH/2,w,targetH);ctx.restore();return true;
+}
+
+/* --------------------------------------------------------------------------
    HALLOWEEN V · SISTEMA VISUAL DE PLATAFORMAS
    A física continua usando GROUND/PLATFORMS. As artes abaixo vestem essa
    geometria sem alterar colisão, puzzles ou checkpoints.
@@ -748,6 +851,7 @@ function ensurePhase5PlatformWindow(index){
   if(n>=0&&n<SECTIONS.length)ids.push(SECTIONS[n].id);
  }
  ids.forEach(id=>ensurePhase5PlatformSection(id));
+ ensurePuzzleWindow(index);
  // Mantém no máximo a vizinhança imediata em memória.
  for(const [key,entry] of phase5PlatformCache){
   const sec=key.split(":")[0];
@@ -1770,53 +1874,100 @@ function drawSectionProps(){
   }
  }
  if(sec==="houses"){
-  // As casas agora pertencem ao panorama final; em primeiro plano ficam apenas
-  // as cinco lanternas que fazem parte do enigma.
+  const houseXs=[1980,2550,3130];
+  houseXs.forEach((x,i)=>{
+   drawPuzzleBottom(puzzleImg("houses",i),x,592,i===1?340:315,.72,i===2);
+  });
+  drawPuzzleBottom(puzzleImg("houses",6),1755,592,245,.86);
   housesLamps.forEach((l,i)=>{
    const gy=surfaceYAt(l.x);
-   ctx.fillStyle="#332718";ctx.fillRect(l.x-4,gy-90,8,90);
-   ctx.fillStyle=l.on?(l.type==="path"?"#e7c064":"#e28b49"):"#302a24";
-   ctx.shadowColor=l.on?"#d89a48":"transparent";ctx.shadowBlur=l.on?18:0;
-   ctx.beginPath();ctx.arc(l.x,gy-98,14,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
-   ctx.fillStyle="rgba(240,225,180,.7)";ctx.font="10px Georgia";ctx.textAlign="center";ctx.fillText(l.type==="path"?"ESTRADA":"JANELA",l.x,gy-125);
+   const correct=l.type==="path"?l.on:!l.on;
+   const windowIndex=correct?(l.on?4:3):5;
+   const drew=drawPuzzleBottom(puzzleImg("houses",windowIndex),l.x,gy-30,112,1);
+   if(!drew){
+    ctx.fillStyle="#332718";ctx.fillRect(l.x-4,gy-90,8,90);
+    ctx.fillStyle=l.on?(l.type==="path"?"#e7c064":"#e28b49"):"#302a24";
+    ctx.shadowColor=l.on?"#d89a48":"transparent";ctx.shadowBlur=l.on?18:0;
+    ctx.beginPath();ctx.arc(l.x,gy-98,14,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
+   }
+   ctx.fillStyle=correct?"rgba(240,225,180,.82)":"rgba(238,151,112,.88)";
+   ctx.font="700 10px Georgia";ctx.textAlign="center";
+   ctx.fillText(l.type==="path"?"ESTRADA":"JANELA",l.x,gy-145);
   });
  }
  if(sec==="clock"){
-  const cx=4450,cy=330;ctx.strokeStyle="#8a744c";ctx.lineWidth=12;ctx.beginPath();ctx.arc(cx,cy,150,0,Math.PI*2);ctx.stroke();
-  ["ANTES","ONTEM","AGORA","DEPOIS"].forEach((t,i)=>{const a=-Math.PI/2+i*Math.PI/2;ctx.fillStyle=t==="AGORA"&&clockSolved?"#f0ca70":"#95856b";ctx.font="700 16px Georgia";ctx.textAlign="center";ctx.fillText(t,cx+Math.cos(a)*205,cy+Math.sin(a)*185)});
-  const hand=clockSolved?0:Math.sin(performance.now()/450)*1.3;ctx.strokeStyle="#e0b85b";ctx.lineWidth=6;ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+Math.cos(hand-Math.PI/2)*105,cy+Math.sin(hand-Math.PI/2)*105);ctx.stroke();
+  const cx=4450,cy=330,now=performance.now();
+  const main=puzzleImg("clock",0),frame=puzzleImg("clock",1),hour=puzzleImg("clock",2),minute=puzzleImg("clock",3);
+  const gearS=puzzleImg("clock",4),gearL=puzzleImg("clock",5),core=puzzleImg("clock",6);
+  drawPuzzleCentered(gearL,cx-185,390,165,.34,now/3200);
+  drawPuzzleCentered(gearS,cx+190,415,125,.30,-now/2500);
+  const drew=drawPuzzleCentered(frame,cx,365,435,.96);
+  if(!drew)drawPuzzleCentered(main,cx,365,440,.9);
+  ["ANTES","ONTEM","AGORA","DEPOIS"].forEach((t,i)=>{
+   const a=-Math.PI/2+i*Math.PI/2;
+   ctx.fillStyle=t==="AGORA"&&clockSolved?"#f5d77d":"#b09b76";
+   ctx.font="700 15px Georgia";ctx.textAlign="center";
+   ctx.fillText(t,cx+Math.cos(a)*210,cy+Math.sin(a)*188);
+  });
+  if(clockSolved){
+   drawPuzzleCentered(core,cx,330,175,.92);
+  }else{
+   const swing=Math.sin(now/450)*.72;
+   drawPuzzleCentered(hour,cx,330,180,.92,swing-.22);
+   drawPuzzleCentered(minute,cx,330,225,.94,-swing*.8+.35);
+  }
   clockMirrors.forEach(m=>drawMirror(m,clockCharged.has(m.node)));
  }
  if(sec==="garden"){
-  ctx.strokeStyle="#34412e";ctx.lineWidth=14;for(let x=5450;x<7300;x+=310){ctx.beginPath();ctx.moveTo(x,FLOOR);ctx.quadraticCurveTo(x-45,440,x+20,340);ctx.stroke()}
+  ctx.strokeStyle="#34412e";ctx.lineWidth=12;for(let x=5450;x<7300;x+=310){ctx.beginPath();ctx.moveTo(x,FLOOR);ctx.quadraticCurveTo(x-45,440,x+20,340);ctx.stroke()}
+  const itemAsset={letter:0,key:1,portrait:2};
   gardenItems.forEach(it=>{
-   const iy=groundYAt(it.x),my=groundYAt(it.memorialX);
-   if(!gardenPlaced.has(it.id)&&carriedItem!==it.id){
-    ctx.fillStyle="#b79a63";ctx.fillRect(it.x-18,iy-52,36,30);ctx.fillStyle="#ead595";ctx.font="10px Georgia";ctx.textAlign="center";ctx.fillText(it.title,it.x,iy-65);
+   const iy=groundYAt(it.x),my=groundYAt(it.memorialX),placed=gardenPlaced.has(it.id);
+   if(!placed&&carriedItem!==it.id){
+    const h=it.id==="key"?112:98;
+    if(!drawPuzzleBottom(puzzleImg("garden",itemAsset[it.id]),it.x,iy-12,h,.98)){
+     ctx.fillStyle="#b79a63";ctx.fillRect(it.x-18,iy-52,36,30);
+    }
+    ctx.fillStyle="#ead595";ctx.font="700 10px Georgia";ctx.textAlign="center";ctx.fillText(it.title,it.x,iy-122);
    }
-   ctx.strokeStyle=gardenPlaced.has(it.id)?"#d3b567":"#655a44";ctx.lineWidth=3;ctx.strokeRect(it.memorialX-34,my-70,68,70);
+   drawPuzzleBottom(puzzleImg("garden",3),it.memorialX,my+6,150,placed?1:.68);
+   if(placed){
+    const pulse=.56+.15*(.5+.5*Math.sin(performance.now()/420+it.memorialX));
+    drawPuzzleBottom(puzzleImg("garden",4),it.memorialX,my-10,145,pulse);
+    drawPuzzleBottom(puzzleImg("garden",itemAsset[it.id]),it.memorialX,my-72,it.id==="key"?72:64,.92);
+   }
   });
   gardenMirrors.forEach(m=>drawMirror(m,false));
  }
  if(sec==="city"){
-  // Fachadas, parque e circo já estão no cenário final; mantemos apenas
-  // as quatro marcas jogáveis da identidade de Jack.
+  const markerMap=[0,1,2,3];
   cityMarks.forEach((m,i)=>{
-   const gy=surfaceYAt(m.x);
-   ctx.strokeStyle=cityLit.has(i)?"#e3c66e":"#5a5144";ctx.lineWidth=3;ctx.strokeRect(m.x-62,gy-70,124,46);
-   ctx.fillStyle=cityLit.has(i)?"#ead58d":"#786d58";ctx.font="700 11px Georgia";ctx.textAlign="center";ctx.fillText(m.label,m.x,gy-42);
+   const gy=surfaceYAt(m.x),lit=cityLit.has(i);
+   const h=i===3?175:160;
+   drawPuzzleBottom(puzzleImg("city",markerMap[i]),m.x,gy+8,h,lit?1:.72);
+   if(lit){
+    ctx.save();ctx.globalCompositeOperation="screen";ctx.fillStyle="rgba(239,195,91,.22)";
+    ctx.beginPath();ctx.arc(m.x,gy-82,58,0,Math.PI*2);ctx.fill();ctx.restore();
+   }
+   ctx.fillStyle=lit?"#f0d083":"#9c8b70";ctx.font="700 11px Georgia";ctx.textAlign="center";
+   ctx.fillText(m.label,m.x,gy-174);
   });
+  drawPuzzleBottom(puzzleImg("city",4),9280,groundYAt(9280)+8,205,.58);
   drawMirror(cityAshMirror,false);
  }
  if(sec==="promise"){
-  ctx.strokeStyle="rgba(184,153,91,.3)";ctx.lineWidth=5;
   const promiseGround=groundYAt(10100);
-  for(let i=-3;i<=3;i++){ctx.beginPath();ctx.moveTo(10100,promiseGround);ctx.lineTo(10100+i*440,260);ctx.stroke()}
+  const seal=puzzleImg("promise",3);
+  drawPuzzleCentered(seal,10100,365,300,.28);
   promiseAltars.forEach((a,i)=>{
-   const gy=groundYAt(a.x),on=i<promiseStep;
-   ctx.fillStyle=on?"#d9b65f":"#3f392f";ctx.fillRect(a.x-4,gy-90,8,90);
-   ctx.beginPath();ctx.arc(a.x,gy-98,17,0,Math.PI*2);ctx.fill();
-   ctx.fillStyle=on?"#efd48b":"#776a54";ctx.font="10px Georgia";ctx.textAlign="center";ctx.fillText(a.label,a.x,gy-135);
+   const gy=groundYAt(a.x),on=i<promiseStep,altar=puzzleImg("promise",i%3);
+   drawPuzzleBottom(altar,a.x,gy+8,165,on?1:.74,i===3);
+   if(on){
+    const pulse=.72+.10*(.5+.5*Math.sin(performance.now()/360+i));
+    drawPuzzleBottom(puzzleImg("promise",4),a.x,gy-18,115,pulse);
+   }
+   ctx.fillStyle=on?"#f1d48c":"#9a8a70";ctx.font="700 10px Georgia";ctx.textAlign="center";
+   ctx.fillText(a.label,a.x,gy-178);
   });
  }
  if(sec==="final"){
