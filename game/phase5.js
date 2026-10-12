@@ -871,21 +871,21 @@ const ambient=new Audio();
 ambient.loop=true;ambient.preload="metadata";ambient.volume=.40;
 // Sino diegético da Estrada que Volta: independente da trilha, sem sobreposições.
 const roadBell=new Audio("../assets/audio/fase5/f5-bell-distant.wav");
-roadBell.preload="auto";roadBell.volume=.48;
+roadBell.preload="auto";roadBell.volume=1;
 let roadBellElapsed=0;
 function stopRoadBell(){
  roadBell.pause();
  try{roadBell.currentTime=0}catch(_){}
 }
 function ringRoadBell(){
- if(!running||!musicOn||document.hidden||phase5Complete||ending||currentSection().id!=="return")return;
+ if(!running||document.hidden||phase5Complete||ending||currentSection().id!=="return")return;
  if(!roadBell.paused)return;
- roadBell.volume=.40;
+ roadBell.volume=1;
  try{roadBell.currentTime=0}catch(_){}
  roadBell.play().catch(()=>{});
 }
 function updateRoadBell(dt){
- if(!musicOn||document.hidden||currentSection().id!=="return"||phase5Complete){
+ if(document.hidden||currentSection().id!=="return"||phase5Complete){
   if(!roadBell.paused)stopRoadBell();
   roadBellElapsed=0;
   return;
@@ -897,6 +897,13 @@ function updateRoadBell(dt){
   ringRoadBell();
  }
 }
+// A badalada é efeito da história: deve ser ouvida mesmo com a música desligada.
+roadBell.addEventListener("play",()=>{
+ if(musicOn&&phase5MusicKey==="return"&&!ambient.paused)ambient.volume=Math.min(ambient.volume,.12);
+});
+roadBell.addEventListener("ended",()=>{
+ if(musicOn&&phase5MusicKey==="return"&&!ambient.paused)ambient.volume=PHASE5_MUSIC.return.volume;
+});
 let musicOn=localStorage.getItem("jack-phase5-music-muted")!=="1";
 let phase5MusicKey="",phase5MusicFadeToken=0;
 const musicBtn=document.getElementById("phase5MusicToggle");
