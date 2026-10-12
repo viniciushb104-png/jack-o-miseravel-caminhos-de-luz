@@ -421,6 +421,9 @@
   ];
 
   const original=new WeakMap();
+  // Record the exact text produced by the translator. MutationObserver must
+  // ignore these internal writes but still respond to real game UI changes.
+  const lastRendered=new WeakMap();
   function lang(){return currentLang()}
   function tr(value){
     if(!BASE()||typeof value!=='string')return value;
@@ -459,7 +462,9 @@
     for(const n of nodes){
       if(!original.has(n))original.set(n,n.nodeValue);
       const src=original.get(n);
-      n.nodeValue=BASE()?tr(src):src;
+      const next=BASE()?tr(src):src;
+      lastRendered.set(n,next);
+      if(n.nodeValue!==next)n.nodeValue=next;
     }
     if(root.querySelectorAll){
       root.querySelectorAll('[aria-label],[title],[alt]').forEach(el=>{
@@ -505,8 +510,18 @@
     document.documentElement.lang=lang();window.JackLocale?.localizeStories(lang());addStyle();injectSwitcher();translateNode(document.body);
     if(BASE()){
       const observer=new MutationObserver(records=>records.forEach(r=>{
-        if(r.type==='characterData')translateNode(r.target);
-        r.addedNodes.forEach(n=>{if(n.nodeType===Node.ELEMENT_NODE||n.nodeType===Node.TEXT_NODE)translateNode(n)});
+        if(r.type==='characterData'){
+          const node=r.target;
+          // This is our own translation write, not a new game message.
+          if(lastRendered.has(node)&&lastRendered.get(node)===node.nodeValue)return;
+          // New dialogue/objective from the game becomes the new source.
+          original.set(node,node.nodeValue);
+          translateNode(node);
+          return;
+        }
+        r.addedNodes.forEach(n=>{
+          if(n.nodeType===Node.ELEMENT_NODE||n.nodeType===Node.TEXT_NODE)translateNode(n);
+        });
       }));
       observer.observe(document.body,{childList:true,subtree:true,characterData:true});
     }
