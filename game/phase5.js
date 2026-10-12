@@ -191,7 +191,7 @@ let phase5Complete=(!forceNew&&!replayMode)&&(
 
 const p={x:Number(state.px)||150,y:Number(state.py)||480,w:44,h:86,vx:0,vy:0,on:false,dir:1,anim:0,attack:0,inv:0};
 let life=3,cam=0,running=false,last=performance.now(),sectionIndex=-1,lightPulse=0,lightCooldown=0;
-let reflectedFx=[],hazards=[],shots=[],bossImpacts=[],enemyDissolves=[],messageTimer=0,bannerTimer=0,bossShotCd=1.2,ending=false,autosaveTimer=0;
+let reflectedFx=[],mirrorHitFx=[],hazards=[],shots=[],bossImpacts=[],enemyDissolves=[],messageTimer=0,bannerTimer=0,bossShotCd=1.2,ending=false,autosaveTimer=0;
 let bossShootFx=0,bossTransformStartedAt=0,bossFinalStartedAt=0,bossContinueStartedAt=0,bossReleaseStartedAt=0;
 let roadOpenFxStartedAt=0;
 let checkpointActivation={id:"",startedAt:0,duration:900};
@@ -552,6 +552,63 @@ function ensureMiseravelAssets(){
  });
  miseravelAssetsPromise=Promise.allSettled(jobs);
  return miseravelAssetsPromise;
+}
+
+// ---------------------------------------------------------------------------
+// FASE 5 · ESPELHOS E REFLEXOS — LOTES M1/M2/M3
+// Carregamento preguiçoso: só entra em memória quando Jack chega às áreas
+// que usam espelhos. A lógica continua funcionando mesmo sem os PNGs.
+// ---------------------------------------------------------------------------
+const MIRROR_VISUAL_FILES=Object.freeze({
+ mirrors:[
+  "../assets/game/phase5/mirrors/mirrors/phase5-mirror-idle.png?v=1",
+  "../assets/game/phase5/mirrors/mirrors/phase5-mirror-charge-01.png?v=1",
+  "../assets/game/phase5/mirrors/mirrors/phase5-mirror-charge-02.png?v=1",
+  "../assets/game/phase5/mirrors/mirrors/phase5-mirror-charge-03.png?v=1",
+  "../assets/game/phase5/mirrors/mirrors/phase5-mirror-reflect-base.png?v=1"
+ ],
+ beams:[
+  "../assets/game/phase5/mirrors/beams/phase5-reflection-beam-right.png?v=1",
+  "../assets/game/phase5/mirrors/beams/phase5-reflection-beam-left.png?v=1",
+  "../assets/game/phase5/mirrors/beams/phase5-reflection-beam-up-right.png?v=1",
+  "../assets/game/phase5/mirrors/beams/phase5-reflection-beam-up-left.png?v=1",
+  "../assets/game/phase5/mirrors/beams/phase5-reflection-beam-impact.png?v=1"
+ ],
+ fx:[
+  "../assets/game/phase5/mirrors/fx/phase5-mirror-hit-fx-01.png?v=1",
+  "../assets/game/phase5/mirrors/fx/phase5-mirror-hit-fx-02.png?v=1",
+  "../assets/game/phase5/mirrors/fx/phase5-mirror-hit-fx-03.png?v=1",
+  "../assets/game/phase5/mirrors/fx/phase5-enemy-reflect-dissolve-01.png?v=1",
+  "../assets/game/phase5/mirrors/fx/phase5-enemy-reflect-dissolve-02.png?v=1"
+ ]
+});
+const mirrorVisuals={mirrors:[],beams:[],fx:[]};
+let mirrorVisualsStarted=false,mirrorVisualsPromise=null;
+function ensureMirrorVisuals(){
+ if(mirrorVisualsPromise)return mirrorVisualsPromise;
+ mirrorVisualsStarted=true;
+ const jobs=[];
+ Object.entries(MIRROR_VISUAL_FILES).forEach(([group,files])=>{
+  files.forEach((src,index)=>{
+   const im=new Image();
+   mirrorVisuals[group][index]=im;
+   jobs.push(new Promise(resolve=>{
+    im.onload=()=>resolve(im);
+    im.onerror=()=>resolve(null);
+   }));
+   im.src=src;
+  });
+ });
+ mirrorVisualsPromise=Promise.allSettled(jobs);
+ return mirrorVisualsPromise;
+}
+function mirrorVisualImg(group,index){
+ const im=mirrorVisuals[group]?.[index];
+ return im&&im.complete&&(im.naturalWidth||im.width)?im:null;
+}
+function maybePreloadMirrorVisuals(){
+ const id=currentSection().id;
+ if(!mirrorVisualsStarted&&["clock","garden","city","final"].includes(id))ensureMirrorVisuals();
 }
 
 // ---------------------------------------------------------------------------
@@ -1282,20 +1339,18 @@ function hurtPlayer(sourceX){
  if(life<=0)setTimeout(respawn,180);
  syncHud();
 }
-function killEnemy(e){
- if(e.kind==="shadow"){
+function killEnemy(e,reflected=false){
+ if(e.kind==="ash"&&reflected){
+  enemyDissolves.push({kind:"reflect",x:e.x,y:e.y,dir:e.vx<0?-1:1,t:.86,maxT:.86});
+ }else if(e.kind==="shadow"){
   enemyDissolves.push({kind:"shadow",x:e.x,y:e.y,dir:e.vx<0?-1:1,t:.48,maxT:.48});
- }
- if(e.kind==="witness"){
+ }else if(e.kind==="witness"){
   enemyDissolves.push({kind:"witness",x:e.x,y:e.y,dir:e.vx<0?-1:1,t:.62,maxT:.62});
- }
- if(e.kind==="repeater"){
+ }else if(e.kind==="repeater"){
   enemyDissolves.push({kind:"repeater",x:e.x,y:e.y,dir:e.vx<0?-1:1,t:.56,maxT:.56});
- }
- if(e.kind==="ash"){
+ }else if(e.kind==="ash"){
   enemyDissolves.push({kind:"ash",x:e.x,y:e.y,dir:e.vx<0?-1:1,t:.66,maxT:.66});
- }
- if(e.kind==="accuser"){
+ }else if(e.kind==="accuser"){
   enemyDissolves.push({kind:"accuser",x:e.x,y:e.y,dir:e.vx<0?-1:1,t:.62,maxT:.62,label:e.label});
  }
  deadEnemies.add(e.id);e.dead=true;banner(e.label+" · DISSIPADO");
@@ -1309,10 +1364,13 @@ function damageEnemy(e,reflected=false){
   say("A lanterna apagada absorveu a Luz. Tente refletir o facho.");
   return true;
  }
+ if(reflected){
+  mirrorHitFx.push({x:e.x,y:e.y-72,t:.34,maxT:.34});
+ }
  e.hp--;
  e.hit=e.kind==="ash"&&reflected?.34:.24;
  e.x+=p.dir*24;
- if(e.hp<=0)killEnemy(e);
+ if(e.hp<=0)killEnemy(e,reflected);
  return true;
 }
 function updateEnemies(dt){
@@ -1410,7 +1468,8 @@ function useLight(){
  const pc=p.x+p.w/2,pcy=p.y+p.h*.48;
  const mirror=nearestMirror();
  if(mirror){
-  reflectedFx.push({x1:pc,y1:pcy,x2:mirror.x,y2:mirror.y,x3:mirror.targetX,y3:mirror.targetY,t:.35});
+  ensureMirrorVisuals();
+  reflectedFx.push({x1:pc,y1:pcy,x2:mirror.x,y2:mirror.y,x3:mirror.targetX,y3:mirror.targetY,mx:mirror.x,my:mirror.y,t:.52,maxT:.52});
   if(Number.isFinite(mirror.node)&&currentSection().id==="clock"){
    clockCharged.add(mirror.node);banner("REFLEXO "+clockCharged.size+"/3");checkClockSolved();save();
   }
@@ -1651,12 +1710,15 @@ function update(dt){
  }
  updateCheckpoint();
  updateEnemies(dt);
+ maybePreloadMirrorVisuals();
  maybePreloadBoss();
  startBoss();
  updateBoss(dt);
 
  for(const fx of reflectedFx)fx.t-=dt;
  reflectedFx=reflectedFx.filter(f=>f.t>0);
+ for(const fx of mirrorHitFx)fx.t-=dt;
+ mirrorHitFx=mirrorHitFx.filter(f=>f.t>0);
 
  cam+=(Math.max(0,Math.min(WORLD-W,p.x-W*.38))-cam)*Math.min(1,dt*6);
  syncHud();
@@ -1987,6 +2049,25 @@ function drawSectionProps(){
  ctx.restore();
 }
 function drawMirror(m,charged){
+ const active=reflectedFx.find(f=>Math.abs(f.mx-m.x)<2&&Math.abs(f.my-m.y)<2&&f.t>0);
+ let im=null;
+ if(active){
+  const elapsed=(active.maxT-active.t);
+  if(elapsed<.20){
+   const seq=[mirrorVisualImg("mirrors",1),mirrorVisualImg("mirrors",2),mirrorVisualImg("mirrors",3)].filter(Boolean);
+   if(seq.length)im=seq[Math.min(seq.length-1,Math.floor(elapsed/.20*seq.length))];
+  }else im=mirrorVisualImg("mirrors",4);
+ }else if(charged)im=mirrorVisualImg("mirrors",4);
+ else im=mirrorVisualImg("mirrors",0);
+
+ if(im){
+  const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+  const h=156,w=h*(iw/ih);
+  ctx.save();ctx.translate(m.x,m.y+12);ctx.rotate(-.09);
+  if(active||charged){ctx.shadowColor="#f1c765";ctx.shadowBlur=active?28:15}
+  ctx.drawImage(im,-w/2,-h+12,w,h);ctx.restore();
+  return;
+ }
  ctx.save();ctx.translate(m.x,m.y);ctx.rotate(-.22);
  ctx.fillStyle="#251f1b";ctx.fillRect(-8,-48,16,48);
  ctx.fillStyle=charged?"rgba(244,215,139,.75)":"rgba(174,187,184,.35)";ctx.strokeStyle="#8a7654";ctx.lineWidth=4;ctx.fillRect(-30,-92,60,52);ctx.strokeRect(-30,-92,60,52);
@@ -2287,6 +2368,21 @@ function drawAccuserDissolves(){
   ctx.restore();
  }
 }
+function drawReflectDissolves(){
+ for(const fx of enemyDissolves){
+  if(fx.kind!=="reflect")continue;
+  const seq=[mirrorVisualImg("fx",3),mirrorVisualImg("fx",4)].filter(Boolean);
+  if(!seq.length)continue;
+  const elapsed=fx.maxT-fx.t;
+  const im=seq[Math.min(seq.length-1,Math.floor(elapsed/fx.maxT*seq.length))]||seq[0];
+  const q=Math.max(0,Math.min(1,fx.t/fx.maxT));
+  const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+  const h=240,w=h*(iw/ih);
+  ctx.save();ctx.translate(fx.x,fx.y-75);ctx.globalAlpha=Math.min(1,q*1.25);
+  ctx.globalCompositeOperation="screen";
+  ctx.drawImage(im,-w/2,-h/2,w,h);ctx.restore();
+ }
+}
 function drawEnemies(){
  ctx.save();ctx.translate(-cam,0);
  drawShadowDissolves();
@@ -2294,6 +2390,7 @@ function drawEnemies(){
  drawRepeaterDissolves();
  drawAshDissolves();
  drawAccuserDissolves();
+ drawReflectDissolves();
  for(const e of enemies){
   if(e.dead||!enemyActive(e))continue;
   const y=e.y,hit=e.hit>0;
@@ -2386,6 +2483,35 @@ function drawJack(){
  }
  ctx.restore();
 }
+function drawReflectionBeamSprite(f){
+ const dx=f.x3-f.x2,dy=f.y3-f.y2,len=Math.max(1,Math.hypot(dx,dy));
+ const angle=Math.atan2(dy,dx);
+ const mostlyHorizontal=Math.abs(dy)<60;
+ let im;
+ if(mostlyHorizontal)im=mirrorVisualImg("beams",dx>=0?0:1);
+ else im=mirrorVisualImg("beams",dx>=0?2:3);
+ if(!im)return false;
+ const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+ const a=Math.max(0,Math.min(1,f.t/f.maxT));
+ const h=mostlyHorizontal?82:96;
+ ctx.save();ctx.translate(f.x2,f.y2);ctx.rotate(angle);
+ ctx.globalAlpha=.72*a;ctx.globalCompositeOperation="screen";
+ ctx.shadowColor="#f6d37a";ctx.shadowBlur=18;
+ ctx.drawImage(im,0,-h/2,len,h);
+ ctx.restore();return true;
+}
+function drawMirrorImpactFx(){
+ for(const fx of mirrorHitFx){
+  const elapsed=fx.maxT-fx.t;
+  const seq=[mirrorVisualImg("fx",0),mirrorVisualImg("fx",1),mirrorVisualImg("fx",2)].filter(Boolean);
+  const im=seq.length?seq[Math.min(seq.length-1,Math.floor(elapsed/fx.maxT*seq.length))]:mirrorVisualImg("beams",4);
+  if(!im)continue;
+  const a=Math.max(0,Math.min(1,fx.t/fx.maxT)),iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+  const h=150,w=h*(iw/ih);
+  ctx.save();ctx.globalAlpha=a;ctx.globalCompositeOperation="screen";
+  ctx.drawImage(im,fx.x-w/2,fx.y-h/2,w,h);ctx.restore();
+ }
+}
 function drawLight(){
  const pc=p.x-cam+p.w/2,pcy=p.y+p.h*.5;
  if(lightPulse>0){
@@ -2393,8 +2519,18 @@ function drawLight(){
   const g=ctx.createRadialGradient(pc,pcy,10,pc,pcy,260);g.addColorStop(0,"rgba(255,225,140,"+(.55*a)+")");g.addColorStop(1,"rgba(255,225,140,0)");
   ctx.fillStyle=g;ctx.beginPath();ctx.arc(pc,pcy,260,0,Math.PI*2);ctx.fill();ctx.restore();
  }
- ctx.save();ctx.translate(-cam,0);ctx.globalCompositeOperation="screen";
- reflectedFx.forEach(f=>{const a=f.t/.35;ctx.strokeStyle="rgba(255,224,145,"+(.72*a)+")";ctx.lineWidth=5;ctx.shadowColor="#efc76b";ctx.shadowBlur=15;ctx.beginPath();ctx.moveTo(f.x1,f.y1);ctx.lineTo(f.x2,f.y2);ctx.lineTo(f.x3,f.y3);ctx.stroke()});
+ ctx.save();ctx.translate(-cam,0);
+ reflectedFx.forEach(f=>{
+  const a=f.t/f.maxT;
+  ctx.save();ctx.globalCompositeOperation="screen";
+  ctx.strokeStyle="rgba(255,224,145,"+(.68*a)+")";ctx.lineWidth=4;ctx.shadowColor="#efc76b";ctx.shadowBlur=14;
+  ctx.beginPath();ctx.moveTo(f.x1,f.y1);ctx.lineTo(f.x2,f.y2);ctx.stroke();ctx.restore();
+  if(!drawReflectionBeamSprite(f)){
+   ctx.save();ctx.globalCompositeOperation="screen";ctx.strokeStyle="rgba(255,224,145,"+(.82*a)+")";ctx.lineWidth=7;ctx.shadowColor="#efc76b";ctx.shadowBlur=18;
+   ctx.beginPath();ctx.moveTo(f.x2,f.y2);ctx.lineTo(f.x3,f.y3);ctx.stroke();ctx.restore();
+  }
+ });
+ drawMirrorImpactFx();
  ctx.restore();
 }
 function draw(){
