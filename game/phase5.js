@@ -413,6 +413,51 @@ Object.entries(ASH_BEARER_FILES).forEach(([state,files])=>{
 const ashBearerAssetsReady=Promise.allSettled(ashBearerReady);
 
 // ---------------------------------------------------------------------------
+// FASE 5 · ACUSADORES
+// Lote 5: quatro variações narrativas — MENTIROSO, COVARDE, AVARENTO, MISERÁVEL.
+// ---------------------------------------------------------------------------
+const ACCUSER_FILES=Object.freeze({
+ idle:[
+  "../assets/game/phase5/enemies/accusers/accuser-idle-01.png?v=1",
+  "../assets/game/phase5/enemies/accusers/accuser-idle-02.png?v=1"
+ ],
+ covarde:[
+  "../assets/game/phase5/enemies/accusers/accuser-covarde-01.png?v=1"
+ ],
+ avarento:[
+  "../assets/game/phase5/enemies/accusers/accuser-avarento-01.png?v=1"
+ ],
+ point:[
+  "../assets/game/phase5/enemies/accusers/accuser-point-01.png?v=1"
+ ],
+ attack:[
+  "../assets/game/phase5/enemies/accusers/accuser-attack-01.png?v=1",
+  "../assets/game/phase5/enemies/accusers/accuser-attack-02.png?v=1",
+  "../assets/game/phase5/enemies/accusers/accuser-attack-03.png?v=1"
+ ],
+ hit:[
+  "../assets/game/phase5/enemies/accusers/accuser-hit-01.png?v=1"
+ ],
+ dissolve:[
+  "../assets/game/phase5/enemies/accusers/accuser-dissolve-01.png?v=1"
+ ]
+});
+const accuserSprites={idle:[],covarde:[],avarento:[],point:[],attack:[],hit:[],dissolve:[]};
+const accuserReady=[];
+Object.entries(ACCUSER_FILES).forEach(([state,files])=>{
+ files.forEach((src,index)=>{
+  const im=new Image();
+  accuserSprites[state][index]=im;
+  accuserReady.push(new Promise(resolve=>{
+   im.onload=()=>resolve(im);
+   im.onerror=()=>resolve(null);
+  }));
+  im.src=src;
+ });
+});
+const accuserAssetsReady=Promise.allSettled(accuserReady);
+
+// ---------------------------------------------------------------------------
 // FASE 5 · LANTERNA DE VIGÍLIA
 // Checkpoint narrativo: apagado quando inativo, acendimento em 3 estágios e
 // abóbora iluminada quando é o ponto de retorno atual.
@@ -713,6 +758,7 @@ window.__PHASE_ASSETS_READY=Promise.allSettled([
  witnessBlindAssetsReady,
  repeaterAssetsReady,
  ashBearerAssetsReady,
+ accuserAssetsReady,
  phase5CheckpointAssetsReady
 ]);
 
@@ -942,7 +988,7 @@ function respawn(){
 }
 
 function makeEnemy(id,kind,x,minX,maxX,hp,label){
- return {id,kind,x,y:0,minX,maxX,hp,maxHp:hp,label,dir:-1,vx:0,cd:.7,t:0,hit:0,attackFx:0,dashFx:0,absorbFx:0};
+ return {id,kind,x,y:0,minX,maxX,hp,maxHp:hp,label,dir:-1,vx:0,cd:.7,t:0,hit:0,attackFx:0,dashFx:0,absorbFx:0,pointFx:0};
 }
 const enemies=[
  makeEnemy("shadow-1","shadow",980,720,1400,2,"SOMBRA DE RETORNO"),
@@ -998,6 +1044,9 @@ function killEnemy(e){
  if(e.kind==="ash"){
   enemyDissolves.push({kind:"ash",x:e.x,y:e.y,dir:e.vx<0?-1:1,t:.66,maxT:.66});
  }
+ if(e.kind==="accuser"){
+  enemyDissolves.push({kind:"accuser",x:e.x,y:e.y,dir:e.vx<0?-1:1,t:.62,maxT:.62,label:e.label});
+ }
  deadEnemies.add(e.id);e.dead=true;banner(e.label+" · DISSIPADO");
  if(e.id==="accuser-4")checkCitySolved();
  save();
@@ -1019,7 +1068,7 @@ function updateEnemies(dt){
  const pc=p.x+p.w/2;
  for(const e of enemies){
   if(e.dead||!enemyActive(e))continue;
-  e.cd=Math.max(0,e.cd-dt);e.hit=Math.max(0,e.hit-dt);e.attackFx=Math.max(0,e.attackFx-dt);e.dashFx=Math.max(0,e.dashFx-dt);e.absorbFx=Math.max(0,e.absorbFx-dt);e.t+=dt;
+  e.cd=Math.max(0,e.cd-dt);e.hit=Math.max(0,e.hit-dt);e.attackFx=Math.max(0,e.attackFx-dt);e.dashFx=Math.max(0,e.dashFx-dt);e.absorbFx=Math.max(0,e.absorbFx-dt);e.pointFx=Math.max(0,e.pointFx-dt);e.t+=dt;
   const dx=pc-e.x,ad=Math.abs(dx),sg=Math.sign(dx)||1;
   e.y=enemyGroundY(e);
 
@@ -1039,8 +1088,17 @@ function updateEnemies(dt){
     e.dashFx=.48;
     e.cd=1.35;
    }else e.vx*=.94;
+  }else if(e.kind==="accuser"){
+   if(ad<300&&e.cd<=0){
+    e.pointFx=.42;
+    e.vx=0;
+    e.cd=.95;
+   }else{
+    const speed=e.label==="MISERÁVEL"?82:e.label==="COVARDE"?62:70;
+    e.vx=sg*speed;
+   }
   }else{
-   e.vx=sg*(e.kind==="accuser"?70:55);
+   e.vx=sg*55;
   }
 
   e.x+=e.vx*dt;
@@ -1796,12 +1854,53 @@ function drawAshDissolves(){
   ctx.restore();
  }
 }
+function accuserBaseFrame(e){
+ if(e.hit>0)return accuserSprites.hit[0];
+ if(e.attackFx>0){
+  const seq=accuserSprites.attack;
+  const elapsed=.28-e.attackFx;
+  return seq[Math.min(seq.length-1,Math.floor(Math.max(0,elapsed)*10))]||seq[0];
+ }
+ if(e.pointFx>0)return accuserSprites.point[0];
+ if(e.label==="COVARDE")return accuserSprites.covarde[0]||accuserSprites.idle[0];
+ if(e.label==="AVARENTO")return accuserSprites.avarento[0]||accuserSprites.idle[0];
+ const seq=accuserSprites.idle;
+ return seq[Math.floor(e.t*2.2)%Math.max(1,seq.length)];
+}
+function drawAccuserSprite(e){
+ const im=accuserBaseFrame(e);
+ if(!im||!im.complete||!(im.naturalWidth||im.width))return false;
+ const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+ const h=e.label==="MISERÁVEL"?225:205,w=h*(iw/ih);
+ const facing=e.vx<0?-1:1;
+ const bob=Math.sin(e.t*1.7)*2;
+ ctx.save();ctx.translate(0,bob-2);
+ if(facing<0){ctx.scale(-1,1);ctx.drawImage(im,-w/2,-h,w,h)}
+ else ctx.drawImage(im,-w/2,-h,w,h);
+ ctx.restore();
+ return true;
+}
+function drawAccuserDissolves(){
+ for(const fx of enemyDissolves){
+  if(fx.kind!=="accuser")continue;
+  const im=accuserSprites.dissolve[0];
+  if(!im||!im.complete||!(im.naturalWidth||im.width))continue;
+  const q=Math.max(0,Math.min(1,fx.t/fx.maxT));
+  const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+  const h=fx.label==="MISERÁVEL"?225:205,w=h*(iw/ih);
+  ctx.save();ctx.translate(fx.x,fx.y-2);ctx.globalAlpha=q;
+  if(fx.dir<0){ctx.scale(-1,1);ctx.drawImage(im,-w/2,-h,w,h)}
+  else ctx.drawImage(im,-w/2,-h,w,h);
+  ctx.restore();
+ }
+}
 function drawEnemies(){
  ctx.save();ctx.translate(-cam,0);
  drawShadowDissolves();
  drawWitnessDissolves();
  drawRepeaterDissolves();
  drawAshDissolves();
+ drawAccuserDissolves();
  for(const e of enemies){
   if(e.dead||!enemyActive(e))continue;
   const y=e.y,hit=e.hit>0;
@@ -1823,9 +1922,13 @@ function drawEnemies(){
    if(!drawAshBearerSprite(e)){
     ctx.fillStyle="#34312d";ctx.fillRect(-36,-74,72,74);ctx.fillStyle="#171717";ctx.beginPath();ctx.arc(0,-88,28,0,Math.PI*2);ctx.fill();ctx.fillStyle="#5f5440";ctx.fillRect(20,-58,32,42);
    }
+  }else if(e.kind==="accuser"){
+   if(!drawAccuserSprite(e)){
+    ctx.fillStyle="#171414";ctx.beginPath();ctx.moveTo(-42,0);ctx.lineTo(-30,-105);ctx.lineTo(0,-145);ctx.lineTo(30,-105);ctx.lineTo(42,0);ctx.closePath();ctx.fill();
+   }
+   ctx.fillStyle="#d9c18a";ctx.font="700 10px Georgia";ctx.textAlign="center";ctx.fillText(e.label,0,-150);
   }else{
    ctx.fillStyle="#171414";ctx.beginPath();ctx.moveTo(-42,0);ctx.lineTo(-30,-105);ctx.lineTo(0,-145);ctx.lineTo(30,-105);ctx.lineTo(42,0);ctx.closePath();ctx.fill();
-   ctx.fillStyle="#5e312b";ctx.fillRect(-48,-92,96,26);ctx.fillStyle="#d9c18a";ctx.font="700 10px Georgia";ctx.textAlign="center";ctx.fillText(e.label,0,-74);
   }
   ctx.restore();
  }
