@@ -1757,10 +1757,13 @@ function update(dt){
  p.anim+=dt;p.attack=Math.max(0,p.attack-dt);p.inv=Math.max(0,p.inv-dt);
  lightPulse=Math.max(0,lightPulse-dt);lightCooldown=Math.max(0,lightCooldown-dt);
 
- const speed=(carriedItem?145:205)*(input.run?1.28:1);
+ const crouching=input.down&&p.on&&p.attack<=0;
+ const baseSpeed=carriedItem?145:205;
+ const speed=(crouching?95:baseSpeed)*(input.run&&!crouching?1.28:1);
  let move=(input.right?1:0)-(input.left?1:0);
  p.vx=move*speed;if(move)p.dir=move;
- if(input.jump&&p.on){p.vy=carriedItem?-560:-650;p.on=false;input.jump=false}
+ // Agachado Jack não dispara o salto; soltar BAIXO devolve o salto normal.
+ if(input.jump&&p.on&&!input.down){p.vy=carriedItem?-560:-650;p.on=false;input.jump=false}
  p.vy+=G*dt;
  const oldX=p.x,oldY=p.y,oldBottom=oldY+p.h;
  p.x+=p.vx*dt;p.x=Math.max(0,Math.min(WORLD-p.w,p.x));gateCollision(oldX);
@@ -2680,6 +2683,8 @@ function jackFrame(){
  const a=JA.animations;
  if(p.attack>0){const seq=a.attack;return seq[Math.floor((.42-p.attack)*10)%seq.length]}
  if(!p.on){if(p.vy<-220)return a.jumpRise[0];if(p.vy<100)return a.jumpApex[0];return a.jumpFall[0]}
+ // Fase 5: usa a mesma pose oficial de abaixar das fases anteriores.
+ if(input.down&&a.crouch?.length)return a.crouch[0];
  const sp=Math.abs(p.vx);
  if(sp>18){const seq=input.run?a.run:a.walk,fps=input.run?12:9;return seq[Math.floor(p.anim*fps)%seq.length]}
  return a.idle[Math.floor(p.anim*2.4)%a.idle.length];
