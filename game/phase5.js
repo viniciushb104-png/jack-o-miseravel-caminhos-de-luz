@@ -39,17 +39,21 @@ const GROUND=Object.freeze([
  {x1:5350,x2:7350,y:590,section:"garden"},
  {x1:7350,x2:9500,y:590,section:"city"},
 
- // A Promessa: cinco degraus largos, em subida contínua e alcançável a pé.
- // Desnível de 12 px por degrau (abaixo da tolerância de colisão de 24 px).
- // Os altares e o checkpoint conservam suas coordenadas e lógica narrativa.
- {x1:9500,x2:9770,y:590,section:"promise"},
- {x1:9770,x2:10040,y:578,section:"promise"},
- {x1:10040,x2:10310,y:566,section:"promise"},
- {x1:10310,x2:10580,y:554,section:"promise"},
- {x1:10580,x2:10850,y:542,section:"promise"},
+ // A Promessa agora termina em uma ESCADA REAL para a Casa dos Espelhos.
+ // A primeira metade continua plana para os altares; a aproximação final usa
+ // seis degraus curtos, com subida de 14 px — ainda dentro da tolerância de 24 px.
+ {x1:9500,x2:10220,y:590,section:"promise"},
+ {x1:10220,x2:10325,y:590,section:"promise"},
+ {x1:10325,x2:10430,y:576,section:"promise"},
+ {x1:10430,x2:10535,y:562,section:"promise"},
+ {x1:10535,x2:10640,y:548,section:"promise"},
+ {x1:10640,x2:10745,y:534,section:"promise"},
+ {x1:10745,x2:10850,y:520,section:"promise"},
 
- // A arena final volta a uma linha de chão única; o boss ganha três palcos claros.
- {x1:10850,x2:12600,y:590,section:"final"}
+ // O limiar da Casa dos Espelhos prolonga o último degrau até o primeiro palco.
+ // Depois disso a arena mantém o chão baixo original, preservando a luta.
+ {x1:10850,x2:11000,y:520,section:"final"},
+ {x1:11000,x2:12600,y:590,section:"final"}
 ]);
 
 const PLATFORMS=Object.freeze([
@@ -1033,14 +1037,17 @@ const PHASE5_GROUND_ART=Object.freeze([
  {s:"city",i:1,x:8070,w:715,scale:1.06},
  {s:"city",i:5,x:8785,w:715,scale:1.06},
 
- // Um sprite por degrau: centro da arte e topo da colisão coincidem.
- {s:"promise",i:0,x:9500,w:270,scale:1.05},
- {s:"promise",i:1,x:9770,w:270,scale:1.05},
- {s:"promise",i:2,x:10040,w:270,scale:1.05},
- {s:"promise",i:3,x:10310,w:270,scale:1.05},
- {s:"promise",i:4,x:10580,w:270,scale:1.05},
+ // A primeira parte da Promessa continua como caminho/altar.
+ {s:"promise",i:0,x:9500,w:360,scale:1.06},
+ {s:"promise",i:1,x:9860,w:360,scale:1.06},
 
- {s:"final",i:1,x:10850,w:585,scale:1.04,surface:.38},
+ // A peça 5F-05 já foi desenhada como escadaria. Em vez de tratá-la como
+ // uma plataforma curta, ela agora ocupa toda a aproximação final ao boss.
+ // A colisão acima foi dividida em seis degraus reais.
+ {s:"promise",i:4,x:10220,w:780,scale:1.18,surface:.40},
+
+ // A arte da arena começa depois do patamar da escada para não "engolir" os degraus.
+ {s:"final",i:1,x:11000,w:435,scale:1.04,surface:.38},
  {s:"final",i:0,x:11435,w:580,scale:1.04,surface:.38},
  {s:"final",i:7,x:12015,w:585,scale:1.04,surface:.38}
 ]);
@@ -1875,6 +1882,20 @@ function drawGround(){
   const top=groundYAt(a.x+a.w*.5);
   drawPhase5PlatformArt(a.s,a.i,a.x,top,a.w,a.surface??.42,1,a.scale??1.4,true);
  }
+
+ // Reforço sutil dos seis espelhos/degraus da aproximação final:
+ // as linhas seguem exatamente as quinas físicas, então o olho lê "escada",
+ // não uma sequência de plataformas soltas.
+ const stairEdges=[
+  [10325,576],[10430,562],[10535,548],[10640,534],[10745,520],[10850,520]
+ ];
+ ctx.save();
+ ctx.strokeStyle="rgba(218,171,86,.28)";
+ ctx.lineWidth=2;
+ for(const [x,y] of stairEdges){
+  ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x,y+28);ctx.stroke();
+ }
+ ctx.restore();
 
  // Plataformas elevadas mantêm exatamente os hitboxes originais.
  for(const a of PHASE5_ELEVATED_ART){
