@@ -43,17 +43,16 @@ const GROUND=Object.freeze([
  // A primeira metade continua plana para os altares; a aproximação final usa
  // seis degraus curtos, com subida de 14 px — ainda dentro da tolerância de 24 px.
  {x1:9500,x2:10220,y:590,section:"promise"},
- {x1:10220,x2:10325,y:590,section:"promise"},
- {x1:10325,x2:10430,y:576,section:"promise"},
- {x1:10430,x2:10535,y:562,section:"promise"},
- {x1:10535,x2:10640,y:548,section:"promise"},
- {x1:10640,x2:10745,y:534,section:"promise"},
- {x1:10745,x2:10850,y:520,section:"promise"},
+ {x1:10220,x2:10340,y:590,section:"promise"},
+ {x1:10340,x2:10460,y:576,section:"promise"},
+ {x1:10460,x2:10580,y:562,section:"promise"},
+ {x1:10580,x2:10700,y:548,section:"promise"},
+ {x1:10700,x2:10820,y:534,section:"promise"},
+ {x1:10820,x2:10850,y:520,section:"promise"},
 
- // O limiar da Casa dos Espelhos prolonga o último degrau até o primeiro palco.
- // Depois disso a arena mantém o chão baixo original, preservando a luta.
- {x1:10850,x2:11000,y:520,section:"final"},
- {x1:11000,x2:12600,y:590,section:"final"}
+ // Patamar contínuo: a escadaria entra na Casa dos Espelhos sem um corte seco.
+ {x1:10850,x2:11040,y:520,section:"final"},
+ {x1:11040,x2:12600,y:590,section:"final"}
 ]);
 
 const PLATFORMS=Object.freeze([
@@ -1044,10 +1043,11 @@ const PHASE5_GROUND_ART=Object.freeze([
  // A peça 5F-05 já foi desenhada como escadaria. Em vez de tratá-la como
  // uma plataforma curta, ela agora ocupa toda a aproximação final ao boss.
  // A colisão acima foi dividida em seis degraus reais.
- {s:"promise",i:4,x:10220,w:780,scale:1.18,surface:.40},
+ {s:"promise",i:4,x:10190,w:840,scale:1.20,surface:.43,clip:false},
 
- // A arte da arena começa depois do patamar da escada para não "engolir" os degraus.
- {s:"final",i:1,x:11000,w:435,scale:1.04,surface:.38},
+ // A primeira peça da sala recua sobre o patamar: as duas artes se encontram,
+ // evitando o corte visual no fim da escadaria.
+ {s:"final",i:1,x:10885,w:575,scale:1.06,surface:.42,clip:false},
  {s:"final",i:0,x:11435,w:580,scale:1.04,surface:.38},
  {s:"final",i:7,x:12015,w:585,scale:1.04,surface:.38}
 ]);
@@ -1317,8 +1317,10 @@ function surfaceYAt(x){
 // A arte 5F/5G possui uma margem transparente maior sob a superfície pintada.
 // A física fica intacta; este bias existe apenas para "assentar" sprites no piso.
 function finalGroundVisualBias(x){
- if(x>=9500&&x<10850)return 12;  // Encruzilhada + escadaria
- if(x>=10850&&x<=12600)return 8;  // Casa dos Espelhos
+ if(x>=9500&&x<10220)return 10;   // altares da Promessa
+ if(x>=10220&&x<10850)return 14;  // corpo da escadaria
+ if(x>=10850&&x<11040)return 12;  // patamar de ligação
+ if(x>=11040&&x<=12600)return 8;  // Casa dos Espelhos
  return 0;
 }
 function visualSurfaceYAt(x){return surfaceYAt(x)+finalGroundVisualBias(x)}
@@ -1892,20 +1894,20 @@ function drawGround(){
  // Chão artístico por capítulo, alinhado à altura física de cada trecho.
  for(const a of PHASE5_GROUND_ART){
   const top=groundYAt(a.x+a.w*.5);
-  drawPhase5PlatformArt(a.s,a.i,a.x,top,a.w,a.surface??.42,1,a.scale??1.4,true);
+  drawPhase5PlatformArt(a.s,a.i,a.x,top,a.w,a.surface??.42,1,a.scale??1.4,a.clip!==false);
  }
 
  // Reforço sutil dos seis espelhos/degraus da aproximação final:
  // as linhas seguem exatamente as quinas físicas, então o olho lê "escada",
  // não uma sequência de plataformas soltas.
  const stairEdges=[
-  [10325,576],[10430,562],[10535,548],[10640,534],[10745,520],[10850,520]
+  [10340,576],[10460,562],[10580,548],[10700,534],[10820,520],[10850,520]
  ];
  ctx.save();
- ctx.strokeStyle="rgba(218,171,86,.28)";
- ctx.lineWidth=2;
+ ctx.strokeStyle="rgba(218,171,86,.34)";
+ ctx.lineWidth=2.5;
  for(const [x,y] of stairEdges){
-  ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x,y+28);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(x,y-2);ctx.lineTo(x,y+34);ctx.stroke();
  }
  ctx.restore();
 
@@ -2171,10 +2173,10 @@ function drawSectionProps(){
   promiseAltars.forEach((a,i)=>{
    const gy=visualGroundYAt(a.x),on=i<promiseStep,altar=puzzleImg("promise",i%3);
    ctx.save();
-   ctx.fillStyle="rgba(0,0,0,.24)";
-   ctx.beginPath();ctx.ellipse(a.x,gy-3,48,9,0,0,Math.PI*2);ctx.fill();
+   ctx.fillStyle="rgba(0,0,0,.30)";
+   ctx.beginPath();ctx.ellipse(a.x,gy-1,54,10,0,0,Math.PI*2);ctx.fill();
    ctx.restore();
-   drawPuzzleBottom(altar,a.x,gy+8,165,on?1:.74,i===3);
+   drawPuzzleBottom(altar,a.x,gy+12,165,on?1:.74,i===3);
    if(on){
     const pulse=.72+.10*(.5+.5*Math.sin(performance.now()/360+i));
     drawPuzzleBottom(puzzleImg("promise",4),a.x,gy-18,115,pulse);
@@ -2202,7 +2204,7 @@ function drawMirror(m,charged){
 
  // m.y continua sendo o ponto óptico usado pela física do reflexo.
  // O sprite, porém, precisa tocar o piso real da seção.
- const floorY=surfaceYAt(m.x);
+ const floorY=visualSurfaceYAt(m.x);
  if(im){
   const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
   const h=142,w=h*(iw/ih);
