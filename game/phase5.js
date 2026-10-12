@@ -178,7 +178,8 @@ let phase5Complete=(!forceNew&&!replayMode)&&(
 
 const p={x:Number(state.px)||150,y:Number(state.py)||480,w:44,h:86,vx:0,vy:0,on:false,dir:1,anim:0,attack:0,inv:0};
 let life=3,cam=0,running=false,last=performance.now(),sectionIndex=-1,lightPulse=0,lightCooldown=0;
-let reflectedFx=[],hazards=[],shots=[],enemyDissolves=[],messageTimer=0,bannerTimer=0,bossShotCd=1.2,ending=false,autosaveTimer=0;
+let reflectedFx=[],hazards=[],shots=[],bossImpacts=[],enemyDissolves=[],messageTimer=0,bannerTimer=0,bossShotCd=1.2,ending=false,autosaveTimer=0;
+let bossShootFx=0,bossTransformStartedAt=0,bossFinalStartedAt=0,bossReleaseStartedAt=0;
 let roadOpenFxStartedAt=0;
 let checkpointActivation={id:"",startedAt:0,duration:900};
 const input={left:false,right:false,down:false,jump:false,run:false};
@@ -456,6 +457,73 @@ Object.entries(ACCUSER_FILES).forEach(([state,files])=>{
  });
 });
 const accuserAssetsReady=Promise.allSettled(accuserReady);
+
+// ---------------------------------------------------------------------------
+// FASE 5 · BOSS — O MISERÁVEL
+// Reflexo sombrio de Jack. Permanece no centro da arena: o visual acompanha
+// a mecânica real da fase (idle, disparo, transição de atos e libertação).
+// ---------------------------------------------------------------------------
+const MISERAVEL_FILES=Object.freeze({
+ idle:[
+  "../assets/game/phase5/boss/miseravel/lote-a/boss-miseravel-idle-01.png?v=1",
+  "../assets/game/phase5/boss/miseravel/lote-a/boss-miseravel-idle-02.png?v=1",
+  "../assets/game/phase5/boss/miseravel/lote-a/boss-miseravel-idle-03.png?v=1"
+ ],
+ shoot:[
+  "../assets/game/phase5/boss/miseravel/lote-a/boss-miseravel-shoot-01.png?v=1",
+  "../assets/game/phase5/boss/miseravel/lote-a/boss-miseravel-shoot-02.png?v=1",
+  "../assets/game/phase5/boss/miseravel/lote-a/boss-miseravel-shoot-03.png?v=1"
+ ],
+ shot1:[
+  "../assets/game/phase5/boss/miseravel/lote-b-projectiles/boss-miseravel-shot-01.png?v=1",
+  "../assets/game/phase5/boss/miseravel/lote-b-projectiles/boss-miseravel-shot-02.png?v=1",
+  "../assets/game/phase5/boss/miseravel/lote-b-projectiles/boss-miseravel-shot-03.png?v=1"
+ ],
+ shot2:[
+  "../assets/game/phase5/boss/miseravel/lote-b-projectiles/boss-miseravel-shot-act2-01.png?v=1",
+  "../assets/game/phase5/boss/miseravel/lote-b-projectiles/boss-miseravel-shot-act2-02.png?v=1",
+  "../assets/game/phase5/boss/miseravel/lote-b-projectiles/boss-miseravel-shot-act2-03.png?v=1"
+ ],
+ impact:[
+  "../assets/game/phase5/boss/miseravel/lote-b-projectiles/boss-miseravel-shot-impact.png?v=1"
+ ],
+ transform:[
+  "../assets/game/phase5/boss/miseravel/lote-c-act2/boss-miseravel-transform-act2-01.png?v=1",
+  "../assets/game/phase5/boss/miseravel/lote-c-act2/boss-miseravel-transform-act2-02.png?v=1",
+  "../assets/game/phase5/boss/miseravel/lote-c-act2/boss-miseravel-transform-act2-03.png?v=1"
+ ],
+ act2:[
+  "../assets/game/phase5/boss/miseravel/lote-c-act2/boss-miseravel-act2-idle-01.png?v=1",
+  "../assets/game/phase5/boss/miseravel/lote-c-act2/boss-miseravel-act2-idle-02.png?v=1"
+ ],
+ final:[
+  "../assets/game/phase5/boss/miseravel/lote-d-final/boss-miseravel-final-01.png?v=1",
+  "../assets/game/phase5/boss/miseravel/lote-d-final/boss-miseravel-final-02.png?v=1"
+ ],
+ continue:[
+  "../assets/game/phase5/boss/miseravel/lote-d-final/boss-miseravel-continue-01.png?v=1",
+  "../assets/game/phase5/boss/miseravel/lote-d-final/boss-miseravel-continue-02.png?v=1"
+ ],
+ release:[
+  "../assets/game/phase5/boss/miseravel/lote-d-final/boss-miseravel-release-01.png?v=1",
+  "../assets/game/phase5/boss/miseravel/lote-d-final/boss-miseravel-release-02.png?v=1",
+  "../assets/game/phase5/boss/miseravel/lote-d-final/boss-miseravel-release-03.png?v=1"
+ ]
+});
+const miseravelSprites={idle:[],shoot:[],shot1:[],shot2:[],impact:[],transform:[],act2:[],final:[],continue:[],release:[]};
+const miseravelReady=[];
+Object.entries(MISERAVEL_FILES).forEach(([state,files])=>{
+ files.forEach((src,index)=>{
+  const im=new Image();
+  miseravelSprites[state][index]=im;
+  miseravelReady.push(new Promise(resolve=>{
+   im.onload=()=>resolve(im);
+   im.onerror=()=>resolve(null);
+  }));
+  im.src=src;
+ });
+});
+const miseravelAssetsReady=Promise.allSettled(miseravelReady);
 
 // ---------------------------------------------------------------------------
 // FASE 5 · LANTERNA DE VIGÍLIA
@@ -759,6 +827,7 @@ window.__PHASE_ASSETS_READY=Promise.allSettled([
  repeaterAssetsReady,
  ashBearerAssetsReady,
  accuserAssetsReady,
+ miseravelAssetsReady,
  phase5CheckpointAssetsReady
 ]);
 
@@ -1203,12 +1272,12 @@ function useLight(){
 }
 function checkBossActOne(){
  if(bossAct!==1||bossSigilLit.size<4)return;
- bossAct=2;shots.length=0;banner("ATO II · O QUE VOCÊ FEZ DEPOIS");
+ bossAct=2;shots.length=0;bossTransformStartedAt=performance.now();banner("ATO II · O QUE VOCÊ FEZ DEPOIS");
  openLines(story.bossActTwo,()=>{bossShotCd=1.1;save()});save();
 }
 function checkBossActTwo(){
  if(bossAct!==2||bossLessonLit.size<4)return;
- bossAct=3;shots.length=0;banner("ATO III · QUEM CONTINUA");
+ bossAct=3;shots.length=0;bossFinalStartedAt=performance.now();banner("ATO III · QUEM CONTINUA");
  openLines(story.bossActThree,save);save();
 }
 
@@ -1254,7 +1323,7 @@ function interact(){
  }
 
  if(bossAct===3&&!bossContinued&&Math.abs(pc-11740)<120){
-  bossContinued=true;bossResolved=true;banner("CONTINUAR");
+  bossContinued=true;bossResolved=true;bossReleaseStartedAt=performance.now();banner("CONTINUAR");
   openLines(story.bossContinue,save);save();return;
  }
 
@@ -1298,20 +1367,27 @@ function startBoss(){
  openLines(story.bossIntro,()=>{bossShotCd=.8;save()});save();
 }
 function updateBoss(dt){
+ bossShootFx=Math.max(0,bossShootFx-dt);
+ for(const fx of bossImpacts)fx.t-=dt;
+ bossImpacts=bossImpacts.filter(fx=>fx.t>0);
  if(!bossStarted||bossResolved||bossAct===3)return;
  bossShotCd-=dt;
  if(bossShotCd<=0&&!dialogue.active){
   const bx=11740,by=385,pc=p.x+p.w/2,pcy=p.y+p.h/2;
   const dx=pc-bx,dy=pcy-by,d=Math.max(1,Math.hypot(dx,dy));
   const speed=bossAct===2?330:275;
-  shots.push({x:bx,y:by,vx:dx/d*speed,vy:dy/d*speed,r:12,t:5});
+  shots.push({x:bx,y:by,vx:dx/d*speed,vy:dy/d*speed,r:12,t:5,age:0,act:bossAct});
+  bossShootFx=.42;
   bossShotCd=bossAct===2?.78:1.08;
  }
- for(const s of shots){
-  s.x+=s.vx*dt;s.y+=s.vy*dt;s.t-=dt;
-  if(Math.hypot(s.x-(p.x+p.w/2),s.y-(p.y+p.h/2))<30){hurtPlayer(s.x);s.t=0}
+ for(const shot of shots){
+  shot.x+=shot.vx*dt;shot.y+=shot.vy*dt;shot.t-=dt;shot.age=(shot.age||0)+dt;
+  if(Math.hypot(shot.x-(p.x+p.w/2),shot.y-(p.y+p.h/2))<30){
+   bossImpacts.push({x:shot.x,y:shot.y,t:.28,maxT:.28});
+   hurtPlayer(shot.x);shot.t=0;
+  }
  }
- shots=shots.filter(s=>s.t>0&&s.x>10800&&s.x<12650&&s.y>80&&s.y<680);
+ shots=shots.filter(shot=>shot.t>0&&shot.x>10800&&shot.x<12650&&shot.y>80&&shot.y<680);
 }
 function completePhase(){
  if(ending||phase5Complete)return;
@@ -1656,20 +1732,75 @@ function drawMirror(m,charged){
  ctx.fillStyle=charged?"rgba(244,215,139,.75)":"rgba(174,187,184,.35)";ctx.strokeStyle="#8a7654";ctx.lineWidth=4;ctx.fillRect(-30,-92,60,52);ctx.strokeRect(-30,-92,60,52);
  ctx.restore();
 }
+function miseravelImage(){
+ const now=performance.now();
+ if(bossResolved&&bossReleaseStartedAt){
+  const elapsed=(now-bossReleaseStartedAt)/1000;
+  const seq=miseravelSprites.release;
+  if(elapsed<1.35)return seq[Math.min(seq.length-1,Math.floor(elapsed/(1.35/Math.max(1,seq.length))))]||seq[seq.length-1];
+  return null;
+ }
+ if(bossAct===3){
+  if(bossContinued){
+   const seq=miseravelSprites.continue;
+   return seq[Math.floor(now/420)%Math.max(1,seq.length)]||seq[0];
+  }
+  const seq=miseravelSprites.final;
+  return seq[Math.floor(now/650)%Math.max(1,seq.length)]||seq[0];
+ }
+ if(bossAct===2&&bossTransformStartedAt){
+  const elapsed=(now-bossTransformStartedAt)/1000;
+  if(elapsed<1.25){
+   const seq=miseravelSprites.transform;
+   return seq[Math.min(seq.length-1,Math.floor(elapsed/(1.25/Math.max(1,seq.length))))]||seq[0];
+  }
+ }
+ if(bossShootFx>0){
+  const seq=miseravelSprites.shoot;
+  const elapsed=.42-bossShootFx;
+  return seq[Math.min(seq.length-1,Math.floor(elapsed/(.42/Math.max(1,seq.length))))]||seq[0];
+ }
+ if(bossAct===2){
+  const seq=miseravelSprites.act2;
+  return seq[Math.floor(now/520)%Math.max(1,seq.length)]||seq[0];
+ }
+ const seq=miseravelSprites.idle;
+ return seq[Math.floor(now/620)%Math.max(1,seq.length)]||seq[0];
+}
+function drawMiseravelBody(bx){
+ const im=miseravelImage();
+ if(!im||!im.complete||!(im.naturalWidth||im.width))return false;
+ const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+ const targetH=bossAct===3?260:290,targetW=targetH*(iw/ih);
+ const gy=surfaceYAt(bx);
+ ctx.save();
+ ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";
+ ctx.shadowColor=bossAct===2?"rgba(242,103,45,.55)":"rgba(0,0,0,.78)";
+ ctx.shadowBlur=bossAct===2?22:16;
+ ctx.drawImage(im,bx-targetW/2,gy-targetH+6,targetW,targetH);
+ ctx.restore();
+ return true;
+}
 function drawBossScene(){
  const bx=11740;
- // A Sala de Espelhos é o próprio palco narrativo do boss.
- // Apenas um véu sutil concentra a leitura no centro sem esconder a arte.
  const veil=ctx.createLinearGradient(10850,0,12600,0);
  veil.addColorStop(0,"rgba(0,0,0,.20)");
  veil.addColorStop(.48,"rgba(0,0,0,.10)");
  veil.addColorStop(1,"rgba(0,0,0,.22)");
  ctx.fillStyle=veil;ctx.fillRect(10850,180,1750,410);
  if(!bossStarted)return;
- ctx.save();ctx.translate(bx,460);
- ctx.fillStyle=bossAct===3?"#1e1d1a":"#0b0b0c";ctx.shadowColor="rgba(0,0,0,.9)";ctx.shadowBlur=28;
- ctx.beginPath();ctx.moveTo(-70,80);ctx.lineTo(-45,-105);ctx.quadraticCurveTo(0,-190,45,-105);ctx.lineTo(70,80);ctx.closePath();ctx.fill();
- ctx.fillStyle="#32281d";ctx.fillRect(-45,-62,90,16);ctx.fillStyle="#c6a75d";ctx.font="700 12px Georgia";ctx.textAlign="center";ctx.fillText("MISERÁVEL",0,-50);ctx.restore();
+
+ if(!drawMiseravelBody(bx)){
+  ctx.save();ctx.translate(bx,460);
+  ctx.fillStyle=bossAct===3?"#1e1d1a":"#0b0b0c";ctx.shadowColor="rgba(0,0,0,.9)";ctx.shadowBlur=28;
+  ctx.beginPath();ctx.moveTo(-70,80);ctx.lineTo(-45,-105);ctx.quadraticCurveTo(0,-190,45,-105);ctx.lineTo(70,80);ctx.closePath();ctx.fill();
+  ctx.restore();
+ }
+ if(!bossResolved){
+  ctx.fillStyle="#d8bd77";ctx.font="700 11px Georgia";ctx.textAlign="center";
+  ctx.fillText("O MISERÁVEL",bx,surfaceYAt(bx)-290);
+ }
+
  if(bossAct===1){
   bossSigils.forEach((s,i)=>{const gy=surfaceYAt(s.x);ctx.strokeStyle=bossSigilLit.has(i)?"#e5c369":"#6d2f2f";ctx.lineWidth=3;ctx.strokeRect(s.x-55,gy-70,110,48);ctx.fillStyle="#cdb57a";ctx.font="10px Georgia";ctx.textAlign="center";ctx.fillText(s.label,s.x,gy-40)});
  }
@@ -1937,7 +2068,26 @@ function drawEnemies(){
 function drawHazards(){
  ctx.save();ctx.translate(-cam,0);
  hazards.forEach(h=>{ctx.strokeStyle=h.arm>0?"rgba(184,91,76,.35)":"rgba(232,112,80,.85)";ctx.lineWidth=3;ctx.beginPath();ctx.arc(h.x,568,32,0,Math.PI*2);ctx.stroke()});
- shots.forEach(s=>{ctx.fillStyle="#d6a85c";ctx.shadowColor="#d27647";ctx.shadowBlur=12;ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0});
+ shots.forEach(shot=>{
+  const seq=shot.act===2?miseravelSprites.shot2:miseravelSprites.shot1;
+  const im=seq[Math.floor((shot.age||0)*9)%Math.max(1,seq.length)];
+  if(im&&im.complete&&(im.naturalWidth||im.width)){
+   const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+   const size=shot.act===2?62:54,w=size*(iw/ih);
+   ctx.save();ctx.translate(shot.x,shot.y);ctx.rotate((shot.age||0)*5);
+   ctx.shadowColor=shot.act===2?"#ff8b45":"#d27647";ctx.shadowBlur=14;
+   ctx.drawImage(im,-w/2,-size/2,w,size);ctx.restore();
+  }else{
+   ctx.fillStyle="#d6a85c";ctx.shadowColor="#d27647";ctx.shadowBlur=12;ctx.beginPath();ctx.arc(shot.x,shot.y,shot.r,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
+  }
+ });
+ bossImpacts.forEach(fx=>{
+  const im=miseravelSprites.impact[0];
+  if(!im||!im.complete||!(im.naturalWidth||im.width))return;
+  const a=Math.max(0,Math.min(1,fx.t/fx.maxT)),iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
+  const h=110*(1+(1-a)*.18),w=h*(iw/ih);
+  ctx.save();ctx.globalAlpha=a;ctx.drawImage(im,fx.x-w/2,fx.y-h/2,w,h);ctx.restore();
+ });
  ctx.restore();
 }
 function jackFrame(){
