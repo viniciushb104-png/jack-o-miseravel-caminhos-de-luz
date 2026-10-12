@@ -1992,24 +1992,65 @@ function drawSectionProps(){
   clockMirrors.forEach(m=>drawMirror(m,clockCharged.has(m.node)));
  }
  if(sec==="garden"){
-  ctx.strokeStyle="#34412e";ctx.lineWidth=12;for(let x=5450;x<7300;x+=310){ctx.beginPath();ctx.moveTo(x,FLOOR);ctx.quadraticCurveTo(x-45,440,x+20,340);ctx.stroke()}
+  // Jardim R3: composição baixa e assentada no piso. Removemos os antigos
+  // galhos procedurais altos que atravessavam a tela e faziam os props parecer
+  // soltos no cenário.
   const itemAsset={letter:0,key:1,portrait:2};
-  gardenItems.forEach(it=>{
-   const iy=groundYAt(it.x),my=groundYAt(it.memorialX),placed=gardenPlaced.has(it.id);
+  gardenItems.forEach((it,index)=>{
+   const iy=surfaceYAt(it.x),my=surfaceYAt(it.memorialX),placed=gardenPlaced.has(it.id);
+
+   // Pequeno plinto físico para o objeto solto: tudo toca o mesmo piso de Jack.
    if(!placed&&carriedItem!==it.id){
-    const h=it.id==="key"?112:98;
-    if(!drawPuzzleBottom(puzzleImg("garden",itemAsset[it.id]),it.x,iy-12,h,.98)){
-     ctx.fillStyle="#b79a63";ctx.fillRect(it.x-18,iy-52,36,30);
+    ctx.save();
+    ctx.fillStyle="rgba(42,35,27,.94)";
+    ctx.strokeStyle="rgba(139,111,66,.72)";
+    ctx.lineWidth=2;
+    ctx.beginPath();
+    ctx.roundRect(it.x-38,iy-18,76,18,5);
+    ctx.fill();ctx.stroke();
+    ctx.fillStyle="rgba(230,174,72,.16)";
+    ctx.beginPath();ctx.ellipse(it.x,iy-5,50,13,0,0,Math.PI*2);ctx.fill();
+    ctx.restore();
+
+    const h=it.id==="key"?104:it.id==="portrait"?94:88;
+    if(!drawPuzzleBottom(puzzleImg("garden",itemAsset[it.id]),it.x,iy-15,h,.98)){
+     ctx.fillStyle="#b79a63";ctx.fillRect(it.x-18,iy-48,36,30);
     }
-    ctx.fillStyle="#ead595";ctx.font="700 10px Georgia";ctx.textAlign="center";ctx.fillText(it.title,it.x,iy-122);
+    ctx.save();
+    ctx.fillStyle="#ead595";ctx.font="700 10px Georgia";ctx.textAlign="center";
+    ctx.shadowColor="rgba(0,0,0,.95)";ctx.shadowBlur=5;
+    ctx.fillText(it.title,it.x,iy-h-25);
+    ctx.restore();
    }
-   drawPuzzleBottom(puzzleImg("garden",3),it.memorialX,my+6,150,placed?1:.68);
+
+   // O memorial fica enterrado/assentado alguns pixels no piso para eliminar
+   // qualquer sensação de flutuação causada pela margem transparente do PNG.
+   drawPuzzleBottom(puzzleImg("garden",3),it.memorialX,my+18,142,placed?1:.74);
+
    if(placed){
-    const pulse=.56+.15*(.5+.5*Math.sin(performance.now()/420+it.memorialX));
-    drawPuzzleBottom(puzzleImg("garden",4),it.memorialX,my-10,145,pulse);
-    drawPuzzleBottom(puzzleImg("garden",itemAsset[it.id]),it.memorialX,my-72,it.id==="key"?72:64,.92);
+    const pulse=.48+.13*(.5+.5*Math.sin(performance.now()/460+index*1.7));
+    drawPuzzleBottom(puzzleImg("garden",4),it.memorialX,my+4,132,pulse);
+    // A relíquia repousa sobre o topo do memorial, não no ar.
+    const placedH=it.id==="key"?62:56;
+    drawPuzzleBottom(puzzleImg("garden",itemAsset[it.id]),it.memorialX,my-74,placedH,.96);
    }
   });
+
+  // Os dois espelhos são ferramentas do puzzle, então permanecem bem legíveis,
+  // mas agora a própria função drawMirror os ancora no chão.
+  // Pequenas piscinas de luz rente ao chão unem memorial, objeto e plataforma
+  // sem acrescentar novos sprites ou poluir o cenário.
+  ctx.save();
+  ctx.globalCompositeOperation="screen";
+  for(const it of gardenItems){
+   const gy=surfaceYAt(it.memorialX);
+   const g=ctx.createRadialGradient(it.memorialX,gy-4,2,it.memorialX,gy-4,78);
+   g.addColorStop(0,"rgba(218,157,67,.16)");
+   g.addColorStop(1,"rgba(218,157,67,0)");
+   ctx.fillStyle=g;ctx.beginPath();ctx.ellipse(it.memorialX,gy-5,78,20,0,0,Math.PI*2);ctx.fill();
+  }
+  ctx.restore();
+
   gardenMirrors.forEach(m=>drawMirror(m,false));
  }
  if(sec==="city"){
@@ -2060,17 +2101,30 @@ function drawMirror(m,charged){
  }else if(charged)im=mirrorVisualImg("mirrors",4);
  else im=mirrorVisualImg("mirrors",0);
 
+ // m.y continua sendo o ponto óptico usado pela física do reflexo.
+ // O sprite, porém, precisa tocar o piso real da seção.
+ const floorY=surfaceYAt(m.x);
  if(im){
   const iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height;
-  const h=156,w=h*(iw/ih);
-  ctx.save();ctx.translate(m.x,m.y+12);ctx.rotate(-.09);
+  const h=142,w=h*(iw/ih);
+  ctx.save();
+  ctx.translate(m.x,floorY+10);
+  ctx.rotate(-.035);
+  // sombra de contato: ajuda o olho a perceber imediatamente que o espelho está apoiado.
+  ctx.fillStyle="rgba(0,0,0,.26)";
+  ctx.beginPath();ctx.ellipse(0,-2,Math.min(46,w*.28),8,0,0,Math.PI*2);ctx.fill();
   if(active||charged){ctx.shadowColor="#f1c765";ctx.shadowBlur=active?28:15}
-  ctx.drawImage(im,-w/2,-h+12,w,h);ctx.restore();
+  ctx.drawImage(im,-w/2,-h,w,h);
+  ctx.restore();
   return;
  }
- ctx.save();ctx.translate(m.x,m.y);ctx.rotate(-.22);
+ // Fallback procedural também assentado no mesmo piso.
+ ctx.save();ctx.translate(m.x,floorY+4);ctx.rotate(-.06);
+ ctx.fillStyle="rgba(0,0,0,.24)";ctx.beginPath();ctx.ellipse(0,0,32,7,0,0,Math.PI*2);ctx.fill();
  ctx.fillStyle="#251f1b";ctx.fillRect(-8,-48,16,48);
- ctx.fillStyle=charged?"rgba(244,215,139,.75)":"rgba(174,187,184,.35)";ctx.strokeStyle="#8a7654";ctx.lineWidth=4;ctx.fillRect(-30,-92,60,52);ctx.strokeRect(-30,-92,60,52);
+ ctx.fillStyle=charged?"rgba(244,215,139,.75)":"rgba(174,187,184,.35)";
+ ctx.strokeStyle="#8a7654";ctx.lineWidth=4;
+ ctx.fillRect(-30,-100,60,52);ctx.strokeRect(-30,-100,60,52);
  ctx.restore();
 }
 function miseravelImage(){
